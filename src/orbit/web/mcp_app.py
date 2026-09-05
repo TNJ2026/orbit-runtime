@@ -14,7 +14,7 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v30.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v31.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
@@ -78,7 +78,7 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
       color-scheme: light dark;
       font: 14px/1.45 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont,
         "Segoe UI", sans-serif;
-      --dashboard-card-min-height: 420px;
+      --dashboard-card-min-height: 420px; --dashboard-card-max-height: 640px;
       --bg: light-dark(#fff, #151517); --soft: light-dark(#f5f5f7, #1d1d20);
       --hover: light-dark(#ededf0, #252529); --line: light-dark(#dedee3, #303035);
       --text: light-dark(#202024, #e8e8eb); --muted: light-dark(#686871, #a0a0a9);
@@ -96,8 +96,26 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
     #refresh { width: 32px; height: 32px; border: 1px solid var(--line);
       border-radius: 8px; color: var(--muted); background: var(--soft); cursor: pointer; }
     #refresh:disabled { opacity: .55; cursor: default; }
-    #card { min-height: var(--dashboard-card-min-height); margin-top: 14px;
-      overflow: hidden; border: 1px solid var(--line);
+    /* One row of navigation, not four suggestions. The three tabs are the
+       card's whole top level; the only button among them creates something,
+       so it sits apart at the end rather than in the tab order. */
+    #tabs { display: flex; align-items: center; gap: 18px; margin-top: 14px;
+      border-bottom: 1px solid var(--line); }
+    .tab { position: relative; min-height: 38px; padding: 0 2px; border: 0;
+      color: var(--muted); background: transparent; font: inherit; font-size: 12px;
+      font-weight: 620; cursor: pointer; }
+    .tab:hover { color: var(--text); }
+    .tab[aria-selected="true"] { color: var(--text); }
+    .tab[aria-selected="true"]::after { position: absolute; right: 0; bottom: -1px;
+      left: 0; height: 2px; border-radius: 2px 2px 0 0; background: var(--accent); content: ""; }
+    .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    #createWorkflow { margin-left: auto; }
+    /* A project with a year of goals in it must not turn the card into a
+       page the host has to scroll past. The list scrolls inside its own
+       frame; the tabs above it stay where they were left. */
+    #card { min-height: var(--dashboard-card-min-height);
+      max-height: var(--dashboard-card-max-height); margin-top: 12px;
+      overflow: hidden auto; border: 1px solid var(--line);
       border-radius: 12px; background: var(--soft); }
     .summary { padding: 16px; }
     .statusLine { display: flex; align-items: center; gap: 8px; }
@@ -125,8 +143,6 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
     .stepState { color: var(--faint); font-size: 10px; }
     .actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px;
       border-top: 1px solid var(--line); background: var(--bg); }
-    .idleActions { flex-wrap: nowrap; overflow-x: auto; }
-    .idleActions .action { flex: 0 0 auto; }
     .action { min-height: 34px; padding: 7px 11px; border: 1px solid var(--line);
       border-radius: 8px; color: var(--text); background: var(--soft); cursor: pointer;
       font: inherit; font-size: 12px; }
@@ -146,14 +162,40 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
     .workflowRow:hover { background: var(--hover); }
     .workflowGoal { margin-right: 12px; white-space: nowrap; }
     .workflowName { font-weight: 650; }
-    .recentTitle { margin-bottom: 8px; color: var(--muted); font-size: 11px;
-      font-weight: 650; letter-spacing: .02em; }
     .workflowDesc { margin-top: 3px; color: var(--muted); font-size: 11px; }
     .definition { border-top: 1px solid var(--line); }
     .definitionRow { padding: 10px 14px; border-bottom: 1px solid var(--line); }
     .definitionRow:last-child { border-bottom: 0; }
     .definitionName { font-size: 12px; font-weight: 620; }
     .definitionMeta { margin-top: 3px; color: var(--faint); font-size: 10px; }
+    /* The full UI groups its history by day and the card follows it, because
+       "today" and "yesterday" are how a person looks for a run they remember
+       starting — a column of timestamps is not. */
+    .historyDay { border-bottom: 1px solid var(--line); }
+    .historyDay:last-child { border-bottom: 0; }
+    .historyDate { margin: 0; padding: 11px 14px 3px; color: var(--faint);
+      font-size: 10px; font-weight: 650; letter-spacing: .04em; }
+    .historyRow { display: grid; grid-template-columns: minmax(0,1fr) auto;
+      align-items: center; gap: 10px; width: 100%; padding: 9px 14px; border: 0;
+      color: inherit; text-align: left; background: transparent; cursor: pointer; }
+    .historyRow:hover { background: var(--hover); }
+    .historyCopy { min-width: 0; }
+    .historyTitle { display: block; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; font-size: 12px; font-weight: 620; }
+    .historyMeta { display: block; margin-top: 3px; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; color: var(--faint); font-size: 10px; }
+    .pill { padding: 3px 8px; border-radius: 999px; color: var(--muted);
+      background: var(--hover); font-size: 10px; font-weight: 650; white-space: nowrap; }
+    .pill.live { color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); }
+    .pill.good { color: var(--good); background: color-mix(in srgb, var(--good) 15%, transparent); }
+    .pill.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 15%, transparent); }
+    .pill.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 15%, transparent); }
+    /* Workflow generation has its own card. This strip only says one is
+       running, above the list the finished Workflow will appear in. */
+    .authoringStrip { display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+      border-bottom: 1px solid var(--line); background: var(--bg); }
+    .authoringPrompt { min-width: 0; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; color: var(--faint); font-size: 11px; }
     __PROMPT_EDITOR_STYLE__
     .agentRow { display: grid; grid-template-columns: minmax(0,1fr) auto auto;
       align-items: center; gap: 12px; min-height: 56px; padding: 10px 14px;
@@ -177,6 +219,12 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
 <main>
   <header><img class="mark" src="__ORBIT_LOGO__" alt="" aria-hidden="true"><div class="heading"><h1>Orbit</h1>
     <div id="updated"></div></div><button id="refresh" type="button" aria-label="Refresh">↻</button></header>
+  <nav id="tabs" role="tablist">
+    <button class="tab" id="tabWorkflows" type="button" role="tab" data-tab="workflows" aria-selected="false"></button>
+    <button class="tab" id="tabHistory" type="button" role="tab" data-tab="history" aria-selected="false"></button>
+    <button class="tab" id="tabAgents" type="button" role="tab" data-tab="agents" aria-selected="false"></button>
+    <button class="action primary" id="createWorkflow" type="button" data-prompt-mode="edit"></button>
+  </nav>
   <section id="card" aria-live="polite"><div class="empty">Connecting…</div></section>
 </main>
 <script>
@@ -184,24 +232,30 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
   const TERMINAL = new Set(['completed', 'failed', 'cancelled', 'unknown']);
   const ACTIVE_JOBS = new Set(['queued', 'running']);
   const RECENT_TASK_MS = 5 * 60 * 60 * 1000;
+  const HISTORY_LIMIT = 50;
   const card = document.getElementById('card');
   const updated = document.getElementById('updated');
   const refreshButton = document.getElementById('refresh');
+  const tabBar = document.getElementById('tabs');
+  const createButton = document.getElementById('createWorkflow');
   let locale = navigator.language?.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
-  let bridge = null, ready = null, poller = null, refreshing = false;
-  let currentView = 'task', currentWorkflow = null;
+  let bridge = null, ready = null, poller = null;
+  // The tab is where the card is; the detail is what is open inside it.
+  let currentTab = 'workflows', detail = null;
 
   const S = {
     'en-US': {
-      idle: 'Ready to start', idleHint: 'Run a goal with an existing workflow, or create a new workflow.',
-      running: 'Running', waiting: 'Needs your input', completed: 'Completed', failed: 'Failed',
+      running: 'Running', waiting: 'Needs your input', interrupted: 'Needs your input',
+      completed: 'Completed', failed: 'Failed',
       cancelled: 'Cancelled', unknown: 'Needs review', queued: 'Workflow generation queued',
       authoring: 'Generating workflow', authoringDone: 'Workflow generated', authoringFailed: 'Workflow generation failed',
       waitingNotice: 'A workflow step is waiting for your response.',
-      handle: 'Handle in chat', approve: 'Approve', reject: 'Reject', cancel: 'Request cancellation', explain: 'Explain result', selectWorkflow: 'Choose workflow', createWorkflow: 'Create workflow',
+      handle: 'Handle in chat', approve: 'Approve', reject: 'Reject', cancel: 'Request cancellation', explain: 'Explain result', createWorkflow: 'Create workflow',
       workflows: 'Workflows', workflow: 'Workflow', back: 'Back', noWorkflows: 'No published workflows', noSteps: 'No steps', noAgents: 'No registered Agents', newGoal: 'New goal', modify: 'Modify', addAgent: 'Add Agent',
-      history: 'History', agents: 'Agents',
-      recentRun: 'Most recent run',
+      history: 'History', agents: 'Agents', goalDetail: 'Goal', noRuns: 'No goals have been run in this project yet.',
+      today: 'Today', yesterday: 'Yesterday', dateUnknown: 'Unknown date',
+      durationShort: 'under 1 min', durationMinutes: minutes => `${minutes} min`,
+      durationHours: (hours, minutes) => `${hours} h ${minutes} min`,
       runs: 'Runs', errors: 'Errors',
       open: 'Open full Orbit UI', refreshed: 'Updated just now', error: 'Could not read the current Orbit task.',
       status: { succeeded:'Done', answered:'Answered', running:'Running', waiting:'Waiting', failed:'Failed', unknown:'Review', cancelled:'Cancelled', not_reached:'Pending' },
@@ -212,18 +266,20 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
         + `Before resuming, inspect the run again and use its current interrupt_id, revision, allowed_commands, and output_ports. `
         + `Submit the declared output port object with decision="${decision}" and value=null; do not invent top-level fields.`,
       promptCancel: id => `Cancel Orbit run ${id}.`, promptExplain: id => `Explain the result of Orbit run ${id}.`,
-      promptSelectWorkflow: 'View the Orbit workflow list so I can choose a workflow for a new goal.', promptCreateWorkflow: 'Create an Orbit workflow from the following requirements:', promptAddAgent: '给Orbit添加Agent cli：', promptHistory: 'Open the Orbit history page: http://127.0.0.1:8848/ui/#/history', promptOpen: 'Open the full Orbit UI.',
+      promptCreateWorkflow: 'Create an Orbit workflow from the following requirements:', promptAddAgent: '给Orbit添加Agent cli：', promptOpen: 'Open the full Orbit UI.',
     },
     'zh-CN': {
-      idle: '准备开始', idleHint: '使用已有工作流执行目标，或创建新的工作流。',
-      running: '运行中', waiting: '需要你的处理', completed: '已完成', failed: '失败',
+      running: '运行中', waiting: '需要你的处理', interrupted: '需要你的处理',
+      completed: '已完成', failed: '失败',
       cancelled: '已取消', unknown: '需要检查', queued: '工作流生成已排队',
       authoring: '正在生成工作流', authoringDone: '工作流已生成', authoringFailed: '工作流生成失败',
       waitingNotice: '有一个工作流步骤正在等待你的回复。',
-      handle: '在聊天中处理', approve: '批准', reject: '拒绝', cancel: '请求取消', explain: '解释结果', selectWorkflow: '选择工作流', createWorkflow: '创建工作流',
+      handle: '在聊天中处理', approve: '批准', reject: '拒绝', cancel: '请求取消', explain: '解释结果', createWorkflow: '创建工作流',
       workflows: '工作流', workflow: '工作流详情', back: '返回', noWorkflows: '暂无已发布工作流', noSteps: '暂无步骤', noAgents: '暂无已注册 Agent', newGoal: '新目标', modify: '修改', addAgent: '添加 Agent',
-      history: '历史记录', agents: 'Agents',
-      recentRun: '最近一次执行',
+      history: '历史记录', agents: 'Agents', goalDetail: '目标详情', noRuns: '当前项目还没有目标执行记录。',
+      today: '今天', yesterday: '昨天', dateUnknown: '未知日期',
+      durationShort: '不足 1 分钟', durationMinutes: minutes => `${minutes} 分钟`,
+      durationHours: (hours, minutes) => `${hours} 小时 ${minutes} 分钟`,
       runs: '运行', errors: '错误',
       open: '打开完整 Orbit UI', refreshed: '刚刚更新', error: '无法读取当前 Orbit 任务。',
       status: { succeeded:'完成', answered:'已回答', running:'运行中', waiting:'等待', failed:'失败', unknown:'检查', cancelled:'取消', not_reached:'未开始' },
@@ -234,7 +290,7 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
         + `恢复前请重新检查运行，并使用当前的 interrupt_id、revision、allowed_commands 和 output_ports。`
         + `按已声明的输出端口提交 decision="${decision}"、value=null 的对象，不要自创顶层字段。`,
       promptCancel: id => `取消 Orbit 运行 ${id}。`, promptExplain: id => `解释 Orbit 运行 ${id} 的结果。`,
-      promptSelectWorkflow: '查看 Orbit 工作流列表，以便选择一个工作流开始新目标。', promptCreateWorkflow: '按照下面的要求创建 Orbit 工作流：', promptAddAgent: '给Orbit添加Agent cli：', promptHistory: '打开 Orbit 历史记录页面：http://127.0.0.1:8848/ui/#/history', promptOpen: '打开 Orbit 完整 UI。',
+      promptCreateWorkflow: '按照下面的要求创建 Orbit 工作流：', promptAddAgent: '给Orbit添加Agent cli：', promptOpen: '打开 Orbit 完整 UI。',
     },
   };
   const t = () => S[locale] || S['en-US'];
@@ -243,7 +299,7 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
     : Array.isArray(value?.data?.[key]) ? value.data[key]
     : Array.isArray(value?.structuredContent?.[key]) ? value.structuredContent[key] : [];
   const cssFor = status => status === 'running' || status === 'queued' ? 'live'
-    : status === 'waiting' ? 'warn' : status === 'completed' || status === 'succeeded' || status === 'answered' ? 'good'
+    : status === 'waiting' || status === 'interrupted' ? 'warn' : status === 'completed' || status === 'succeeded' || status === 'answered' || status === 'done' ? 'good'
     : status === 'failed' || status === 'cancelled' ? 'bad' : '';
   const updatedAt = item => Date.parse(item?.updated_at || item?.created_at || '') || 0;
   const isRecent = item => updatedAt(item) > 0 && Date.now() - updatedAt(item) <= RECENT_TASK_MS;
@@ -321,28 +377,41 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
     }).join('');
   }
 
-  function idleActions(includeCreate=true) {
-    const create = includeCreate ? action(t().createWorkflow,t().promptCreateWorkflow,'edit') : '';
-    return `<div class="actions idleActions"><button class="action primary" type="button" data-view-workflows>${esc(t().selectWorkflow)}</button>${create}
-      ${action(t().history,t().promptHistory,'direct')}
-      <button class="action" type="button" data-view-agents>${esc(t().agents)}</button></div>`;
-  }
-
-  function renderIdle() {
-    card.innerHTML = `<div class="empty"><strong>${esc(t().idle)}</strong><div>${esc(t().idleHint)}</div></div>
-      ${idleActions()}`;
+  function paintTabs() {
+    for (const button of tabBar.querySelectorAll('[data-tab]')) {
+      button.textContent = t()[button.dataset.tab];
+      button.setAttribute('aria-selected', String(button.dataset.tab === currentTab));
+    }
+    createButton.textContent = t().createWorkflow;
+    createButton.dataset.prompt = t().promptCreateWorkflow;
   }
 
   function viewHead(title,backView) {
     return `<div class="viewHead"><button class="back" type="button" data-back-view="${backView}" aria-label="${esc(t().back)}">←</button><div class="viewTitle">${esc(title)}</div></div>`;
   }
 
-  function renderWorkflowList(workflows) {
+  /* A head with no title. The tab above already names the list; printing
+     the same word again directly under it was one label too many. What the
+     row is here for is the button at its end. */
+  function actionHead(trailing) {
+    return `<div class="viewHead"><div class="viewTitle"></div>${trailing}</div>`;
+  }
+
+  function authoringStrip(job) {
+    if (!job) return '';
+    const status = job.status === 'queued' ? t().queued : job.status === 'done' ? t().authoringDone
+      : job.status === 'failed' ? t().authoringFailed : t().authoring;
+    const prompt = job.prompt || job.requirements || '';
+    return `<div class="authoringStrip"><span class="dot ${cssFor(job.status)}"></span>
+      <span class="status">${esc(status)}</span><span class="authoringPrompt">${esc(prompt)}</span></div>`;
+  }
+
+  function renderWorkflowList(workflows,job) {
     const rows = workflows.map(workflow => { const name = workflow.name || workflow.workflow_id; return `<div class="workflowChoice"><button class="workflowRow" type="button" data-workflow-id="${esc(workflow.workflow_id)}">
       <div class="workflowName">${esc(name)}</div>
       <div class="workflowDesc">${esc(workflow.description || `${workflow.node_count || 0} steps · v${workflow.latest_version || ''}`)}</div></button>
       ${action(t().newGoal,`使用工作流「${name}」（${workflow.workflow_id}）执行：`,'edit',true).replace('class="action primary"','class="action primary workflowGoal"')}</div>`; }).join('');
-    card.innerHTML = `${viewHead(t().workflows,'task')}${rows || `<div class="empty">${esc(t().noWorkflows)}</div>`}`;
+    card.innerHTML = `${authoringStrip(job)}${rows || `<div class="empty">${esc(t().noWorkflows)}</div>`}`;
   }
 
   function renderWorkflowDetail(workflow) {
@@ -356,23 +425,75 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
       <div class="actions">${action(t().newGoal,`使用工作流「${name}」（${workflow.workflow_id}）执行：`,'edit',true)}${action(t().modify,`按照下面的要求修改工作流「${name}」（${workflow.workflow_id}）：`,'edit')}</div>`;
   }
 
+  function dayKey(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'unknown';
+    return [date.getFullYear(),date.getMonth()+1,date.getDate()].map(part => String(part).padStart(2,'0')).join('-');
+  }
+
+  function dayLabel(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return t().dateUnknown;
+    const today = new Date(); const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const key = dayKey(value);
+    if (key === dayKey(today)) return t().today;
+    if (key === dayKey(yesterday)) return t().yesterday;
+    return new Intl.DateTimeFormat(locale,{dateStyle:'long'}).format(date);
+  }
+
+  function clockTime(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value || '');
+    return new Intl.DateTimeFormat(locale,{timeStyle:'short'}).format(date);
+  }
+
+  function runDuration(run) {
+    const started = Date.parse(run.created_at); const finished = Date.parse(run.updated_at);
+    if (!Number.isFinite(started) || !Number.isFinite(finished) || finished < started) return '';
+    const minutes = Math.floor((finished - started) / 60000);
+    if (minutes < 1) return t().durationShort;
+    if (minutes < 60) return t().durationMinutes(minutes);
+    return t().durationHours(Math.floor(minutes / 60), minutes % 60);
+  }
+
+  function runStatusLabel(status) { return t()[status] || t().status[status] || status; }
+
+  /* The goal a person typed is the row's name; the id is what is left when
+     there was none. The Workflow is named only while the catalog still has
+     it — an id in its place is not what anyone reads a history list for. */
+  function historyRow(run,workflowNames) {
+    const meta = [
+      workflowNames.get(run.workflow_id) || '',
+      clockTime(run.updated_at),
+      runDuration(run),
+    ].filter(Boolean).join(' · ');
+    return `<button class="historyRow" type="button" data-run-id="${esc(run.run_id)}">
+      <span class="historyCopy"><span class="historyTitle">${esc(run.goal || run.run_id)}</span>
+      <span class="historyMeta">${esc(meta)}</span></span>
+      <span class="pill ${cssFor(run.status)}">${esc(runStatusLabel(run.status))}</span></button>`;
+  }
+
+  function renderHistory(runs,workflowNames) {
+    if (!runs.length) { card.innerHTML = `<div class="empty">${esc(t().noRuns)}</div>`; return; }
+    const groups = [];
+    for (const run of runs) {
+      const key = dayKey(run.updated_at);
+      let group = groups.find(item => item.key === key);
+      if (!group) groups.push(group = {key, label: dayLabel(run.updated_at), rows: []});
+      group.rows.push(historyRow(run,workflowNames));
+    }
+    card.innerHTML = groups.map(group =>
+      `<section class="historyDay"><h2 class="historyDate">${esc(group.label)}</h2>${group.rows.join('')}</section>`).join('');
+  }
+
   function renderAgents(agents) {
     const rows = agents.map(agent => { const name = String(agent.name || '').replace(/^agent\./,''); return `<div class="agentRow">
       <div class="agentIdentity"><div class="agentName" title="${esc(agent.name)}">${esc(name || agent.name)}</div><div class="agentVersion">${esc(agent.version || '')}</div></div>
       <div class="agentStat"><strong>${esc(agent.attempt_count ?? 0)}</strong>${esc(t().runs)}</div>
       <div class="agentStat${agent.failed_count > 0 ? ' bad' : ''}"><strong>${esc(agent.failed_count ?? 0)}</strong>${esc(t().errors)}</div></div>`; }).join('');
-    const head = viewHead(t().agents,'task').replace('</div>', `</div><button class="action primary" type="button" data-prompt="${esc(t().promptAddAgent)}" data-prompt-mode="edit">${esc(t().addAgent)}</button>`);
+    const head = actionHead(`<button class="action primary" type="button" data-prompt="${esc(t().promptAddAgent)}" data-prompt-mode="edit">${esc(t().addAgent)}</button>`);
     card.innerHTML = `${head}${rows || `<div class="empty">${esc(t().noAgents)}</div>`}`;
-  }
-
-  function renderAuthoring(job) {
-    const status = job.status === 'queued' ? t().queued : job.status === 'done' ? t().authoringDone
-      : job.status === 'failed' ? t().authoringFailed : t().authoring;
-    const prompt = job.prompt || job.requirements || '';
-    const includeCreate = job.status === 'done' || job.status === 'failed';
-    card.innerHTML = `<div class="summary"><div class="statusLine"><span class="dot ${cssFor(job.status)}"></span>
-      <span class="status">${esc(status)}</span></div><div class="goal">${esc(prompt || status)}</div>
-      <div class="meta">${esc(job.job_id || '')}</div></div>${idleActions(includeCreate)}`;
   }
 
   function renderRun(run,steps) {
@@ -386,95 +507,131 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
     else if (waiting) actions = action(t().handle,t().promptHandle(run),'edit',true) + actions;
     else if (live) actions = action(t().cancel,t().promptCancel(run.run_id),'direct') + actions;
     else actions = action(t().explain,t().promptExplain(run.run_id),'direct',true) + actions;
-    card.innerHTML = `<div class="summary"><div class="statusLine"><span class="dot ${cssFor(statusKey)}"></span>
-      <span class="status">${esc(t()[statusKey] || statusKey)}</span></div>
+    card.innerHTML = `${viewHead(t().goalDetail,'history')}<div class="summary"><div class="statusLine"><span class="dot ${cssFor(statusKey)}"></span>
+      <span class="status">${esc(runStatusLabel(statusKey))}</span></div>
       <div class="goal">${esc(run.goal || run.workflow_id || run.run_id)}</div>
       <div class="meta">${esc(run.workflow_id || '')} · ${esc(run.run_id)}</div></div>
       ${waiting ? `<div class="notice">${esc(t().waitingNotice)}</div>` : ''}
       ${stepRows ? `<div class="steps">${stepRows}</div>` : ''}<div class="actions">${actions}</div>`;
   }
 
-  function renderRecentRun(run,workflowName) {
-    const statusKey = run.status;
-    card.innerHTML = `<div class="summary"><div class="recentTitle">${esc(t().recentRun)}</div>
-      <div class="workflowName">${esc(workflowName || run.workflow_id)}</div>
-      <div class="statusLine"><span class="dot ${cssFor(statusKey)}"></span>
-      <span class="status">${esc(t()[statusKey] || statusKey)}</span></div></div>${idleActions()}`;
-  }
-
   function bindActions() {
     card.querySelectorAll('[data-prompt]').forEach(button => button.addEventListener('click', () => dispatchPrompt(button)));
-    card.querySelectorAll('[data-view-workflows]').forEach(button => button.addEventListener('click',showWorkflows));
-    card.querySelectorAll('[data-view-agents]').forEach(button => button.addEventListener('click',showAgents));
     card.querySelectorAll('[data-workflow-id]').forEach(button => button.addEventListener('click',() => showWorkflowDetail(button.dataset.workflowId)));
+    card.querySelectorAll('[data-run-id]').forEach(button => button.addEventListener('click',() => showRun(button.dataset.runId)));
     card.querySelectorAll('[data-back-view]').forEach(button => button.addEventListener('click',() => {
+      detail = null;
       if (button.dataset.backView === 'workflows') showWorkflows();
-      else { currentView = 'task'; currentWorkflow = null; refresh(); }
+      else showHistory();
     }));
   }
 
+  function enter(tab) { clearTimeout(poller); currentTab = tab; detail = null; paintTabs(); refreshButton.disabled = true; }
+
   async function showWorkflows() {
-    clearTimeout(poller); currentView = 'workflows'; currentWorkflow = null;
-    refreshButton.disabled = true;
-    try { const result = await callTool('list_workflows',{}); renderWorkflowList(list(result,'workflows')); bindActions(); updated.textContent = t().refreshed; }
-    catch (_) { card.innerHTML = `${viewHead(t().workflows,'task')}<div class="error">${esc(t().error)}</div>`; bindActions(); }
+    enter('workflows');
+    try {
+      const [workflowResult,jobResult] = await Promise.all([
+        callTool('list_workflows',{}), callTool('list_authoring_jobs',{limit:10}),
+      ]);
+      const jobs = list(jobResult,'jobs');
+      const job = jobs.find(item => ACTIVE_JOBS.has(item.status)) || jobs.find(item => isRecent(item)) || null;
+      renderWorkflowList(list(workflowResult,'workflows'),job); bindActions(); updated.textContent = t().refreshed;
+      if (job && ACTIVE_JOBS.has(job.status)) poller = setTimeout(() => {
+        if (currentTab === 'workflows' && !detail && document.visibilityState === 'visible') showWorkflows();
+      }, 3000);
+    }
+    catch (_) { card.innerHTML = `<div class="error">${esc(t().error)}</div>`; bindActions(); }
     finally { refreshButton.disabled = false; }
   }
 
   async function showWorkflowDetail(workflowId) {
-    clearTimeout(poller); currentView = 'workflow'; currentWorkflow = workflowId;
-    refreshButton.disabled = true;
+    clearTimeout(poller); currentTab = 'workflows'; detail = {kind:'workflow', id:workflowId};
+    paintTabs(); refreshButton.disabled = true;
     try { const result = await callTool('get_workflow_definition',{workflow_id:workflowId}); renderWorkflowDetail(result); bindActions(); updated.textContent = t().refreshed; }
     catch (_) { card.innerHTML = `${viewHead(t().workflow,'workflows')}<div class="error">${esc(t().error)}</div>`; bindActions(); }
     finally { refreshButton.disabled = false; }
   }
 
-  async function showAgents() {
-    clearTimeout(poller); currentView = 'agents'; currentWorkflow = null;
-    refreshButton.disabled = true;
-    try { const result = await callTool('list_agents',{}); renderAgents(list(result,'agents')); bindActions(); updated.textContent = t().refreshed; }
-    catch (_) { card.innerHTML = `${viewHead(t().agents,'task')}<div class="error">${esc(t().error)}</div>`; bindActions(); }
+  async function showHistory(known) {
+    enter('history');
+    try {
+      const [runResult,workflowResult] = await Promise.all([
+        known ? null : callTool('list_runs',{limit:HISTORY_LIMIT}), callTool('list_workflows',{}),
+      ]);
+      const runs = known || list(runResult,'runs');
+      const names = new Map(list(workflowResult,'workflows').map(item => [item.workflow_id, item.name || '']));
+      renderHistory(runs,names); bindActions(); updated.textContent = t().refreshed;
+      poller = setTimeout(() => {
+        if (currentTab === 'history' && !detail && document.visibilityState === 'visible') showHistory();
+      }, runs.some(run => !TERMINAL.has(run.status)) ? 2000 : 15000);
+    }
+    catch (_) { card.innerHTML = `<div class="error">${esc(t().error)}</div>`; bindActions(); }
     finally { refreshButton.disabled = false; }
   }
 
-  async function refresh() {
-    if (currentView === 'workflows') return showWorkflows();
-    if (currentView === 'workflow' && currentWorkflow) return showWorkflowDetail(currentWorkflow);
-    if (currentView === 'agents') return showAgents();
-    if (refreshing) return; refreshing = true; refreshButton.disabled = true; clearTimeout(poller);
+  async function showRun(runId,known) {
+    clearTimeout(poller); currentTab = 'history'; detail = {kind:'run', id:runId};
+    paintTabs(); refreshButton.disabled = true;
     try {
-      const [runResult,jobResult] = await Promise.all([
-        callTool('list_runs',{limit:10}), callTool('list_authoring_jobs',{limit:10}),
-      ]);
-      const runs = list(runResult,'runs'); const jobs = list(jobResult,'jobs');
-      const activeRun = runs.find(run => !TERMINAL.has(run.status));
-      const activeJob = jobs.find(job => ACTIVE_JOBS.has(job.status));
-      const recentRun = runs.find(run => TERMINAL.has(run.status) && isRecent(run));
-      const recentJob = jobs.find(job => !ACTIVE_JOBS.has(job.status) && isRecent(job));
-      const run = activeRun || (!activeJob && (!recentJob || updatedAt(recentRun) >= updatedAt(recentJob)) ? recentRun : null);
-      if (run) {
-        if (TERMINAL.has(run.status)) {
-          const workflowResult = await callTool('list_workflows',{});
-          const workflow = list(workflowResult,'workflows').find(item => item.workflow_id === run.workflow_id);
-          renderRecentRun(run,workflow?.name);
-        } else {
-          const stepResult = await callTool('get_run_steps',{run_id:run.run_id});
-          renderRun(run,list(stepResult,'steps'));
-        }
-      } else if (activeJob || recentJob) renderAuthoring(activeJob || recentJob);
-      else renderIdle();
-      bindActions(); updated.textContent = t().refreshed;
-      poller = setTimeout(() => { if (currentView === 'task' && document.visibilityState === 'visible') refresh(); }, activeRun || activeJob ? 2000 : 15000);
-    } catch (_) {
-      card.innerHTML = `<div class="error">${esc(t().error)}</div><div class="actions">${action(t().open,t().promptOpen,'direct')}</div>`;
-      bindActions(); poller = setTimeout(refresh,15000);
-    } finally { refreshing = false; refreshButton.disabled = false; }
+      const runs = known || list(await callTool('list_runs',{limit:HISTORY_LIMIT}),'runs');
+      const run = runs.find(item => item.run_id === runId);
+      // A run the list no longer carries is not an error: say so by going back
+      // to the list it left, not by painting a detail of nothing.
+      if (!run) return showHistory(runs);
+      const steps = list(await callTool('get_run_steps',{run_id:runId}),'steps');
+      renderRun(run,steps); bindActions(); updated.textContent = t().refreshed;
+      poller = setTimeout(() => {
+        if (detail?.kind === 'run' && detail.id === runId && document.visibilityState === 'visible') showRun(runId);
+      }, TERMINAL.has(run.status) ? 15000 : 2000);
+    }
+    catch (_) { card.innerHTML = `${viewHead(t().goalDetail,'history')}<div class="error">${esc(t().error)}</div>`; bindActions(); }
+    finally { refreshButton.disabled = false; }
+  }
+
+  function refresh() {
+    if (detail?.kind === 'workflow') return showWorkflowDetail(detail.id);
+    if (detail?.kind === 'run') return showRun(detail.id);
+    if (currentTab === 'history') return showHistory();
+    if (currentTab === 'agents') return showAgents();
+    return showWorkflows();
+  }
+
+  async function showAgents() {
+    enter('agents');
+    try { const result = await callTool('list_agents',{}); renderAgents(list(result,'agents')); bindActions(); updated.textContent = t().refreshed; }
+    catch (_) { card.innerHTML = `<div class="error">${esc(t().error)}</div>`; bindActions(); }
+    finally { refreshButton.disabled = false; }
+  }
+
+  /* Which tab the card opens on is the one question this navigation has to
+     answer for itself. A run that is still going — or waiting on a person —
+     is the reason the card was opened, so History leads and the run is
+     already open inside it. With nothing running, the useful first screen is
+     the one that starts something. */
+  async function start() {
+    paintTabs();
+    let runs = null;
+    try { runs = list(await callTool('list_runs',{limit:HISTORY_LIMIT}),'runs'); }
+    catch (_) { return showHistory(); }
+    const active = runs.find(run => !TERMINAL.has(run.status));
+    if (active) return showRun(active.run_id,runs);
+    if (runs.some(run => isRecent(run))) return showHistory(runs);
+    return showWorkflows();
   }
 
   bridge = mcpBridge();
   refreshButton.addEventListener('click',refresh);
+  createButton.addEventListener('click',() => dispatchPrompt(createButton));
+  tabBar.querySelectorAll('[data-tab]').forEach(button => button.addEventListener('click',() => {
+    if (currentTab === button.dataset.tab && !detail) return;
+    detail = null;
+    if (button.dataset.tab === 'history') showHistory();
+    else if (button.dataset.tab === 'agents') showAgents();
+    else showWorkflows();
+  }));
   document.addEventListener('visibilitychange',() => { if (document.visibilityState === 'visible') refresh(); });
-  refresh();
+  start();
 </script>
 </body>
 </html>""".replace("__ORBIT_LOGO__", ORBIT_LOGO_DATA_URI).replace(

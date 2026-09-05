@@ -22,7 +22,7 @@ from orbit.web.mcp_app import (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v30.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v31.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -59,7 +59,7 @@ class CurrentTaskCardTests(unittest.TestCase):
 
     def test_workflow_selection_switches_views_inside_the_card(self) -> None:
         for marker in (
-            "data-view-workflows", "showWorkflows", "showWorkflowDetail",
+            'data-tab="workflows"', "showWorkflows", "showWorkflowDetail",
             "callTool('list_workflows'", "callTool('get_workflow_definition'",
             "data-back-view", "renderWorkflowList", "renderWorkflowDetail",
         ):
@@ -67,9 +67,9 @@ class CurrentTaskCardTests(unittest.TestCase):
 
     def test_agents_switches_to_a_list_inside_the_dashboard_card(self) -> None:
         for marker in (
-            "data-view-agents", "showAgents", "renderAgents",
+            'data-tab="agents"', "showAgents", "renderAgents",
             "callTool('list_agents'", 'class="agentRow"',
-            "currentView === 'agents'", "data-back-view",
+            "currentTab === 'agents'", "data-back-view",
         ):
             self.assertIn(marker, ORBIT_DASHBOARD_HTML)
 
@@ -77,7 +77,7 @@ class CurrentTaskCardTests(unittest.TestCase):
         for marker in (
             "addAgent: 'Add Agent'", "addAgent: '添加 Agent'",
             "promptAddAgent: '给Orbit添加Agent cli：'",
-            "const head = viewHead(t().agents,'task').replace",
+            "const head = actionHead(",
             'data-prompt="${esc(t().promptAddAgent)}"',
             "button.addEventListener('click', () => dispatchPrompt(button))",
             "dispatchPromptValue(button.dataset.prompt",
@@ -96,9 +96,18 @@ class CurrentTaskCardTests(unittest.TestCase):
             self.assertIn(marker, ORBIT_DASHBOARD_HTML)
 
     def test_it_contains_no_administration_surface(self) -> None:
+        """Tabs are navigation, not administration.
+
+        This used to forbid the three tab ids outright, back when any tab at
+        all was the shape an administration surface would have arrived in.
+        The card now navigates by tab, so what is worth forbidding is the
+        thing itself: deleting a Workflow, editing one in place, or reading a
+        step's output — each of which belongs to the full UI.
+        """
+
         for absent in (
-            "workflowDelete", "deleteWorkflow", "tabWorkflows", "tabHistory",
-            "tabAgents", "workflowGenerator", "authoringConsole", "stepOutput",
+            "workflowDelete", "deleteWorkflow",
+            "workflowGenerator", "authoringConsole", "stepOutput",
         ):
             self.assertNotIn(absent, ORBIT_DASHBOARD_HTML)
 
@@ -112,36 +121,37 @@ class CurrentTaskCardTests(unittest.TestCase):
         ):
             self.assertNotIn(absent, ORBIT_DASHBOARD_HTML)
 
-    def test_recent_completed_run_is_a_compact_summary_with_idle_actions(self) -> None:
+    def test_history_is_a_tab_in_the_card_and_not_a_link_out(self) -> None:
+        """The run list the full UI shows, in the card, for this project.
+
+        History used to be a button that asked the host to open
+        `#/history` in a browser. It is a tab now, built on the same three
+        facts per row as the full UI's list — Workflow name, time of day,
+        elapsed — and grouped under the same day headings.
+        """
+
         for marker in (
-            "function renderRecentRun(run,workflowName)",
-            "recentRun: 'Most recent run'",
-            "recentRun: '最近一次执行'",
-            'class="recentTitle">${esc(t().recentRun)}',
-            'class="workflowName">${esc(workflowName || run.workflow_id)}',
-            "if (TERMINAL.has(run.status))",
-            "renderRecentRun(run,workflow?.name)",
-            "function idleActions(includeCreate=true)",
+            'data-tab="history"', "showHistory", "renderHistory", "historyRow",
+            "callTool('list_runs'", "function dayKey(value)", "function dayLabel(value)",
+            "function runDuration(run)", 'class="historyDay"', "data-run-id",
+            "showRun(button.dataset.runId)",
         ):
             self.assertIn(marker, ORBIT_DASHBOARD_HTML)
-
-        recent = ORBIT_DASHBOARD_HTML.split(
-            "function renderRecentRun(run,workflowName) {", 1
-        )[1].split("function bindActions", 1)[0]
         for absent in (
-            "run.goal", "run.run_id", 'class="progress"',
-            'class="steps"', "promptExplain", "promptOpen",
+            "promptHistory", "127.0.0.1:8848/ui/#/history",
+            "idleActions", "renderIdle", "renderRecentRun",
         ):
-            self.assertNotIn(absent, recent)
+            self.assertNotIn(absent, ORBIT_DASHBOARD_HTML)
 
-        idle_actions = ORBIT_DASHBOARD_HTML.split(
-            "function idleActions(includeCreate=true) {", 1
-        )[1].split("function renderIdle", 1)[0]
+    def test_a_history_row_opens_the_run_it_names(self) -> None:
+        run = ORBIT_DASHBOARD_HTML.split("async function showRun(runId,known) {", 1)[1]
+        run = run.split("function refresh()", 1)[0]
         for marker in (
-            "data-view-workflows", "t().createWorkflow",
-            "t().history", "data-view-agents",
+            "callTool('get_run_steps'", "renderRun(run,steps)",
+            # A run the list no longer carries goes back to the list.
+            "if (!run) return showHistory(runs)",
         ):
-            self.assertIn(marker, idle_actions)
+            self.assertIn(marker, run)
 
     def test_goal_run_card_paints_an_initial_failure_as_running(self) -> None:
         """A synchronous failed start must not make the card open as failed."""
@@ -161,46 +171,58 @@ class CurrentTaskCardTests(unittest.TestCase):
         ):
             self.assertIn(marker, ORBIT_RUN_HTML)
 
-    def test_idle_state_does_not_promote_stale_tasks(self) -> None:
-        for marker in (
-            "RECENT_TASK_MS = 5 * 60 * 60 * 1000", "isRecent", "recentRun",
-            "recentJob", "准备开始", "选择工作流", "创建工作流",
-            "promptSelectWorkflow", "promptCreateWorkflow",
-        ):
-            self.assertIn(marker, ORBIT_DASHBOARD_HTML)
+    def test_stale_tasks_do_not_decide_which_tab_opens(self) -> None:
+        """What the card opens on, and what it does not reopen.
 
-    def test_idle_goal_flow_selects_a_workflow_first(self) -> None:
+        A run still going — or waiting on a person — is the reason the card
+        was opened, so History leads and that run is already open in it. A
+        run that merely finished recently leaves History selected without
+        opening anything. Older than that decides nothing, and the first
+        screen is the one that starts something.
+        """
+
+        start = ORBIT_DASHBOARD_HTML.split("async function start() {", 1)[1]
+        start = start.split("bridge = mcpBridge()", 1)[0]
+        for marker in (
+            "const active = runs.find(run => !TERMINAL.has(run.status))",
+            "if (active) return showRun(active.run_id,runs)",
+            "if (runs.some(run => isRecent(run))) return showHistory(runs)",
+            "return showWorkflows()",
+        ):
+            self.assertIn(marker, start)
+        self.assertIn("RECENT_TASK_MS = 5 * 60 * 60 * 1000", ORBIT_DASHBOARD_HTML)
         self.assertNotIn("promptStart", ORBIT_DASHBOARD_HTML)
+
+    def test_create_workflow_sits_beside_the_tabs_not_among_them(self) -> None:
+        tabs = ORBIT_DASHBOARD_HTML.split('<nav id="tabs"', 1)[1].split("</nav>", 1)[0]
+        self.assertLess(tabs.index('data-tab="workflows"'), tabs.index('data-tab="history"'))
+        self.assertLess(tabs.index('data-tab="history"'), tabs.index('data-tab="agents"'))
+        # Last in the row, and not a tab: it creates rather than navigates.
+        self.assertLess(tabs.index('data-tab="agents"'), tabs.index('id="createWorkflow"'))
+        self.assertNotIn('id="createWorkflow" type="button" role="tab"', tabs)
+        self.assertIn("#createWorkflow { margin-left: auto; }", ORBIT_DASHBOARD_HTML)
         self.assertIn(
-            "查看 Orbit 工作流列表，以便选择一个工作流开始新目标。",
+            "createButton.dataset.prompt = t().promptCreateWorkflow;",
             ORBIT_DASHBOARD_HTML,
         )
 
-    def test_authoring_actions_reuse_idle_navigation_and_gate_create(self) -> None:
-        authoring = ORBIT_DASHBOARD_HTML.split(
-            "function renderAuthoring(job) {", 1
-        )[1].split("function renderRun", 1)[0]
-        for marker in (
-            "job.status === 'done' || job.status === 'failed'",
-            "idleActions(includeCreate)",
-        ):
-            self.assertIn(marker, authoring)
-
-        idle_actions = ORBIT_DASHBOARD_HTML.split(
-            "function idleActions(includeCreate=true) {", 1
-        )[1].split("function renderIdle", 1)[0]
-        for marker in (
-            "includeCreate ? action(t().createWorkflow",
-            "data-view-workflows", "t().history", "data-view-agents",
-        ):
-            self.assertIn(marker, idle_actions)
+    def test_generation_in_flight_is_a_strip_above_the_workflow_list(self) -> None:
+        strip = ORBIT_DASHBOARD_HTML.split("function authoringStrip(job) {", 1)[1]
+        strip = strip.split("function renderWorkflowList", 1)[0]
+        for marker in ("t().authoring", "t().authoringDone", "t().authoringFailed"):
+            self.assertIn(marker, strip)
+        self.assertIn(
+            "card.innerHTML = `${authoringStrip(job)}${rows ||", ORBIT_DASHBOARD_HTML,
+        )
+        # Progress belongs to the generation card; this one only says it runs.
+        self.assertNotIn("callTool('get_authoring_job'", ORBIT_DASHBOARD_HTML)
 
     def test_suggested_actions_return_to_the_conversation(self) -> None:
         self.assertIn("'ui/message'", ORBIT_DASHBOARD_HTML)
         self.assertIn("sendFollowUpMessage", ORBIT_DASHBOARD_HTML)
         for prompt in (
             "promptHandle", "promptCancel", "promptExplain",
-            "promptSelectWorkflow", "promptCreateWorkflow", "promptOpen",
+            "promptCreateWorkflow", "promptOpen",
         ):
             self.assertIn(prompt, ORBIT_DASHBOARD_HTML)
 
@@ -215,24 +237,6 @@ class CurrentTaskCardTests(unittest.TestCase):
         ):
             self.assertIn(marker, ORBIT_DASHBOARD_HTML)
         self.assertNotIn("callTool('resume_run'", ORBIT_DASHBOARD_HTML)
-
-    def test_history_asks_the_host_to_open_the_full_ui_while_agents_stays_in_card(self) -> None:
-        for marker in (
-            'class="actions idleActions"',
-            "action(t().history,t().promptHistory,'direct')",
-            "data-view-agents",
-            "http://127.0.0.1:8848/ui/#/history",
-            "'ui/message'", "sendFollowUpMessage",
-            ".idleActions { flex-wrap: nowrap; overflow-x: auto; }",
-        ):
-            self.assertIn(marker, ORBIT_DASHBOARD_HTML)
-        idle = ORBIT_DASHBOARD_HTML.split(
-            'function idleActions(includeCreate=true) {', 1
-        )[1].split(
-            'function renderIdle', 1
-        )[0]
-        self.assertLess(idle.index('t().createWorkflow'), idle.index('t().history'))
-        self.assertLess(idle.index('t().history'), idle.index('data-view-agents'))
 
     def test_it_does_not_request_a_large_display_surface(self) -> None:
         self.assertNotIn("request-display-mode", ORBIT_DASHBOARD_HTML)

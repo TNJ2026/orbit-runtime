@@ -77,7 +77,7 @@ class HandshakeTests(ApiTestCase):
             resources = listed["result"]["resources"]
             self.assertEqual(
                 {
-                    "ui://orbit/current-task-v30.html", "ui://orbit/workflows-v10.html",
+                    "ui://orbit/current-task-v31.html", "ui://orbit/workflows-v10.html",
                     "ui://orbit/workflow-authoring-v5.html", "ui://orbit/goal-run-v11.html",
                     "ui://orbit/goals-v5.html",
                 },
@@ -257,12 +257,12 @@ class DiscoveryTests(ApiTestCase):
                 item for item in tools if item["name"] == "open_orbit_dashboard"
             )
             self.assertEqual(
-                "ui://orbit/current-task-v30.html",
+                "ui://orbit/current-task-v31.html",
                 dashboard["_meta"]["ui"]["resourceUri"],
             )
             self.assertEqual(
                 {
-                    "open_orbit_dashboard": "ui://orbit/current-task-v30.html",
+                    "open_orbit_dashboard": "ui://orbit/current-task-v31.html",
                     "open_orbit_goals": "ui://orbit/goals-v5.html",
                 },
                 {
@@ -311,7 +311,7 @@ class DiscoveryTests(ApiTestCase):
             ).json()["result"]["contents"][0]["text"]
             dashboard = rpc(
                 client, "resources/read",
-                {"uri": "ui://orbit/current-task-v30.html"}, actor="reader",
+                {"uri": "ui://orbit/current-task-v31.html"}, actor="reader",
             ).json()["result"]["contents"][0]["text"]
 
             self.assertIn("dispatchPromptValue(`使用工作流", workflows)
@@ -321,13 +321,15 @@ class DiscoveryTests(ApiTestCase):
             self.assertIn('data-prompt-mode="direct"', dashboard)
             self.assertIn("mode==='direct'||hostProvidesPromptEditor()", dashboard)
             for editable in (
-                "action(t().createWorkflow,t().promptCreateWorkflow,'edit')",
+                # Create workflow left the action row for the tab bar, so it
+                # carries its mode on the element rather than through action().
+                'id="createWorkflow" type="button" data-prompt-mode="edit"',
+                "createButton.dataset.prompt = t().promptCreateWorkflow;",
                 "action(t().handle,t().promptHandle(run),'edit',true)",
                 'data-prompt="${esc(t().promptAddAgent)}" data-prompt-mode="edit"',
             ):
                 self.assertIn(editable, dashboard)
             for direct in (
-                "action(t().history,t().promptHistory,'direct')",
                 "action(t().open,t().promptOpen,'direct')",
                 "action(t().cancel,t().promptCancel(run.run_id),'direct')",
                 "action(t().explain,t().promptExplain(run.run_id),'direct',true)",
