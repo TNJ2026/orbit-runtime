@@ -39,6 +39,60 @@ class VersionlessHandlerTests(unittest.TestCase):
         self.assertEqual(first.definition_hash, second.definition_hash)
         self.assertEqual(first.ir, second.ir)
 
+    def test_two_versions_that_collapse_are_named_before_anything_changes(self):
+        """The build number was the only difference, so now there is none.
+
+        `UNIQUE (workflow_id, definition_hash)` catches it, but as an
+        IntegrityError naming a constraint — which does not say which workflow
+        to look at or what to do. And it is the ordinary case rather than a
+        corner: republishing the same source against a newer build is exactly
+        what `workflow.rebind` does, so the more an operator repaired drift
+        the supported way, the more likely their database has a pair like
+        this.
+        """
+
+        migration = self.migration()
+        graph = to_primitive(self.compile(self.document).ir)
+        source = copy.deepcopy(self.document)
+        connection = sqlite3.connect(':memory:')
+        self.addCleanup(connection.close)
+        connection.executescript(
+            'CREATE TABLE workflow_versions(workflow_id TEXT, version INTEGER,'
+            ' canonical_ir_json TEXT, definition_hash TEXT, source_text TEXT,'
+            ' source_format TEXT);'
+        )
+        for version, build in ((1, '1.0.0'), (2, '2.0.0')):
+            versioned = copy.deepcopy(graph)
+            next(n['handler'] for n in versioned['nodes'] if n.get('handler'))['version'] = build
+            written = copy.deepcopy(source)
+            next(n['handler'] for n in written['nodes'] if n.get('handler'))['version'] = build
+            connection.execute(
+                'INSERT INTO workflow_versions VALUES(?,?,?,?,?,?)',
+                ('workflow:collide', version, json.dumps(versioned),
+                 f'sha256:{version:064d}', json.dumps(written), 'json'),
+            )
+
+        with self.assertRaises(ValueError) as raised:
+            migration.migrate(connection)
+
+        message = str(raised.exception)
+        self.assertIn('workflow:collide', message)
+        self.assertIn('versions 1, 2', message)
+        # And it said so before touching anything.
+        self.assertEqual(
+            ['sha256:' + '0' * 63 + '1', 'sha256:' + '0' * 63 + '2'],
+            sorted(
+                row[0] for row in
+                connection.execute('SELECT definition_hash FROM workflow_versions')
+            ),
+        )
+
+    def migration(self):
+        spec = importlib.util.spec_from_file_location('binding_migration', Path(__file__).parents[1] / 'scripts/migrate-handler-bindings.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
     def test_offline_migration_rehashes_and_restores_immutability(self):
         spec = importlib.util.spec_from_file_location('binding_migration', Path(__file__).parents[1] / 'scripts/migrate-handler-bindings.py')
         migration = importlib.util.module_from_spec(spec)

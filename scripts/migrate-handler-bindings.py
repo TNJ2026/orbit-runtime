@@ -8,6 +8,7 @@ import argparse
 import json
 from pathlib import Path
 import sqlite3
+import sys
 
 import yaml
 from orbit.workflow.domain.ir_schema import workflow_ir_from_primitive
@@ -39,24 +40,86 @@ def source_without_versions(source, fmt):
             else yaml.safe_dump(document, allow_unicode=True, sort_keys=False))
 
 
+def planned_versions(connection):
+    """Each published version as it will be, with the hash it lands on.
+
+    Computed for every row, not only the ones that change: a row this
+    migration leaves alone still occupies its hash, and a rewritten one can
+    land on it.
+    """
+
+    plans = []
+    for row in list(connection.execute('SELECT rowid,* FROM workflow_versions')):
+        graph = json.loads(row['canonical_ir_json'])
+        changed = strip_versions(graph)
+        source = source_without_versions(row['source_text'], row['source_format'])
+        rewritten = changed or source != row['source_text']
+        ir = workflow_ir_from_primitive(graph) if rewritten else None
+        digest = definition_hash(ir).value if rewritten else row['definition_hash']
+        plans.append((row, ir, digest, source, rewritten))
+    return plans
+
+
+def refuse_collisions(plans, columns):
+    """Say which versions become the same definition, before touching any.
+
+    Two published versions of one workflow that differed only in the Handler
+    build *are* the same definition once the build is gone, and
+    `UNIQUE (workflow_id, definition_hash)` says so — as an IntegrityError
+    naming a constraint, which tells an operator nothing about which workflow
+    to look at. Not a corner case either: it is exactly what `workflow.rebind`
+    produces, so a database is more likely to hit this the more its owner
+    repaired drift the supported way.
+
+    Answered here, before the immutability triggers come off, so a refusal
+    leaves nothing to undo.
+    """
+
+    landing = {}
+    for row, _ir, digest, _source, _rewritten in plans:
+        workflow = row['workflow_id'] if 'workflow_id' in columns else ''
+        label = row['version'] if 'version' in columns else row['rowid']
+        landing.setdefault((workflow, digest), []).append(label)
+    clashes = {
+        key: sorted(labels, key=str)
+        for key, labels in landing.items() if len(labels) > 1
+    }
+    if not clashes:
+        return
+    lines = [
+        f"  {workflow or '(unnamed workflow)'}: versions "
+        + ", ".join(str(label) for label in labels)
+        for (workflow, _digest), labels in sorted(clashes.items(), key=str)
+    ]
+    raise ValueError(
+        "these published versions become the same definition once the Handler "
+        "build number is removed, and a workflow cannot hold one definition "
+        "twice:\n" + "\n".join(lines)
+        + "\n\nThey differ only in the build they were compiled against, which "
+        "this migration is removing. Decide which one survives — delete or "
+        "renumber the others — and run the migration again. Nothing has been "
+        "changed."
+    )
+
+
 def migrate(connection):
     connection.row_factory = sqlite3.Row
     tables = {r[0] for r in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     counts = {}
+    plans = []
+    if 'workflow_versions' in tables:
+        columns = {r[1] for r in connection.execute('PRAGMA table_info(workflow_versions)')}
+        plans = planned_versions(connection)
+        refuse_collisions(plans, columns)
     # Only this explicit offline migration may update published immutable rows.
     triggers = list(connection.execute("SELECT name,sql FROM sqlite_master WHERE type='trigger' AND tbl_name='workflow_versions'"))
     for row in triggers:
         connection.execute('DROP TRIGGER "' + row['name'].replace('"', '""') + '"')
-    if 'workflow_versions' in tables:
-        for row in list(connection.execute('SELECT rowid,* FROM workflow_versions')):
-            graph = json.loads(row['canonical_ir_json'])
-            changed = strip_versions(graph)
-            source = source_without_versions(row['source_text'], row['source_format'])
-            if changed or source != row['source_text']:
-                ir = workflow_ir_from_primitive(graph)
-                connection.execute('UPDATE workflow_versions SET canonical_ir_json=?,definition_hash=?,source_text=? WHERE rowid=?',
-                                   (canonical_json(ir), definition_hash(ir).value, source, row['rowid']))
-                counts['workflow_versions'] = counts.get('workflow_versions', 0) + 1
+    for row, ir, digest, source, rewritten in plans:
+        if rewritten:
+            connection.execute('UPDATE workflow_versions SET canonical_ir_json=?,definition_hash=?,source_text=? WHERE rowid=?',
+                               (canonical_json(ir), digest, source, row['rowid']))
+            counts['workflow_versions'] = counts.get('workflow_versions', 0) + 1
     for row in triggers:
         connection.execute(row['sql'])
     if 'langgraph_runs' in tables:
@@ -92,9 +155,17 @@ def main():
             memory = sqlite3.connect(':memory:')
             source.backup(memory)
             memory.execute('BEGIN')
-            counts = migrate(memory)
-            memory.rollback()
-            memory.close()
+            try:
+                counts = migrate(memory)
+            except ValueError as refusal:
+                # A refusal is an answer, not a crash: the operator has a
+                # decision to make and needs to read it, not a traceback
+                # through a script they did not write.
+                print(f'{path}: {refusal}', file=sys.stderr)
+                raise SystemExit(1) from None
+            finally:
+                memory.rollback()
+                memory.close()
             print(json.dumps({'database': str(path), 'changes': counts}, ensure_ascii=False))
     if not args.apply:
         return
