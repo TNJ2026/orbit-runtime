@@ -666,6 +666,32 @@ class WorkflowAuthoringService:
     def available_agents(self) -> tuple[str, ...]:
         return tuple(sorted(self.generators))
 
+    @property
+    def agent_cli_handlers(self) -> tuple[str, ...]:
+        """Installed CLI-backed Agent handlers offered to workflow authors."""
+
+        return tuple(sorted({
+            name for item in self.handler_facts
+            if (name := str(item.get("name", "")).strip()).startswith("agent.")
+        }))
+
+    def _check_agent_cli_preference(self, compiled) -> None:
+        """Reject App delegation in new drafts when a CLI can own the step."""
+
+        if not self.agent_cli_handlers:
+            return
+        delegated = sorted(
+            node.id for node in compiled.ir.nodes
+            if node.handler is not None
+            and node.handler.name in {"app.delegate", "harness.subagent"}
+        )
+        if delegated:
+            raise ValueError(
+                "Agent CLI handlers are available; replace App delegation on "
+                f"nodes {', '.join(delegated)} with one of: "
+                + ", ".join(self.agent_cli_handlers)
+            )
+
     def ensure_agent(self, agent: str | None) -> str | None:
         """Refuse an unknown name now rather than when the job finally runs.
 
@@ -794,6 +820,13 @@ class WorkflowAuthoringService:
             "This is a LangGraph workflow: use only action, decision, human, join, and terminal nodes. Never emit agentic, foreach, subflow, or extension nodes, top-level extensions, or a node extension field.",
             f"At most {self.max_nodes} nodes.",
         ]
+        if current_source is None and self.agent_cli_handlers:
+            hard.append(
+                "When the workflow needs an Agent action and agent_cli_handlers "
+                "is non-empty, choose an agent.* handler from that list instead "
+                "of app.delegate or harness.subagent. Use App delegation only "
+                "when no Agent CLI handler is available."
+            )
         shape_rules = [
             "Keep every action bounded and single-purpose. A coding action may include targeted tests for its own change, but requirements analysis, cross-module implementation, a full test suite, and final reporting must not be combined in one action.",
             "Put full test suites, long builds, and end-to-end tests in a separate validation action. Agent actions should prefer targeted tests and must be able to return a useful partial result when time is short, a test fails, or progress is blocked.",
@@ -868,6 +901,7 @@ class WorkflowAuthoringService:
             "display_language": language or DEFAULT_DISPLAY_LANGUAGE,
             "node_kinds": ["action", "human", "decision", "join", "terminal"],
             "handlers": self._handler_facts_with_ports(),
+            "agent_cli_handlers": list(self.agent_cli_handlers),
             "preferred_handler": preferred_handler,
             "assigned_workflow_id": assigned_workflow_id,
             "current_source": current_source,
@@ -1255,6 +1289,7 @@ class WorkflowAuthoringService:
                 raise ValueError("preferred handler is not available")
 
         def checks(compiled):
+            self._check_agent_cli_preference(compiled)
             self._check_goal_binding(compiled)
             if self._wants_markdown_artifact(instruction):
                 self._check_markdown_artifact(compiled)

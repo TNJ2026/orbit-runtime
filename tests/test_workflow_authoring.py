@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+from types import SimpleNamespace
 import unittest
 
 from orbit.workflow.authoring import (
@@ -380,6 +381,72 @@ class AuthoringServiceTests(unittest.TestCase):
                 "flow", preferred_handler="agent.missing",
             )
         self.assertEqual([], unavailable.prompts)
+
+    def test_generation_prefers_agent_cli_handlers_over_app_delegation(self) -> None:
+        authoring = WorkflowAuthoringService(
+            InMemoryHandlerCatalog([MANIFEST]), SCHEMAS, lambda _prompt: "{}",
+            handler_facts=[
+                {"name": "app.delegate", "version": "1.0.0"},
+                {"name": "agent.codex", "version": "1.0.0"},
+                {"name": "agent.claude", "version": "1.0.0"},
+            ],
+        )
+
+        prompt = authoring._prompt("flow", None)
+
+        self.assertIn(
+            '"agent_cli_handlers":["agent.claude","agent.codex"]', prompt,
+        )
+        self.assertIn(
+            "choose an agent.* handler from that list instead of app.delegate",
+            prompt,
+        )
+
+    def test_app_delegation_remains_the_fallback_without_agent_cli(self) -> None:
+        authoring = WorkflowAuthoringService(
+            InMemoryHandlerCatalog([MANIFEST]), SCHEMAS, lambda _prompt: "{}",
+            handler_facts=[{"name": "app.delegate", "version": "1.0.0"}],
+        )
+
+        prompt = authoring._prompt("flow", None)
+
+        self.assertIn('"agent_cli_handlers":[]', prompt)
+        self.assertNotIn(
+            "choose an agent.* handler from that list instead of app.delegate",
+            prompt,
+        )
+
+    def test_generation_rejects_app_delegation_when_agent_cli_is_available(self) -> None:
+        authoring = WorkflowAuthoringService(
+            InMemoryHandlerCatalog([MANIFEST]), SCHEMAS, lambda _prompt: "{}",
+            handler_facts=[
+                {"name": "app.delegate", "version": "1.0.0"},
+                {"name": "agent.codex", "version": "1.0.0"},
+            ],
+        )
+        compiled = SimpleNamespace(ir=SimpleNamespace(nodes=[
+            SimpleNamespace(
+                id="draft", handler=SimpleNamespace(name="app.delegate"),
+            ),
+        ]))
+
+        with self.assertRaisesRegex(
+            ValueError, "replace App delegation on nodes draft with one of: agent.codex",
+        ):
+            authoring._check_agent_cli_preference(compiled)
+
+    def test_generation_allows_app_delegation_without_agent_cli(self) -> None:
+        authoring = WorkflowAuthoringService(
+            InMemoryHandlerCatalog([MANIFEST]), SCHEMAS, lambda _prompt: "{}",
+            handler_facts=[{"name": "app.delegate", "version": "1.0.0"}],
+        )
+        compiled = SimpleNamespace(ir=SimpleNamespace(nodes=[
+            SimpleNamespace(
+                id="draft", handler=SimpleNamespace(name="app.delegate"),
+            ),
+        ]))
+
+        authoring._check_agent_cli_preference(compiled)
 
     def test_unknown_edge_field_is_named_in_feedback_for_repair(self) -> None:
         broken = valid_document()

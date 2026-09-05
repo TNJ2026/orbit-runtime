@@ -19,10 +19,11 @@ When the user asks this task to generate a new workflow:
    its `request` contains the generation prompt for that job.
 4. Tell the user which authoring stage is running, follow the returned prompt
    exactly, and produce one Workflow DSL JSON document. Do not wrap it in
-   Markdown. When a step needs an Agent and the returned Handler catalog
-   contains `app.delegate`, bind that step to `app.delegate` with
-   `target: "run_initiator"`; this keeps execution on the App conversation
-   that starts the Run instead of assuming a separately installed Agent CLI.
+   Markdown. When a step needs an Agent and the returned Handler catalog has
+   any `agent.*` Handler, bind the step to an appropriate available Agent CLI.
+   Prefer CLI-backed Agents regardless of which App or Agent generated the
+   workflow. Use `app.delegate` with `target: "run_initiator"` only when the
+   catalog has no available Agent CLI Handler.
    When the requested Agent work has independently meaningful stages, express
    those stages as separate action nodes with connected, persisted outputs.
    Completed Workflow nodes are the recovery boundary; one monolithic Agent
