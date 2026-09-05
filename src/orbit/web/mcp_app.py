@@ -14,7 +14,7 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v31.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v32.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
@@ -67,6 +67,46 @@ function dispatchPromptValue(prompt,mode='edit'){if(mode==='direct'||hostProvide
 function dispatchPrompt(button){dispatchPromptValue(button.dataset.prompt,button.dataset.promptMode||'edit')}
 """
 
+_CARD_STYLE = r"""
+  :root { color-scheme:light dark; font:14px/1.45 Inter,ui-sans-serif,-apple-system,
+    BlinkMacSystemFont,"Segoe UI",sans-serif; --bg:light-dark(#fff,#151517);
+    --soft:light-dark(#f5f5f7,#1d1d20); --hover:light-dark(#ededf0,#252529);
+    --line:light-dark(#dedee3,#303035); --text:light-dark(#202024,#e8e8eb);
+    --muted:light-dark(#686871,#a0a0a9); --accent:#7772ff; --good:#54b878;
+    --warn:#d99a35; --bad:#df6767; }
+  *{box-sizing:border-box} body{margin:0;color:var(--text);background:var(--bg)}
+  main{padding:16px} header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .mark{display:block;width:28px;height:28px;flex:none;border-radius:7px} h1{margin:0;flex:1;font-size:14px}
+  button{font:inherit}.icon{width:32px;height:32px;border:1px solid var(--line);border-radius:8px;
+    color:var(--muted);background:var(--soft);cursor:pointer}.card{overflow:hidden;border:1px solid var(--line);
+    border-radius:12px;background:var(--soft)} .empty,.error{padding:26px 16px;text-align:center;color:var(--muted)}
+  .error{color:var(--bad)} .row{display:block;width:100%;padding:12px 14px;border:0;border-bottom:1px solid var(--line);
+    color:inherit;text-align:left;background:transparent;cursor:pointer}.row:last-child{border-bottom:0}.row:hover{background:var(--hover)}
+  .name{font-weight:650}.desc,.meta{margin-top:3px;color:var(--muted);font-size:11px;overflow-wrap:anywhere}
+  .summary{padding:15px}.statusLine{display:flex;align-items:center;gap:8px}.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+  .dot.live{background:var(--accent);animation:pulse 1.4s infinite}.dot.good{background:var(--good)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}
+  .goal{margin-top:9px;font-size:14px;font-weight:600;overflow-wrap:anywhere}.progress{height:3px;margin-top:12px;border-radius:3px;background:var(--line);overflow:hidden}
+  .progress span{display:block;height:100%;background:var(--accent)}.steps{border-top:1px solid var(--line)}
+  .step{display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--line);font-size:12px}
+  .step:last-child{border-bottom:0}.result{padding:12px 14px;border-top:1px solid var(--line);white-space:pre-wrap;overflow-wrap:anywhere}
+  .resultTitle{margin:0 0 6px;font-size:12px;font-weight:650}
+  .detailPanel{height:420px;overflow:hidden}.detailPanel.definition{overflow-y:auto}
+  .workflowGraphMount{width:100%;height:100%;min-width:0;min-height:0;background:var(--bg)}
+  .tabs{display:flex;gap:20px;padding:0 14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg)}
+  .tab{position:relative;min-height:42px;padding:0 2px;border:0;color:var(--muted);background:transparent;cursor:pointer}
+  .tab:hover{color:var(--text)}
+  .tab::after{position:absolute;right:0;bottom:-1px;left:0;height:2px;border-radius:2px 2px 0 0;background:transparent;content:""}
+  .tab[aria-selected="true"]{color:var(--text);font-weight:650}
+  .tab[aria-selected="true"]::after{background:var(--accent)}
+  .tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  [role="tabpanel"][hidden]{display:none}
+  .actions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 14px;border-top:1px solid var(--line);background:var(--bg)}
+  .action{padding:7px 11px;border:1px solid var(--line);border-radius:8px;color:var(--text);background:var(--soft);cursor:pointer}
+  .action.primary{border-color:transparent;color:#fff;background:var(--accent)}.action.danger{color:var(--bad)}
+  @keyframes pulse{50%{opacity:.35}} @media(prefers-reduced-motion:reduce){.dot.live{animation:none}}
+""" + _PROMPT_EDITOR_STYLE
+
+
 ORBIT_DASHBOARD_HTML = r"""<!doctype html>
 <html>
 <head>
@@ -74,81 +114,37 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="orbit-surface" content="mcp-app">
   <style>
-    :root {
-      color-scheme: light dark;
-      font: 14px/1.45 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont,
-        "Segoe UI", sans-serif;
-      --dashboard-card-min-height: 420px; --dashboard-card-max-height: 640px;
-      --bg: light-dark(#fff, #151517); --soft: light-dark(#f5f5f7, #1d1d20);
-      --hover: light-dark(#ededf0, #252529); --line: light-dark(#dedee3, #303035);
-      --text: light-dark(#202024, #e8e8eb); --muted: light-dark(#686871, #a0a0a9);
-      --faint: light-dark(#86868f, #797982); --accent: #7772ff;
-      --good: #54b878; --warn: #d99a35; --bad: #df6767;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; color: var(--text); background: var(--bg); }
-    main { min-width: 0; padding: 16px; }
-    header { display: flex; align-items: center; gap: 10px; }
-    .mark { display: block; width: 28px; height: 28px; flex: none; border-radius: 7px; }
+__CARD_STYLE__
+    /* What only this card has: a heading that says when it last read, a tab
+       bar that is the card's top level rather than a divider inside one, and
+       the lists those tabs open. Everything above is the standard card
+       theme — the palette, the buttons, the steps and the tab bar are the
+       ones every Orbit card uses, defined once. */
     .heading { min-width: 0; flex: 1; }
-    h1 { margin: 0; font-size: 14px; font-weight: 650; }
-    #updated { margin-top: 1px; color: var(--faint); font-size: 11px; }
-    #refresh { width: 32px; height: 32px; border: 1px solid var(--line);
-      border-radius: 8px; color: var(--muted); background: var(--soft); cursor: pointer; }
+    #updated { margin-top: 1px; color: var(--muted); font-size: 11px; }
     #refresh:disabled { opacity: .55; cursor: default; }
-    /* One row of navigation, not four suggestions. The three tabs are the
-       card's whole top level; the only button among them creates something,
-       so it sits apart at the end rather than in the tab order. */
-    #tabs { display: flex; align-items: center; gap: 18px; margin-top: 14px;
-      border-bottom: 1px solid var(--line); }
-    .tab { position: relative; min-height: 38px; padding: 0 2px; border: 0;
-      color: var(--muted); background: transparent; font: inherit; font-size: 12px;
-      font-weight: 620; cursor: pointer; }
-    .tab:hover { color: var(--text); }
-    .tab[aria-selected="true"] { color: var(--text); }
-    .tab[aria-selected="true"]::after { position: absolute; right: 0; bottom: -1px;
-      left: 0; height: 2px; border-radius: 2px 2px 0 0; background: var(--accent); content: ""; }
-    .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    #tabs { align-items: center; padding: 0; border-top: 0; background: transparent; }
     #createWorkflow { margin-left: auto; }
     /* A project with a year of goals in it must not turn the card into a
        page the host has to scroll past. The list scrolls inside its own
-       frame; the tabs above it stay where they were left. */
+       frame; the tabs above it stay where they were left. Named, like the
+       workflow card's own height, so the two knobs a host may need to reach
+       are not buried in a rule. */
+    :root { --dashboard-card-min-height: 420px; --dashboard-card-max-height: 640px; }
     #card { min-height: var(--dashboard-card-min-height);
       max-height: var(--dashboard-card-max-height); margin-top: 12px;
-      overflow: hidden auto; border: 1px solid var(--line);
-      border-radius: 12px; background: var(--soft); }
-    .summary { padding: 16px; }
-    .statusLine { display: flex; align-items: center; gap: 8px; }
-    .dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--faint); }
-    .dot.live { background: var(--accent); animation: pulse 1.5s ease-in-out infinite; }
-    .dot.good { background: var(--good); } .dot.warn { background: var(--warn); }
-    .dot.bad { background: var(--bad); }
-    .status { color: var(--muted); font-size: 12px; font-weight: 620; }
-    .goal { margin-top: 10px; font-size: 15px; font-weight: 600; line-height: 1.45;
-      overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3;
+      overflow: hidden auto; }
+    /* A goal can be a paragraph; three lines is enough to recognise one. */
+    .goal { display: -webkit-box; -webkit-line-clamp: 3;
       -webkit-box-orient: vertical; overflow: hidden; }
-    .meta { margin-top: 6px; color: var(--faint); font-size: 11px; overflow-wrap: anywhere; }
-    .notice { margin: 0 16px 14px; padding: 10px 12px; border: 1px solid
+    .status { color: var(--muted); font-size: 12px; font-weight: 620; }
+    .notice { margin: 0 14px 12px; padding: 10px 12px; border: 1px solid
       color-mix(in srgb, var(--warn) 42%, var(--line)); border-radius: 8px;
       color: var(--warn); background: color-mix(in srgb, var(--warn) 8%, transparent);
       font-size: 12px; }
-    .steps { border-top: 1px solid var(--line); }
-    .step { display: grid; grid-template-columns: 16px minmax(0,1fr) auto;
-      align-items: center; gap: 10px; min-height: 44px; padding: 8px 16px;
-      border-bottom: 1px solid var(--line); }
-    .step:last-child { border-bottom: 0; }
-    .step .dot { width: 7px; height: 7px; }
     .stepName { min-width: 0; overflow: hidden; text-overflow: ellipsis;
-      white-space: nowrap; font-size: 12px; }
-    .stepState { color: var(--faint); font-size: 10px; }
-    .actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px;
-      border-top: 1px solid var(--line); background: var(--bg); }
-    .action { min-height: 34px; padding: 7px 11px; border: 1px solid var(--line);
-      border-radius: 8px; color: var(--text); background: var(--soft); cursor: pointer;
-      font: inherit; font-size: 12px; }
-    .action:hover { background: var(--hover); }
-    .action.primary { border-color: transparent; color: #fff; background: var(--accent); }
-    .action.danger { border-color: transparent; color: #fff; background: var(--bad); }
+      white-space: nowrap; }
+    .stepState { color: var(--muted); font-size: 10px; }
     .viewHead { display: flex; align-items: center; gap: 8px; padding: 10px 12px;
       border-bottom: 1px solid var(--line); background: var(--bg); }
     .back { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px;
@@ -157,33 +153,26 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
     .workflowChoice { display: grid; grid-template-columns: minmax(0, 1fr) auto;
       align-items: center; border-bottom: 1px solid var(--line); }
     .workflowChoice:last-child { border-bottom: 0; }
-    .workflowRow { display: block; width: 100%; padding: 12px 14px; border: 0;
-      color: inherit; text-align: left; background: transparent; cursor: pointer; }
-    .workflowRow:hover { background: var(--hover); }
+    .workflowChoice .row { border-bottom: 0; }
     .workflowGoal { margin-right: 12px; white-space: nowrap; }
-    .workflowName { font-weight: 650; }
-    .workflowDesc { margin-top: 3px; color: var(--muted); font-size: 11px; }
     .definition { border-top: 1px solid var(--line); }
     .definitionRow { padding: 10px 14px; border-bottom: 1px solid var(--line); }
     .definitionRow:last-child { border-bottom: 0; }
-    .definitionName { font-size: 12px; font-weight: 620; }
-    .definitionMeta { margin-top: 3px; color: var(--faint); font-size: 10px; }
     /* The full UI groups its history by day and the card follows it, because
        "today" and "yesterday" are how a person looks for a run they remember
        starting — a column of timestamps is not. */
     .historyDay { border-bottom: 1px solid var(--line); }
     .historyDay:last-child { border-bottom: 0; }
-    .historyDate { margin: 0; padding: 11px 14px 3px; color: var(--faint);
+    .historyDate { margin: 0; padding: 11px 14px 3px; color: var(--muted);
       font-size: 10px; font-weight: 650; letter-spacing: .04em; }
     .historyRow { display: grid; grid-template-columns: minmax(0,1fr) auto;
       align-items: center; gap: 10px; width: 100%; padding: 9px 14px; border: 0;
       color: inherit; text-align: left; background: transparent; cursor: pointer; }
     .historyRow:hover { background: var(--hover); }
     .historyCopy { min-width: 0; }
-    .historyTitle { display: block; overflow: hidden; text-overflow: ellipsis;
-      white-space: nowrap; font-size: 12px; font-weight: 620; }
-    .historyMeta { display: block; margin-top: 3px; overflow: hidden;
-      text-overflow: ellipsis; white-space: nowrap; color: var(--faint); font-size: 10px; }
+    .historyCopy .name, .historyCopy .meta { display: block; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; }
+    .historyCopy .name { font-size: 12px; }
     .pill { padding: 3px 8px; border-radius: 999px; color: var(--muted);
       background: var(--hover); font-size: 10px; font-weight: 650; white-space: nowrap; }
     .pill.live { color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); }
@@ -195,37 +184,30 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
     .authoringStrip { display: flex; align-items: center; gap: 8px; padding: 10px 14px;
       border-bottom: 1px solid var(--line); background: var(--bg); }
     .authoringPrompt { min-width: 0; overflow: hidden; text-overflow: ellipsis;
-      white-space: nowrap; color: var(--faint); font-size: 11px; }
-    __PROMPT_EDITOR_STYLE__
+      white-space: nowrap; color: var(--muted); font-size: 11px; }
     .agentRow { display: grid; grid-template-columns: minmax(0,1fr) auto auto;
       align-items: center; gap: 12px; min-height: 56px; padding: 10px 14px;
       border-bottom: 1px solid var(--line); }
     .agentRow:last-child { border-bottom: 0; }
     .agentIdentity { min-width: 0; }
-    .agentName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-      font-size: 12px; font-weight: 650; }
-    .agentVersion { margin-top: 2px; color: var(--faint); font-size: 10px;
-      overflow-wrap: anywhere; }
+    .agentIdentity .name { overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; font-size: 12px; }
     .agentStat { min-width: 48px; color: var(--muted); text-align: right; font-size: 10px; }
     .agentStat strong { display: block; color: var(--text); font-size: 12px; }
     .agentStat.bad strong { color: var(--bad); }
-    .empty { padding: 28px 18px; color: var(--muted); text-align: center; }
-    .error { padding: 20px; color: var(--bad); text-align: center; font-size: 12px; }
-    @keyframes pulse { 50% { opacity: .35; } }
-    @media (prefers-reduced-motion: reduce) { .dot.live { animation: none; } }
   </style>
 </head>
 <body>
 <main>
   <header><img class="mark" src="__ORBIT_LOGO__" alt="" aria-hidden="true"><div class="heading"><h1>Orbit</h1>
-    <div id="updated"></div></div><button id="refresh" type="button" aria-label="Refresh">↻</button></header>
-  <nav id="tabs" role="tablist">
+    <div id="updated"></div></div><button id="refresh" class="icon" type="button" aria-label="Refresh">↻</button></header>
+  <nav id="tabs" class="tabs" role="tablist">
     <button class="tab" id="tabWorkflows" type="button" role="tab" data-tab="workflows" aria-selected="false"></button>
     <button class="tab" id="tabHistory" type="button" role="tab" data-tab="history" aria-selected="false"></button>
     <button class="tab" id="tabAgents" type="button" role="tab" data-tab="agents" aria-selected="false"></button>
     <button class="action primary" id="createWorkflow" type="button" data-prompt-mode="edit"></button>
   </nav>
-  <section id="card" aria-live="polite"><div class="empty">Connecting…</div></section>
+  <section id="card" class="card" aria-live="polite"><div class="empty">Connecting…</div></section>
 </main>
 <script>
   const PROTOCOL = '2026-01-26';
@@ -407,20 +389,20 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
   }
 
   function renderWorkflowList(workflows,job) {
-    const rows = workflows.map(workflow => { const name = workflow.name || workflow.workflow_id; return `<div class="workflowChoice"><button class="workflowRow" type="button" data-workflow-id="${esc(workflow.workflow_id)}">
-      <div class="workflowName">${esc(name)}</div>
-      <div class="workflowDesc">${esc(workflow.description || `${workflow.node_count || 0} steps · v${workflow.latest_version || ''}`)}</div></button>
+    const rows = workflows.map(workflow => { const name = workflow.name || workflow.workflow_id; return `<div class="workflowChoice"><button class="row" type="button" data-workflow-id="${esc(workflow.workflow_id)}">
+      <div class="name">${esc(name)}</div>
+      <div class="desc">${esc(workflow.description || `${workflow.node_count || 0} steps · v${workflow.latest_version || ''}`)}</div></button>
       ${action(t().newGoal,`使用工作流「${name}」（${workflow.workflow_id}）执行：`,'edit',true).replace('class="action primary"','class="action primary workflowGoal"')}</div>`; }).join('');
     card.innerHTML = `${authoringStrip(job)}${rows || `<div class="empty">${esc(t().noWorkflows)}</div>`}`;
   }
 
   function renderWorkflowDetail(workflow) {
     const nodes = workflow.nodes || workflow.definition?.nodes || [];
-    const rows = nodes.map(node => `<div class="definitionRow"><div class="definitionName">${esc(node.label || node.node_id || node.id)}</div>
-      <div class="definitionMeta">${esc(node.kind || '')}${node.handler ? ` · ${esc(node.handler)}` : ''}</div></div>`).join('');
+    const rows = nodes.map(node => `<div class="definitionRow"><div class="name">${esc(node.label || node.node_id || node.id)}</div>
+      <div class="meta">${esc(node.kind || '')}${node.handler ? ` · ${esc(node.handler)}` : ''}</div></div>`).join('');
     const name = workflow.name || workflow.workflow_id;
-    card.innerHTML = `${viewHead(t().workflow,'workflows')}<div class="summary"><div class="workflowName">${esc(name)}</div>
-      <div class="workflowDesc">${esc(workflow.description || '')}</div><div class="meta">${esc(workflow.workflow_id)} · v${esc(workflow.latest_version || '')}</div></div>
+    card.innerHTML = `${viewHead(t().workflow,'workflows')}<div class="summary"><div class="name">${esc(name)}</div>
+      <div class="desc">${esc(workflow.description || '')}</div><div class="meta">${esc(workflow.workflow_id)} · v${esc(workflow.latest_version || '')}</div></div>
       <div class="definition">${rows || `<div class="empty">${esc(t().noSteps)}</div>`}</div>
       <div class="actions">${action(t().newGoal,`使用工作流「${name}」（${workflow.workflow_id}）执行：`,'edit',true)}${action(t().modify,`按照下面的要求修改工作流「${name}」（${workflow.workflow_id}）：`,'edit')}</div>`;
   }
@@ -469,8 +451,8 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
       runDuration(run),
     ].filter(Boolean).join(' · ');
     return `<button class="historyRow" type="button" data-run-id="${esc(run.run_id)}">
-      <span class="historyCopy"><span class="historyTitle">${esc(run.goal || run.run_id)}</span>
-      <span class="historyMeta">${esc(meta)}</span></span>
+      <span class="historyCopy"><span class="name">${esc(run.goal || run.run_id)}</span>
+      <span class="meta">${esc(meta)}</span></span>
       <span class="pill ${cssFor(run.status)}">${esc(runStatusLabel(run.status))}</span></button>`;
   }
 
@@ -489,7 +471,7 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
 
   function renderAgents(agents) {
     const rows = agents.map(agent => { const name = String(agent.name || '').replace(/^agent\./,''); return `<div class="agentRow">
-      <div class="agentIdentity"><div class="agentName" title="${esc(agent.name)}">${esc(name || agent.name)}</div><div class="agentVersion">${esc(agent.version || '')}</div></div>
+      <div class="agentIdentity"><div class="name" title="${esc(agent.name)}">${esc(name || agent.name)}</div><div class="meta">${esc(agent.version || '')}</div></div>
       <div class="agentStat"><strong>${esc(agent.attempt_count ?? 0)}</strong>${esc(t().runs)}</div>
       <div class="agentStat${agent.failed_count > 0 ? ' bad' : ''}"><strong>${esc(agent.failed_count ?? 0)}</strong>${esc(t().errors)}</div></div>`; }).join('');
     const head = actionHead(`<button class="action primary" type="button" data-prompt="${esc(t().promptAddAgent)}" data-prompt-mode="edit">${esc(t().addAgent)}</button>`);
@@ -635,47 +617,9 @@ ORBIT_DASHBOARD_HTML = r"""<!doctype html>
 </script>
 </body>
 </html>""".replace("__ORBIT_LOGO__", ORBIT_LOGO_DATA_URI).replace(
-    "__PROMPT_EDITOR_STYLE__", _PROMPT_EDITOR_STYLE,
+    "__CARD_STYLE__", _CARD_STYLE,
 ).replace("__PROMPT_EDITOR_SCRIPT__", _PROMPT_EDITOR_SCRIPT)
 
-_CARD_STYLE = r"""
-  :root { color-scheme:light dark; font:14px/1.45 Inter,ui-sans-serif,-apple-system,
-    BlinkMacSystemFont,"Segoe UI",sans-serif; --bg:light-dark(#fff,#151517);
-    --soft:light-dark(#f5f5f7,#1d1d20); --hover:light-dark(#ededf0,#252529);
-    --line:light-dark(#dedee3,#303035); --text:light-dark(#202024,#e8e8eb);
-    --muted:light-dark(#686871,#a0a0a9); --accent:#7772ff; --good:#54b878;
-    --warn:#d99a35; --bad:#df6767; }
-  *{box-sizing:border-box} body{margin:0;color:var(--text);background:var(--bg)}
-  main{padding:16px} header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-  .mark{display:block;width:28px;height:28px;flex:none;border-radius:7px} h1{margin:0;flex:1;font-size:14px}
-  button{font:inherit}.icon{width:32px;height:32px;border:1px solid var(--line);border-radius:8px;
-    color:var(--muted);background:var(--soft);cursor:pointer}.card{overflow:hidden;border:1px solid var(--line);
-    border-radius:12px;background:var(--soft)} .empty,.error{padding:26px 16px;text-align:center;color:var(--muted)}
-  .error{color:var(--bad)} .row{display:block;width:100%;padding:12px 14px;border:0;border-bottom:1px solid var(--line);
-    color:inherit;text-align:left;background:transparent;cursor:pointer}.row:last-child{border-bottom:0}.row:hover{background:var(--hover)}
-  .name{font-weight:650}.desc,.meta{margin-top:3px;color:var(--muted);font-size:11px;overflow-wrap:anywhere}
-  .summary{padding:15px}.statusLine{display:flex;align-items:center;gap:8px}.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
-  .dot.live{background:var(--accent);animation:pulse 1.4s infinite}.dot.good{background:var(--good)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}
-  .goal{margin-top:9px;font-size:14px;font-weight:600;overflow-wrap:anywhere}.progress{height:3px;margin-top:12px;border-radius:3px;background:var(--line);overflow:hidden}
-  .progress span{display:block;height:100%;background:var(--accent)}.steps{border-top:1px solid var(--line)}
-  .step{display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--line);font-size:12px}
-  .step:last-child{border-bottom:0}.result{padding:12px 14px;border-top:1px solid var(--line);white-space:pre-wrap;overflow-wrap:anywhere}
-  .resultTitle{margin:0 0 6px;font-size:12px;font-weight:650}
-  .detailPanel{height:420px;overflow:hidden}.detailPanel.definition{overflow-y:auto}
-  .workflowGraphMount{width:100%;height:100%;min-width:0;min-height:0;background:var(--bg)}
-  .tabs{display:flex;gap:20px;padding:0 14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg)}
-  .tab{position:relative;min-height:42px;padding:0 2px;border:0;color:var(--muted);background:transparent;cursor:pointer}
-  .tab:hover{color:var(--text)}
-  .tab::after{position:absolute;right:0;bottom:-1px;left:0;height:2px;border-radius:2px 2px 0 0;background:transparent;content:""}
-  .tab[aria-selected="true"]{color:var(--text);font-weight:650}
-  .tab[aria-selected="true"]::after{background:var(--accent)}
-  .tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-  [role="tabpanel"][hidden]{display:none}
-  .actions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 14px;border-top:1px solid var(--line);background:var(--bg)}
-  .action{padding:7px 11px;border:1px solid var(--line);border-radius:8px;color:var(--text);background:var(--soft);cursor:pointer}
-  .action.primary{border-color:transparent;color:#fff;background:var(--accent)}.action.danger{color:var(--bad)}
-  @keyframes pulse{50%{opacity:.35}} @media(prefers-reduced-motion:reduce){.dot.live{animation:none}}
-""" + _PROMPT_EDITOR_STYLE
 
 _CARD_BRIDGE = r"""
 const PROTOCOL='2026-01-26'; let bridge=null,ready=null,lastToolResult=null,hostTheme=null;const toolResultListeners=[],hostContextListeners=[];

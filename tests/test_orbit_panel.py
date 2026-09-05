@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 import re
 import unittest
 
+from orbit.web import mcp_app
 from orbit.web.mcp_app import (
     ORBIT_AUTHORING_HTML,
     ORBIT_AUTHORING_URI,
@@ -19,10 +21,16 @@ from orbit.web.mcp_app import (
     ORBIT_WORKFLOWS_URI,
 )
 
+# The template before its placeholders are filled in, so a test can ask
+# whether the shared sheet is composed in rather than copied out.
+ORBIT_DASHBOARD_HTML_SOURCE = (
+    Path(mcp_app.__file__).read_text(encoding="utf-8")
+)
+
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v31.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v32.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -94,6 +102,35 @@ class CurrentTaskCardTests(unittest.TestCase):
             "使用工作流「${name}」（${workflow.workflow_id}）执行：",
         ):
             self.assertIn(marker, ORBIT_DASHBOARD_HTML)
+
+    def test_the_dashboard_is_painted_by_the_shared_card_theme(self) -> None:
+        """One theme for every card, not a second copy of it here.
+
+        This card carried its own palette, its own `body`, its own `.action`
+        and its own tab bar — a full restatement of `_CARD_STYLE` that had
+        already drifted from it (`.action.danger` was filled here and text
+        elsewhere). It is built on the shared sheet now and adds only what is
+        its own, so a colour can be changed in one place and a reader
+        comparing two cards is comparing one stylesheet.
+        """
+
+        self.assertIn("__CARD_STYLE__", ORBIT_DASHBOARD_HTML_SOURCE)
+        self.assertIn('"__CARD_STYLE__", _CARD_STYLE,', ORBIT_DASHBOARD_HTML_SOURCE)
+        # Declared once, by the shared sheet.
+        self.assertEqual(1, ORBIT_DASHBOARD_HTML.count("--accent:"))
+        self.assertEqual(1, ORBIT_DASHBOARD_HTML.count(".action.primary"))
+        self.assertEqual(1, ORBIT_DASHBOARD_HTML.count("body{margin:0"))
+        for restated in (
+            "--bg: light-dark", ".action { min-height", ".action.danger {",
+            "@keyframes pulse {", "--faint",
+        ):
+            self.assertNotIn(restated, ORBIT_DASHBOARD_HTML)
+        # And the shared vocabulary is used rather than renamed: rows are
+        # `.row`, a title is `.name`, a secondary line is `.meta`.
+        for shared in ('class="row" type="button" data-workflow-id=',
+                       'class="name"', 'class="meta"', 'class="card"',
+                       'class="tabs" role="tablist"', 'id="refresh" class="icon"'):
+            self.assertIn(shared, ORBIT_DASHBOARD_HTML)
 
     def test_it_contains_no_administration_surface(self) -> None:
         """Tabs are navigation, not administration.

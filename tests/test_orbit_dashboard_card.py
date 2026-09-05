@@ -174,7 +174,7 @@ class DashboardCardTests(unittest.TestCase):
         self.assertIn("当前项目还没有目标执行记录。", page.text_content("#card"))
 
         page.click("#tabWorkflows")
-        page.wait_for_selector(".workflowRow")
+        page.wait_for_selector(".workflowChoice .row")
         self.assertEqual("workflows", self.selected(page))
 
     # -- history ----------------------------------------------------------
@@ -198,12 +198,12 @@ class DashboardCardTests(unittest.TestCase):
             ),
         )
         titles = page.eval_on_selector_all(
-            ".historyTitle", "nodes => nodes.map(node => node.textContent)"
+            ".historyRow .name", "nodes => nodes.map(node => node.textContent)"
         )
         self.assertEqual(["翻译这段内容", "检查 README"], titles)
         # Workflow name, time of day, and how long it took — the same three
         # facts, in the same order, as the full UI's history row.
-        meta = page.text_content(".historyRow .historyMeta")
+        meta = page.text_content(".historyRow .meta")
         self.assertIn("起草 · 人工审核", meta)
         self.assertIn("1 小时", meta)
         self.assertEqual(
