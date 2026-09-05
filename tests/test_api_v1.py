@@ -417,13 +417,20 @@ class HandlerDriftTests(unittest.TestCase):
             "/api/v1/workflows/workflow:drifted", actor="writer"
         ).json()["data"]
 
+    def test_version_change_with_same_contract_is_current(self):
+        with AsgiHarness(self.app) as client:
+            detail = self.detail(client)
+            self.assertEqual("current", detail["handler_bindings"][0]["status"])
+            self.assertEqual([], detail["handler_drift"])
+            self.assertNotIn("workflow.rebind", [c["command"] for c in detail["allowed_commands"]])
+
     def test_the_stale_binding_is_named_not_buried(self) -> None:
         with AsgiHarness(self.app) as client:
-            data = self.detail(client)
+            data = client.get("/api/v1/workflows/workflow:contract", actor="writer").json()["data"]
             drift = data["handler_drift"]
             self.assertEqual(1, len(drift))
             self.assertEqual(
-                ("transform", "0.9.0", "1.0.0", "version_changed"),
+                ("transform", "0.9.0", "1.0.0", "contract_changed"),
                 (drift[0]["handler_name"], drift[0]["pinned_version"],
                  drift[0]["available_version"], drift[0]["status"]),
             )
@@ -473,7 +480,7 @@ class HandlerDriftTests(unittest.TestCase):
 
     def test_rebind_moves_every_node_to_the_installed_build(self) -> None:
         with AsgiHarness(self.app) as client:
-            before = self.detail(client)
+            before = client.get("/api/v1/workflows/workflow:contract", actor="writer").json()["data"]
             rebind = next(
                 c for c in before["allowed_commands"] if c["command"] == "workflow.rebind"
             )
@@ -490,11 +497,44 @@ class HandlerDriftTests(unittest.TestCase):
             )
             # What the catalog now serves is clean, and the run it refused
             # starts.
-            self.assertEqual([], self.detail(client)["handler_drift"])
+            self.assertEqual([], client.get("/api/v1/workflows/workflow:contract", actor="writer").json()["data"]["handler_drift"])
             started = client.post(
                 "/api/v1/langgraph-runs", actor="writer", key="run-after-rebind",
-                body={"workflow_id": "workflow:drifted", "input": {"value": 1}},
+                body={"workflow_id": "workflow:contract", "input": {"value": 1}},
             )
+            self.assertEqual(200, started.status_code, started.text)
+
+    def test_same_version_contract_drift_can_be_recompiled(self):
+        from orbit.workflow.catalogs import InMemoryHandlerCatalog, InMemorySchemaCatalog
+        from orbit.workflow.dsl import compile_source
+        from orbit.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
+        import copy
+        import json
+        document = copy.deepcopy(self.DRIFTED)
+        document["metadata"] = {"id": "same-version", "name": "Same version"}
+        document["nodes"][0]["handler"]["version"] = "1.0.0"
+        source = json.dumps(document)
+        compiled = compile_source(
+            source, InMemoryHandlerCatalog([self.manifest_at("1.0.0", cancel=False)]),
+            InMemorySchemaCatalog(dict(SCHEMAS)), source_format="json",
+        )
+        store = SQLiteWorkflowVersionStore(self.db)
+        store.publish(compiled, expected_latest_version=0, source_format="json",
+                      source_text=source, actor="fixture")
+        with AsgiHarness(self.app) as client:
+            url = "/api/v1/workflows/workflow:same-version"
+            before = client.get(url, actor="writer").json()["data"]
+            self.assertEqual("contract_changed", before["handler_bindings"][0]["status"])
+            command = next(c for c in before["allowed_commands"] if c["command"] == "workflow.rebind")
+            response = client.post(command["href"], actor="writer", key="same-contract",
+                                   body={"expected_version": 1})
+            self.assertEqual(200, response.status_code, response.text)
+            self.assertEqual(2, response.json()["data"]["version"])
+            self.assertEqual([], response.json()["data"]["rebound"])
+            after = client.get(url, actor="writer").json()["data"]
+            self.assertEqual([], after["handler_drift"])
+            started = client.post("/api/v1/langgraph-runs", actor="writer", key="same-run",
+                                  body={"workflow_id": "workflow:same-version", "input": {"value": 1}})
             self.assertEqual(200, started.status_code, started.text)
 
     def test_a_version_without_source_cannot_be_rebound(self) -> None:
@@ -505,7 +545,7 @@ class HandlerDriftTests(unittest.TestCase):
 
         source = json_module.dumps({**self.DRIFTED, "metadata": {"id": "sourceless", "name": "Sourceless"}})
         compiled = compile_source(
-            source, InMemoryHandlerCatalog([self.manifest_at("0.9.0")]),
+            source, InMemoryHandlerCatalog([self.manifest_at("0.9.0", cancel=False)]),
             InMemorySchemaCatalog(dict(SCHEMAS)), source_format="json",
         )
         SQLiteWorkflowVersionStore(self.db).publish(
@@ -1293,16 +1333,11 @@ class WorkflowDraftApiTests(ApiTestCase):
             detail = client.get(
                 "/api/v1/workflows/workflow:agent-drift", actor="writer",
             ).json()["data"]
-            # Not drift: an Agent CLI release is an operational upgrade, and
-            # the step is carried to the build that is installed rather than
-            # sent for a recompile. `rebound` rather than `current`, because
-            # the engine's registry is pinned to the exact build — reporting
-            # "current" said no repair was needed while the run refused to
-            # start for a version nobody had moved off.
+            # Build changes with an identical contract resolve directly.
             self.assertEqual([], detail["handler_drift"])
             binding = detail["handler_bindings"][0]
-            self.assertEqual("rebound", binding["status"])
-            self.assertEqual("agent.codex", binding["rebound_to"])
+            self.assertEqual("current", binding["status"])
+            self.assertNotIn("rebound_to", binding)
             self.assertEqual("1.1.7", binding["available_version"])
             self.assertNotIn(
                 "workflow.rebind",

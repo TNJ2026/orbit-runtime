@@ -1831,7 +1831,9 @@ export function createViews(context) {
           class: "muted mono",
           text: binding.status === "missing"
             ? i18n.t("workflows.drift.missing", { pinned: binding.pinned_version })
-            : i18n.t("workflows.drift.changed", {
+            : binding.status === "contract_changed"
+              ? i18n.t("workflows.drift.contractChanged")
+              : i18n.t("workflows.drift.changed", {
                 pinned: binding.pinned_version, available: binding.available_version,
               }),
         }),

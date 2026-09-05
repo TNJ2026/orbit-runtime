@@ -420,11 +420,9 @@ def build_routes(ctx) -> list[Route]:
     def handler_bindings(item: Mapping[str, Any]) -> list[dict[str, Any]]:
         """How each node's pinned Handler compares with what is registered.
 
-        A published plan names the exact Handler build it was compiled against,
-        and an Agent's build *is* its CLI version — so upgrading a CLI retires
-        every binding to the old one. That is the guarantee working, not a
-        fault, but the operator has to be able to see it: without this the run
-        simply refuses to start and nothing says which Agent moved.
+        Compatibility follows execution: the name must exist and the pinned
+        fingerprint must match the current or supported legacy contract.
+        A build-number change alone does not invalidate a binding.
         """
 
         registry = ctx.execution_registry
@@ -440,13 +438,13 @@ def build_routes(ctx) -> list[Route]:
             name, pinned = handler["name"], handler["version"]
             current = available.get(name)
             current_version = None if current is None else current.version
-            # An Agent step whose build is not here does not have to be
-            # repaired: it is carried at start to an Agent that is. That is a
-            # third answer beside current and drifted, and calling it drift
-            # would offer a recompile for a binding that needs none.
+            contract_matches = current is not None and handler.get("manifest_fingerprint") in {
+                current.fingerprint, current.legacy_fingerprint,
+            }
+            # Execution only substitutes Agents whose name is absent.
             fallback = (
                 ctx.agent_fallback(name) if name.startswith("agent.")
-                and current_version != pinned else None
+                and current is None else None
             )
             rebound = fallback is not None
             bindings.append({
@@ -458,8 +456,8 @@ def build_routes(ctx) -> list[Route]:
                 ),
                 "status": (
                     "rebound" if rebound
-                    else "current" if current_version == pinned
-                    else "missing" if current is None else "version_changed"
+                    else "current" if contract_matches
+                    else "missing" if current is None else "contract_changed"
                 ),
                 **({"rebound_to": fallback.name} if rebound else {}),
             })
@@ -607,7 +605,7 @@ def build_routes(ctx) -> list[Route]:
         # Handler that is gone entirely is not a version to move to.
         if (
             stale
-            and all(binding["status"] == "version_changed" for binding in stale)
+            and all(binding["status"] in {"version_changed", "contract_changed"} for binding in stale)
             and item.get("source_available")
             and ctx.workflow_publisher is not None
             and ctx.guard.allows(actor, WRITE_SCOPE)
@@ -772,12 +770,11 @@ def build_routes(ctx) -> list[Route]:
     async def workflow_rebind(request: Request) -> JSONResponse:
         """Republish this workflow, moving each node to the installed Handler.
 
-        A plain recompile does not help: the source pins the build the workflow
-        was authored against, and an exact pin that is gone cannot resolve —
-        while a range that once matched excludes the newer build (`^0.18` stops
-        before `0.19`). So the rebind rewrites each node's handler version to
-        the one registered now, then republishes. The old version keeps its
-        bindings and its runs; immutability holds, this is simply a new one.
+        When the source pins an unavailable build, retarget its version before
+        compiling. When only the contract changed, recompiling the same source
+        captures the new fingerprint, provided it validates against the new
+        contract. Publication creates a new version; old plans and runs stay
+        immutable.
         """
 
         workflow_id = str(EntityId.parse(request.path_params["workflow_id"]))
@@ -794,9 +791,10 @@ def build_routes(ctx) -> list[Route]:
                     "be rebound; publish the workflow again from its source"
                 )
             source_format = detail.get("source_format") or "yaml"
+            bindings = handler_bindings(detail)
             available = {
                 binding["handler_name"]: binding["available_version"]
-                for binding in handler_bindings(detail)
+                for binding in bindings
                 if binding["available_version"] is not None
             }
             document = (
@@ -804,10 +802,13 @@ def build_routes(ctx) -> list[Route]:
                 else yaml.safe_load(source)
             )
             moved = _retarget_handlers(document, available)
-            if not moved:
+            contract_changes = [
+                binding for binding in bindings if binding["status"] == "contract_changed"
+            ]
+            if not moved and not contract_changes:
                 raise ValueError(
                     "nothing to rebind: no node names a handler that is installed "
-                    "at a different version"
+                    "at a different version or with a changed contract"
                 )
             rewritten = (
                 json.dumps(document) if source_format == "json"
@@ -827,6 +828,7 @@ def build_routes(ctx) -> list[Route]:
                 "version": record.version.value,
                 "definition_hash": record.definition_hash.value,
                 "rebound": moved,
+                "contract_changes": contract_changes,
             }
 
         return await ctx.mutate(request, WRITE_SCOPE, "workflow.rebind", command)

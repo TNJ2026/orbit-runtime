@@ -396,6 +396,7 @@
   "workflows.agentBinding.description.one": "有 1 个步骤指定的 Agent 不在本机。它将改由 {agent} 执行；已发布的定义不会被修改。",
   "workflows.drift.changed": "绑定 {pinned}，已安装 {available}",
   "workflows.drift.missing": "绑定 {pinned}，已不再安装",
+  "workflows.drift.contractChanged": "处理器契约已变化，需重新编译并发布。",
   "workflows.drift.rebind": "重新绑定到已安装的处理器",
   "workflows.drift.rebound": "已重新绑定到当前安装的 Handler 并重新发布。",
   "workflows.drift.republish": "有处理器已不再安装。等该处理器可用后，从源码重新发布此工作流。",

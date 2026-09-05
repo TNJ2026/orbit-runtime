@@ -396,6 +396,7 @@
   "workflows.agentBinding.description.one": "One step names an Agent this Runtime does not have. It will run on {agent} instead; the published definition is unchanged.",
   "workflows.drift.changed": "pinned {pinned}, installed {available}",
   "workflows.drift.missing": "pinned {pinned}, no longer installed",
+  "workflows.drift.contractChanged": "Handler contract changed; recompile and republish.",
   "workflows.drift.rebind": "Rebind to installed handlers",
   "workflows.drift.rebound": "Rebound to the installed handlers and republished.",
   "workflows.drift.republish": "One handler is no longer installed. Republish this workflow from its source once the handler is available.",
