@@ -48,6 +48,47 @@ class PackageContentTests(unittest.TestCase):
         self.assertFalse(root.joinpath("workflow-detail.js.map").is_file())
         self.assertNotIn("process.env.NODE_ENV", script)
 
+    def test_the_mcp_graph_does_not_repaint_the_card_around_it(self) -> None:
+        """The bundle is a component inside somebody else's document.
+
+        `app.css` is compiled into both the standalone editor and this bundle,
+        and its `:root` palette and `body` rule describe the editor's *page*.
+        Shipped here they replaced the card's own: the workflow card's accent
+        became #2563eb while every other Orbit card stayed #7772ff, and the
+        card's body font and background came from the editor too. The tokens
+        are scoped to `.mcp-xyflow-viewer` now, so the graph keeps its colours
+        and the card keeps its own.
+        """
+
+        palette = (
+            "color-scheme:light dark;--bg: #f6f7f9;--panel: #ffffff;"
+            "--ink: #14161a;--muted: #5d6470;--line: #d8dce3;--accent: #2563eb"
+        )
+        body = "body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5"
+        card = ORBIT.joinpath("static/mcp-app/workflow-detail.css").read_text(encoding="utf-8")
+        self.assertIn(".mcp-xyflow-viewer{" + palette, card)
+        self.assertNotIn(":root{" + palette, card)
+        self.assertNotIn(body, card)
+
+        # The editor is a page and still paints like one.
+        page = ORBIT.joinpath(
+            "static/workflow-editor/assets/index.css"
+        ).read_text(encoding="utf-8")
+        self.assertIn(":root{" + palette, page)
+        self.assertIn(body, page)
+
+        # And the split is kept at the source, not only in what was built
+        # last: a page rule added back to app.css lands in both bundles.
+        source = Path(__file__).resolve().parents[1].joinpath("ui/editor/src")
+        component_css = (source / "app.css").read_text(encoding="utf-8")
+        self.assertNotIn(":root {", component_css)
+        self.assertNotIn("body {", component_css)
+        self.assertIn(":root {", (source / "page.css").read_text(encoding="utf-8"))
+        self.assertIn(
+            'import "./page.css";',
+            (source / "main.jsx").read_text(encoding="utf-8"),
+        )
+
     def test_the_mcp_graph_keeps_nodes_readable(self) -> None:
         source = Path(__file__).resolve().parents[1].joinpath(
             "ui/editor/src/mcp-workflow-graph.jsx"

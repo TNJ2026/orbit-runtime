@@ -77,7 +77,7 @@ class HandshakeTests(ApiTestCase):
             resources = listed["result"]["resources"]
             self.assertEqual(
                 {
-                    "ui://orbit/current-task-v31.html", "ui://orbit/workflows-v11.html",
+                    "ui://orbit/current-task-v31.html", "ui://orbit/workflows-v12.html",
                     "ui://orbit/workflow-authoring-v5.html", "ui://orbit/goal-run-v11.html",
                     "ui://orbit/goals-v5.html",
                 },
@@ -274,9 +274,9 @@ class DiscoveryTests(ApiTestCase):
                 item["name"]: item.get("_meta", {}).get("ui", {}).get("resourceUri")
                 for item in tools
             }
-            self.assertEqual("ui://orbit/workflows-v11.html", card_bindings["list_workflows"])
+            self.assertEqual("ui://orbit/workflows-v12.html", card_bindings["list_workflows"])
             self.assertEqual(
-                "ui://orbit/workflows-v11.html",
+                "ui://orbit/workflows-v12.html",
                 card_bindings["get_workflow_definition"],
             )
             self.assertIsNone(card_bindings["inspect_workflow_definition"])
@@ -291,14 +291,14 @@ class DiscoveryTests(ApiTestCase):
             ).json()["result"]["resources"]
             detail = next(
                 item for item in listed
-                if item["uri"] == "ui://orbit/workflows-v11.html"
+                if item["uri"] == "ui://orbit/workflows-v12.html"
             )
             self.assertFalse(detail["_meta"]["ui"]["prefersBorder"])
             self.assertFalse(detail["_meta"]["openai/widgetPrefersBorder"])
 
             read = rpc(
                 client, "resources/read",
-                {"uri": "ui://orbit/workflows-v11.html"}, actor="reader",
+                {"uri": "ui://orbit/workflows-v12.html"}, actor="reader",
             ).json()["result"]["contents"][0]
             self.assertFalse(read["_meta"]["ui"]["prefersBorder"])
             self.assertFalse(read["_meta"]["openai/widgetPrefersBorder"])
@@ -307,7 +307,7 @@ class DiscoveryTests(ApiTestCase):
         with AsgiHarness(self.app) as client:
             workflows = rpc(
                 client, "resources/read",
-                {"uri": "ui://orbit/workflows-v11.html"}, actor="reader",
+                {"uri": "ui://orbit/workflows-v12.html"}, actor="reader",
             ).json()["result"]["contents"][0]["text"]
             dashboard = rpc(
                 client, "resources/read",

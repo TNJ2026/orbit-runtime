@@ -18,7 +18,7 @@ ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v31.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v11.html"
+ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v12.html"
 ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v5.html"
 ORBIT_RUN_URI = "ui://orbit/goal-run-v11.html"
 ORBIT_GOALS_URI = "ui://orbit/goals-v5.html"
