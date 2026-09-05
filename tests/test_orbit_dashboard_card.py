@@ -217,6 +217,46 @@ class DashboardCardTests(unittest.TestCase):
             )
         self.assertEqual(1, len(set(heights.values())), heights)
 
+    def test_hovering_a_button_tints_it_in_its_own_colour(self) -> None:
+        """A rounded wash, not an underline — and red where the button is red.
+
+        The tint is `color-mix(currentColor 10%)`, so 拒绝 cannot end up
+        washed in the accent, and neither can drift if either colour changes.
+        """
+
+        runs = [run("run:live", status="interrupted", goal="起草说明文档",
+                    created_at=at(0), updated_at=at(0),
+                    interrupts=[APPROVAL_INTERRUPT])]
+        page = self.open(runs=runs, steps=[
+            {"node_id": "review", "label": "审核", "status": "waiting"},
+        ])
+        page.wait_for_selector(".actions .action")
+        seen = {}
+        for index, label in enumerate(page.eval_on_selector_all(
+            ".actions .action", "nodes => nodes.map(node => node.textContent)"
+        )):
+            button = page.locator(".actions .action").nth(index)
+            self.assertEqual(
+                "rgba(0, 0, 0, 0)",
+                button.evaluate("node => getComputedStyle(node).backgroundColor"),
+            )
+            button.hover()
+            page.wait_for_timeout(120)
+            seen[label] = button.evaluate(
+                """node => {
+                  const s = getComputedStyle(node);
+                  return [s.backgroundColor, s.borderRadius, s.textDecorationLine];
+                }"""
+            )
+        for label, (background, radius, decoration) in seen.items():
+            with self.subTest(label=label):
+                self.assertNotIn(background, ("rgba(0, 0, 0, 0)", "transparent"))
+                self.assertEqual("8px", radius)
+                self.assertEqual("none", decoration)
+        # 拒绝 washes red; the other two wash accent.
+        self.assertNotEqual(seen["拒绝"][0], seen["批准"][0])
+        self.assertEqual(seen["批准"][0], seen["打开完整 Orbit UI"][0])
+
     def test_the_host_never_has_to_scroll_the_whole_card(self) -> None:
         """Two scrollbars, one inside the other, is the thing to avoid.
 

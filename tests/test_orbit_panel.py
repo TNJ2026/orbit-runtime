@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v38.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v39.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -294,11 +294,19 @@ class CurrentTaskCardTests(unittest.TestCase):
             ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
         ):
             with self.subTest():
+                rule = html.split(".action{", 1)[1].split("}", 1)[0]
+                self.assertIn("color:var(--accent)", rule)
+                self.assertIn("background:transparent", rule)
+                self.assertNotIn("border:1px", rule)
+                # Nothing at rest; a tint of its own colour under the pointer.
                 self.assertIn(
-                    ".action{padding:7px 0;border:0;color:var(--accent);"
-                    "background:transparent;cursor:pointer;font-weight:620}",
+                    ".action:hover,.icon:hover,.back:hover{\n"
+                    "    background:color-mix(in srgb,currentColor 10%,transparent)}",
                     html,
                 )
+                # Scoped: the editor bundle embedded in the workflow card
+                # underlines a link of its own, which is not our button.
+                self.assertNotIn(".action:hover{text-decoration", html)
                 # Main or not, an offer is the same colour.
                 self.assertIn(".action.primary{color:var(--accent)}", html)
                 # Destructive stays a warning rather than joining them.
@@ -309,11 +317,10 @@ class CurrentTaskCardTests(unittest.TestCase):
                 rule = html.split(".card{", 1)[1].split("}", 1)[0]
                 self.assertIn("border:1px solid var(--line)", rule)
                 self.assertNotIn("background:", rule)
-                self.assertIn(
-                    ".back{width:30px;height:30px;border:0;color:var(--accent);"
-                    "background:transparent;cursor:pointer}",
-                    html,
-                )
+                back = html.split(".back{", 1)[1].split("}", 1)[0]
+                self.assertIn("border:0", back)
+                self.assertIn("color:var(--accent)", back)
+                self.assertIn("background:transparent", back)
                 for chrome in (
                     ".action.primary{border-color:transparent;color:#fff",
                     "border-radius:12px;background:var(--soft)",

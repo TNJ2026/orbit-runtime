@@ -14,14 +14,14 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v38.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v39.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v16.html"
-ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v9.html"
-ORBIT_RUN_URI = "ui://orbit/goal-run-v15.html"
-ORBIT_GOALS_URI = "ui://orbit/goals-v9.html"
+ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v17.html"
+ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v10.html"
+ORBIT_RUN_URI = "ui://orbit/goal-run-v16.html"
+ORBIT_GOALS_URI = "ui://orbit/goals-v10.html"
 
 # The same framed ring-and-satellite mark used by the full Orbit UI favicon.
 # Keep it embedded: MCP App documents must not depend on a separate HTTP asset.
@@ -45,7 +45,7 @@ _PROMPT_EDITOR_STYLE = r"""
       color: var(--text); background: var(--bg); font: inherit; line-height: 1.5; }
     .promptEditorInput:focus { border-color: var(--accent); outline: 2px solid
       color-mix(in srgb, var(--accent) 24%, transparent); }
-    .promptEditorActions { display: flex; justify-content: flex-end; gap: 18px;
+    .promptEditorActions { display: flex; justify-content: flex-end; gap: 8px;
       padding: 12px 16px; border-top: 1px solid var(--line); }
 """
 
@@ -141,14 +141,23 @@ _CARD_STYLE = r"""
      form to fill in; the accent alone says "this is something you can do",
      and it is the same accent whether the offer is the main one or not.
      Destructive stays red — that is a warning, not decoration. */
-  .actions{display:flex;flex-wrap:wrap;gap:18px;padding:12px 14px;border-top:1px solid var(--line)}
-  .action{padding:7px 0;border:0;color:var(--accent);background:transparent;cursor:pointer;font-weight:620}
-  .action:hover{text-decoration:underline}
+  /* The row is inset by 4 rather than 14 so a label still begins where every
+     other line in the card begins; the remaining 10 is the button's own
+     padding, which shows as nothing at rest and is what the tint fills under
+     the pointer. */
+  .actions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 4px;border-top:1px solid var(--line)}
+  .action{padding:7px 10px;border:0;border-radius:8px;color:var(--accent);
+    background:transparent;cursor:pointer;font-weight:620}
+  /* `currentColor`, so the destructive one tints red without a rule of its
+     own, and both stay right if either colour is ever changed. */
+  .action:hover,.icon:hover,.back:hover{
+    background:color-mix(in srgb,currentColor 10%,transparent)}
   .action.primary{color:var(--accent)}.action.danger{color:var(--bad)}
   /* One head for a view inside a card, and one way back out of it. Both
      cards that have a detail view drew these separately. */
   .viewHead{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
-  .back{width:30px;height:30px;border:0;color:var(--accent);background:transparent;cursor:pointer}
+  .back{width:30px;height:30px;border:0;border-radius:8px;color:var(--accent);
+    background:transparent;cursor:pointer}
   .viewTitle{min-width:0;flex:1;font-size:12px;font-weight:650}
   @keyframes pulse{50%{opacity:.35}} @media(prefers-reduced-motion:reduce){.dot.live{animation:none}}
 """ + _PROMPT_EDITOR_STYLE
@@ -732,7 +741,7 @@ html, body, main {
 .confirmBody { padding: 18px; }
 .confirmTitle { margin: 0; font-size: 15px; }
 .confirmText { margin: 8px 0 0; color: var(--muted); overflow-wrap: anywhere; }
-.confirmActions { display: flex; justify-content: flex-end; gap: 18px; padding: 12px 18px;
+.confirmActions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px;
   border-top: 1px solid var(--line); }
 """
 
