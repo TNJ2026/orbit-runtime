@@ -743,14 +743,13 @@ EXECUTION_PLAN_PORT_SCHEMA = _object_schema(
 
 EXECUTION_PLAN_NODE_SCHEMA = _object_schema(
     [
-        "node_id", "kind", "handler_name", "handler_version",
+        "node_id", "kind", "handler_name",
         "handler_manifest_fingerprint", "inputs", "outputs", "config",
     ],
     {
         "node_id": {"type": "string", "minLength": 1},
         "kind": {"enum": ["action", "human", "agentic", "foreach", "subflow", "decision", "join", "terminal"]},
         "handler_name": {"type": ["string", "null"]},
-        "handler_version": {"type": ["string", "null"]},
         "handler_manifest_fingerprint": {**_HASH, "type": ["string", "null"]},
         "inputs": {"type": "array", "items": EXECUTION_PLAN_PORT_SCHEMA},
         "outputs": {"type": "array", "items": EXECUTION_PLAN_PORT_SCHEMA},

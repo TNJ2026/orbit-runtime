@@ -123,7 +123,7 @@ class AgentRebinding:
         """What ran it, short enough to put in a hash or a label."""
 
         return ", ".join(sorted({
-            f"{reference.name}@{reference.version}"
+            f"{reference.name}"
             for reference in self.rebound.values()
         }))
 
@@ -234,7 +234,7 @@ def _apply(
             continue
         _check_ports(node, manifest)
         reference = IRHandlerRef(
-            manifest.name, manifest.version, manifest.fingerprint,
+            manifest.name, manifest.fingerprint,
         )
         if (
             node.handler != reference

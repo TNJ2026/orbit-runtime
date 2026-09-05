@@ -84,9 +84,9 @@ _IR_SCHEMA: dict[str, Any] = {
         },
         "handler": {
             "type": "object", "additionalProperties": False,
-            "required": ["name", "version", "manifest_fingerprint"],
+            "required": ["name", "manifest_fingerprint"],
             "properties": {
-                "name": {"type": "string"}, "version": {"type": "string"},
+                "name": {"type": "string"},
                 "manifest_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
             },
         },
@@ -181,7 +181,7 @@ def workflow_ir_from_primitive(value: Mapping[str, Any]) -> WorkflowIR:
                 node["id"], node["kind"], tuple(_port(item) for item in node["inputs"]),
                 tuple(_port(item) for item in node["outputs"]),
                 None if handler is None else IRHandlerRef(
-                    handler["name"], handler["version"],
+                    handler["name"],
                     handler["manifest_fingerprint"],
                 ),
                 node["config"], tuple(node["policies"]),

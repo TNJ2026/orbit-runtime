@@ -2624,7 +2624,7 @@ class AgentSubstitutionNoticeTests(BrowserE2ETestCase):
         )
         self.assertIn("data", run, run)
         run_id = run["data"]["run"]["run_id"]
-        self.assertEqual("agent.claude@1.2.3", run["data"]["run"]["agent_binding"])
+        self.assertEqual("agent.claude", run["data"]["run"]["agent_binding"])
 
         page.goto(f"{self.base}/ui/#/runs/{quote(run_id, safe='')}")
         line = page.locator(".run-agent-binding")
@@ -2734,10 +2734,10 @@ class TwoSubstitutesNoticeTests(BrowserE2ETestCase):
             (port("prompt"),), (port("result"),),
             (
                 agent_step("first", handler=IRHandlerRef(
-                    "agent.claude", "0.0.1", "sha256:" + "a" * 64,
+                    "agent.claude", "sha256:" + "a" * 64,
                 )),
                 agent_step("second", handler=IRHandlerRef(
-                    "agent.codex", "0.0.1", "sha256:" + "b" * 64,
+                    "agent.codex", "sha256:" + "b" * 64,
                 )),
             ),
             (),

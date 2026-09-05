@@ -39,7 +39,7 @@ VALID_DSL = {
             "id": "collect",
             "kind": "action",
             "outputs": [{"id": "request", "schema_id": "example://request/1.0"}],
-            "handler": {"name": "collect", "version": "^1.0"},
+            "handler": {"name": "collect"},
         },
         {
             "id": "done",
@@ -76,7 +76,6 @@ nodes:
         schema_id: example://request/1.0
     handler:
       name: collect
-      version: ^1.0
   - id: done
     kind: terminal
     inputs:
@@ -261,9 +260,9 @@ class WorkflowDslSemanticTests(unittest.TestCase):
         self.assertIn("DSL_GRAPH_CYCLE", codes)
         self.assertIn("DSL_GRAPH_NO_TERMINAL_PATH", codes)
 
-    def test_ir_handler_reference_requires_exact_version(self) -> None:
+    def test_ir_handler_reference_requires_contract_fingerprint(self) -> None:
         with self.assertRaises(ValueError):
-            IRHandlerRef("collect", "^1.0", "sha256:" + "a" * 64)
+            IRHandlerRef("collect", "not-a-fingerprint")
 
     def test_artifact_port_policy_is_normalized_into_ir_1_1(self) -> None:
         value = json.loads(json.dumps(VALID_DSL))
@@ -417,7 +416,7 @@ class WorkflowDslSemanticTests(unittest.TestCase):
         second = compile_source(json.dumps(value, indent=2), self.handlers, self.schemas, source_format="json")
         self.assertEqual(first.definition_hash, second.definition_hash)
         self.assertEqual(canonical_ir_json(first), canonical_ir_json(second))
-        self.assertEqual("1.2.0", first.ir.nodes[0].handler.version)
+        self.assertFalse(hasattr(first.ir.nodes[0].handler, "version"))
         self.assertEqual("workflow:approval_flow", first.ir.workflow_id)
         self.assertEqual({"op": "eq", "left": {"op": "ref", "path": "source.request.approved"}, "right": {"op": "literal", "value": True}}, to_primitive(first.ir.edges[0].condition))
         self.assertEqual({"op": "identity", "schema_id": "example://request/1.0"}, to_primitive(first.ir.edges[0].mapping))
@@ -600,11 +599,11 @@ class ArtifactEdgeTests(unittest.TestCase):
             "nodes": [
                 {"id": "produce", "kind": "action",
                  "outputs": [{"id": "result", "schema_id": "x://blob/1.0", **policy}],
-                 "handler": {"name": "produce", "version": "1.0.0"}},
+                 "handler": {"name": "produce"}},
                 {"id": "consume", "kind": "action",
                  "inputs": [{"id": "prompt", "schema_id": "x://blob/1.0", **policy}],
                  "outputs": [{"id": "result", "schema_id": "x://blob/1.0", **policy}],
-                 "handler": {"name": "consume", "version": "1.0.0"}},
+                 "handler": {"name": "consume"}},
                 {"id": "done", "kind": "terminal",
                  "inputs": [{"id": "result", "schema_id": "x://blob/1.0", **policy}]},
             ],
@@ -795,7 +794,7 @@ class NodeLabelTests(unittest.TestCase):
                 {
                     "id": "collect", "kind": "action",
                     "outputs": [{"id": "request", "schema_id": "example://request/1.0"}],
-                    "handler": {"name": "collect", "version": "1.2.0"},
+                    "handler": {"name": "collect"},
                     **node_fields,
                 },
                 {
@@ -897,7 +896,7 @@ class RetryOnAHandlerlessNodeTests(unittest.TestCase):
                     "id": "act", "kind": "action",
                     "inputs": [{"id": "prompt", "schema_id": self.OBJECT}],
                     "outputs": [{"id": "result", "schema_id": self.OBJECT}],
-                    "handler": {"name": "collect", "version": "1.2.0"},
+                    "handler": {"name": "collect"},
                     "policies": ["again"] if retried == "act" else [],
                 },
                 {
@@ -981,7 +980,7 @@ class UnsatisfiableJoinTests(unittest.TestCase):
             return {
                 "id": node_id, "kind": "action",
                 "inputs": [dict(port)], "outputs": [dict(result)],
-                "handler": {"name": "collect", "version": "1.2.0"},
+                "handler": {"name": "collect"},
             }
 
         fan = action("fan")
@@ -1092,7 +1091,7 @@ class WorkspaceAccessPolicyTests(unittest.TestCase):
                     "id": "review", "kind": "action",
                     "inputs": [{"id": "prompt", "schema_id": "example://request/1.0"}],
                     "outputs": [{"id": "result", "schema_id": "example://request/1.0"}],
-                    "handler": {"name": "agent.opencode", "version": "1.0.0"},
+                    "handler": {"name": "agent.opencode"},
                     "policies": ["access"],
                 },
                 {
@@ -1223,7 +1222,7 @@ class ProjectAccessModeTests(unittest.TestCase):
             "id": node_id, "kind": "action",
             "inputs": [{"id": "prompt", "schema_id": self.OBJ}],
             "outputs": [{"id": "result", "schema_id": self.OBJ}],
-            "handler": {"name": "agent.opencode", "version": "1.18.16"},
+            "handler": {"name": "agent.opencode"},
         }
         if parallel:
             node["route_mode"] = "parallel"
@@ -1315,7 +1314,7 @@ class ProjectAccessModeTests(unittest.TestCase):
             "id": "tool", "kind": "action",
             "inputs": [{"id": "workspace_ref", "schema_id": self.OBJ}],
             "outputs": [{"id": "result", "schema_id": self.OBJ}],
-            "handler": {"name": "dev_tool", "version": "1.0.0"},
+            "handler": {"name": "dev_tool"},
         }
         with self.assertRaises(DiagnosticError) as caught:
             self.compile(self.document(
@@ -1400,7 +1399,7 @@ class AcceptancePolicyTests(unittest.TestCase):
                     "id": "work", "kind": "action",
                     "inputs": [{"id": "prompt", "schema_id": self.OBJ}],
                     "outputs": [{"id": "result", "schema_id": self.OBJ}],
-                    "handler": {"name": "agent.opencode", "version": "1.18.16"},
+                    "handler": {"name": "agent.opencode"},
                     "policies": ["accept"],
                 },
                 {

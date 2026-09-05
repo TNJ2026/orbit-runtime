@@ -360,7 +360,7 @@ class FailedStepTests(unittest.TestCase):
         node = IRNode(
             "tool", "action",
             (engine_tests.port("value"),), (engine_tests.port("value"),),
-            IRHandlerRef(manifest.name, manifest.version, manifest.fingerprint),
+            IRHandlerRef(manifest.name, manifest.fingerprint),
             {"tool_name": "example.read", "tool_version": "1.0.0"}, (), None,
         )
         ir = engine_tests.workflow(
@@ -469,7 +469,7 @@ class ProgressIsObservableTests(unittest.TestCase):
             IRNode(
                 f"step{index}", "action",
                 (engine_tests.port("value"),), (engine_tests.port("value"),),
-                IRHandlerRef(manifest.name, manifest.version, manifest.fingerprint),
+                IRHandlerRef(manifest.name, manifest.fingerprint),
                 {"tool_name": "example.read", "tool_version": "1.0.0"}, (), None,
             )
             for index in range(count)
@@ -1094,7 +1094,7 @@ class RetryOnTheRealHandlerPathTests(unittest.TestCase):
         node = IRNode(
             "tool", "action",
             (engine_tests.port("value"),), (engine_tests.port("value"),),
-            IRHandlerRef(manifest.name, manifest.version, manifest.fingerprint),
+            IRHandlerRef(manifest.name, manifest.fingerprint),
             {"tool_name": "example.read", "tool_version": "1.0.0"},
             (retry.id,) if policy else (), None,
         )
@@ -1297,7 +1297,7 @@ class EdgeReportTests(unittest.TestCase):
         classify = IRNode(
             "classify", "action",
             (engine_tests.port("value"),), (engine_tests.port("value"),),
-            IRHandlerRef(manifest.name, manifest.version, manifest.fingerprint),
+            IRHandlerRef(manifest.name, manifest.fingerprint),
             {"tool_name": "example.read", "tool_version": "1.0.0"},
             (), None, route_mode,
         )
@@ -1500,7 +1500,7 @@ class BranchHistoryTests(EdgeReportTests):
         classify = IRNode(
             "classify", "action",
             (engine_tests.port("value"),), (engine_tests.port("value"),),
-            IRHandlerRef(manifest.name, manifest.version, manifest.fingerprint),
+            IRHandlerRef(manifest.name, manifest.fingerprint),
             {"tool_name": "example.read", "tool_version": "1.0.0"},
             (), None, None,
         )
@@ -2246,7 +2246,7 @@ class CancellingAQueuedRunTests(unittest.TestCase):
                 f"tool{index}", "action",
                 (engine_tests.port("value"),), (engine_tests.port("value"),),
                 IRHandlerRef(
-                    manifest.name, manifest.version, manifest.fingerprint,
+                    manifest.name, manifest.fingerprint,
                 ),
                 {"tool_name": "example.read", "tool_version": "1.0.0"},
                 (), None,
@@ -2446,7 +2446,7 @@ class CancellingAQueuedRunTests(unittest.TestCase):
                     "tool0", "action",
                     (engine_tests.port("value"),), (engine_tests.port("value"),),
                     IRHandlerRef(
-                        manifest.name, manifest.version, manifest.fingerprint,
+                        manifest.name, manifest.fingerprint,
                     ),
                     {"tool_name": "example.read", "tool_version": "1.0.0"},
                     (), None,

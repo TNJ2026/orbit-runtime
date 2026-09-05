@@ -333,8 +333,7 @@ class NodeEventTests(unittest.TestCase):
         return registry.resolve(IRNode(
             "tool", "action", (port("value"),), (port("value"),),
             IRHandlerRef(
-                registration.manifest.name, registration.manifest.version,
-                registration.manifest.fingerprint,
+                registration.manifest.name, registration.manifest.fingerprint,
             ),
             {"tool_name": "example.read", "tool_version": "1.0.0"}, (), None,
         ))
@@ -906,7 +905,7 @@ class HandlerConsoleWiringTests(unittest.TestCase):
                 "agent", "action",
                 (engine_tests.port("value"),), (engine_tests.port("value"),),
                 IRHandlerRef(
-                    manifest.name, manifest.version, manifest.fingerprint,
+                    manifest.name, manifest.fingerprint,
                 ),
                 {}, (), None, None,
             ))

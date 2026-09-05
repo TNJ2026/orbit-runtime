@@ -42,17 +42,13 @@ class IRPort:
 @dataclass(frozen=True)
 class IRHandlerRef:
     name: str
-    version: str
     manifest_fingerprint: str
 
     def __post_init__(self) -> None:
         _required(self.name, "handler name")
-        _required(self.version, "handler version")
         _required(self.manifest_fingerprint, "handler manifest fingerprint")
         if not self.manifest_fingerprint.startswith("sha256:"):
             raise ValueError("handler manifest fingerprint must be sha256")
-        if self.version.startswith(("^", "~", ">", "<", "=")):
-            raise ValueError("IR handler version must be exact")
 
 
 @dataclass(frozen=True)

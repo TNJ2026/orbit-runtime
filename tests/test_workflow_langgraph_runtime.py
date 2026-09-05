@@ -111,7 +111,7 @@ def node(
     handler=True,
 ) -> IRNode:
     reference = (
-        IRHandlerRef(node_id, "1.0.0", FINGERPRINT) if handler else None
+        IRHandlerRef(node_id, FINGERPRINT) if handler else None
     )
     return IRNode(
         node_id,
@@ -364,7 +364,7 @@ class LangGraphWorkflowCompilerValidationTests(unittest.TestCase):
             "action",
             (artifact,),
             (port("value"),),
-            IRHandlerRef("action", "1.0.0", FINGERPRINT),
+            IRHandlerRef("action", FINGERPRINT),
             {},
             (),
             None,
@@ -2112,7 +2112,7 @@ class LangGraphWorkflowCompilerTests(unittest.TestCase):
                     "kind": "action",
                     "inputs": [{"id": "value", "schema_id": SCHEMA}],
                     "outputs": [{"id": "value", "schema_id": SCHEMA}],
-                    "handler": {"name": "increment", "version": "1.0.0"},
+                    "handler": {"name": "increment"},
                 },
                 {
                     "id": "done",
@@ -2698,7 +2698,7 @@ class LangGraphWorkflowServiceTests(unittest.TestCase):
         )
         agent = IRNode(
             "translate", "action", (prompt,), (result,),
-            IRHandlerRef("agent.codex", "1.0.0", FINGERPRINT),
+            IRHandlerRef("agent.codex", FINGERPRINT),
             {}, (), None,
         )
         terminal = IRNode(
@@ -2736,7 +2736,7 @@ class LangGraphWorkflowServiceTests(unittest.TestCase):
         result = IRPort("result", "schema://object/1.0", True, False, None, "")
         delegate = IRNode(
             "delegate", "action", (task,), (result,),
-            IRHandlerRef("app.delegate", "1.0.0", FINGERPRINT),
+            IRHandlerRef("app.delegate", FINGERPRINT),
             {"target": "run_initiator"}, (), None,
         )
         terminal = IRNode(
@@ -3157,7 +3157,7 @@ class LangGraphWorkflowServiceTests(unittest.TestCase):
         )
         action = IRNode(
             "action", "action", (port("value"),), (port("value"),),
-            IRHandlerRef("action", "1.0.0", FINGERPRINT), {},
+            IRHandlerRef("action", FINGERPRINT), {},
             (retry.id,), None,
         )
         ir = WorkflowIR(
@@ -4416,7 +4416,7 @@ class LangGraphWorkflowServiceTests(unittest.TestCase):
         artifact = artifact_port("payload")
         action = IRNode(
             "action", "action", (artifact,), (port("value"),),
-            IRHandlerRef("action", "1.0.0", FINGERPRINT), {}, (), None,
+            IRHandlerRef("action", FINGERPRINT), {}, (), None,
         )
         ir = WorkflowIR(
             "1.3", "workflow:artifact", "Artifact workflow", "", {},
@@ -4588,7 +4588,7 @@ class LangGraphProductionWiringTests(unittest.TestCase):
     def bound_node(self, manifest) -> IRNode:
         return IRNode(
             "agent", "action", (port("value"),), (port("value"),),
-            IRHandlerRef(manifest.name, manifest.version, manifest.fingerprint),
+            IRHandlerRef(manifest.name, manifest.fingerprint),
             {}, (), None, None,
         )
 
@@ -4675,8 +4675,7 @@ class LangGraphProductionWiringTests(unittest.TestCase):
         client = PipelineClient()
         registration = self.registration(client)
         reference = IRHandlerRef(
-            registration.manifest.name, registration.manifest.version,
-            registration.manifest.fingerprint,
+            registration.manifest.name, registration.manifest.fingerprint,
         )
         document = artifact_port("document")
         produce = IRNode(
@@ -4723,8 +4722,7 @@ class LangGraphProductionWiringTests(unittest.TestCase):
         action = IRNode(
             "agent", "action", (credential,), (port("value"),),
             IRHandlerRef(
-                registration.manifest.name, registration.manifest.version,
-                registration.manifest.fingerprint,
+                registration.manifest.name, registration.manifest.fingerprint,
             ),
             {}, (), None,
         )
@@ -4817,8 +4815,7 @@ class LangGraphProductionWiringTests(unittest.TestCase):
             bound = registry.resolve(IRNode(
                 "tool", "action", (port("value"),), (port("value"),),
                 IRHandlerRef(
-                    registration.manifest.name, registration.manifest.version,
-                    registration.manifest.fingerprint,
+                    registration.manifest.name, registration.manifest.fingerprint,
                 ),
                 {
                     "tool_name": "example.read",
@@ -4858,8 +4855,7 @@ class LangGraphProductionWiringTests(unittest.TestCase):
             node = IRNode(
                 "tool", "action", (port("value"),), (port("value"),),
                 IRHandlerRef(
-                    registration.manifest.name, registration.manifest.version,
-                    registration.manifest.fingerprint,
+                    registration.manifest.name, registration.manifest.fingerprint,
                 ),
                 {}, (), None,
             )
@@ -4995,8 +4991,7 @@ class LangGraphProductionWiringTests(unittest.TestCase):
             return IRNode(
                 node_id, "action", (port("value"),), (port("value"),),
                 IRHandlerRef(
-                    registration.manifest.name, registration.manifest.version,
-                    registration.manifest.fingerprint,
+                    registration.manifest.name, registration.manifest.fingerprint,
                 ),
                 {"branch": name}, (), None,
             )
@@ -5101,8 +5096,7 @@ class LangGraphProductionWiringTests(unittest.TestCase):
             return IRNode(
                 node_id, "action", (port("value"),), (port("value"),),
                 IRHandlerRef(
-                    registration.manifest.name, registration.manifest.version,
-                    registration.manifest.fingerprint,
+                    registration.manifest.name, registration.manifest.fingerprint,
                 ),
                 {
                     "tool_name": "example.read", "tool_version": "1.0.0",
@@ -5627,7 +5621,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
                     "outputs": [{
                         "id": "value", "schema_id": "example://integer/1.0",
                     }],
-                    "handler": {"name": "transform", "version": "1.0.0"},
+                    "handler": {"name": "transform"},
                 },
                 {
                     "id": "done", "kind": "terminal",

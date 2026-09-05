@@ -209,7 +209,7 @@ def linear_ir_for(manifest) -> WorkflowIR:
     """
 
     port = IRPort("value", "example://integer/1.0", True, False, None, "")
-    ref = IRHandlerRef(manifest.name, manifest.version, manifest.fingerprint)
+    ref = IRHandlerRef(manifest.name, manifest.fingerprint)
     node_ids = ("collect", "transform", "publish")
     # Labels are what a reader sees; the ids stay internal on purpose so tests
     # can tell the two apart.
@@ -269,7 +269,7 @@ def publish_human_workflow(db_path: Path) -> tuple[str, object]:
                 "id": "transform", "kind": "action",
                 "inputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
                 "outputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
-                "handler": {"name": "transform", "version": "1.0.0"},
+                "handler": {"name": "transform"},
             },
             {
                 "id": "approve", "kind": "human",

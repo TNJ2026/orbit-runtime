@@ -156,7 +156,7 @@ export function createViews(context) {
     if (!bound.length) return null;
     return Object.fromEntries(bound.map((binding) => [
       binding.node_id,
-      { name: binding.rebound_to, version: binding.available_version },
+      { name: binding.rebound_to },
     ]));
   }
 
@@ -1830,12 +1830,8 @@ export function createViews(context) {
         el("span", {
           class: "muted mono",
           text: binding.status === "missing"
-            ? i18n.t("workflows.drift.missing", { pinned: binding.pinned_version })
-            : binding.status === "contract_changed"
-              ? i18n.t("workflows.drift.contractChanged")
-              : i18n.t("workflows.drift.changed", {
-                pinned: binding.pinned_version, available: binding.available_version,
-              }),
+            ? i18n.t("workflows.drift.missing")
+            : i18n.t("workflows.drift.contractChanged"),
         }),
       ]));
     return el("div", { class: "banner warn workflow-drift" }, [

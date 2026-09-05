@@ -76,7 +76,7 @@ def compile_document(
                 inputs=tuple(_port(item) for item in sorted(value.get("inputs", []), key=lambda item: item["id"])),
                 outputs=tuple(_port(item) for item in sorted(value.get("outputs", []), key=lambda item: item["id"])),
                 handler=None if manifest is None else IRHandlerRef(
-                    manifest.name, manifest.version, manifest.fingerprint
+                    manifest.name, manifest.fingerprint
                 ),
                 config=value.get("config", {}),
                 label=value.get("label"),

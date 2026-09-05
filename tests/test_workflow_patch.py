@@ -25,7 +25,7 @@ BASE = {
             "id": "work", "kind": "action", "label": "Transform",
             "inputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
             "outputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
-            "handler": {"name": "transform", "version": "1.0.0"},
+            "handler": {"name": "transform"},
             "config": {"mode": "fast"},
             "policies": ["retry"],
         },
@@ -84,7 +84,7 @@ class PatchShapeTests(unittest.TestCase):
                 "op": "add_node",
                 "node": {
                     "id": "x", "kind": "action",
-                    "handler": {"name": "t", "version": "1", "fingerprint": "deadbeef"},
+                    "handler": {"name": "t", "fingerprint": "deadbeef"},
                 },
             })
 

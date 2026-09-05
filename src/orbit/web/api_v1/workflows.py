@@ -28,7 +28,7 @@ from ...workflow.persistence.database import connect_workflow_database
 from .common import (
     OPS_READ_SCOPE, READ_SCOPE, SENSITIVE_SCOPE, WRITE_SCOPE,
     _display_language, _generation_agent, _required_version,
-    _retarget_handlers, error,
+    error,
 )
 
 
@@ -435,9 +435,8 @@ def build_routes(ctx) -> list[Route]:
             handler = node.get("handler")
             if not handler:
                 continue
-            name, pinned = handler["name"], handler["version"]
+            name = handler["name"]
             current = available.get(name)
-            current_version = None if current is None else current.version
             contract_matches = current is not None and handler.get("manifest_fingerprint") in {
                 current.fingerprint, current.legacy_fingerprint,
             }
@@ -450,10 +449,8 @@ def build_routes(ctx) -> list[Route]:
             bindings.append({
                 "node_id": node["id"],
                 "handler_name": name,
-                "pinned_version": pinned,
-                "available_version": (
-                    fallback.version if rebound else current_version
-                ),
+                "pinned_fingerprint": handler.get("manifest_fingerprint"),
+                "available_fingerprint": (fallback.fingerprint if rebound else current.fingerprint if current else None),
                 "status": (
                     "rebound" if rebound
                     else "current" if contract_matches
@@ -491,7 +488,7 @@ def build_routes(ctx) -> list[Route]:
             inputs = {port["id"]: port["schema_id"] for port in node.get("inputs", ())}
             outputs = {port["id"]: port["schema_id"] for port in node.get("outputs", ())}
             choices = [
-                {"name": manifest.name, "version": manifest.version}
+                {"name": manifest.name}
                 for manifest in agent_manifests
                 if dict(manifest.inputs) == inputs and dict(manifest.outputs) == outputs
             ]
@@ -687,12 +684,11 @@ def build_routes(ctx) -> list[Route]:
             # Agent step itself, there was no honest value to restate, because
             # the one the definition names need not be installed at all.
             if handler is not None:
-                if not isinstance(handler, Mapping) or set(handler) != {"name", "version"}:
-                    raise ValueError("handler must contain exactly name and version")
+                if not isinstance(handler, Mapping) or set(handler) != {"name"}:
+                    raise ValueError("handler must contain exactly name")
                 handler_name = handler.get("name")
-                handler_version = handler.get("version")
-                if not isinstance(handler_name, str) or not isinstance(handler_version, str):
-                    raise ValueError("handler name and version must be strings")
+                if not isinstance(handler_name, str):
+                    raise ValueError("handler name must be a string")
 
             item = ctx.workflow_reads.detail(workflow_id)
             # The catalog answers for a deleted id so its Runs stay readable.
@@ -710,7 +706,7 @@ def build_routes(ctx) -> list[Route]:
             choice = None
             if handler is not None:
                 choice = {
-                    "name": handler_name.strip(), "version": handler_version.strip(),
+                    "name": handler_name.strip(),
                 }
                 if choice not in editor["handlers"]:
                     raise ValueError(
@@ -770,8 +766,7 @@ def build_routes(ctx) -> list[Route]:
     async def workflow_rebind(request: Request) -> JSONResponse:
         """Republish this workflow, moving each node to the installed Handler.
 
-        When the source pins an unavailable build, retarget its version before
-        compiling. When only the contract changed, recompiling the same source
+        Recompiling the same source
         captures the new fingerprint, provided it validates against the new
         contract. Publication creates a new version; old plans and runs stay
         immutable.
@@ -792,31 +787,14 @@ def build_routes(ctx) -> list[Route]:
                 )
             source_format = detail.get("source_format") or "yaml"
             bindings = handler_bindings(detail)
-            available = {
-                binding["handler_name"]: binding["available_version"]
-                for binding in bindings
-                if binding["available_version"] is not None
-            }
-            document = (
-                json.loads(source) if source_format == "json"
-                else yaml.safe_load(source)
-            )
-            moved = _retarget_handlers(document, available)
             contract_changes = [
                 binding for binding in bindings if binding["status"] == "contract_changed"
             ]
-            if not moved and not contract_changes:
-                raise ValueError(
-                    "nothing to rebind: no node names a handler that is installed "
-                    "at a different version or with a changed contract"
-                )
-            rewritten = (
-                json.dumps(document) if source_format == "json"
-                else yaml.safe_dump(document, allow_unicode=True, sort_keys=False)
-            )
+            if not contract_changes:
+                raise ValueError("nothing to rebind: no Handler contract changed")
             try:
                 record = ctx.workflow_publisher.publish_workflow(
-                    rewritten, source_name="<rebind>", source_format=source_format,
+                    source, source_name="<rebind>", source_format=source_format,
                     expected_latest_version=expected, actor=actor,
                 )
             except PublishConflictError as exc:
@@ -827,7 +805,7 @@ def build_routes(ctx) -> list[Route]:
                 "workflow_id": record.workflow_id,
                 "version": record.version.value,
                 "definition_hash": record.definition_hash.value,
-                "rebound": moved,
+                "rebound": contract_changes,
                 "contract_changes": contract_changes,
             }
 

@@ -380,13 +380,13 @@ def analyze_dsl(
                 _diagnostic(document, "DSL_HANDLER_NOT_FOUND", f"{kind} node cannot declare a handler", node_path + ("handler",))
             )
         elif handler_ref is not None:
-            manifest = handlers.resolve(handler_ref["name"], handler_ref["version"])
+            manifest = handlers.resolve(handler_ref["name"])
             if manifest is None:
                 diagnostics.append(
                     _diagnostic(
                         document,
                         "DSL_HANDLER_NOT_FOUND",
-                        f"handler {handler_ref['name']!r} does not match {handler_ref['version']!r}",
+                        f"handler {handler_ref['name']!r} is not registered",
                         node_path + ("handler",),
                     )
                 )

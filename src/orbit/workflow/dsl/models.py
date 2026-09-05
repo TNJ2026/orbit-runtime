@@ -100,7 +100,6 @@ class HandlerRef(_Strict):
     """
 
     name: str = Field(min_length=1)
-    version: str = Field(min_length=1)
 
 
 class Node(_Strict):

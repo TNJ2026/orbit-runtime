@@ -220,7 +220,7 @@ class CurrentAppExecutionTests(unittest.TestCase):
     def test_installed_agent_is_also_overridden(self):
         from orbit.workflow.langgraph_runtime.compiler import BoundHandler, LangGraphHandlerRegistry
         step = agent_step()
-        installed = BoundHandler(step.handler.name, step.handler.version, step.handler.manifest_fingerprint,
+        installed = BoundHandler(step.handler.name, "1.0.0", step.handler.manifest_fingerprint,
                                  lambda *_: self.fail("CLI should never run"), capabilities=frozenset({"agent.invoke"}))
         registry = LangGraphHandlerRegistry([installed, *self.registry._entries.values()])
         binding = bind_current_app(single_step_workflow(step), registry)

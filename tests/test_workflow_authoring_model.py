@@ -30,7 +30,7 @@ AUTHORED = {
             "id": "draft",
             "kind": "action",
             "label": "Draft the summary",
-            "handler": {"name": "collect", "version": "^1.0"},
+            "handler": {"name": "collect"},
             "outputs": [{"id": "request", "schema_id": "example://request/1.0"}],
         },
         {
@@ -284,14 +284,14 @@ class CompilesThroughTheRealPipelineTests(unittest.TestCase):
     ) -> None:
         workflow = AuthoredWorkflow.model_validate(AUTHORED)
         self.assertEqual(
-            {"name", "version"}, set(workflow.nodes[0].handler.model_dump())
+            {"name"}, set(workflow.nodes[0].handler.model_dump())
         )
         compiled = self._compile(workflow.to_dsl_document())
         handler = next(
             node.handler for node in compiled.ir.nodes if node.id == "draft"
         )
         # The author wrote "^1.0" and no fingerprint; the catalog decided both.
-        self.assertEqual("1.2.0", handler.version)
+        self.assertFalse(hasattr(handler, "version"))
         self.assertTrue(handler.manifest_fingerprint)
 
 

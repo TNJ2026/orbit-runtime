@@ -246,14 +246,14 @@ export function createWorkflowDefinitionViews({
     const titleId = `actionTitle-${nodeId}`;
     const agentId = `actionAgent-${nodeId}`;
     const promptId = `actionPrompt-${nodeId}`;
-    const currentHandler = `${node.handler?.name || ""}@${node.handler?.version || ""}`;
+    const currentHandler = node.handler?.name || "";
     const title = el("input", {
       id: titleId, type: "text", required: "required", maxlength: "80",
       value: node.label || "",
     });
     const agent = el("select", { id: agentId, required: "required" },
       editor.handlers.map((handler) => {
-        const value = `${handler.name}@${handler.version}`;
+        const value = handler.name;
         return el("option", {
           value, text: handler.name.replace(/^agent\./, ""),
           ...(value === currentHandler ? { selected: "selected" } : {}),
@@ -293,7 +293,7 @@ export function createWorkflowDefinitionViews({
       event.preventDefault();
       if (!form.reportValidity()) return;
       const selected = editor.handlers.find(
-        (handler) => `${handler.name}@${handler.version}` === agent.value,
+        (handler) => handler.name === agent.value,
       );
       if (!selected) return;
       save.disabled = true;

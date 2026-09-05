@@ -95,7 +95,7 @@ class SetNodePorts(_Op):
 class SetNodeHandler(_Op):
     """Bind a node to a Handler, or unbind it.
 
-    Named and versioned, never fingerprinted: which build an IR node carries
+    Named, never versioned or fingerprinted: which build an IR node carries
     is resolved by `analyze_dsl` against the sealed registry.
     """
 

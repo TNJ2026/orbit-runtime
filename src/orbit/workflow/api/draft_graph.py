@@ -56,7 +56,6 @@ def _nodes(document: Mapping[str, Any]) -> list[dict[str, Any]]:
             "kind": str(node["kind"]),
             "label": str(label) if isinstance(label, str) and label.strip() else None,
             "handler_name": handler.get("name"),
-            "handler_version": handler.get("version"),
         })
     return nodes
 

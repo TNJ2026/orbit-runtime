@@ -73,7 +73,7 @@ class HumanReworkTests(unittest.TestCase):
         registry = LangGraphHandlerRegistry([
             BoundHandler(
                 reference.name,
-                reference.version,
+                "1.0.0",
                 reference.manifest_fingerprint,
                 implementations[name],
             )

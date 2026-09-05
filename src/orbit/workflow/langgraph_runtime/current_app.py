@@ -24,7 +24,7 @@ def bind_current_app(ir, registry):
     back edges and conditions merely to rename `prompt` to `task`.
     """
     manifest = APP_DELEGATE_MANIFEST
-    reference = IRHandlerRef(manifest.name, manifest.version, manifest.fingerprint)
+    reference = IRHandlerRef(manifest.name, manifest.fingerprint)
     nodes, rebound = [], {}
     for node in ir.nodes:
         is_agent = node.handler is not None and (

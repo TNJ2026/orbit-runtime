@@ -55,7 +55,7 @@ def dsl(workflow_id: str = "draftable", name: str = "Draftable") -> dict:
                 "id": "work", "kind": "action",
                 "inputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
                 "outputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
-                "handler": {"name": "transform", "version": "1.0.0"},
+                "handler": {"name": "transform"},
             },
             {
                 "id": "done", "kind": "terminal",

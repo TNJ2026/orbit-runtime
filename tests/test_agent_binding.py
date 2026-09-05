@@ -39,7 +39,7 @@ from orbit.workflow.persistence.workflow_versions import SQLiteWorkflowVersionSt
 from orbit.web.api_v1 import READ_SCOPE, WRITE_SCOPE, Authorizer
 
 OBJECT = "schema://object/1.0"
-ABSENT = IRHandlerRef("agent.absent", "9.9.9", "sha256:" + "b" * 64)
+ABSENT = IRHandlerRef("agent.absent", "sha256:" + "b" * 64)
 
 
 def manifest_for(name: str, version: str = "1.2.3"):
@@ -117,9 +117,9 @@ class SubstitutionTests(unittest.TestCase):
 
         self.assertIsNotNone(rebinding)
         self.assertEqual(("execute",), tuple(rebinding.rebound))
-        self.assertEqual("agent.claude@1.2.3", rebinding.identity)
+        self.assertEqual("agent.claude", rebinding.identity)
         self.assertEqual(
-            IRHandlerRef("agent.claude", "1.2.3", claude.fingerprint),
+            IRHandlerRef("agent.claude", claude.fingerprint),
             rebinding.ir.nodes[0].handler,
         )
         # The step's own instruction is not the Agent's, and does not move.
@@ -128,7 +128,7 @@ class SubstitutionTests(unittest.TestCase):
     def test_steps_that_are_not_agents_are_left_alone(self) -> None:
         transform = IRNode(
             "shape", "action", (port("result"),), (port("result"),),
-            IRHandlerRef("transform.identity", "1.0.0", "sha256:" + "d" * 64),
+            IRHandlerRef("transform.identity", "sha256:" + "d" * 64),
             {}, (), None,
         )
         ir = WorkflowIR(
@@ -146,7 +146,7 @@ class SubstitutionTests(unittest.TestCase):
 
     def test_a_step_already_on_an_installed_agent_does_not_move(self) -> None:
         claude = manifest_for("claude")
-        reference = IRHandlerRef("agent.claude", "1.2.3", claude.fingerprint)
+        reference = IRHandlerRef("agent.claude", claude.fingerprint)
         ir = single_step_workflow(agent_step(handler=reference))
 
         self.assertIsNone(AgentFallback([claude])(ir))
@@ -154,7 +154,7 @@ class SubstitutionTests(unittest.TestCase):
     def test_an_installed_agent_matches_without_cli_version_or_fingerprint(self) -> None:
         claude = manifest_for("claude", "2.0.0")
         reference = IRHandlerRef(
-            "agent.claude", "1.2.3", "sha256:" + "a" * 64,
+            "agent.claude", "sha256:" + "a" * 64,
         )
         ir = single_step_workflow(agent_step(handler=reference))
 
@@ -163,7 +163,7 @@ class SubstitutionTests(unittest.TestCase):
     def test_a_graph_with_no_agent_step_needs_no_agent(self) -> None:
         transform = IRNode(
             "shape", "action", (port("prompt"),), (port("result"),),
-            IRHandlerRef("transform.identity", "1.0.0", "sha256:" + "d" * 64),
+            IRHandlerRef("transform.identity", "sha256:" + "d" * 64),
             {}, (), None,
         )
         ir = single_step_workflow(transform, workflow_id="workflow:plain")
@@ -368,7 +368,7 @@ class SingleAgentEngineTests(unittest.TestCase):
             self.assertEqual(
                 {
                     "compatible": True, "workflow_version": 1,
-                    "engine": "langgraph", "agent_binding": "agent.claude@1.2.3",
+                    "engine": "langgraph", "agent_binding": "agent.claude",
                 },
                 engine.compatibility("workflow:single"),
             )
@@ -417,7 +417,7 @@ class SingleAgentEngineTests(unittest.TestCase):
             stored = engine._run_ir(engine.get(run.run_id))
 
             self.assertEqual(
-                IRHandlerRef("agent.claude", "1.2.3", claude.fingerprint),
+                IRHandlerRef("agent.claude", claude.fingerprint),
                 stored.nodes[0].handler,
             )
 
@@ -432,16 +432,16 @@ class SingleAgentEngineTests(unittest.TestCase):
                 "workflow:single", {"prompt": {"goal": "x"}},
                 idempotency_key="start-1", actor="local",
             )
-            self.assertEqual("agent.claude@1.2.3", run.agent_binding)
+            self.assertEqual("agent.claude", run.agent_binding)
 
             # The Runtime moves on; the run does not.
             engine.rebind = AgentFallback([codex])
 
             self.assertEqual(
-                "agent.claude@1.2.3", engine.get(run.run_id).agent_binding,
+                "agent.claude", engine.get(run.run_id).agent_binding,
             )
             self.assertEqual(
-                "agent.claude@1.2.3", engine.list_runs()[0].agent_binding,
+                "agent.claude", engine.list_runs()[0].agent_binding,
             )
 
     def test_a_run_that_rebinds_nothing_stores_no_graph(self) -> None:
@@ -449,7 +449,7 @@ class SingleAgentEngineTests(unittest.TestCase):
 
         transform = IRNode(
             "shape", "action", (port("prompt"),), (port("result"),),
-            IRHandlerRef("transform.identity", "1.0.0", "sha256:" + "d" * 64),
+            IRHandlerRef("transform.identity", "sha256:" + "d" * 64),
             {}, (), None,
         )
         manifest = manifest_for("claude")
@@ -619,7 +619,7 @@ class AgentFallbackCatalogTests(unittest.TestCase):
         """
 
         pinned = IRHandlerRef(
-            self.claude.name, self.claude.version, self.claude.fingerprint,
+            self.claude.name, self.claude.fingerprint,
         )
         self.publish(single_step_workflow(agent_step(handler=pinned)))
 

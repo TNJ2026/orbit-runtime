@@ -14,7 +14,6 @@ interface WorkflowGraph {
         kind: string;
         label?: string;
         handler_name?: string | null;
-        handler_version?: string | null;
     }[];
     edges?: readonly {
         edge_id: string;

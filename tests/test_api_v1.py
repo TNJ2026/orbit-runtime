@@ -79,7 +79,7 @@ class WorkflowCatalogProjectionTests(unittest.TestCase):
             "entry": ["analyze"],
             "nodes": [{
                 "id": "analyze", "kind": "action",
-                "handler": {"name": "agent.claude", "version": "1.0.0"},
+                "handler": {"name": "agent.claude"},
             }],
         }
         inputs = [{
@@ -99,7 +99,7 @@ class WorkflowCatalogProjectionTests(unittest.TestCase):
             "entry": ["transform"],
             "nodes": [{
                 "id": "transform", "kind": "action",
-                "handler": {"name": "transform", "version": "1.0.0"},
+                "handler": {"name": "transform"},
             }],
         }
         inputs = [{
@@ -115,7 +115,7 @@ class WorkflowCatalogProjectionTests(unittest.TestCase):
             "nodes": [
                 {
                     "id": "analyze", "kind": "action",
-                    "handler": {"name": "agent.claude", "version": "1.0.0"},
+                    "handler": {"name": "agent.claude"},
                     "outputs": [{"id": "result"}],
                 },
                 {
@@ -162,7 +162,7 @@ class WorkflowCatalogProjectionTests(unittest.TestCase):
             "nodes": [
                 {
                     "id": "analyze", "kind": "action",
-                    "handler": {"name": "agent.claude", "version": "1.0.0"},
+                    "handler": {"name": "agent.claude"},
                     "outputs": [{"id": "result"}],
                 },
                 {"id": "done", "kind": "terminal", "inputs": [{"id": "result"}]},
@@ -339,7 +339,7 @@ class HandlerDriftTests(unittest.TestCase):
                 "id": "work", "kind": "action",
                 "inputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
                 "outputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
-                "handler": {"name": "transform", "version": "0.9.0"},
+                "handler": {"name": "transform"},
             },
             {
                 "id": "done", "kind": "terminal",
@@ -430,9 +430,8 @@ class HandlerDriftTests(unittest.TestCase):
             drift = data["handler_drift"]
             self.assertEqual(1, len(drift))
             self.assertEqual(
-                ("transform", "0.9.0", "1.0.0", "contract_changed"),
-                (drift[0]["handler_name"], drift[0]["pinned_version"],
-                 drift[0]["available_version"], drift[0]["status"]),
+                ("transform", "contract_changed"),
+                (drift[0]["handler_name"], drift[0]["status"]),
             )
             self.assertIn(
                 "workflow.rebind",
@@ -492,8 +491,8 @@ class HandlerDriftTests(unittest.TestCase):
             data = result.json()["data"]
             self.assertEqual(2, data["version"])
             self.assertEqual(
-                [("work", "0.9.0", "1.0.0")],
-                [(m["node_id"], m["from"], m["to"]) for m in data["rebound"]],
+                [("work", "contract_changed")],
+                [(m["node_id"], m["status"]) for m in data["rebound"]],
             )
             # What the catalog now serves is clean, and the run it refused
             # starts.
@@ -512,7 +511,6 @@ class HandlerDriftTests(unittest.TestCase):
         import json
         document = copy.deepcopy(self.DRIFTED)
         document["metadata"] = {"id": "same-version", "name": "Same version"}
-        document["nodes"][0]["handler"]["version"] = "1.0.0"
         source = json.dumps(document)
         compiled = compile_source(
             source, InMemoryHandlerCatalog([self.manifest_at("1.0.0", cancel=False)]),
@@ -530,7 +528,7 @@ class HandlerDriftTests(unittest.TestCase):
                                    body={"expected_version": 1})
             self.assertEqual(200, response.status_code, response.text)
             self.assertEqual(2, response.json()["data"]["version"])
-            self.assertEqual([], response.json()["data"]["rebound"])
+            self.assertEqual(1, len(response.json()["data"]["rebound"]))
             after = client.get(url, actor="writer").json()["data"]
             self.assertEqual([], after["handler_drift"])
             started = client.post("/api/v1/langgraph-runs", actor="writer", key="same-run",
@@ -723,7 +721,7 @@ class CatalogTests(ApiTestCase):
         prompt = IRPort("prompt", "schema://object/1.0", True, False, None, "")
         value = IRPort("value", "schema://object/1.0", True, False, None, "")
         ref = IRHandlerRef(
-            manifest.name, manifest.version, manifest.fingerprint,
+            manifest.name, manifest.fingerprint,
         )
         ir = WorkflowIR(
             "1.1", "workflow:research", "Research", "", {}, (), (),
@@ -887,7 +885,7 @@ class WorkflowAuthoringApiTests(ApiTestCase):
                 "id": "work", "kind": "action",
                 "inputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
                 "outputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
-                "handler": {"name": "transform", "version": "1.0.0"},
+                "handler": {"name": "transform"},
             },
             {
                 "id": "done", "kind": "terminal",
@@ -1212,8 +1210,8 @@ class WorkflowDraftApiTests(ApiTestCase):
             editor = detail["action_editors"]["work"]
             self.assertEqual(
                 [
-                    {"name": "agent.claude", "version": "2.0.0"},
-                    {"name": "agent.codex", "version": "1.0.0"},
+                    {"name": "agent.claude"},
+                    {"name": "agent.codex"},
                 ],
                 editor["handlers"],
             )
@@ -1222,7 +1220,7 @@ class WorkflowDraftApiTests(ApiTestCase):
                 body={
                     "expected_version": editor["allowed_command"]["expected_version"],
                     "label": "Search web",
-                    "handler": {"name": "agent.codex", "version": "1.0.0"},
+                    "handler": {"name": "agent.codex"},
                     "prompt": "Find reliable primary sources.",
                 },
             )
@@ -1234,7 +1232,8 @@ class WorkflowDraftApiTests(ApiTestCase):
             work = next(node for node in updated["definition"]["nodes"] if node["id"] == "work")
             self.assertEqual("Search web", work["label"])
             self.assertEqual("agent.codex", work["handler"]["name"])
-            self.assertEqual("1.0.0", work["handler"]["version"])
+            self.assertEqual("agent.codex", work["handler"]["name"])
+            self.assertNotIn("version", work["handler"])
             self.assertEqual("Find reliable primary sources.", work["config"]["prompt"])
             self.assertEqual(["done"], updated["definition"]["terminals"])
 
@@ -1249,7 +1248,7 @@ class WorkflowDraftApiTests(ApiTestCase):
                 actor="writer", key="action-edit-terminal",
                 body={
                     "expected_version": 1, "label": "Not allowed",
-                    "handler": {"name": "agent.codex", "version": "1.0.0"},
+                    "handler": {"name": "agent.codex"},
                     "prompt": "No.",
                 },
             )
@@ -1284,7 +1283,7 @@ class WorkflowDraftApiTests(ApiTestCase):
                 body={
                     "expected_version": editor["allowed_command"]["expected_version"],
                     "label": "Search web",
-                    "handler": {"name": "agent.codex", "version": "1.0.0"},
+                    "handler": {"name": "agent.codex"},
                     "prompt": "Find reliable primary sources.",
                 },
             )
@@ -1308,7 +1307,7 @@ class WorkflowDraftApiTests(ApiTestCase):
 
         source = editable_dsl(workflow_id="agent-drift", name="Agent drift")
         source["nodes"][0]["handler"] = {
-            "name": "agent.codex", "version": "1.1.5",
+            "name": "agent.codex",
         }
         old_agent = self._agent_registration("agent.codex", "1.1.5").manifest
         WorkflowDefinitionService(
@@ -1338,7 +1337,7 @@ class WorkflowDraftApiTests(ApiTestCase):
             binding = detail["handler_bindings"][0]
             self.assertEqual("current", binding["status"])
             self.assertNotIn("rebound_to", binding)
-            self.assertEqual("1.1.7", binding["available_version"])
+            self.assertEqual(binding["pinned_fingerprint"], binding["available_fingerprint"])
             self.assertNotIn(
                 "workflow.rebind",
                 [command["command"] for command in detail["allowed_commands"]],
@@ -2910,7 +2909,7 @@ class AuthoringSchemaApiTests(ApiTestCase):
 
         with AsgiHarness(self.app) as client:
             handler = self._schema(client)["schema"]["$defs"]["HandlerRef"]
-        self.assertEqual(["name", "version"], sorted(handler["properties"]))
+        self.assertEqual(["name"], sorted(handler["properties"]))
 
     def test_reading_the_contract_still_needs_credentials(self) -> None:
         with AsgiHarness(self.app) as client:

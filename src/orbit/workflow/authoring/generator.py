@@ -171,7 +171,7 @@ DIAGNOSTIC_RULES = {
         "the same schema_id."
     ),
     "DSL_HANDLER_NOT_FOUND": (
-        "handler{name,version} must name one of the entries in `handlers`."
+        "handler{name} must name one of the entries in `handlers`."
     ),
     "DSL_SCHEMA_ID": "Every schema_id must be one of the `schema_ids` values.",
     "DSL_GRAPH_CYCLE": (
@@ -242,7 +242,7 @@ EXAMPLE_DOCUMENT = {
             "id": "draft_summary",
             "kind": "action",
             "label": "Draft the summary",
-            "handler": {"name": "<a name from handlers>", "version": "<its version>"},
+            "handler": {"name": "<a name from handlers>"},
             "inputs": [{"id": "prompt", "schema_id": "<a schema_ids value>"}],
             "outputs": [{"id": "result", "schema_id": "<a schema_ids value>"}],
         },
@@ -785,7 +785,7 @@ class WorkflowAuthoringService:
             "Return exactly one JSON object, optionally inside a ```json fence, and nothing else.",
             "The DSL document's own top level: dsl_version, metadata{id,slug,name}, nodes[], edges[], entry[], terminals[], result{node,port}, and optional policies[]. It carries no other keys.",
             "Set dsl_version to 1.3 and declare exactly one result that references the output representing the user's Goal outcome; that output must reach a terminal on a success path.",
-            "Every action node needs handler{name,version} chosen from `handlers`, and its inputs and outputs must be exactly that handler fact's `ports.inputs` and `ports.outputs`. Copy them; do not rewrite, reorder-with-changes, rename or retype them.",
+            "Every action node needs handler{name} chosen from `handlers`, and its inputs and outputs must be exactly that handler fact's `ports.inputs` and `ports.outputs`. Copy them; do not rewrite, reorder-with-changes, rename or retype them.",
             "Edges may contain only the fields listed in shape_contract.edge_fields; port schemas on both ends must match.",
             "There is no edge field named default. A default edge omits condition or uses condition:true, and sorts after conditional edges by using a greater priority.",
             "In conditions and mappings, a source reference must start with source.<from.port>; for example an approval edge from port result references source.result.decision, never source.decision or source.result.approved.",

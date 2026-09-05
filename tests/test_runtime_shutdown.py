@@ -128,7 +128,7 @@ class ExecutionDoesNotBlockTheServerTests(unittest.TestCase):
         node = IRNode(
             "slow", "action",
             (engine_tests.port("value"),), (engine_tests.port("value"),),
-            IRHandlerRef(manifest.name, manifest.version, manifest.fingerprint),
+            IRHandlerRef(manifest.name, manifest.fingerprint),
             {"tool_name": "example.read", "tool_version": "1.0.0"}, (), None,
         )
         ir = engine_tests.workflow(

@@ -86,10 +86,9 @@ _SCHEMA: dict[str, Any] = {
         "handler": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["name", "version"],
+            "required": ["name"],
             "properties": {
                 "name": {"type": "string", "minLength": 1},
-                "version": {"type": "string", "minLength": 1},
             },
         },
         "node": {

@@ -55,7 +55,7 @@ def dsl(*, nodes=("collect",), name="Research") -> dict:
             "label": node_id.replace("_", " ").title(),
             "inputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
             "outputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
-            "handler": {"name": "transform", "version": "1.0.0"},
+            "handler": {"name": "transform"},
         }
         for node_id in nodes
     ]

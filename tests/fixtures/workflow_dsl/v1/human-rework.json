@@ -5,34 +5,75 @@
     "name": "Draft, review, rework",
     "description": "An Agent drafts, a person reviews, and a rejection goes back to the Agent carrying the reason it was rejected for."
   },
-  "inputs": [{"id": "brief", "schema_id": "example://brief/1.0"}],
+  "inputs": [
+    {
+      "id": "brief",
+      "schema_id": "example://brief/1.0"
+    }
+  ],
   "nodes": [
     {
       "id": "draft",
       "kind": "action",
       "label": "Draft",
-      "inputs": [{"id": "brief", "schema_id": "example://brief/1.0"}],
-      "outputs": [{"id": "draft", "schema_id": "example://document/1.0"}],
-      "handler": {"name": "agent_task", "version": "^1.0"}
+      "inputs": [
+        {
+          "id": "brief",
+          "schema_id": "example://brief/1.0"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "draft",
+          "schema_id": "example://document/1.0"
+        }
+      ],
+      "handler": {
+        "name": "agent_task"
+      }
     },
     {
       "id": "render",
       "kind": "action",
       "label": "Render",
-      "inputs": [{"id": "draft", "schema_id": "example://document/1.0"}],
-      "outputs": [{"id": "document", "schema_id": "example://document/1.0"}],
-      "handler": {"name": "render", "version": "^1.0"},
+      "inputs": [
+        {
+          "id": "draft",
+          "schema_id": "example://document/1.0"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "document",
+          "schema_id": "example://document/1.0"
+        }
+      ],
+      "handler": {
+        "name": "render"
+      },
       "route_mode": "parallel"
     },
     {
       "id": "review",
       "kind": "human",
       "label": "Review",
-      "inputs": [{"id": "document", "schema_id": "example://document/1.0"}],
-      "outputs": [{"id": "submission", "schema_id": "example://submission/1.0"}],
+      "inputs": [
+        {
+          "id": "document",
+          "schema_id": "example://document/1.0"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "submission",
+          "schema_id": "example://submission/1.0"
+        }
+      ],
       "config": {
         "task_kind": "approval",
-        "participants": ["reviewer"],
+        "participants": [
+          "reviewer"
+        ],
         "quorum": "any"
       }
     },
@@ -41,78 +82,174 @@
       "kind": "join",
       "label": "Keep the reviewed draft with the decision",
       "inputs": [
-        {"id": "document", "schema_id": "example://document/1.0"},
-        {"id": "submission", "schema_id": "example://submission/1.0"}
+        {
+          "id": "document",
+          "schema_id": "example://document/1.0"
+        },
+        {
+          "id": "submission",
+          "schema_id": "example://submission/1.0"
+        }
       ],
-      "outputs": [{"id": "context", "schema_id": "example://context/1.0"}],
-      "policies": ["review_context_all"]
+      "outputs": [
+        {
+          "id": "context",
+          "schema_id": "example://context/1.0"
+        }
+      ],
+      "policies": [
+        "review_context_all"
+      ]
     },
     {
       "id": "route_review",
       "kind": "decision",
       "label": "Route review decision",
-      "inputs": [{"id": "context", "schema_id": "example://context/1.0"}],
-      "outputs": [{"id": "context", "schema_id": "example://context/1.0"}]
+      "inputs": [
+        {
+          "id": "context",
+          "schema_id": "example://context/1.0"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "context",
+          "schema_id": "example://context/1.0"
+        }
+      ]
     },
     {
       "id": "approved_result",
       "kind": "decision",
       "label": "Record approval",
-      "inputs": [{"id": "result", "schema_id": "example://result/1.0"}],
-      "outputs": [{"id": "result", "schema_id": "example://result/1.0"}]
+      "inputs": [
+        {
+          "id": "result",
+          "schema_id": "example://result/1.0"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "result",
+          "schema_id": "example://result/1.0"
+        }
+      ]
     },
     {
       "id": "abandoned_result",
       "kind": "decision",
       "label": "Record exhausted rework",
-      "inputs": [{"id": "result", "schema_id": "example://result/1.0"}],
-      "outputs": [{"id": "result", "schema_id": "example://result/1.0"}]
+      "inputs": [
+        {
+          "id": "result",
+          "schema_id": "example://result/1.0"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "result",
+          "schema_id": "example://result/1.0"
+        }
+      ]
     },
     {
       "id": "finalize",
       "kind": "join",
       "label": "Select final outcome",
-      "inputs": [{"id": "result", "schema_id": "example://result/1.0"}],
-      "outputs": [{"id": "result", "schema_id": "example://result/1.0"}],
-      "policies": ["final_outcome_any"]
+      "inputs": [
+        {
+          "id": "result",
+          "schema_id": "example://result/1.0"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "result",
+          "schema_id": "example://result/1.0"
+        }
+      ],
+      "policies": [
+        "final_outcome_any"
+      ]
     },
     {
       "id": "done",
       "kind": "terminal",
       "label": "Done",
-      "inputs": [{"id": "result", "schema_id": "example://result/1.0"}]
+      "inputs": [
+        {
+          "id": "result",
+          "schema_id": "example://result/1.0"
+        }
+      ]
     }
   ],
   "edges": [
     {
       "id": "draft_render",
-      "from": {"node": "draft", "port": "draft"},
-      "to": {"node": "render", "port": "draft"}
+      "from": {
+        "node": "draft",
+        "port": "draft"
+      },
+      "to": {
+        "node": "render",
+        "port": "draft"
+      }
     },
     {
       "id": "render_review",
-      "from": {"node": "render", "port": "document"},
-      "to": {"node": "review", "port": "document"}
+      "from": {
+        "node": "render",
+        "port": "document"
+      },
+      "to": {
+        "node": "review",
+        "port": "document"
+      }
     },
     {
       "id": "render_context",
-      "from": {"node": "render", "port": "document"},
-      "to": {"node": "review_context", "port": "document"}
+      "from": {
+        "node": "render",
+        "port": "document"
+      },
+      "to": {
+        "node": "review_context",
+        "port": "document"
+      }
     },
     {
       "id": "review_context",
-      "from": {"node": "review", "port": "submission"},
-      "to": {"node": "review_context", "port": "submission"}
+      "from": {
+        "node": "review",
+        "port": "submission"
+      },
+      "to": {
+        "node": "review_context",
+        "port": "submission"
+      }
     },
     {
       "id": "context_route",
-      "from": {"node": "review_context", "port": "context"},
-      "to": {"node": "route_review", "port": "context"}
+      "from": {
+        "node": "review_context",
+        "port": "context"
+      },
+      "to": {
+        "node": "route_review",
+        "port": "context"
+      }
     },
     {
       "id": "approved",
-      "from": {"node": "route_review", "port": "context"},
-      "to": {"node": "approved_result", "port": "result"},
+      "from": {
+        "node": "route_review",
+        "port": "context"
+      },
+      "to": {
+        "node": "approved_result",
+        "port": "result"
+      },
       "condition": "source.context.submission.decision == 'approve'",
       "mapping": {
         "schema_id": "example://result/1.0",
@@ -125,8 +262,14 @@
     },
     {
       "id": "rejected",
-      "from": {"node": "route_review", "port": "context"},
-      "to": {"node": "draft", "port": "brief"},
+      "from": {
+        "node": "route_review",
+        "port": "context"
+      },
+      "to": {
+        "node": "draft",
+        "port": "brief"
+      },
       "condition": "source.context.submission.decision == 'reject'",
       "back_edge": true,
       "policy": "bounded_rework",
@@ -141,8 +284,14 @@
     },
     {
       "id": "out_of_generations",
-      "from": {"node": "route_review", "port": "context"},
-      "to": {"node": "abandoned_result", "port": "result"},
+      "from": {
+        "node": "route_review",
+        "port": "context"
+      },
+      "to": {
+        "node": "abandoned_result",
+        "port": "result"
+      },
       "route": "error",
       "mapping": {
         "schema_id": "example://result/1.0",
@@ -155,38 +304,72 @@
     },
     {
       "id": "approved_finalize",
-      "from": {"node": "approved_result", "port": "result"},
-      "to": {"node": "finalize", "port": "result"}
+      "from": {
+        "node": "approved_result",
+        "port": "result"
+      },
+      "to": {
+        "node": "finalize",
+        "port": "result"
+      }
     },
     {
       "id": "abandoned_finalize",
-      "from": {"node": "abandoned_result", "port": "result"},
-      "to": {"node": "finalize", "port": "result"}
+      "from": {
+        "node": "abandoned_result",
+        "port": "result"
+      },
+      "to": {
+        "node": "finalize",
+        "port": "result"
+      }
     },
     {
       "id": "finalize_done",
-      "from": {"node": "finalize", "port": "result"},
-      "to": {"node": "done", "port": "result"}
+      "from": {
+        "node": "finalize",
+        "port": "result"
+      },
+      "to": {
+        "node": "done",
+        "port": "result"
+      }
     }
   ],
   "policies": [
     {
       "id": "bounded_rework",
       "kind": "rework",
-      "config": {"max_generations": 2, "exhaustion": "error_route"}
+      "config": {
+        "max_generations": 2,
+        "exhaustion": "error_route"
+      }
     },
     {
       "id": "review_context_all",
       "kind": "join",
-      "config": {"mode": "all", "merge_mode": "first_by_priority"}
+      "config": {
+        "mode": "all",
+        "merge_mode": "first_by_priority"
+      }
     },
     {
       "id": "final_outcome_any",
       "kind": "join",
-      "config": {"mode": "any", "merge_mode": "first_by_priority"}
+      "config": {
+        "mode": "any",
+        "merge_mode": "first_by_priority"
+      }
     }
   ],
-  "entry": ["draft"],
-  "terminals": ["done"],
-  "result": {"node": "finalize", "port": "result"}
+  "entry": [
+    "draft"
+  ],
+  "terminals": [
+    "done"
+  ],
+  "result": {
+    "node": "finalize",
+    "port": "result"
+  }
 }

@@ -29,7 +29,7 @@ YAML 与 JSON 都生成字段级 Source Map。输入上限为 2 MiB，展开后�
 | `terminals` | 显式终点 Node ID 集合 | 无，至少一个 | 排序 | 是 |
 | `policies` | 定义期 Policy 引用与配置 | `[]` | 按 Policy ID 排序 | 是 |
 | `extensions` | 版本化扩展信封 | `[]` | 按 ID、Version 排序 | 是 |
-| `handler.version` | 编译前版本约束 | 无 | 无 | 否；解析后的精确版本进入 IR/Hash |
+| `handler` | 仅声明 `{name}`；编译器绑定当前契约指纹 | 无 | 无 | 名称和契约指纹进入 IR/Hash；不包含构建版本 |
 | `condition` | 受限条件表达式或 AST | `true` | AST 规范化 | 只有编译后 AST |
 | `mapping` | 受限数据映射 | Identity | Object Key 排序 | 只有编译后 AST |
 | Source Map、注释、文件名 | 诊断与审计信息 | — | — | 否 |
@@ -103,3 +103,15 @@ DSL 接受精确 SemVer `x.y.z` 或 caret 约束。Compiler 在不可变 Catalog
 - 不同 Hash 必须携带正确 `expected_latest_version`，事务内分配下一版本。
 - 数据库 Trigger 禁止更新或删除已发布 WorkflowVersion。
 - `workflow_definitions.name` 是列表展示用的最新名称；每次成功发布新版本后更新。各历史名称仍保存在对应不可变 IR 中。
+
+## Handler 绑定不含构建版本
+
+DSL 的 Handler 引用仅为 `{"name": "agent.codex"}`；编译后的 IR 为
+`{"name": "agent.codex", "manifest_fingerprint": "sha256:..."}`。
+Handler 目录每个名称只能注册一个实现，构建版本仅用于诊断。契约变化需重新编译发布，
+构建版本变化本身不会改变工作流定义哈希。旧 `handler.version` 字段不再被接受。
+
+现有数据库需停服务后使用 `scripts/migrate-handler-bindings.py` 显式迁移：
+先传数据库路径预检，再加 `--apply --backup-dir <新备份目录>`。
+迁移保留工作流版本编号和契约指纹、重算定义哈希，并移除运行图快照中的版本字段。
+哈希冲突会在预检阶段拒绝，执行前会备份全部目标数据库。

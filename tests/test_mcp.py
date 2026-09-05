@@ -731,13 +731,13 @@ class DiscoveryAndResultTests(ApiTestCase):
                     "id": "second", "kind": "action",
                     "inputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
                     "outputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
-                    "handler": {"name": "transform", "version": "1.0.0"},
+                    "handler": {"name": "transform"},
                 },
                 {
                     "id": "first", "kind": "action",
                     "inputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
                     "outputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
-                    "handler": {"name": "transform", "version": "1.0.0"},
+                    "handler": {"name": "transform"},
                 },
             ],
             "edges": [
@@ -1115,7 +1115,7 @@ class ClientWrittenWorkflowTests(unittest.TestCase):
                     "id": "transform", "kind": "action", "label": "Transform",
                     "inputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
                     "outputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
-                    "handler": {"name": "transform", "version": "1.0.0"},
+                    "handler": {"name": "transform"},
                 },
                 {
                     "id": "done", "kind": "terminal",

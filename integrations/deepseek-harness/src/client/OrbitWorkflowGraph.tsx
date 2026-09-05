@@ -11,7 +11,6 @@ export interface WorkflowGraphNode {
   kind: string
   label?: string
   handler_name?: string | null
-  handler_version?: string | null
 }
 
 export interface WorkflowGraphEdge {
@@ -69,7 +68,7 @@ export function OrbitWorkflowGraph({ graph }: { graph: WorkflowGraph }) {
           kind: node.kind,
           label: node.label ?? node.node_id,
           handler: node.handler_name
-            ? `${node.handler_name}${node.handler_version ? ` ${node.handler_version}` : ''}`
+            ? node.handler_name
             : undefined,
         },
       }

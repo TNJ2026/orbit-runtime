@@ -699,7 +699,6 @@ class HarnessSubagentHandlerTests(unittest.TestCase):
             node = IRNode(
                 "delegate", "action", (), (), IRHandlerRef(
                     HARNESS_SUBAGENT_MANIFEST.name,
-                    HARNESS_SUBAGENT_MANIFEST.version,
                     HARNESS_SUBAGENT_MANIFEST.fingerprint,
                 ), {"provider": "codex"}, (), None,
             )

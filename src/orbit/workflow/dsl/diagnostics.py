@@ -101,7 +101,7 @@ DIAGNOSTIC_CODES: Mapping[str, str] = MappingProxyType(
         "DSL_GRAPH_CYCLE": "The core workflow graph contains a cycle.",
         "DSL_GRAPH_UNREACHABLE": "A node cannot be reached from an entry.",
         "DSL_GRAPH_NO_TERMINAL_PATH": "A node has no path to a terminal.",
-        "DSL_HANDLER_NOT_FOUND": "A handler version cannot be resolved.",
+        "DSL_HANDLER_NOT_FOUND": "A handler name cannot be resolved.",
         "DSL_PORT_INCOMPATIBLE": "Connected port schemas are incompatible.",
         "DSL_EXPRESSION_INVALID": "A condition expression is invalid.",
         "DSL_MAPPING_INVALID": "A data mapping is invalid.",

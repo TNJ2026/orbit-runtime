@@ -50,7 +50,7 @@ def valid_document(workflow_id: str = "generated") -> dict:
                 "id": "work", "kind": "action",
                 "inputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
                 "outputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
-                "handler": {"name": "transform", "version": "1.0.0"},
+                "handler": {"name": "transform"},
             },
             {
                 "id": "done", "kind": "terminal",
@@ -111,7 +111,7 @@ class AuthoringServiceTests(unittest.TestCase):
         document["nodes"][0].update({
             "inputs": [{"id": "task", "schema_id": "schema://object/1.0"}],
             "outputs": [{"id": "result", "schema_id": "schema://object/1.0"}],
-            "handler": {"name": "app.delegate", "version": "1.0.0"},
+            "handler": {"name": "app.delegate"},
             "config": {"target": "run_initiator"},
         })
         document["nodes"][1]["inputs"] = [
@@ -149,7 +149,7 @@ class AuthoringServiceTests(unittest.TestCase):
             {"id": "prompt", "schema_id": "schema://object/1.0"},
         ]
         corrected["nodes"][0]["handler"] = {
-            "name": "agent.test", "version": "1.0.0",
+            "name": "agent.test",
         }
         artifact_policy = {
             "transport": "artifact_ref", "max_size_bytes": 262144,
@@ -444,7 +444,7 @@ class AuthoringServiceTests(unittest.TestCase):
 
     def test_compiler_findings_are_fed_back_and_the_retry_succeeds(self) -> None:
         broken = valid_document()
-        broken["nodes"][0]["handler"] = {"name": "missing", "version": "9.9.9"}
+        broken["nodes"][0]["handler"] = {"name": "missing"}
         model = ScriptedModel([
             json.dumps(broken), json.dumps(valid_document()),
         ])
@@ -459,7 +459,7 @@ class AuthoringServiceTests(unittest.TestCase):
         """A complaint is not a constraint; repair needs the rule itself."""
 
         broken = valid_document()
-        broken["nodes"][0]["handler"] = {"name": "missing", "version": "1.0.0"}
+        broken["nodes"][0]["handler"] = {"name": "missing"}
         model = ScriptedModel([
             json.dumps(broken), json.dumps(valid_document()),
         ])
@@ -473,7 +473,7 @@ class AuthoringServiceTests(unittest.TestCase):
 
     def test_each_rejected_attempt_reports_structured_diagnostics(self) -> None:
         broken = valid_document()
-        broken["nodes"][0]["handler"] = {"name": "missing", "version": "1.0.0"}
+        broken["nodes"][0]["handler"] = {"name": "missing"}
         reports = []
         model = ScriptedModel([json.dumps(broken), json.dumps(valid_document())])
 

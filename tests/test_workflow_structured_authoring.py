@@ -58,7 +58,7 @@ WORKFLOW = {
         {
             "id": "draft",
             "kind": "action",
-            "handler": {"name": "collect", "version": "^1.0"},
+            "handler": {"name": "collect"},
             "outputs": [{"id": "request", "schema_id": "example://request/1.0"}],
         },
         {
@@ -400,7 +400,7 @@ def _funnel_document(workflow_id: str = "generated") -> dict:
                 "id": "work", "kind": "action",
                 "inputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
                 "outputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
-                "handler": {"name": "transform", "version": "1.0.0"},
+                "handler": {"name": "transform"},
             },
             {
                 "id": "done", "kind": "terminal",
@@ -536,7 +536,7 @@ class RevisionByPatchTests(unittest.TestCase):
                 "id": "work", "kind": "action", "label": "Transform",
                 "inputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
                 "outputs": [{"id": "value", "schema_id": "example://integer/1.0"}],
-                "handler": {"name": "transform", "version": "1.0.0"},
+                "handler": {"name": "transform"},
                 "config": {"mode": "fast"},
             },
             {

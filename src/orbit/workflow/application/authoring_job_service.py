@@ -611,7 +611,7 @@ class AuthoringJobService:
             handler = node.get("handler") or {}
             return (
                 node.get("label"),
-                handler.get("name"), handler.get("version"),
+                handler.get("name"),
                 tuple(sorted(port["id"] for port in node.get("inputs") or ())),
                 tuple(sorted(port["id"] for port in node.get("outputs") or ())),
             )
@@ -619,7 +619,6 @@ class AuthoringJobService:
         return (
             getattr(node, "label", None),
             None if handler is None else handler.name,
-            None if handler is None else handler.version,
             tuple(sorted(port.id for port in node.inputs)),
             tuple(sorted(port.id for port in node.outputs)),
         )

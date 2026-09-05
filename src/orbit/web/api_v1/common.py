@@ -105,34 +105,6 @@ class Authorizer:
         return scope in set(self._scopes_for(actor))
 
 
-def _retarget_handlers(
-    document: Any, available: Mapping[str, str]
-) -> list[dict[str, str]]:
-    """Move each node's handler to the installed version, in place.
-
-    Returns one record per node actually moved, so the caller can refuse a
-    rebind that would change nothing rather than mint an identical version.
-    """
-
-    moved: list[dict[str, str]] = []
-    nodes = document.get("nodes") if isinstance(document, Mapping) else None
-    for node in nodes or ():
-        handler = node.get("handler") if isinstance(node, Mapping) else None
-        if not isinstance(handler, Mapping):
-            continue
-        name = handler.get("name")
-        target = available.get(name)
-        if target is not None and handler.get("version") != target:
-            moved.append({
-                "node_id": str(node.get("id")),
-                "handler_name": str(name),
-                "from": str(handler.get("version")),
-                "to": str(target),
-            })
-            handler["version"] = target
-    return moved
-
-
 def authoring_timeout_seconds(operational_config) -> int:
     """How long an authoring job may take, wherever it was started from.
 

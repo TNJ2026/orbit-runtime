@@ -34,7 +34,6 @@ def drawable_graph(ir: Mapping[str, Any]) -> dict[str, Any]:
             # has never seen a node id.
             "label": node.get("label"),
             "handler_name": (node.get("handler") or {}).get("name"),
-            "handler_version": (node.get("handler") or {}).get("version"),
         }
         for node in ir.get("nodes") or ()
     ]

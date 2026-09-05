@@ -115,21 +115,21 @@ class HandlerCatalog(Protocol):
     @property
     def fingerprint(self) -> str: ...
 
-    def resolve(self, name: str, constraint: str) -> HandlerManifest | None: ...
+    def resolve(self, name: str) -> HandlerManifest | None: ...
 
 
 class InMemoryHandlerCatalog:
     def __init__(self, manifests: Iterable[HandlerManifest]) -> None:
         by_name: dict[str, list[HandlerManifest]] = {}
-        seen: set[tuple[str, str]] = set()
+        seen: set[str] = set()
         for manifest in manifests:
-            key = (manifest.name, manifest.version)
+            key = manifest.name
             if key in seen:
                 raise ValueError(f"duplicate handler manifest: {manifest.name}@{manifest.version}")
             seen.add(key)
             by_name.setdefault(manifest.name, []).append(manifest)
         self._by_name = {
-            name: tuple(sorted(values, key=lambda item: _version_tuple(item.version), reverse=True))
+            name: tuple(values)
             for name, values in by_name.items()
         }
         payload = [
@@ -143,32 +143,7 @@ class InMemoryHandlerCatalog:
     def fingerprint(self) -> str:
         return self._fingerprint
 
-    def resolve(self, name: str, constraint: str) -> HandlerManifest | None:
-        """The manifest a declaration selects, or None when nothing answers.
-
-        The constraint is honoured whenever something satisfies it. When
-        nothing does and the Handler is an Agent, the installed build answers
-        anyway: an Agent's version says which CLI release is on this machine,
-        which is not a choice the author made and not one they can keep true.
-        A Workflow that named the build it was written against would otherwise
-        stop compiling the day that build was replaced — so editing a Workflow
-        from last month would begin by working out which release it was born
-        on. Other Handler kinds keep their pin, because their versions move
-        only when this repository does, and a pin that misses is real drift
-        worth reporting rather than papering over.
-
-        This is not a hole in the contract. The compiler still checks the
-        selected manifest's ports and schemas against the node that declared
-        it, so an Agent whose contract really did change is refused here — it
-        is only the release number that stopped being a reason to refuse.
-        """
-
+    def resolve(self, name: str) -> HandlerManifest | None:
+        """Resolve one registered implementation by name."""
         candidates = self._by_name.get(name, ())
-        matches = [item for item in candidates if _matches(item.version, constraint)]
-        if matches:
-            return matches[0]
-        # Sorted newest-first at construction, so the first is the newest.
-        installed = [
-            item for item in candidates if "agent.invoke" in item.capabilities
-        ]
-        return installed[0] if installed else None
+        return candidates[0] if candidates else None

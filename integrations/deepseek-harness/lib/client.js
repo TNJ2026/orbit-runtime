@@ -12131,7 +12131,7 @@ window.__ModuleLoader__.load({
 							data: {
 								kind: node.kind,
 								label: node.label ?? node.node_id,
-								handler: node.handler_name ? `${node.handler_name}${node.handler_version ? ` ${node.handler_version}` : ""}` : void 0
+								handler: node.handler_name ? node.handler_name : void 0
 							}
 						};
 					}),

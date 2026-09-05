@@ -10,7 +10,6 @@ nodes:
         schema_id: example://request/1.0
     handler:
       name: collect
-      version: ^1.0
   - id: done
     kind: terminal
     inputs:

@@ -33,7 +33,7 @@ interface AgentLookup {
 }
 
 interface WorkflowGraph {
-  nodes?: readonly { node_id: string; kind: string; label?: string; handler_name?: string | null; handler_version?: string | null }[]
+  nodes?: readonly { node_id: string; kind: string; label?: string; handler_name?: string | null }[]
   edges?: readonly { edge_id: string; from: string; to: string; route?: string; back_edge?: boolean }[]
   layout?: { positions?: readonly { node_id: string; depth: number; lane: number }[] }
 }

@@ -17,7 +17,7 @@ FP = "sha256:" + "a" * 64
 def port(name): return IRPort(name, SCHEMA, True, False, None, "")
 
 def node(nid, *, handler="agent.opencode", policies=()):
-    ref = None if handler is None else IRHandlerRef(handler, "1.0.0", FP)
+    ref = None if handler is None else IRHandlerRef(handler, FP)
     return IRNode(nid, "action", (port("prompt"),), (port("result"),), ref, {}, tuple(policies), None, None)
 
 def ir(nodes, policies=()):

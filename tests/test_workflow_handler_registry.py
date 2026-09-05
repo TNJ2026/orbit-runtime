@@ -137,53 +137,15 @@ class HandlerRegistryTests(unittest.TestCase):
 
 
 class CatalogResolutionTests(unittest.TestCase):
-    """Which manifest a DSL declaration selects, at compile time.
+    def test_resolves_unique_name_without_build_constraint(self):
+        catalog = InMemoryHandlerCatalog([manifest("1.2.0"), agent_manifest("1.1.7")])
+        self.assertEqual("1.2.0", catalog.resolve("transform.identity").version)
+        self.assertEqual("1.1.7", catalog.resolve("agent.codex").version)
+        self.assertIsNone(catalog.resolve("missing"))
 
-    Separate from the execution registry above: this is the step that turns
-    what an author wrote into the exact build recorded in the IR, and it is the
-    last place a release number could still refuse a Workflow.
-    """
-
-    def test_a_constraint_that_can_be_satisfied_is_honoured(self) -> None:
-        catalog = InMemoryHandlerCatalog([manifest("1.0.0"), manifest("1.2.0")])
-
-        self.assertEqual("1.2.0", catalog.resolve("transform.identity", "^1.0").version)
-        self.assertEqual("1.0.0", catalog.resolve("transform.identity", "1.0.0").version)
-
-    def test_an_agent_pinned_to_a_build_that_is_gone_still_resolves(self) -> None:
-        """The whole point: last month's Workflow still compiles today.
-
-        The author named the CLI release that happened to be installed when
-        they wrote it. Refusing them for that would mean editing an old
-        Workflow starts by working out which release it was born on.
-        """
-
-        catalog = InMemoryHandlerCatalog([agent_manifest("1.1.7")])
-
-        self.assertEqual("1.1.7", catalog.resolve("agent.codex", "1.1.5").version)
-
-    def test_the_newest_installed_agent_build_is_the_one_selected(self) -> None:
-        catalog = InMemoryHandlerCatalog([
-            agent_manifest("1.1.5"), agent_manifest("2.0.0"), agent_manifest("1.9.0"),
-        ])
-
-        self.assertEqual("2.0.0", catalog.resolve("agent.codex", "0.1.0").version)
-
-    def test_a_first_party_pin_that_misses_is_still_drift(self) -> None:
-        """Only Agents get this. A transform's version moves with this repo.
-
-        Silently substituting one there would hide a real mismatch behind a
-        successful compile, which is the opposite of what the pin is for.
-        """
-
-        catalog = InMemoryHandlerCatalog([manifest("1.0.0")])
-
-        self.assertIsNone(catalog.resolve("transform.identity", "2.0.0"))
-
-    def test_a_name_nobody_installed_still_resolves_to_nothing(self) -> None:
-        catalog = InMemoryHandlerCatalog([agent_manifest("1.1.7")])
-
-        self.assertIsNone(catalog.resolve("agent.nobody", "1.1.7"))
+    def test_multiple_builds_of_same_name_are_ambiguous(self):
+        with self.assertRaisesRegex(ValueError, "duplicate handler"):
+            InMemoryHandlerCatalog([manifest("1.0.0"), manifest("1.2.0")])
 
 
 if __name__ == "__main__": unittest.main()

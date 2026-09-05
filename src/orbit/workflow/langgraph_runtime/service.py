@@ -1972,7 +1972,7 @@ class LangGraphWorkflowService:
                 "kind": node.kind,
                 "prompt": prompt,
                 "handler": None if node.handler is None else {
-                    "name": node.handler.name, "version": node.handler.version,
+                    "name": node.handler.name, "manifest_fingerprint": node.handler.manifest_fingerprint,
                 },
                 "status": status,
                 "runs": counts.get(node.id, 0),
