@@ -267,15 +267,26 @@ class DedicatedCardTests(unittest.TestCase):
         self.assertNotIn("list_authoring_jobs", ORBIT_WORKFLOWS_HTML)
 
     def test_workflow_list_items_offer_the_same_new_goal_prompt(self) -> None:
+        """Same offer, same prompt, and now the same button.
+
+        The list's 新目标 used to be a neutral pill of its own while the
+        workflow's card offered the accent one. Two looks for one action read
+        as two different actions, so the list uses `.action.primary` and the
+        class it keeps only says where in the row it sits.
+        """
+
         for marker in (
-            'class="listGoal"', 'data-goal-id="${esc(w.workflow_id)}"',
+            'class="action primary listGoal"', 'data-goal-id="${esc(w.workflow_id)}"',
             'data-goal-name="${esc(w.name||w.workflow_id)}"',
             "event.stopPropagation()",
             "使用工作流「${b.dataset.goalName}」（${b.dataset.goalId}）执行：",
-            "background: light-dark(#e5e5e8, #303034) !important",
-            "background: light-dark(#d9d9dd, #3a3a40) !important",
+            ".listGoal { position: absolute; top: 50%; right: 12px;"
+            " transform: translateY(-50%); }",
         ):
             self.assertIn(marker, ORBIT_WORKFLOWS_HTML)
+        # Nothing left that repaints it away from the shared button.
+        for absent in ("light-dark(#e5e5e8, #303034)", ".listGoal:hover"):
+            self.assertNotIn(absent, ORBIT_WORKFLOWS_HTML)
 
     def test_workflow_item_switches_to_detail_inside_the_list_card(self) -> None:
         for marker in (

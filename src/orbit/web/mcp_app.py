@@ -18,7 +18,7 @@ ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v31.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v10.html"
+ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v11.html"
 ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v5.html"
 ORBIT_RUN_URI = "ui://orbit/goal-run-v11.html"
 ORBIT_GOALS_URI = "ui://orbit/goals-v5.html"
@@ -776,11 +776,11 @@ _WORKFLOW_LIST_STYLE = r"""
 .workflowRow { position: relative; border-bottom: 1px solid var(--line); }
 .workflowRow:last-child { border-bottom: 0; }
 .workflowRow .row { min-height: 68px; padding-right: 104px; border-bottom: 0; }
-.listGoal { position: absolute; top: 50%; right: 12px; transform: translateY(-50%);
-  min-height: 32px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 7px;
-  color: light-dark(#303034, #e4e4e8); background: light-dark(#e5e5e8, #303034) !important;
-  cursor: pointer; }
-.listGoal:hover { background: light-dark(#d9d9dd, #3a3a40) !important; }
+/* 新目标 in the list is the same offer as 新目标 on the workflow's own
+   card, so it is the same button: `.action.primary`, styled once. All this
+   class adds is where it sits, which is local to the list — the row behind
+   it is a full-width button, so this one is placed over its right edge. */
+.listGoal { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); }
 /* Why there is no 新目标 on this one. Small print, wrapping, and in the row
    rather than replacing the description: a reader still needs to know which
    workflow it is. */
@@ -822,7 +822,7 @@ function bindDeleteConfirmation(w){const dialog=document.getElementById('deleteW
 function drawList(rows){current=null;
  card.className='card workflowList';
  card.innerHTML=rows.length?rows.map(w=>`<div class="workflowRow"><button class="row" type="button" data-open-id="${esc(w.workflow_id)}"><div class="name">${esc(w.name)}</div>
- <div class="desc">${esc(w.description||`${w.node_count||0} steps · v${w.latest_version||''}`)}</div>${refusalMarkup(w)}</button>${runnable(w)?`<button class="listGoal" type="button" data-goal-id="${esc(w.workflow_id)}" data-goal-name="${esc(w.name||w.workflow_id)}">新目标</button>`:''}</div>`).join(''):'<div class="empty">No workflows</div>';
+ <div class="desc">${esc(w.description||`${w.node_count||0} steps · v${w.latest_version||''}`)}</div>${refusalMarkup(w)}</button>${runnable(w)?`<button class="action primary listGoal" type="button" data-goal-id="${esc(w.workflow_id)}" data-goal-name="${esc(w.name||w.workflow_id)}">新目标</button>`:''}</div>`).join(''):'<div class="empty">No workflows</div>';
  card.querySelectorAll('[data-open-id]').forEach(b=>b.onclick=()=>openDetail(b.dataset.openId));
  card.querySelectorAll('[data-goal-id]').forEach(b=>b.onclick=event=>{event.stopPropagation();dispatchPromptValue(`使用工作流「${b.dataset.goalName}」（${b.dataset.goalId}）执行：`) });
 }
