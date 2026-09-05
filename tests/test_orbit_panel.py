@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v43.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v44.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -43,15 +43,59 @@ class CurrentTaskCardTests(unittest.TestCase):
             {item["uri"] for item in ORBIT_MCP_APP_RESOURCES},
         )
 
-    def test_every_card_uses_the_full_ui_logo_image(self) -> None:
+    def test_every_card_wears_the_mark_the_full_ui_wears(self) -> None:
+        """The UI's own mark, not the favicon that stands in for it.
+
+        The cards carried the favicon: an opaque near-black tile, drawn to
+        survive being 16px in a browser tab, which beside a light card read
+        as a black stamp. The UI shows something else in its own corner — a
+        plate, a ring and a satellite, each following the theme.
+
+        Inline, because that is what following the theme requires: an <img>
+        of a data: URI cannot read the page it sits on. The values are the
+        UI's own, both ways round, so the two marks agree in either theme.
+        """
+
         for html in (
             ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML,
             ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
         ):
             with self.subTest():
-                self.assertIn('<img class="mark"', html)
-                self.assertIn("data:image/svg+xml", html)
-                self.assertNotIn('<span class="mark">O</span>', html)
+                self.assertIn('<svg class="mark"', html)
+                self.assertIn('<rect class="plate" x="0.5" y="0.5"'
+                              ' width="19" height="19" rx="5"/>', html)
+                self.assertIn('<circle class="ring" cx="10" cy="10" r="5"/>', html)
+                self.assertIn('<circle class="satellite" cx="16" cy="4" r="2"/>', html)
+                # `light-dark`, since the card follows the host's scheme while
+                # the UI follows an operator's explicit `data-theme`.
+                self.assertIn(
+                    ".mark .plate{fill:light-dark(#f7f8fb,#212121);"
+                    "stroke:light-dark(#e4e8f0,#2a2d35)}", html,
+                )
+                self.assertIn(
+                    ".mark .ring{fill:none;stroke:light-dark(#2563eb,#adc6ff);"
+                    "stroke-width:2}", html,
+                )
+                self.assertIn(".mark .satellite{fill:light-dark(#b45309,#ffb786)}", html)
+                for absent in ('<img class="mark"', "data:image/svg+xml",
+                               '<span class="mark">O</span>'):
+                    self.assertNotIn(absent, html)
+
+    def test_the_mark_uses_the_ui_stylesheet_values_verbatim(self) -> None:
+        """Read out of the UI's tokens rather than copied by eye."""
+
+        tokens = Path(__file__).resolve().parents[1].joinpath(
+            "src/orbit/static/workflow-ui/assets/styles/tokens.css"
+        ).read_text(encoding="utf-8")
+        dark, light = tokens.split('html[data-theme="light"]', 1)
+        for value, block, where in (
+            ("--panel-3: #212121", dark, "dark"), ("--line-soft: #2a2d35", dark, "dark"),
+            ("--blue: #adc6ff", dark, "dark"), ("--amber: #ffb786", dark, "dark"),
+            ("--panel-3: #f7f8fb", light, "light"), ("--line-soft: #e4e8f0", light, "light"),
+            ("--blue: #2563eb", light, "light"), ("--amber: #b45309", light, "light"),
+        ):
+            with self.subTest(value=value, theme=where):
+                self.assertIn(value, block)
 
     def test_it_reads_current_task_and_embedded_workflow_views(self) -> None:
         calls = set(re.findall(r"callTool\('([a-z_]+)'", ORBIT_DASHBOARD_HTML))

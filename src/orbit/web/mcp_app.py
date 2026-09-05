@@ -14,23 +14,30 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v43.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v44.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v20.html"
-ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v11.html"
-ORBIT_RUN_URI = "ui://orbit/goal-run-v17.html"
-ORBIT_GOALS_URI = "ui://orbit/goals-v11.html"
+ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v21.html"
+ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v12.html"
+ORBIT_RUN_URI = "ui://orbit/goal-run-v18.html"
+ORBIT_GOALS_URI = "ui://orbit/goals-v12.html"
 
-# The same framed ring-and-satellite mark used by the full Orbit UI favicon.
-# Keep it embedded: MCP App documents must not depend on a separate HTTP asset.
-ORBIT_LOGO_DATA_URI = (
-    "data:image/svg+xml,"
-    "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E"
-    "%3Crect width='64' height='64' rx='14' fill='%2310131a'/%3E"
-    "%3Ccircle cx='32' cy='32' r='18' fill='none' stroke='%23adc6ff' stroke-width='6'/%3E"
-    "%3Ccircle cx='48' cy='22' r='6' fill='%23ffb786'/%3E%3C/svg%3E"
+# The mark the full Orbit UI shows in its own top-left corner — the same
+# geometry as `workflow-ui/index.html`'s `.brand-mark`, not the favicon the
+# cards used to carry. The favicon is a tile: an opaque near-black plate with
+# the ring on it, drawn to survive being 16px in a browser tab. Beside a
+# light card it read as a black stamp.
+#
+# Inline rather than a data: URI, because the UI's mark takes its colours
+# from the page and an <img> cannot: it is a plate, a ring and a satellite,
+# and each of the three follows the theme. Embedded rather than fetched
+# either way — MCP App documents must not depend on a separate HTTP asset.
+ORBIT_LOGO_MARK = (
+    '<svg class="mark" viewBox="0 0 20 20" aria-hidden="true" focusable="false">'
+    '<rect class="plate" x="0.5" y="0.5" width="19" height="19" rx="5"/>'
+    '<circle class="ring" cx="10" cy="10" r="5"/>'
+    '<circle class="satellite" cx="16" cy="4" r="2"/></svg>'
 )
 
 _PROMPT_EDITOR_STYLE = r"""
@@ -99,7 +106,14 @@ _CARD_STYLE = r"""
   main{padding:16px;display:flex;flex-direction:column}
   @media (min-height:360px){main{max-height:100vh;max-height:100dvh}}
   header{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex:none}
-  .mark{display:block;width:28px;height:28px;flex:none;border-radius:7px} h1{margin:0;flex:1;font-size:14px}
+  .mark{display:block;width:28px;height:28px;flex:none}
+  /* The Orbit UI's own values for the three parts, in both themes. Brand
+     colour, so it is the same mark everywhere rather than the card accent
+     wearing the shape. */
+  .mark .plate{fill:light-dark(#f7f8fb,#212121);stroke:light-dark(#e4e8f0,#2a2d35)}
+  .mark .ring{fill:none;stroke:light-dark(#2563eb,#adc6ff);stroke-width:2}
+  .mark .satellite{fill:light-dark(#b45309,#ffb786)}
+  h1{margin:0;flex:1;font-size:14px}
   button{font:inherit}.icon{width:32px;height:32px;border:0;border-radius:8px;
     color:var(--accent);background:transparent;cursor:pointer}.card{max-height:var(--card-height);
     flex:0 1 auto;min-height:0;
@@ -273,7 +287,7 @@ __CARD_STYLE__
 </head>
 <body>
 <main>
-  <header><img class="mark" src="__ORBIT_LOGO__" alt="" aria-hidden="true"><div class="heading"><h1>Orbit</h1>
+  <header>__ORBIT_LOGO__<div class="heading"><h1>Orbit</h1>
     <div id="updated"></div></div><button id="refresh" class="icon" type="button" aria-label="Refresh">↻</button></header>
   <nav id="tabs" class="tabs" role="tablist">
     <button class="tab" id="tabWorkflows" type="button" role="tab" data-tab="workflows" aria-selected="false"></button>
@@ -686,7 +700,7 @@ __CARD_STYLE__
   start();
 </script>
 </body>
-</html>""".replace("__ORBIT_LOGO__", ORBIT_LOGO_DATA_URI).replace(
+</html>""".replace("__ORBIT_LOGO__", ORBIT_LOGO_MARK).replace(
     "__CARD_STYLE__", _CARD_STYLE,
 ).replace("__PROMPT_EDITOR_SCRIPT__", _PROMPT_EDITOR_SCRIPT)
 
@@ -777,7 +791,7 @@ def _card(
 ) -> str:
     return f"""<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
 <meta name=\"orbit-surface\" content=\"mcp-app\"><style>{_CARD_STYLE}{extra_style}</style></head><body><main>
-<header><img class=\"mark\" src=\"{ORBIT_LOGO_DATA_URI}\" alt=\"\" aria-hidden=\"true\"><h1>{title}</h1><button id=\"refresh\" class=\"icon\" type=\"button\">↻</button></header>
+<header>{ORBIT_LOGO_MARK}<h1>{title}</h1><button id=\"refresh\" class=\"icon\" type=\"button\">↻</button></header>
 <section id=\"card\" class=\"card\"><div class=\"empty\">Connecting…</div></section></main><script>{_CARD_BRIDGE}{extra_script}{body}</script></body></html>"""
 
 
