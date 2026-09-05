@@ -77,7 +77,7 @@ class HandshakeTests(ApiTestCase):
             resources = listed["result"]["resources"]
             self.assertEqual(
                 {
-                    "ui://orbit/current-task-v40.html", "ui://orbit/workflows-v18.html",
+                    "ui://orbit/current-task-v41.html", "ui://orbit/workflows-v18.html",
                     "ui://orbit/workflow-authoring-v11.html", "ui://orbit/goal-run-v17.html",
                     "ui://orbit/goals-v11.html",
                 },
@@ -257,12 +257,12 @@ class DiscoveryTests(ApiTestCase):
                 item for item in tools if item["name"] == "open_orbit_dashboard"
             )
             self.assertEqual(
-                "ui://orbit/current-task-v40.html",
+                "ui://orbit/current-task-v41.html",
                 dashboard["_meta"]["ui"]["resourceUri"],
             )
             self.assertEqual(
                 {
-                    "open_orbit_dashboard": "ui://orbit/current-task-v40.html",
+                    "open_orbit_dashboard": "ui://orbit/current-task-v41.html",
                     "open_orbit_goals": "ui://orbit/goals-v11.html",
                 },
                 {
@@ -319,7 +319,7 @@ class DiscoveryTests(ApiTestCase):
             ).json()["result"]["contents"][0]["text"]
             dashboard = rpc(
                 client, "resources/read",
-                {"uri": "ui://orbit/current-task-v40.html"}, actor="reader",
+                {"uri": "ui://orbit/current-task-v41.html"}, actor="reader",
             ).json()["result"]["contents"][0]["text"]
 
             self.assertIn("dispatchPromptValue(`使用工作流", workflows)
@@ -338,9 +338,8 @@ class DiscoveryTests(ApiTestCase):
             ):
                 self.assertIn(editable, dashboard)
             for direct in (
-                "action(t().open,t().promptOpen,'direct')",
                 "action(t().cancel,t().promptCancel(run.run_id),'direct')",
-                "action(t().explain,t().promptExplain(run.run_id),'direct',true)",
+                'data-prompt-mode="direct">${esc(t().approve)}',
             ):
                 self.assertIn(direct, dashboard)
 

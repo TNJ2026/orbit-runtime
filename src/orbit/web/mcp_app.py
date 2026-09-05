@@ -14,7 +14,7 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v40.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v41.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
@@ -227,7 +227,10 @@ __CARD_STYLE__
       font-size: 10px; font-weight: 650; letter-spacing: .04em; }
     .historyRow { display: grid; grid-template-columns: minmax(0,1fr) auto;
       align-items: center; gap: 10px; width: 100%; padding: 9px 14px; border: 0;
-      color: inherit; text-align: left; background: transparent; cursor: pointer; }
+      border-bottom: 1px solid var(--line); color: inherit; text-align: left;
+      background: transparent; cursor: pointer; }
+    /* The day group already draws the line under its last row. */
+    .historyRow:last-child { border-bottom: 0; }
     .historyRow:hover { background: var(--hover); }
     .historyCopy { min-width: 0; }
     .historyCopy .name, .historyCopy .meta { display: block; overflow: hidden;
@@ -292,14 +295,14 @@ __CARD_STYLE__
       cancelled: 'Cancelled', unknown: 'Needs review', queued: 'Workflow generation queued',
       authoring: 'Generating workflow', authoringDone: 'Workflow generated', authoringFailed: 'Workflow generation failed',
       waitingNotice: 'A workflow step is waiting for your response.',
-      handle: 'Handle in chat', approve: 'Approve', reject: 'Reject', cancel: 'Request cancellation', explain: 'Explain result', createWorkflow: 'Create workflow',
+      handle: 'Handle in chat', approve: 'Approve', reject: 'Reject', cancel: 'Request cancellation', createWorkflow: 'Create workflow',
       workflows: 'Workflows', workflow: 'Workflow', back: 'Back', noWorkflows: 'No published workflows', noSteps: 'No steps', noAgents: 'No registered Agents', newGoal: 'New goal', modify: 'Modify', addAgent: 'Add Agent',
       history: 'History', agents: 'Agents', goalDetail: 'Goal', noRuns: 'No goals have been run in this project yet.',
       today: 'Today', yesterday: 'Yesterday', dateUnknown: 'Unknown date',
       durationShort: 'under 1 min', durationMinutes: minutes => `${minutes} min`,
       durationHours: (hours, minutes) => `${hours} h ${minutes} min`,
       runs: 'Runs', errors: 'Errors',
-      open: 'Open full Orbit UI', refreshed: 'Updated just now', error: 'Could not read the current Orbit task.',
+      refreshed: 'Updated just now', error: 'Could not read the current Orbit task.',
       status: { succeeded:'Done', answered:'Answered', running:'Running', waiting:'Waiting', failed:'Failed', unknown:'Review', cancelled:'Cancelled', not_reached:'Pending' },
       promptHandle: run => `Handle the pending human input for Orbit run ${run.run_id}. `
         + `Before resuming, inspect the run and use its current interrupt_id, revision, and output_ports. `
@@ -307,8 +310,8 @@ __CARD_STYLE__
       promptApproval: (run,decision) => `${decision === 'approve' ? 'Approve' : 'Reject'} the pending approval for Orbit run ${run.run_id}. `
         + `Before resuming, inspect the run again and use its current interrupt_id, revision, allowed_commands, and output_ports. `
         + `Submit the declared output port object with decision="${decision}" and value=null; do not invent top-level fields.`,
-      promptCancel: id => `Cancel Orbit run ${id}.`, promptExplain: id => `Explain the result of Orbit run ${id}.`,
-      promptCreateWorkflow: 'Create an Orbit workflow from the following requirements:', promptAddAgent: '给Orbit添加Agent cli：', promptOpen: 'Open the full Orbit UI.',
+      promptCancel: id => `Cancel Orbit run ${id}.`,
+      promptCreateWorkflow: 'Create an Orbit workflow from the following requirements:', promptAddAgent: '给Orbit添加Agent cli：',
     },
     'zh-CN': {
       running: '运行中', waiting: '需要你的处理', interrupted: '需要你的处理',
@@ -316,14 +319,14 @@ __CARD_STYLE__
       cancelled: '已取消', unknown: '需要检查', queued: '工作流生成已排队',
       authoring: '正在生成工作流', authoringDone: '工作流已生成', authoringFailed: '工作流生成失败',
       waitingNotice: '有一个工作流步骤正在等待你的回复。',
-      handle: '在聊天中处理', approve: '批准', reject: '拒绝', cancel: '请求取消', explain: '解释结果', createWorkflow: '创建工作流',
+      handle: '在聊天中处理', approve: '批准', reject: '拒绝', cancel: '请求取消', createWorkflow: '创建工作流',
       workflows: '工作流', workflow: '工作流详情', back: '返回', noWorkflows: '暂无已发布工作流', noSteps: '暂无步骤', noAgents: '暂无已注册 Agent', newGoal: '新目标', modify: '修改', addAgent: '添加 Agent',
       history: '历史记录', agents: 'Agents', goalDetail: '目标详情', noRuns: '当前项目还没有目标执行记录。',
       today: '今天', yesterday: '昨天', dateUnknown: '未知日期',
       durationShort: '不足 1 分钟', durationMinutes: minutes => `${minutes} 分钟`,
       durationHours: (hours, minutes) => `${hours} 小时 ${minutes} 分钟`,
       runs: '运行', errors: '错误',
-      open: '打开完整 Orbit UI', refreshed: '刚刚更新', error: '无法读取当前 Orbit 任务。',
+      refreshed: '刚刚更新', error: '无法读取当前 Orbit 任务。',
       status: { succeeded:'完成', answered:'已回答', running:'运行中', waiting:'等待', failed:'失败', unknown:'检查', cancelled:'取消', not_reached:'未开始' },
       promptHandle: run => `处理 Orbit 运行 ${run.run_id} 中等待人工输入的步骤。`
         + `恢复前请重新检查运行，并使用当前的 interrupt_id、revision 和 output_ports。`
@@ -331,8 +334,8 @@ __CARD_STYLE__
       promptApproval: (run,decision) => `${decision === 'approve' ? '批准' : '拒绝'} Orbit 运行 ${run.run_id} 中待处理的人工审批。`
         + `恢复前请重新检查运行，并使用当前的 interrupt_id、revision、allowed_commands 和 output_ports。`
         + `按已声明的输出端口提交 decision="${decision}"、value=null 的对象，不要自创顶层字段。`,
-      promptCancel: id => `取消 Orbit 运行 ${id}。`, promptExplain: id => `解释 Orbit 运行 ${id} 的结果。`,
-      promptCreateWorkflow: '按照下面的要求创建 Orbit 工作流：', promptAddAgent: '给Orbit添加Agent cli：', promptOpen: '打开 Orbit 完整 UI。',
+      promptCancel: id => `取消 Orbit 运行 ${id}。`,
+      promptCreateWorkflow: '按照下面的要求创建 Orbit 工作流：', promptAddAgent: '给Orbit添加Agent cli：',
     },
   };
   const t = () => S[locale] || S['en-US'];
@@ -539,18 +542,18 @@ __CARD_STYLE__
     const live = !TERMINAL.has(run.status); const statusKey = waiting ? 'waiting' : run.status;
     const stepRows = steps.map(step => `<div class="step"><span class="dot ${cssFor(step.status)}"></span>
       <span class="stepName">${esc(step.label || step.node_id)}</span><span class="stepState">${esc(t().status[step.status] || step.status)}</span></div>`).join('');
-    let actions = action(t().open,t().promptOpen,'direct');
+    // Only what can still be done to this run. A finished one offers
+    // nothing, and an empty bordered row saying so is worse than no row.
     const approvals = approvalActions(run);
-    if (waiting && approvals) actions = approvals + actions;
-    else if (waiting) actions = action(t().handle,t().promptHandle(run),'edit',true) + actions;
-    else if (live) actions = action(t().cancel,t().promptCancel(run.run_id),'direct') + actions;
-    else actions = action(t().explain,t().promptExplain(run.run_id),'direct',true) + actions;
+    const actions = waiting && approvals ? approvals
+      : waiting ? action(t().handle,t().promptHandle(run),'edit',true)
+      : live ? action(t().cancel,t().promptCancel(run.run_id),'direct') : '';
     card.innerHTML = `${viewHead(t().goalDetail,'history')}<div class="summary"><div class="statusLine"><span class="dot ${cssFor(statusKey)}"></span>
       <span class="status">${esc(runStatusLabel(statusKey))}</span></div>
       <div class="goal">${esc(run.goal || run.workflow_id || run.run_id)}</div>
       <div class="meta">${esc(run.workflow_id || '')} · ${esc(run.run_id)}</div></div>
       ${waiting ? `<div class="notice">${esc(t().waitingNotice)}</div>` : ''}
-      ${stepRows ? `<div class="steps">${stepRows}</div>` : ''}<div class="actions">${actions}</div>`;
+      ${stepRows ? `<div class="steps">${stepRows}</div>` : ''}${actions ? `<div class="actions">${actions}</div>` : ''}`;
   }
 
   function bindActions() {

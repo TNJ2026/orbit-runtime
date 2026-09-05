@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v40.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v41.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -258,10 +258,42 @@ class CurrentTaskCardTests(unittest.TestCase):
         self.assertIn("'ui/message'", ORBIT_DASHBOARD_HTML)
         self.assertIn("sendFollowUpMessage", ORBIT_DASHBOARD_HTML)
         for prompt in (
-            "promptHandle", "promptCancel", "promptExplain",
-            "promptCreateWorkflow", "promptOpen",
+            "promptHandle", "promptCancel", "promptCreateWorkflow",
         ):
             self.assertIn(prompt, ORBIT_DASHBOARD_HTML)
+
+    def test_a_run_offers_only_what_can_still_be_done_to_it(self) -> None:
+        """Two ways out of the card is not something to do with a run.
+
+        A finished run used to offer 解释结果 and 打开完整 Orbit UI — one a
+        request to talk about it elsewhere, the other a way to leave. Neither
+        acts on the run, and together they were the whole action row of every
+        completed goal. A finished run offers nothing now, and the row it
+        would have sat in is not drawn.
+        """
+
+        for absent in (
+            "promptExplain", "promptOpen", "t().explain", "t().open",
+            "解释结果", "打开完整 Orbit UI", "Open full Orbit UI",
+        ):
+            self.assertNotIn(absent, ORBIT_DASHBOARD_HTML)
+        for marker in (
+            "const approvals = approvalActions(run);",
+            "live ? action(t().cancel,t().promptCancel(run.run_id),'direct') : ''",
+            "${actions ? `<div class=\"actions\">${actions}</div>` : ''}",
+        ):
+            self.assertIn(marker, ORBIT_DASHBOARD_HTML)
+
+    def test_history_rows_are_separated_like_every_other_list(self) -> None:
+        """The one list in the card that ran its rows together."""
+
+        self.assertIn(
+            "border-bottom: 1px solid var(--line); color: inherit; text-align: left;",
+            ORBIT_DASHBOARD_HTML,
+        )
+        # One line between rows, and one between days — never two.
+        self.assertIn(".historyRow:last-child { border-bottom: 0; }", ORBIT_DASHBOARD_HTML)
+        self.assertIn(".historyDay:last-child { border-bottom: 0; }", ORBIT_DASHBOARD_HTML)
 
     def test_approval_buttons_send_explicit_decisions_to_the_agent(self) -> None:
         for marker in (

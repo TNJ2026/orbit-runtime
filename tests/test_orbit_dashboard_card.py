@@ -253,9 +253,9 @@ class DashboardCardTests(unittest.TestCase):
                 self.assertNotIn(background, ("rgba(0, 0, 0, 0)", "transparent"))
                 self.assertEqual("8px", radius)
                 self.assertEqual("none", decoration)
-        # 拒绝 washes red; the other two wash accent.
+        # 拒绝 washes red where 批准 washes accent — which is the whole
+        # point of tinting with `currentColor` rather than a fixed value.
         self.assertNotEqual(seen["拒绝"][0], seen["批准"][0])
-        self.assertEqual(seen["批准"][0], seen["打开完整 Orbit UI"][0])
 
     def test_the_host_never_has_to_scroll_the_whole_card(self) -> None:
         """Two scrollbars, one inside the other, is the thing to avoid.
@@ -387,6 +387,20 @@ class DashboardCardTests(unittest.TestCase):
             ),
         )
 
+    def test_a_finished_run_is_offered_no_actions_at_all(self) -> None:
+        """Not an empty action row either — the row is not drawn."""
+
+        runs = [run("run:a", status="completed", goal="翻译这段内容",
+                    created_at=at(0), updated_at=at(0))]
+        page = self.open(runs=runs, steps=[
+            {"node_id": "draft", "label": "起草", "status": "succeeded"},
+        ])
+        page.click("#tabHistory")
+        page.click(".historyRow")
+        page.wait_for_selector(".steps")
+        self.assertEqual(0, page.eval_on_selector_all("#card .actions", "n => n.length"))
+        self.assertEqual(0, page.eval_on_selector_all("#card .action", "n => n.length"))
+
     def test_a_history_row_opens_that_run_and_comes_back(self) -> None:
         runs = [run("run:a", status="completed", goal="翻译这段内容",
                     created_at=at(0), updated_at=at(0))]
@@ -424,7 +438,7 @@ class DashboardCardTests(unittest.TestCase):
         self.assertEqual("history", self.selected(page))
         self.assertIn("起草说明文档", page.text_content(".goal"))
         self.assertEqual(
-            ["批准", "拒绝", "打开完整 Orbit UI"],
+            ["批准", "拒绝"],
             page.eval_on_selector_all(
                 ".actions .action", "nodes => nodes.map(node => node.textContent)"
             ),
