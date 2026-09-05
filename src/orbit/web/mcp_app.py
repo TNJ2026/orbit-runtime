@@ -14,7 +14,7 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v34.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v35.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
@@ -136,14 +136,16 @@ __CARD_STYLE__
     #refresh:disabled { opacity: .55; cursor: default; }
     #tabs { align-items: center; padding: 0; border-top: 0; background: transparent; }
     #createWorkflow { margin-left: auto; }
-    /* A project with a year of goals in it must not turn the card into a
-       page the host has to scroll past. The list scrolls inside its own
-       frame; the tabs above it stay where they were left. Named, like the
-       workflow card's own height, so the two knobs a host may need to reach
-       are not buried in a rule. */
-    :root { --dashboard-card-min-height: 420px; --dashboard-card-max-height: 640px; }
-    #card { min-height: var(--dashboard-card-min-height);
-      max-height: var(--dashboard-card-max-height); margin-top: 12px;
+    /* One height, whatever a tab happens to hold. A minimum and a maximum
+       meant the card was as tall as its content between them, so switching
+       to a History with nothing in it yet shrank the card by 220px and moved
+       the tabs the reader had just used. A project with a year of goals in
+       it must not turn the card into a page the host has to scroll past
+       either, so the list scrolls inside the frame. Named, like the workflow
+       card's own height, so the knob a host may need to reach is not buried
+       in a rule. */
+    :root { --dashboard-card-height: 640px; }
+    #card { height: var(--dashboard-card-height); margin-top: 12px;
       overflow: hidden auto; }
     /* A goal can be a paragraph; three lines is enough to recognise one. */
     .goal { display: -webkit-box; -webkit-line-clamp: 3;

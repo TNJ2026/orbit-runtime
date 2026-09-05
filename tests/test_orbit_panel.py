@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v34.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v35.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -463,9 +463,24 @@ class DedicatedCardTests(unittest.TestCase):
             ORBIT_WORKFLOWS_HTML,
         )
 
-    def test_dashboard_default_height_contains_the_prompt_editor(self) -> None:
-        self.assertIn("--dashboard-card-min-height: 420px;", ORBIT_DASHBOARD_HTML)
-        self.assertIn("#card { min-height: var(--dashboard-card-min-height);", ORBIT_DASHBOARD_HTML)
+    def test_dashboard_height_is_one_height_for_every_tab(self) -> None:
+        """A minimum and a maximum is not a height.
+
+        The card was as tall as whatever the open tab held, between 420 and
+        640, so switching to a History with nothing in it yet shrank the card
+        by 220px and moved the tabs the reader had just pressed. One height,
+        and the tall lists still scroll inside it.
+        """
+
+        self.assertIn("--dashboard-card-height: 640px;", ORBIT_DASHBOARD_HTML)
+        self.assertIn(
+            "#card { height: var(--dashboard-card-height); margin-top: 12px;",
+            ORBIT_DASHBOARD_HTML,
+        )
+        self.assertIn("overflow: hidden auto;", ORBIT_DASHBOARD_HTML)
+        for absent in ("min-height: var(--dashboard", "max-height: var(--dashboard"):
+            self.assertNotIn(absent, ORBIT_DASHBOARD_HTML)
+        # Tall enough to hold the prompt editor it opens over itself.
         self.assertIn(".promptEditorInput { display: block; width: 100%; min-height: 132px;", ORBIT_DASHBOARD_HTML)
 
     def test_cards_receive_late_codex_tool_output(self) -> None:

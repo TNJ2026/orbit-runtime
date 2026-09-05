@@ -77,7 +77,7 @@ class HandshakeTests(ApiTestCase):
             resources = listed["result"]["resources"]
             self.assertEqual(
                 {
-                    "ui://orbit/current-task-v34.html", "ui://orbit/workflows-v13.html",
+                    "ui://orbit/current-task-v35.html", "ui://orbit/workflows-v13.html",
                     "ui://orbit/workflow-authoring-v6.html", "ui://orbit/goal-run-v12.html",
                     "ui://orbit/goals-v6.html",
                 },
@@ -257,12 +257,12 @@ class DiscoveryTests(ApiTestCase):
                 item for item in tools if item["name"] == "open_orbit_dashboard"
             )
             self.assertEqual(
-                "ui://orbit/current-task-v34.html",
+                "ui://orbit/current-task-v35.html",
                 dashboard["_meta"]["ui"]["resourceUri"],
             )
             self.assertEqual(
                 {
-                    "open_orbit_dashboard": "ui://orbit/current-task-v34.html",
+                    "open_orbit_dashboard": "ui://orbit/current-task-v35.html",
                     "open_orbit_goals": "ui://orbit/goals-v6.html",
                 },
                 {
@@ -311,7 +311,7 @@ class DiscoveryTests(ApiTestCase):
             ).json()["result"]["contents"][0]["text"]
             dashboard = rpc(
                 client, "resources/read",
-                {"uri": "ui://orbit/current-task-v34.html"}, actor="reader",
+                {"uri": "ui://orbit/current-task-v35.html"}, actor="reader",
             ).json()["result"]["contents"][0]["text"]
 
             self.assertIn("dispatchPromptValue(`使用工作流", workflows)

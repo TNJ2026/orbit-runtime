@@ -191,6 +191,29 @@ class DashboardCardTests(unittest.TestCase):
         page.wait_for_selector(".workflowChoice .row")
         self.assertEqual("workflows", self.selected(page))
 
+    def test_every_tab_is_the_same_height(self) -> None:
+        """Including a History with nothing in it yet.
+
+        The card used to be as tall as its content between a minimum and a
+        maximum, so this one view was 220px shorter than the others and
+        switching to it moved the tabs the reader had just pressed.
+        """
+
+        page = self.open()
+        heights = {}
+        for tab in ("#tabWorkflows", "#tabHistory", "#tabAgents"):
+            page.click(tab)
+            page.wait_for_timeout(200)
+            if tab == "#tabHistory":
+                # The view this is about: nothing in it, and the same height.
+                self.assertEqual(
+                    "当前项目还没有目标执行记录。", page.text_content(".empty")
+                )
+            heights[tab] = page.eval_on_selector(
+                "#card", "node => node.getBoundingClientRect().height"
+            )
+        self.assertEqual(1, len(set(heights.values())), heights)
+
     # -- history ----------------------------------------------------------
 
     def test_history_groups_goals_by_day_the_way_the_full_ui_does(self) -> None:
