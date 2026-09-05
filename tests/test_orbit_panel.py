@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v41.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v42.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -98,7 +98,7 @@ class CurrentTaskCardTests(unittest.TestCase):
 
     def test_embedded_workflow_list_offers_new_goal_directly(self) -> None:
         for marker in (
-            'class="workflowChoice"', "workflowGoal", "t().newGoal",
+            'class="rowItem"', "rowAction", "t().newGoal",
             "使用工作流「${name}」（${workflow.workflow_id}）执行：",
         ):
             self.assertIn(marker, ORBIT_DASHBOARD_HTML)
@@ -404,26 +404,52 @@ class DedicatedCardTests(unittest.TestCase):
         self.assertNotIn("list_authoring_jobs", ORBIT_WORKFLOWS_HTML)
 
     def test_workflow_list_items_offer_the_same_new_goal_prompt(self) -> None:
-        """Same offer, same prompt, and now the same button.
+        """Same offer, same prompt, same button, same construction.
 
         The list's 新目标 used to be a neutral pill of its own while the
-        workflow's card offered the accent one. Two looks for one action read
-        as two different actions, so the list uses `.action.primary` and the
-        class it keeps only says where in the row it sits.
+        workflow's card offered the accent one; two looks for one action read
+        as two different actions. And each card built the row it sits in
+        separately, which is how one of them ended up with a hover that
+        stopped short of its own button. Both are `.rowItem`/`.rowAction` now.
         """
 
         for marker in (
-            'class="action primary listGoal"', 'data-goal-id="${esc(w.workflow_id)}"',
+            'class="action primary rowAction"', 'data-goal-id="${esc(w.workflow_id)}"',
             'data-goal-name="${esc(w.name||w.workflow_id)}"',
             "event.stopPropagation()",
             "使用工作流「${b.dataset.goalName}」（${b.dataset.goalId}）执行：",
-            ".listGoal { position: absolute; top: 50%; right: 12px;"
-            " transform: translateY(-50%); }",
         ):
             self.assertIn(marker, ORBIT_WORKFLOWS_HTML)
         # Nothing left that repaints it away from the shared button.
-        for absent in ("light-dark(#e5e5e8, #303034)", ".listGoal:hover"):
+        for absent in ("light-dark(#e5e5e8, #303034)", ".listGoal"):
             self.assertNotIn(absent, ORBIT_WORKFLOWS_HTML)
+
+    def test_a_row_with_a_control_still_highlights_to_its_own_edge(self) -> None:
+        """The row fills the item; the control sits over it, not beside it.
+
+        The dashboard laid the two out as grid columns, so hovering a
+        workflow lit everything except the 72px under its own 新目标 — the
+        one list in either card whose highlight stopped short. One
+        construction now, in the shared sheet, so it cannot diverge again.
+        """
+
+        for html in (ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML):
+            with self.subTest():
+                self.assertIn(
+                    ".rowItem{position:relative;border-bottom:1px solid var(--line)}", html,
+                )
+                self.assertIn(
+                    ".rowItem .row{min-height:68px;padding-right:104px;border-bottom:0}", html,
+                )
+                self.assertIn(
+                    ".rowAction{position:absolute;top:50%;right:12px;"
+                    "transform:translateY(-50%);white-space:nowrap}",
+                    html,
+                )
+                # The row is what paints, so it must be what hovers.
+                self.assertIn(".row:hover{background:var(--hover)}", html)
+                for retired in ("workflowChoice", "workflowGoal", "workflowRow", "listGoal"):
+                    self.assertNotIn(retired, html)
 
     def test_workflow_item_switches_to_detail_inside_the_list_card(self) -> None:
         for marker in (

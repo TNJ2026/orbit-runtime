@@ -14,11 +14,11 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v41.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v42.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v18.html"
+ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v19.html"
 ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v11.html"
 ORBIT_RUN_URI = "ui://orbit/goal-run-v17.html"
 ORBIT_GOALS_URI = "ui://orbit/goals-v11.html"
@@ -127,6 +127,16 @@ _CARD_STYLE = r"""
   .error{color:var(--bad)} .row{display:block;width:100%;padding:12px 14px;border:0;border-bottom:1px solid var(--line);
     color:inherit;text-align:left;background:transparent;cursor:pointer}.row:last-child{border-bottom:0}.row:hover{background:var(--hover)}
   .name{font-weight:650}.desc,.meta{margin-top:3px;color:var(--muted);font-size:11px;overflow-wrap:anywhere}
+  /* A row that carries a control. The row itself fills the item, so its
+     hover reaches the right edge like every row that carries nothing; the
+     control sits over it rather than beside it. Written once because both
+     cards draw this list and only one of them had it right — the dashboard
+     laid the two out as grid columns, so hovering a workflow lit everything
+     except the 72px under its own button. */
+  .rowItem{position:relative;border-bottom:1px solid var(--line)}
+  .rowItem:last-child{border-bottom:0}
+  .rowItem .row{min-height:68px;padding-right:104px;border-bottom:0}
+  .rowAction{position:absolute;top:50%;right:12px;transform:translateY(-50%);white-space:nowrap}
   .summary{padding:15px}.statusLine{display:flex;align-items:center;gap:8px}.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
   .dot.live{background:var(--accent);animation:pulse 1.4s infinite}.dot.good{background:var(--good)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}
   .goal{margin-top:9px;font-size:14px;font-weight:600;overflow-wrap:anywhere}.progress{height:3px;margin-top:12px;border-radius:3px;background:var(--line);overflow:hidden}
@@ -210,11 +220,6 @@ __CARD_STYLE__
     .stepName { min-width: 0; overflow: hidden; text-overflow: ellipsis;
       white-space: nowrap; }
     .stepState { color: var(--muted); font-size: 10px; }
-    .workflowChoice { display: grid; grid-template-columns: minmax(0, 1fr) auto;
-      align-items: center; border-bottom: 1px solid var(--line); }
-    .workflowChoice:last-child { border-bottom: 0; }
-    .workflowChoice .row { border-bottom: 0; }
-    .workflowGoal { margin-right: 12px; white-space: nowrap; }
     .definition { border-top: 1px solid var(--line); }
     .definitionRow { padding: 10px 14px; border-bottom: 1px solid var(--line); }
     .definitionRow:last-child { border-bottom: 0; }
@@ -445,10 +450,10 @@ __CARD_STYLE__
   }
 
   function renderWorkflowList(workflows,job) {
-    const rows = workflows.map(workflow => { const name = workflow.name || workflow.workflow_id; return `<div class="workflowChoice"><button class="row" type="button" data-workflow-id="${esc(workflow.workflow_id)}">
+    const rows = workflows.map(workflow => { const name = workflow.name || workflow.workflow_id; return `<div class="rowItem"><button class="row" type="button" data-workflow-id="${esc(workflow.workflow_id)}">
       <div class="name">${esc(name)}</div>
       <div class="desc">${esc(workflow.description || `${workflow.node_count || 0} steps · v${workflow.latest_version || ''}`)}</div></button>
-      ${action(t().newGoal,`使用工作流「${name}」（${workflow.workflow_id}）执行：`,'edit',true).replace('class="action primary"','class="action primary workflowGoal"')}</div>`; }).join('');
+      ${action(t().newGoal,`使用工作流「${name}」（${workflow.workflow_id}）执行：`,'edit',true).replace('class="action primary"','class="action primary rowAction"')}</div>`; }).join('');
     card.innerHTML = `${authoringStrip(job)}${rows || `<div class="empty">${esc(t().noWorkflows)}</div>`}`;
   }
 
@@ -774,20 +779,12 @@ _WORKFLOW_LIST_STYLE = r"""
 #card.workflowList, #card.workflowDetail { height: var(--card-height); }
 #card.workflowDetail { display: flex; min-height: 0; flex-direction: column; }
 #card.workflowDetail .detailPanel { flex: 1 1 auto; height: auto; min-height: 0; }
-.workflowRow { position: relative; border-bottom: 1px solid var(--line); }
-.workflowRow:last-child { border-bottom: 0; }
-.workflowRow .row { min-height: 68px; padding-right: 104px; border-bottom: 0; }
-/* 新目标 in the list is the same offer as 新目标 on the workflow's own
-   card, so it is the same button: `.action.primary`, styled once. All this
-   class adds is where it sits, which is local to the list — the row behind
-   it is a full-width button, so this one is placed over its right edge. */
-.listGoal { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); }
 /* Why there is no 新目标 on this one. Small print, wrapping, and in the row
    rather than replacing the description: a reader still needs to know which
    workflow it is. */
 .refusal { margin-top: 4px; padding: 0 12px 8px; color: var(--warn, #b26a00);
   font-size: 11px; line-height: 1.45; white-space: normal; overflow-wrap: anywhere; }
-.workflowRow .refusal { padding: 0; }
+.rowItem .refusal { padding: 0; }
 """
 
 
@@ -817,8 +814,8 @@ function bindDeleteConfirmation(w){const dialog=document.getElementById('deleteW
  dialog.onclick=event=>{if(event.target===dialog)dialog.close()};confirm.onclick=()=>{dialog.close();send(`我确认删除工作流${w.workflow_id}（${w.name||w.workflow_id}）。请重新读取其最新版本，并使用授权的 delete_workflow 工具和新的幂等键执行删除。`)}}
 function drawList(rows){current=null;
  card.className='card workflowList';
- card.innerHTML=rows.length?rows.map(w=>`<div class="workflowRow"><button class="row" type="button" data-open-id="${esc(w.workflow_id)}"><div class="name">${esc(w.name)}</div>
- <div class="desc">${esc(w.description||`${w.node_count||0} steps · v${w.latest_version||''}`)}</div>${refusalMarkup(w)}</button>${runnable(w)?`<button class="action primary listGoal" type="button" data-goal-id="${esc(w.workflow_id)}" data-goal-name="${esc(w.name||w.workflow_id)}">新目标</button>`:''}</div>`).join(''):'<div class="empty">No workflows</div>';
+ card.innerHTML=rows.length?rows.map(w=>`<div class="rowItem"><button class="row" type="button" data-open-id="${esc(w.workflow_id)}"><div class="name">${esc(w.name)}</div>
+ <div class="desc">${esc(w.description||`${w.node_count||0} steps · v${w.latest_version||''}`)}</div>${refusalMarkup(w)}</button>${runnable(w)?`<button class="action primary rowAction" type="button" data-goal-id="${esc(w.workflow_id)}" data-goal-name="${esc(w.name||w.workflow_id)}">新目标</button>`:''}</div>`).join(''):'<div class="empty">No workflows</div>';
  card.querySelectorAll('[data-open-id]').forEach(b=>b.onclick=()=>openDetail(b.dataset.openId));
  card.querySelectorAll('[data-goal-id]').forEach(b=>b.onclick=event=>{event.stopPropagation();dispatchPromptValue(`使用工作流「${b.dataset.goalName}」（${b.dataset.goalId}）执行：`) });
 }

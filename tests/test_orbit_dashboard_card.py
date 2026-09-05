@@ -191,7 +191,7 @@ class DashboardCardTests(unittest.TestCase):
         self.assertIn("当前项目还没有目标执行记录。", page.text_content("#card"))
 
         page.click("#tabWorkflows")
-        page.wait_for_selector(".workflowChoice .row")
+        page.wait_for_selector(".rowItem .row")
         self.assertEqual("workflows", self.selected(page))
 
     def test_every_tab_is_the_same_height(self) -> None:
@@ -350,6 +350,36 @@ class DashboardCardTests(unittest.TestCase):
         self.assertEqual(
             gutters["#tabWorkflows"]["gutter"], gutters["#tabHistory"]["gutter"]
         )
+
+    def test_a_workflow_row_highlights_to_its_own_edge(self) -> None:
+        """Including the part of it under 新目标.
+
+        The list used to be a two-column grid, so the highlight covered the
+        text column and stopped at the button's — 72px of the row stayed
+        white while the pointer was on it.
+        """
+
+        page = self.open()
+        page.wait_for_selector(".rowItem .row")
+        page.hover(".rowItem:nth-child(2) .row")
+        page.wait_for_timeout(150)
+        measured = page.evaluate(
+            """() => {
+              const item = document.querySelectorAll('.rowItem')[1];
+              const row = item.querySelector('.row');
+              const button = item.querySelector('.rowAction');
+              return {
+                gap: Math.round(item.getBoundingClientRect().right
+                     - row.getBoundingClientRect().right),
+                painted: getComputedStyle(row).backgroundColor,
+                reaches_button: Math.round(row.getBoundingClientRect().right)
+                  >= Math.round(button.getBoundingClientRect().right),
+              };
+            }"""
+        )
+        self.assertEqual(0, measured["gap"])
+        self.assertTrue(measured["reaches_button"])
+        self.assertNotIn(measured["painted"], ("rgba(0, 0, 0, 0)", "transparent"))
 
     # -- history ----------------------------------------------------------
 
