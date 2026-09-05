@@ -214,6 +214,31 @@ class DashboardCardTests(unittest.TestCase):
             )
         self.assertEqual(1, len(set(heights.values())), heights)
 
+    def test_the_scrollbar_column_is_there_before_it_is_needed(self) -> None:
+        """Reserved on a view with nothing to scroll, too.
+
+        Otherwise the column appears the moment a list outgrows the card and
+        every row under the pointer shifts 13px to the left.
+        """
+
+        page = self.open()
+        gutters = {}
+        for tab in ("#tabWorkflows", "#tabHistory"):
+            page.click(tab)
+            page.wait_for_timeout(200)
+            gutters[tab] = page.eval_on_selector(
+                "#card",
+                "node => ({gutter: node.offsetWidth - node.clientWidth,"
+                " scrolls: node.scrollHeight > node.clientHeight})",
+            )
+        # History is empty here, so it has nothing to scroll — and still
+        # reserves exactly what the tab that does scroll reserves.
+        self.assertFalse(gutters["#tabHistory"]["scrolls"])
+        self.assertGreater(gutters["#tabHistory"]["gutter"], 0)
+        self.assertEqual(
+            gutters["#tabWorkflows"]["gutter"], gutters["#tabHistory"]["gutter"]
+        )
+
     # -- history ----------------------------------------------------------
 
     def test_history_groups_goals_by_day_the_way_the_full_ui_does(self) -> None:

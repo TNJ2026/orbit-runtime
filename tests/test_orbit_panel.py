@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v36.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v37.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -303,7 +303,12 @@ class CurrentTaskCardTests(unittest.TestCase):
                 self.assertIn(".action.primary{color:var(--accent)}", html)
                 # Destructive stays a warning rather than joining them.
                 self.assertIn(".action.danger{color:var(--bad)}", html)
-                self.assertIn("border-radius:12px} .empty,.error{", html)
+                # The frame has a border and a radius and no fill of its
+                # own; read from the rule rather than from what follows it,
+                # so adding a property to `.card` cannot quietly pass.
+                rule = html.split(".card{", 1)[1].split("}", 1)[0]
+                self.assertIn("border:1px solid var(--line)", rule)
+                self.assertNotIn("background:", rule)
                 self.assertIn(
                     ".back{width:30px;height:30px;border:0;color:var(--accent);"
                     "background:transparent;cursor:pointer}",
@@ -577,6 +582,41 @@ class DedicatedCardTests(unittest.TestCase):
                 for private in ("--workflow-card-height", "--goal-run-card-max-height",
                                 "--dashboard-card-height", "--dashboard-card-min-height"):
                     self.assertNotIn(private, html)
+
+    def test_every_card_keeps_its_scrollbar(self) -> None:
+        """A bar that is there before you need it, and stays after.
+
+        The platform default on macOS is an overlay scrollbar: no width,
+        visible only while a finger is moving. A list gave no sign that it
+        continued, and the content shifted sideways the moment the bar
+        arrived. `scrollbar-gutter: stable` buys the column once, for every
+        card, whether or not that card scrolls today.
+
+        Both mechanisms are written because no engine reads both: current
+        Chromium honours the standard properties and ignores the WebKit
+        pseudo-elements outright, and WebKit has only ever had those.
+        """
+
+        for html in (
+            ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML,
+            ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
+        ):
+            with self.subTest():
+                self.assertIn("scrollbar-gutter:stable;scrollbar-width:thin;", html)
+                self.assertIn(
+                    "scrollbar-color:color-mix(in srgb,var(--muted) 40%,transparent)"
+                    " transparent}",
+                    html,
+                )
+                self.assertIn(".card::-webkit-scrollbar{width:11px}", html)
+                self.assertIn(
+                    ".card::-webkit-scrollbar-thumb{border:3px solid transparent;"
+                    "border-radius:999px;\n    background:color-mix(in srgb,"
+                    "var(--muted) 40%,transparent);background-clip:content-box}",
+                    html,
+                )
+                # `--line` is 33 levels off white; it could not be seen.
+                self.assertNotIn("scrollbar-color:var(--line)", html)
 
     def test_the_goal_list_second_line_reads_as_a_second_line(self) -> None:
         """`--faint` was never declared on any card.

@@ -14,14 +14,14 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v36.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v37.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v14.html"
-ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v7.html"
-ORBIT_RUN_URI = "ui://orbit/goal-run-v13.html"
-ORBIT_GOALS_URI = "ui://orbit/goals-v7.html"
+ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v15.html"
+ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v8.html"
+ORBIT_RUN_URI = "ui://orbit/goal-run-v14.html"
+ORBIT_GOALS_URI = "ui://orbit/goals-v8.html"
 
 # The same framed ring-and-satellite mark used by the full Orbit UI favicon.
 # Keep it embedded: MCP App documents must not depend on a separate HTTP asset.
@@ -84,7 +84,27 @@ _CARD_STYLE = r"""
   .mark{display:block;width:28px;height:28px;flex:none;border-radius:7px} h1{margin:0;flex:1;font-size:14px}
   button{font:inherit}.icon{width:32px;height:32px;border:0;border-radius:8px;
     color:var(--accent);background:transparent;cursor:pointer}.card{max-height:var(--card-height);
-    overflow:hidden auto;border:1px solid var(--line);border-radius:12px} .empty,.error{padding:26px 16px;text-align:center;color:var(--muted)}
+    overflow:hidden auto;border:1px solid var(--line);border-radius:12px;
+    scrollbar-gutter:stable;scrollbar-width:thin;
+    scrollbar-color:color-mix(in srgb,var(--muted) 40%,transparent) transparent}
+  /* A thin bar that is always there. The platform default on macOS is an
+     overlay one: no width, visible only while a finger is moving, gone a
+     second later — so a list gives no sign that it continues, and the
+     content jumps sideways the moment the bar arrives. `scrollbar-gutter`
+     buys the column once, for every card, whether or not that card scrolls
+     today. The tone is `--muted` at 40%: about 60 levels off the ground in
+     both themes, which is present without being a second border. `--line`
+     is 33 off white and could not be seen at all.
+
+     The two declarations above are the standard properties, which is what
+     current Chromium reads — it ignores the pseudo-elements entirely. The
+     block below is the same bar for WebKit hosts, which have only ever had
+     them. Neither engine reads both. */
+  .card::-webkit-scrollbar{width:11px}
+  .card::-webkit-scrollbar-track{background:transparent}
+  .card::-webkit-scrollbar-thumb{border:3px solid transparent;border-radius:999px;
+    background:color-mix(in srgb,var(--muted) 40%,transparent);background-clip:content-box}
+  .card::-webkit-scrollbar-thumb:hover{background:var(--muted);background-clip:content-box} .empty,.error{padding:26px 16px;text-align:center;color:var(--muted)}
   .error{color:var(--bad)} .row{display:block;width:100%;padding:12px 14px;border:0;border-bottom:1px solid var(--line);
     color:inherit;text-align:left;background:transparent;cursor:pointer}.row:last-child{border-bottom:0}.row:hover{background:var(--hover)}
   .name{font-weight:650}.desc,.meta{margin-top:3px;color:var(--muted);font-size:11px;overflow-wrap:anywhere}
