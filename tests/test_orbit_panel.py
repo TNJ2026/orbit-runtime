@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v33.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v34.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -85,7 +85,7 @@ class CurrentTaskCardTests(unittest.TestCase):
         for marker in (
             "addAgent: 'Add Agent'", "addAgent: '添加 Agent'",
             "promptAddAgent: '给Orbit添加Agent cli：'",
-            "const head = actionHead(",
+            "card.innerHTML = `${rows || `<div class=\"empty\">${esc(t().noAgents)}</div>`}${add}`",
             'data-prompt="${esc(t().promptAddAgent)}"',
             "button.addEventListener('click', () => dispatchPrompt(button))",
             "dispatchPromptValue(button.dataset.prompt",

@@ -161,6 +161,20 @@ class DashboardCardTests(unittest.TestCase):
         self.assertEqual("workflows", self.selected(page))
         self.assertIn("起草 · 人工审核", page.text_content("#card"))
 
+    def test_adding_an_agent_is_offered_under_the_list(self) -> None:
+        """After the Agents already registered, not above them."""
+
+        page = self.open()
+        page.click("#tabAgents")
+        page.wait_for_selector(".agentRow")
+        self.assertEqual("添加 Agent", page.text_content("#card .actions .action"))
+        self.assertEqual(
+            ["agentRow", "agentRow", "actions"],
+            page.eval_on_selector_all(
+                "#card > *", "nodes => nodes.map(node => node.className)"
+            ),
+        )
+
     def test_each_tab_switches_the_card_in_place(self) -> None:
         page = self.open()
         page.click("#tabAgents")

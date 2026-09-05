@@ -14,7 +14,7 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v33.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v34.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
@@ -378,13 +378,6 @@ __CARD_STYLE__
     return `<div class="viewHead"><button class="back" type="button" data-back-view="${backView}" aria-label="${esc(t().back)}">←</button><div class="viewTitle">${esc(title)}</div></div>`;
   }
 
-  /* A head with no title. The tab above already names the list; printing
-     the same word again directly under it was one label too many. What the
-     row is here for is the button at its end. */
-  function actionHead(trailing) {
-    return `<div class="viewHead"><div class="viewTitle"></div>${trailing}</div>`;
-  }
-
   function authoringStrip(job) {
     if (!job) return '';
     const status = job.status === 'queued' ? t().queued : job.status === 'done' ? t().authoringDone
@@ -480,8 +473,11 @@ __CARD_STYLE__
       <div class="agentIdentity"><div class="name" title="${esc(agent.name)}">${esc(name || agent.name)}</div><div class="meta">${esc(agent.version || '')}</div></div>
       <div class="agentStat"><strong>${esc(agent.attempt_count ?? 0)}</strong>${esc(t().runs)}</div>
       <div class="agentStat${agent.failed_count > 0 ? ' bad' : ''}"><strong>${esc(agent.failed_count ?? 0)}</strong>${esc(t().errors)}</div></div>`; }).join('');
-    const head = actionHead(`<button class="action primary" type="button" data-prompt="${esc(t().promptAddAgent)}" data-prompt-mode="edit">${esc(t().addAgent)}</button>`);
-    card.innerHTML = `${head}${rows || `<div class="empty">${esc(t().noAgents)}</div>`}`;
+    // Under the list rather than over it: adding an Agent is what a person
+    // does after reading the ones already there, and the row it sits in is
+    // the same action row every other view in this card ends with.
+    const add = `<div class="actions"><button class="action primary" type="button" data-prompt="${esc(t().promptAddAgent)}" data-prompt-mode="edit">${esc(t().addAgent)}</button></div>`;
+    card.innerHTML = `${rows || `<div class="empty">${esc(t().noAgents)}</div>`}${add}`;
   }
 
   function renderRun(run,steps) {
