@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v39.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v40.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -608,8 +608,13 @@ class DedicatedCardTests(unittest.TestCase):
         ):
             with self.subTest():
                 self.assertIn(
-                    "main{padding:16px;display:flex;flex-direction:column;"
-                    "max-height:100vh;max-height:100dvh}",
+                    "main{padding:16px;display:flex;flex-direction:column}", html,
+                )
+                # Fitting is given up below a frame too short to fit into:
+                # the card has no floor, and at 150px it measured 12px.
+                self.assertIn(
+                    "@media (min-height:360px){main{max-height:100vh;"
+                    "max-height:100dvh}}",
                     html,
                 )
                 # The chrome is not what gets squeezed.

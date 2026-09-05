@@ -77,9 +77,9 @@ class HandshakeTests(ApiTestCase):
             resources = listed["result"]["resources"]
             self.assertEqual(
                 {
-                    "ui://orbit/current-task-v39.html", "ui://orbit/workflows-v17.html",
-                    "ui://orbit/workflow-authoring-v10.html", "ui://orbit/goal-run-v16.html",
-                    "ui://orbit/goals-v10.html",
+                    "ui://orbit/current-task-v40.html", "ui://orbit/workflows-v18.html",
+                    "ui://orbit/workflow-authoring-v11.html", "ui://orbit/goal-run-v17.html",
+                    "ui://orbit/goals-v11.html",
                 },
                 {resource["uri"] for resource in resources},
             )
@@ -257,13 +257,13 @@ class DiscoveryTests(ApiTestCase):
                 item for item in tools if item["name"] == "open_orbit_dashboard"
             )
             self.assertEqual(
-                "ui://orbit/current-task-v39.html",
+                "ui://orbit/current-task-v40.html",
                 dashboard["_meta"]["ui"]["resourceUri"],
             )
             self.assertEqual(
                 {
-                    "open_orbit_dashboard": "ui://orbit/current-task-v39.html",
-                    "open_orbit_goals": "ui://orbit/goals-v10.html",
+                    "open_orbit_dashboard": "ui://orbit/current-task-v40.html",
+                    "open_orbit_goals": "ui://orbit/goals-v11.html",
                 },
                 {
                     item["name"]: item["_meta"]["ui"]["resourceUri"]
@@ -274,15 +274,23 @@ class DiscoveryTests(ApiTestCase):
                 item["name"]: item.get("_meta", {}).get("ui", {}).get("resourceUri")
                 for item in tools
             }
-            self.assertEqual("ui://orbit/workflows-v17.html", card_bindings["list_workflows"])
+            self.assertEqual("ui://orbit/workflows-v18.html", card_bindings["list_workflows"])
             self.assertEqual(
-                "ui://orbit/workflows-v17.html",
+                "ui://orbit/workflows-v18.html",
                 card_bindings["get_workflow_definition"],
             )
             self.assertIsNone(card_bindings["inspect_workflow_definition"])
-            self.assertEqual("ui://orbit/workflow-authoring-v10.html", card_bindings["generate_workflow"])
-            self.assertEqual("ui://orbit/goal-run-v16.html", card_bindings["start_run"])
-            self.assertEqual("ui://orbit/goals-v10.html", card_bindings["open_orbit_goals"])
+            self.assertEqual("ui://orbit/workflow-authoring-v11.html", card_bindings["generate_workflow"])
+            self.assertEqual("ui://orbit/goal-run-v17.html", card_bindings["start_run"])
+            self.assertEqual("ui://orbit/goals-v11.html", card_bindings["open_orbit_goals"])
+            for item in tools:
+                resource_uri = item.get("_meta", {}).get("ui", {}).get("resourceUri")
+                if resource_uri is not None:
+                    self.assertEqual(
+                        resource_uri,
+                        item["_meta"]["openai/outputTemplate"],
+                        item["name"],
+                    )
 
     def test_app_resources_request_borderless_host_chrome(self) -> None:
         with AsgiHarness(self.app) as client:
@@ -291,14 +299,14 @@ class DiscoveryTests(ApiTestCase):
             ).json()["result"]["resources"]
             detail = next(
                 item for item in listed
-                if item["uri"] == "ui://orbit/workflows-v17.html"
+                if item["uri"] == "ui://orbit/workflows-v18.html"
             )
             self.assertFalse(detail["_meta"]["ui"]["prefersBorder"])
             self.assertFalse(detail["_meta"]["openai/widgetPrefersBorder"])
 
             read = rpc(
                 client, "resources/read",
-                {"uri": "ui://orbit/workflows-v17.html"}, actor="reader",
+                {"uri": "ui://orbit/workflows-v18.html"}, actor="reader",
             ).json()["result"]["contents"][0]
             self.assertFalse(read["_meta"]["ui"]["prefersBorder"])
             self.assertFalse(read["_meta"]["openai/widgetPrefersBorder"])
@@ -307,11 +315,11 @@ class DiscoveryTests(ApiTestCase):
         with AsgiHarness(self.app) as client:
             workflows = rpc(
                 client, "resources/read",
-                {"uri": "ui://orbit/workflows-v17.html"}, actor="reader",
+                {"uri": "ui://orbit/workflows-v18.html"}, actor="reader",
             ).json()["result"]["contents"][0]["text"]
             dashboard = rpc(
                 client, "resources/read",
-                {"uri": "ui://orbit/current-task-v39.html"}, actor="reader",
+                {"uri": "ui://orbit/current-task-v40.html"}, actor="reader",
             ).json()["result"]["contents"][0]["text"]
 
             self.assertIn("dispatchPromptValue(`使用工作流", workflows)

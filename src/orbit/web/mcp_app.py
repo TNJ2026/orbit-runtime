@@ -14,14 +14,14 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v39.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v40.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v17.html"
-ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v10.html"
-ORBIT_RUN_URI = "ui://orbit/goal-run-v16.html"
-ORBIT_GOALS_URI = "ui://orbit/goals-v10.html"
+ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v18.html"
+ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v11.html"
+ORBIT_RUN_URI = "ui://orbit/goal-run-v17.html"
+ORBIT_GOALS_URI = "ui://orbit/goals-v11.html"
 
 # The same framed ring-and-satellite mark used by the full Orbit UI favicon.
 # Keep it embedded: MCP App documents must not depend on a separate HTTP asset.
@@ -88,8 +88,16 @@ _CARD_STYLE = r"""
 
      Capping `main` at the viewport and letting the card shrink puts the
      scrolling where it already was: inside the list. `.card` may shrink but
-     never grows, so a short card in a tall frame stays short. */
-  main{padding:16px;display:flex;flex-direction:column;max-height:100vh;max-height:100dvh}
+     never grows, so a short card in a tall frame stays short.
+
+     Only down to a point. `.card` has no floor — it shrinks with the frame,
+     and at a 150px one it measured 12px, a sliver with an outer scrollbar
+     suppressed and nothing readable behind it. Under 360px the fitting is
+     given up and the document overflows again, which at least leaves the
+     host a scrollbar that reaches the content. The measured host frame is
+     720px, so this is a guard, not a working range. */
+  main{padding:16px;display:flex;flex-direction:column}
+  @media (min-height:360px){main{max-height:100vh;max-height:100dvh}}
   header{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex:none}
   .mark{display:block;width:28px;height:28px;flex:none;border-radius:7px} h1{margin:0;flex:1;font-size:14px}
   button{font:inherit}.icon{width:32px;height:32px;border:0;border-radius:8px;

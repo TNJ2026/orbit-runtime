@@ -268,7 +268,8 @@ class DashboardCardTests(unittest.TestCase):
 
         runs = [run(f"run:{i}", status="completed", goal=f"目标 {i}",
                     created_at=at(0), updated_at=at(0)) for i in range(30)]
-        for height in (420, 600, 700, 900):
+        # 720 is the frame the host actually gives, measured in Codex.
+        for height in (420, 600, 720, 900):
             page = self.open(runs=runs, height=height)
             page.click("#tabHistory")
             page.wait_for_selector(".historyRow")
@@ -291,6 +292,39 @@ class DashboardCardTests(unittest.TestCase):
                     ),
                     "the list itself should be what scrolls",
                 )
+
+    def test_a_frame_too_short_to_fit_gets_its_scrollbar_back(self) -> None:
+        """Below 360px the card would be a sliver, so stop fitting.
+
+        `.card` has no floor: it shrinks with the frame, and at 150px it
+        measured 12px — an outer scrollbar suppressed and nothing readable
+        left behind it. Handing the document back to the host is worse than
+        fitting and better than that.
+        """
+
+        runs = [run(f"run:{i}", status="completed", goal=f"目标 {i}",
+                    created_at=at(0), updated_at=at(0)) for i in range(30)]
+        for height, fits in ((400, True), (360, True), (340, False), (200, False)):
+            page = self.open(runs=runs, height=height)
+            page.click("#tabHistory")
+            page.wait_for_selector(".historyRow")
+            measured = page.evaluate(
+                """() => ({
+                  outer: document.documentElement.scrollHeight
+                         > document.documentElement.clientHeight,
+                  card: Math.round(
+                    document.getElementById('card').getBoundingClientRect().height),
+                })"""
+            )
+            with self.subTest(height=height):
+                self.assertEqual(not fits, measured["outer"])
+                if fits:
+                    # Shrunk into the frame, and still worth looking at.
+                    self.assertLess(measured["card"], height)
+                    self.assertGreaterEqual(measured["card"], 200)
+                else:
+                    # Full height, and the host scrolls to reach it.
+                    self.assertEqual(600, measured["card"])
 
     def test_the_scrollbar_column_is_there_before_it_is_needed(self) -> None:
         """Reserved on a view with nothing to scroll, too.
