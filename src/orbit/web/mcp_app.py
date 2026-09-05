@@ -14,11 +14,11 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v42.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v43.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v19.html"
+ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v20.html"
 ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v11.html"
 ORBIT_RUN_URI = "ui://orbit/goal-run-v17.html"
 ORBIT_GOALS_URI = "ui://orbit/goals-v11.html"
@@ -174,8 +174,14 @@ _CARD_STYLE = r"""
   /* One head for a view inside a card, and one way back out of it. Both
      cards that have a detail view drew these separately. */
   .viewHead{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
-  .back{width:30px;height:30px;border:0;border-radius:8px;color:var(--accent);
-    background:transparent;cursor:pointer}
+  /* One way back, on every card that has a second level. The glyph is the
+     workflow card's chevron rather than the dashboard's arrow, and it is
+     given a size of its own: at the inherited 14px it was a mark small
+     enough to be read as punctuation. Centred by flex, because a glyph's
+     own box is not centred in a 30px button. */
+  .back{display:flex;align-items:center;justify-content:center;
+    width:30px;height:30px;border:0;border-radius:8px;color:var(--accent);
+    background:transparent;cursor:pointer;font-size:24px;line-height:1}
   .viewTitle{min-width:0;flex:1;font-size:12px;font-weight:650}
   @keyframes pulse{50%{opacity:.35}} @media(prefers-reduced-motion:reduce){.dot.live{animation:none}}
 """ + _PROMPT_EDITOR_STYLE
@@ -437,7 +443,7 @@ __CARD_STYLE__
   }
 
   function viewHead(title,backView) {
-    return `<div class="viewHead"><button class="back" type="button" data-back-view="${backView}" aria-label="${esc(t().back)}">←</button><div class="viewTitle">${esc(title)}</div></div>`;
+    return `<div class="viewHead"><button class="back" type="button" data-back-view="${backView}" aria-label="${esc(t().back)}">‹</button><div class="viewTitle">${esc(title)}</div></div>`;
   }
 
   function authoringStrip(job) {

@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v42.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v43.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -360,6 +360,27 @@ class CurrentTaskCardTests(unittest.TestCase):
                     "color:var(--muted);background:var(--soft);cursor:pointer}.card",
                 ):
                     self.assertNotIn(chrome, html)
+
+    def test_going_back_looks_the_same_wherever_it_appears(self) -> None:
+        """One glyph, one size, on both cards that have a second level.
+
+        The style was already shared; the mark was not — the dashboard drew
+        an arrow and the workflow card a chevron. And neither gave it a size,
+        so it inherited 14px and read as punctuation beside the title rather
+        than as the way out of the view.
+        """
+
+        for html in (ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML):
+            with self.subTest():
+                self.assertIn(
+                    ".back{display:flex;align-items:center;justify-content:center;", html,
+                )
+                self.assertIn("cursor:pointer;font-size:24px;line-height:1}", html)
+                self.assertIn("‹</button>", html)
+                self.assertNotIn("←</button>", html)
+        # And it is still one rule, not one per card.
+        self.assertEqual(1, ORBIT_DASHBOARD_HTML.count(".back{"))
+        self.assertEqual(1, ORBIT_WORKFLOWS_HTML.count(".back{"))
 
     def test_a_view_head_is_defined_once_for_every_card(self) -> None:
         """Both cards with a detail view had drawn their own.

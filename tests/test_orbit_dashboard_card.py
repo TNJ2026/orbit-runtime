@@ -447,6 +447,13 @@ class DashboardCardTests(unittest.TestCase):
         # History stays the selected tab while one of its runs is open.
         self.assertEqual("history", self.selected(page))
 
+        # The way out is the same chevron the workflow card uses, big
+        # enough to be a control rather than punctuation.
+        self.assertEqual("‹", page.text_content(".back"))
+        self.assertEqual(
+            "24px",
+            page.eval_on_selector(".back", "node => getComputedStyle(node).fontSize"),
+        )
         page.click(".back")
         page.wait_for_selector(".historyRow")
         self.assertEqual("history", self.selected(page))
