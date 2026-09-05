@@ -83,7 +83,7 @@ class DashboardCardTests(unittest.TestCase):
         cls.browser.close()
         cls.playwright.stop()
 
-    def open(self, *, runs=(), jobs=(), locale="zh-CN", steps=()):
+    def open(self, *, runs=(), jobs=(), locale="zh-CN", steps=(), height=None):
         """The card, with a host that answers exactly the tools it may call.
 
         `now` is fixed by the fixtures rather than the clock: the day headings
@@ -91,7 +91,10 @@ class DashboardCardTests(unittest.TestCase):
         the machine running the test.
         """
 
-        context = self.browser.new_context(locale=locale)
+        context = self.browser.new_context(
+            locale=locale,
+            **({"viewport": {"width": 460, "height": height}} if height else {}),
+        )
         self.addCleanup(context.close)
         answers = {
             "list_runs": {"runs": list(runs)},
@@ -213,6 +216,41 @@ class DashboardCardTests(unittest.TestCase):
                 "#card", "node => node.getBoundingClientRect().height"
             )
         self.assertEqual(1, len(set(heights.values())), heights)
+
+    def test_the_host_never_has_to_scroll_the_whole_card(self) -> None:
+        """Two scrollbars, one inside the other, is the thing to avoid.
+
+        This card's document carries a tab bar and a subtitle the other cards
+        do not, so it was 60px taller than they were and overflowed frames
+        they fitted. It fits any frame now: the card shrinks into what the
+        chrome leaves, and only the list scrolls.
+        """
+
+        runs = [run(f"run:{i}", status="completed", goal=f"目标 {i}",
+                    created_at=at(0), updated_at=at(0)) for i in range(30)]
+        for height in (420, 600, 700, 900):
+            page = self.open(runs=runs, height=height)
+            page.click("#tabHistory")
+            page.wait_for_selector(".historyRow")
+            outer, card = page.evaluate(
+                """() => [
+                  document.documentElement.scrollHeight
+                    > document.documentElement.clientHeight,
+                  Math.round(
+                    document.getElementById('card').getBoundingClientRect().height),
+                ]"""
+            )
+            with self.subTest(height=height):
+                self.assertFalse(outer, f"the document overflowed a {height}px frame")
+                # Capped where there is room, shrunk where there is not.
+                self.assertLessEqual(card, 600)
+                self.assertGreater(card, 0)
+                self.assertTrue(
+                    page.eval_on_selector(
+                        "#card", "node => node.scrollHeight > node.clientHeight"
+                    ),
+                    "the list itself should be what scrolls",
+                )
 
     def test_the_scrollbar_column_is_there_before_it_is_needed(self) -> None:
         """Reserved on a view with nothing to scroll, too.

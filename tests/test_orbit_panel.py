@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v37.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v38.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -552,7 +552,7 @@ class DedicatedCardTests(unittest.TestCase):
 
         for marker in (
             "--card-height:600px",
-            ".card{max-height:var(--card-height);\n    overflow:hidden auto;",
+            "max-height:var(--card-height)",
             "#card.goalRun { overscroll-behavior: contain; }",
             "card.className='card goalRun'",
         ):
@@ -574,14 +574,40 @@ class DedicatedCardTests(unittest.TestCase):
         ):
             with self.subTest():
                 self.assertEqual(1, html.count("--card-height:600px"))
-                self.assertIn(
-                    ".card{max-height:var(--card-height);\n    overflow:hidden auto;",
-                    html,
-                )
+                rule = html.split(".card{", 1)[1].split("}", 1)[0]
+                self.assertIn("max-height:var(--card-height)", rule)
+                self.assertIn("overflow:hidden auto", rule)
+                # It may shrink to fit the frame; it never grows to fill it.
+                self.assertIn("flex:0 1 auto;min-height:0", rule)
                 # No card carries a ceiling of its own any more.
                 for private in ("--workflow-card-height", "--goal-run-card-max-height",
                                 "--dashboard-card-height", "--dashboard-card-min-height"):
                     self.assertNotIn(private, html)
+
+    def test_the_document_fits_the_frame_the_host_gives_it(self) -> None:
+        """Otherwise the host wraps the whole card in a scrollbar of its own.
+
+        The dashboard's document is 60px taller than the other cards — a tab
+        bar and a line under the title they do not have — so at a frame that
+        fitted them it was the one card with an outer scrollbar around it and
+        an inner one beside it. `main` is capped at the viewport and the card
+        shrinks into what the chrome leaves; the scrolling stays inside the
+        list, where it already was.
+        """
+
+        for html in (
+            ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML,
+            ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
+        ):
+            with self.subTest():
+                self.assertIn(
+                    "main{padding:16px;display:flex;flex-direction:column;"
+                    "max-height:100vh;max-height:100dvh}",
+                    html,
+                )
+                # The chrome is not what gets squeezed.
+                self.assertIn("margin-bottom:14px;flex:none}", html)
+        self.assertIn("#tabs { align-items: center; flex: none;", ORBIT_DASHBOARD_HTML)
 
     def test_every_card_keeps_its_scrollbar(self) -> None:
         """A bar that is there before you need it, and stays after.

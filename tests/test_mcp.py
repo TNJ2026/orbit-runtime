@@ -77,9 +77,9 @@ class HandshakeTests(ApiTestCase):
             resources = listed["result"]["resources"]
             self.assertEqual(
                 {
-                    "ui://orbit/current-task-v37.html", "ui://orbit/workflows-v15.html",
-                    "ui://orbit/workflow-authoring-v8.html", "ui://orbit/goal-run-v14.html",
-                    "ui://orbit/goals-v8.html",
+                    "ui://orbit/current-task-v38.html", "ui://orbit/workflows-v16.html",
+                    "ui://orbit/workflow-authoring-v9.html", "ui://orbit/goal-run-v15.html",
+                    "ui://orbit/goals-v9.html",
                 },
                 {resource["uri"] for resource in resources},
             )
@@ -257,13 +257,13 @@ class DiscoveryTests(ApiTestCase):
                 item for item in tools if item["name"] == "open_orbit_dashboard"
             )
             self.assertEqual(
-                "ui://orbit/current-task-v37.html",
+                "ui://orbit/current-task-v38.html",
                 dashboard["_meta"]["ui"]["resourceUri"],
             )
             self.assertEqual(
                 {
-                    "open_orbit_dashboard": "ui://orbit/current-task-v37.html",
-                    "open_orbit_goals": "ui://orbit/goals-v8.html",
+                    "open_orbit_dashboard": "ui://orbit/current-task-v38.html",
+                    "open_orbit_goals": "ui://orbit/goals-v9.html",
                 },
                 {
                     item["name"]: item["_meta"]["ui"]["resourceUri"]
@@ -274,15 +274,15 @@ class DiscoveryTests(ApiTestCase):
                 item["name"]: item.get("_meta", {}).get("ui", {}).get("resourceUri")
                 for item in tools
             }
-            self.assertEqual("ui://orbit/workflows-v15.html", card_bindings["list_workflows"])
+            self.assertEqual("ui://orbit/workflows-v16.html", card_bindings["list_workflows"])
             self.assertEqual(
-                "ui://orbit/workflows-v15.html",
+                "ui://orbit/workflows-v16.html",
                 card_bindings["get_workflow_definition"],
             )
             self.assertIsNone(card_bindings["inspect_workflow_definition"])
-            self.assertEqual("ui://orbit/workflow-authoring-v8.html", card_bindings["generate_workflow"])
-            self.assertEqual("ui://orbit/goal-run-v14.html", card_bindings["start_run"])
-            self.assertEqual("ui://orbit/goals-v8.html", card_bindings["open_orbit_goals"])
+            self.assertEqual("ui://orbit/workflow-authoring-v9.html", card_bindings["generate_workflow"])
+            self.assertEqual("ui://orbit/goal-run-v15.html", card_bindings["start_run"])
+            self.assertEqual("ui://orbit/goals-v9.html", card_bindings["open_orbit_goals"])
 
     def test_app_resources_request_borderless_host_chrome(self) -> None:
         with AsgiHarness(self.app) as client:
@@ -291,14 +291,14 @@ class DiscoveryTests(ApiTestCase):
             ).json()["result"]["resources"]
             detail = next(
                 item for item in listed
-                if item["uri"] == "ui://orbit/workflows-v15.html"
+                if item["uri"] == "ui://orbit/workflows-v16.html"
             )
             self.assertFalse(detail["_meta"]["ui"]["prefersBorder"])
             self.assertFalse(detail["_meta"]["openai/widgetPrefersBorder"])
 
             read = rpc(
                 client, "resources/read",
-                {"uri": "ui://orbit/workflows-v15.html"}, actor="reader",
+                {"uri": "ui://orbit/workflows-v16.html"}, actor="reader",
             ).json()["result"]["contents"][0]
             self.assertFalse(read["_meta"]["ui"]["prefersBorder"])
             self.assertFalse(read["_meta"]["openai/widgetPrefersBorder"])
@@ -307,11 +307,11 @@ class DiscoveryTests(ApiTestCase):
         with AsgiHarness(self.app) as client:
             workflows = rpc(
                 client, "resources/read",
-                {"uri": "ui://orbit/workflows-v15.html"}, actor="reader",
+                {"uri": "ui://orbit/workflows-v16.html"}, actor="reader",
             ).json()["result"]["contents"][0]["text"]
             dashboard = rpc(
                 client, "resources/read",
-                {"uri": "ui://orbit/current-task-v37.html"}, actor="reader",
+                {"uri": "ui://orbit/current-task-v38.html"}, actor="reader",
             ).json()["result"]["contents"][0]["text"]
 
             self.assertIn("dispatchPromptValue(`使用工作流", workflows)

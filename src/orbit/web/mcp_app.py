@@ -14,14 +14,14 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v37.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v38.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v15.html"
-ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v8.html"
-ORBIT_RUN_URI = "ui://orbit/goal-run-v14.html"
-ORBIT_GOALS_URI = "ui://orbit/goals-v8.html"
+ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v16.html"
+ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v9.html"
+ORBIT_RUN_URI = "ui://orbit/goal-run-v15.html"
+ORBIT_GOALS_URI = "ui://orbit/goals-v9.html"
 
 # The same framed ring-and-satellite mark used by the full Orbit UI favicon.
 # Keep it embedded: MCP App documents must not depend on a separate HTTP asset.
@@ -80,10 +80,21 @@ _CARD_STYLE = r"""
     --muted:light-dark(#686871,#a0a0a9); --accent:#7772ff; --good:#54b878;
     --warn:#d99a35; --bad:#df6767; }
   *{box-sizing:border-box} body{margin:0;color:var(--text);background:var(--bg)}
-  main{padding:16px} header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  /* The document has to fit the frame the host gives it, or the host puts a
+     scrollbar around the whole card. The dashboard's document is 60px taller
+     than the others — a tab bar and a line under the title that they do not
+     have — so at a frame height the others fitted, it was the one card
+     wrapped in an outer scrollbar with an inner one beside it.
+
+     Capping `main` at the viewport and letting the card shrink puts the
+     scrolling where it already was: inside the list. `.card` may shrink but
+     never grows, so a short card in a tall frame stays short. */
+  main{padding:16px;display:flex;flex-direction:column;max-height:100vh;max-height:100dvh}
+  header{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex:none}
   .mark{display:block;width:28px;height:28px;flex:none;border-radius:7px} h1{margin:0;flex:1;font-size:14px}
   button{font:inherit}.icon{width:32px;height:32px;border:0;border-radius:8px;
     color:var(--accent);background:transparent;cursor:pointer}.card{max-height:var(--card-height);
+    flex:0 1 auto;min-height:0;
     overflow:hidden auto;border:1px solid var(--line);border-radius:12px;
     scrollbar-gutter:stable;scrollbar-width:thin;
     scrollbar-color:color-mix(in srgb,var(--muted) 40%,transparent) transparent}
@@ -159,7 +170,8 @@ __CARD_STYLE__
     .heading { min-width: 0; flex: 1; }
     #updated { margin-top: 1px; color: var(--muted); font-size: 11px; }
     #refresh:disabled { opacity: .55; cursor: default; }
-    #tabs { align-items: center; padding: 0; border-top: 0; background: transparent; }
+    #tabs { align-items: center; flex: none; padding: 0; border-top: 0;
+      background: transparent; }
     #createWorkflow { margin-left: auto; }
     /* One height, whatever a tab happens to hold. A minimum and a maximum
        meant the card was as tall as its content between them, so switching
