@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v32.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v33.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -274,6 +274,62 @@ class CurrentTaskCardTests(unittest.TestCase):
         ):
             self.assertIn(marker, ORBIT_DASHBOARD_HTML)
         self.assertNotIn("callTool('resume_run'", ORBIT_DASHBOARD_HTML)
+
+    def test_buttons_are_labels_and_the_card_is_a_frame(self) -> None:
+        """No filled rectangles, and no fill behind them either.
+
+        Every offer used to arrive as a filled or outlined button, so a card
+        of four suggestions read as a form to fill in rather than a list of
+        things a person could do. And the card painted `--soft` behind all of
+        it, which every section then had to paint `--bg` back over to look
+        like a divider. The accent alone now says "this is something you can
+        do", the card is a frame, and the sections are lines.
+
+        Checked on all five cards because they share one sheet, which is the
+        only reason this can be one rule rather than five.
+        """
+
+        for html in (
+            ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML,
+            ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
+        ):
+            with self.subTest():
+                self.assertIn(
+                    ".action{padding:7px 0;border:0;color:var(--accent);"
+                    "background:transparent;cursor:pointer;font-weight:620}",
+                    html,
+                )
+                # Main or not, an offer is the same colour.
+                self.assertIn(".action.primary{color:var(--accent)}", html)
+                # Destructive stays a warning rather than joining them.
+                self.assertIn(".action.danger{color:var(--bad)}", html)
+                self.assertIn("border-radius:12px} .empty,.error{", html)
+                self.assertIn(
+                    ".back{width:30px;height:30px;border:0;color:var(--accent);"
+                    "background:transparent;cursor:pointer}",
+                    html,
+                )
+                for chrome in (
+                    ".action.primary{border-color:transparent;color:#fff",
+                    "border-radius:12px;background:var(--soft)",
+                    "border:1px solid var(--line);border-radius:8px;color:var(--text)",
+                    "color:var(--muted);background:var(--soft);cursor:pointer}.card",
+                ):
+                    self.assertNotIn(chrome, html)
+
+    def test_a_view_head_is_defined_once_for_every_card(self) -> None:
+        """Both cards with a detail view had drawn their own.
+
+        They had already drifted apart in the padding, and would have drifted
+        again the moment one of them restyled its way back out of a card.
+        """
+
+        for html in (ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML):
+            with self.subTest():
+                self.assertEqual(1, html.count(".viewHead{"))
+                self.assertEqual(0, html.count(".viewHead {"))
+                self.assertEqual(1, html.count(".viewTitle{"))
+                self.assertEqual(0, html.count(".viewTitle {"))
 
     def test_it_does_not_request_a_large_display_surface(self) -> None:
         self.assertNotIn("request-display-mode", ORBIT_DASHBOARD_HTML)

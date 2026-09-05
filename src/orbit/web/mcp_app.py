@@ -14,14 +14,14 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v32.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v33.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v12.html"
-ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v5.html"
-ORBIT_RUN_URI = "ui://orbit/goal-run-v11.html"
-ORBIT_GOALS_URI = "ui://orbit/goals-v5.html"
+ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v13.html"
+ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v6.html"
+ORBIT_RUN_URI = "ui://orbit/goal-run-v12.html"
+ORBIT_GOALS_URI = "ui://orbit/goals-v6.html"
 
 # The same framed ring-and-satellite mark used by the full Orbit UI favicon.
 # Keep it embedded: MCP App documents must not depend on a separate HTTP asset.
@@ -45,7 +45,7 @@ _PROMPT_EDITOR_STYLE = r"""
       color: var(--text); background: var(--bg); font: inherit; line-height: 1.5; }
     .promptEditorInput:focus { border-color: var(--accent); outline: 2px solid
       color-mix(in srgb, var(--accent) 24%, transparent); }
-    .promptEditorActions { display: flex; justify-content: flex-end; gap: 8px;
+    .promptEditorActions { display: flex; justify-content: flex-end; gap: 18px;
       padding: 12px 16px; border-top: 1px solid var(--line); }
 """
 
@@ -77,9 +77,9 @@ _CARD_STYLE = r"""
   *{box-sizing:border-box} body{margin:0;color:var(--text);background:var(--bg)}
   main{padding:16px} header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
   .mark{display:block;width:28px;height:28px;flex:none;border-radius:7px} h1{margin:0;flex:1;font-size:14px}
-  button{font:inherit}.icon{width:32px;height:32px;border:1px solid var(--line);border-radius:8px;
-    color:var(--muted);background:var(--soft);cursor:pointer}.card{overflow:hidden;border:1px solid var(--line);
-    border-radius:12px;background:var(--soft)} .empty,.error{padding:26px 16px;text-align:center;color:var(--muted)}
+  button{font:inherit}.icon{width:32px;height:32px;border:0;border-radius:8px;
+    color:var(--accent);background:transparent;cursor:pointer}.card{overflow:hidden;border:1px solid var(--line);
+    border-radius:12px} .empty,.error{padding:26px 16px;text-align:center;color:var(--muted)}
   .error{color:var(--bad)} .row{display:block;width:100%;padding:12px 14px;border:0;border-bottom:1px solid var(--line);
     color:inherit;text-align:left;background:transparent;cursor:pointer}.row:last-child{border-bottom:0}.row:hover{background:var(--hover)}
   .name{font-weight:650}.desc,.meta{margin-top:3px;color:var(--muted);font-size:11px;overflow-wrap:anywhere}
@@ -92,7 +92,7 @@ _CARD_STYLE = r"""
   .resultTitle{margin:0 0 6px;font-size:12px;font-weight:650}
   .detailPanel{height:420px;overflow:hidden}.detailPanel.definition{overflow-y:auto}
   .workflowGraphMount{width:100%;height:100%;min-width:0;min-height:0;background:var(--bg)}
-  .tabs{display:flex;gap:20px;padding:0 14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg)}
+  .tabs{display:flex;gap:20px;padding:0 14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .tab{position:relative;min-height:42px;padding:0 2px;border:0;color:var(--muted);background:transparent;cursor:pointer}
   .tab:hover{color:var(--text)}
   .tab::after{position:absolute;right:0;bottom:-1px;left:0;height:2px;border-radius:2px 2px 0 0;background:transparent;content:""}
@@ -100,9 +100,20 @@ _CARD_STYLE = r"""
   .tab[aria-selected="true"]::after{background:var(--accent)}
   .tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   [role="tabpanel"][hidden]{display:none}
-  .actions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 14px;border-top:1px solid var(--line);background:var(--bg)}
-  .action{padding:7px 11px;border:1px solid var(--line);border-radius:8px;color:var(--text);background:var(--soft);cursor:pointer}
-  .action.primary{border-color:transparent;color:#fff;background:var(--accent)}.action.danger{color:var(--bad)}
+  /* A button is its label. Every offer used to arrive as a filled or
+     outlined rectangle, which made a card of four suggestions look like a
+     form to fill in; the accent alone says "this is something you can do",
+     and it is the same accent whether the offer is the main one or not.
+     Destructive stays red — that is a warning, not decoration. */
+  .actions{display:flex;flex-wrap:wrap;gap:18px;padding:12px 14px;border-top:1px solid var(--line)}
+  .action{padding:7px 0;border:0;color:var(--accent);background:transparent;cursor:pointer;font-weight:620}
+  .action:hover{text-decoration:underline}
+  .action.primary{color:var(--accent)}.action.danger{color:var(--bad)}
+  /* One head for a view inside a card, and one way back out of it. Both
+     cards that have a detail view drew these separately. */
+  .viewHead{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .back{width:30px;height:30px;border:0;color:var(--accent);background:transparent;cursor:pointer}
+  .viewTitle{min-width:0;flex:1;font-size:12px;font-weight:650}
   @keyframes pulse{50%{opacity:.35}} @media(prefers-reduced-motion:reduce){.dot.live{animation:none}}
 """ + _PROMPT_EDITOR_STYLE
 
@@ -145,11 +156,6 @@ __CARD_STYLE__
     .stepName { min-width: 0; overflow: hidden; text-overflow: ellipsis;
       white-space: nowrap; }
     .stepState { color: var(--muted); font-size: 10px; }
-    .viewHead { display: flex; align-items: center; gap: 8px; padding: 10px 12px;
-      border-bottom: 1px solid var(--line); background: var(--bg); }
-    .back { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px;
-      color: var(--muted); background: var(--soft); cursor: pointer; }
-    .viewTitle { min-width: 0; flex: 1; font-size: 12px; font-weight: 650; }
     .workflowChoice { display: grid; grid-template-columns: minmax(0, 1fr) auto;
       align-items: center; border-bottom: 1px solid var(--line); }
     .workflowChoice:last-child { border-bottom: 0; }
@@ -182,7 +188,7 @@ __CARD_STYLE__
     /* Workflow generation has its own card. This strip only says one is
        running, above the list the finished Workflow will appear in. */
     .authoringStrip { display: flex; align-items: center; gap: 8px; padding: 10px 14px;
-      border-bottom: 1px solid var(--line); background: var(--bg); }
+      border-bottom: 1px solid var(--line); }
     .authoringPrompt { min-width: 0; overflow: hidden; text-overflow: ellipsis;
       white-space: nowrap; color: var(--muted); font-size: 11px; }
     .agentRow { display: grid; grid-template-columns: minmax(0,1fr) auto auto;
@@ -693,7 +699,7 @@ html, body, main {
 .confirmBody { padding: 18px; }
 .confirmTitle { margin: 0; font-size: 15px; }
 .confirmText { margin: 8px 0 0; color: var(--muted); overflow-wrap: anywhere; }
-.confirmActions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px;
+.confirmActions { display: flex; justify-content: flex-end; gap: 18px; padding: 12px 18px;
   border-top: 1px solid var(--line); }
 """
 
@@ -731,11 +737,6 @@ _WORKFLOW_LIST_STYLE = r"""
 .refusal { margin-top: 4px; padding: 0 12px 8px; color: var(--warn, #b26a00);
   font-size: 11px; line-height: 1.45; white-space: normal; overflow-wrap: anywhere; }
 .workflowRow .refusal { padding: 0; }
-.viewHead { display: flex; align-items: center; gap: 8px; padding: 10px 12px;
-  border-bottom: 1px solid var(--line); background: var(--bg); }
-.back { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px;
-  color: var(--muted); background: var(--soft); cursor: pointer; }
-.viewTitle { min-width: 0; flex: 1; font-size: 12px; font-weight: 650; }
 """
 
 
