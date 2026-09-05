@@ -96,9 +96,11 @@ def refuse_collisions(plans, columns):
         "build number is removed, and a workflow cannot hold one definition "
         "twice:\n" + "\n".join(lines)
         + "\n\nThey differ only in the build they were compiled against, which "
-        "this migration is removing. Decide which one survives — delete or "
-        "renumber the others — and run the migration again. Nothing has been "
-        "changed."
+        "this migration is removing. Renumbering cannot resolve a collision: "
+        "the unique key is (workflow_id, definition_hash), not the version number. "
+        "Before retrying, back up the database and plan a deduplication that "
+        "preserves references to existing workflow versions, including run history. "
+        "Do not simply delete published version records. Nothing has been changed."
     )
 
 

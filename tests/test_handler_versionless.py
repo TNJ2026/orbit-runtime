@@ -78,6 +78,14 @@ class VersionlessHandlerTests(unittest.TestCase):
         message = str(raised.exception)
         self.assertIn('workflow:collide', message)
         self.assertIn('versions 1, 2', message)
+        self.assertIn('Renumbering cannot resolve a collision', message)
+        self.assertIn('preserves references to existing workflow versions', message)
+        self.assertIn('Do not simply delete published version records', message)
+        self.assertNotIn('delete or renumber', message)
+        # Renumbering the published record leaves the landing hash unchanged.
+        connection.execute('UPDATE workflow_versions SET version=99 WHERE version=2')
+        with self.assertRaisesRegex(ValueError, 'versions 1, 99'):
+            migration.migrate(connection)
         # And it said so before touching anything.
         self.assertEqual(
             ['sha256:' + '0' * 63 + '1', 'sha256:' + '0' * 63 + '2'],
