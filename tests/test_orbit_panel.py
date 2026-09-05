@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v35.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v36.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -450,12 +450,11 @@ class DedicatedCardTests(unittest.TestCase):
         self.assertNotIn('.tab[aria-selected="true"]{color:var(--text);background:', ORBIT_WORKFLOWS_HTML)
 
     def test_workflow_list_and_detail_share_a_stable_card_height(self) -> None:
-        self.assertIn(":root { --workflow-card-height: 600px; }", ORBIT_WORKFLOWS_HTML)
         self.assertIn(
-            "#card.workflowList, #card.workflowDetail { height: var(--workflow-card-height); }",
+            "#card.workflowList, #card.workflowDetail { height: var(--card-height); }",
             ORBIT_WORKFLOWS_HTML,
         )
-        self.assertIn("#card.workflowList { overflow-y: auto; }", ORBIT_WORKFLOWS_HTML)
+        self.assertNotIn("--workflow-card-height", ORBIT_WORKFLOWS_HTML)
         self.assertIn("card.className='card workflowList'", ORBIT_WORKFLOWS_HTML)
         self.assertIn("card.className='card workflowDetail'", ORBIT_WORKFLOWS_HTML)
         self.assertIn(
@@ -472,12 +471,10 @@ class DedicatedCardTests(unittest.TestCase):
         and the tall lists still scroll inside it.
         """
 
-        self.assertIn("--dashboard-card-height: 640px;", ORBIT_DASHBOARD_HTML)
         self.assertIn(
-            "#card { height: var(--dashboard-card-height); margin-top: 12px;",
+            "#card { height: var(--card-height); margin-top: 12px; }",
             ORBIT_DASHBOARD_HTML,
         )
-        self.assertIn("overflow: hidden auto;", ORBIT_DASHBOARD_HTML)
         for absent in ("min-height: var(--dashboard", "max-height: var(--dashboard"):
             self.assertNotIn(absent, ORBIT_DASHBOARD_HTML)
         # Tall enough to hold the prompt editor it opens over itself.
@@ -546,15 +543,56 @@ class DedicatedCardTests(unittest.TestCase):
             self.assertNotIn(absent, ORBIT_RUN_HTML)
 
     def test_run_card_uses_content_height_up_to_a_600px_maximum(self) -> None:
+        """The ceiling is the shared one; only the scroll behaviour is local."""
+
         for marker in (
-            ":root { --goal-run-card-max-height: 600px; }",
-            "#card.goalRun { height: auto; max-height: var(--goal-run-card-max-height);",
+            "--card-height:600px",
+            ".card{max-height:var(--card-height);\n    overflow:hidden auto;",
+            "#card.goalRun { overscroll-behavior: contain; }",
             "card.className='card goalRun'",
-            "overflow-y: auto;",
-            "overscroll-behavior: contain;",
         ):
             self.assertIn(marker, ORBIT_RUN_HTML)
-        self.assertNotIn("--goal-run-card-height", ORBIT_RUN_HTML)
+        self.assertNotIn("--goal-run-card-max-height", ORBIT_RUN_HTML)
+
+    def test_every_card_stops_at_the_same_height(self) -> None:
+        """A card with no ceiling grows with its data.
+
+        The goal list reads a hundred runs and had no maximum at all, so it
+        was three times the height of the cards beside it and the host had to
+        give it a frame to match. One ceiling, declared once, and the lists
+        that exceed it scroll inside their own frame.
+        """
+
+        for html in (
+            ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML,
+            ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
+        ):
+            with self.subTest():
+                self.assertEqual(1, html.count("--card-height:600px"))
+                self.assertIn(
+                    ".card{max-height:var(--card-height);\n    overflow:hidden auto;",
+                    html,
+                )
+                # No card carries a ceiling of its own any more.
+                for private in ("--workflow-card-height", "--goal-run-card-max-height",
+                                "--dashboard-card-height", "--dashboard-card-min-height"):
+                    self.assertNotIn(private, html)
+
+    def test_the_goal_list_second_line_reads_as_a_second_line(self) -> None:
+        """`--faint` was never declared on any card.
+
+        An undefined custom property makes the declaration invalid at
+        computed-value time, so `.goalMeta` inherited the row's colour and
+        printed in the same ink as the title above it.
+        """
+
+        self.assertIn(".goalMeta { margin-top: 5px; color: var(--muted);", ORBIT_GOALS_HTML)
+        for html in (
+            ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML,
+            ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
+        ):
+            with self.subTest():
+                self.assertNotIn("var(--faint)", html)
 
 
 if __name__ == "__main__":

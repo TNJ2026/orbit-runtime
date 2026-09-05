@@ -14,14 +14,14 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v35.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v36.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v13.html"
-ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v6.html"
-ORBIT_RUN_URI = "ui://orbit/goal-run-v12.html"
-ORBIT_GOALS_URI = "ui://orbit/goals-v6.html"
+ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v14.html"
+ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v7.html"
+ORBIT_RUN_URI = "ui://orbit/goal-run-v13.html"
+ORBIT_GOALS_URI = "ui://orbit/goals-v7.html"
 
 # The same framed ring-and-satellite mark used by the full Orbit UI favicon.
 # Keep it embedded: MCP App documents must not depend on a separate HTTP asset.
@@ -68,7 +68,12 @@ function dispatchPrompt(button){dispatchPromptValue(button.dataset.prompt,button
 """
 
 _CARD_STYLE = r"""
-  :root { color-scheme:light dark; font:14px/1.45 Inter,ui-sans-serif,-apple-system,
+  /* How tall a card may be, for every card. A host gives these documents a
+     frame and sizes it to what they report, so a card without a ceiling is
+     one that grows with its data — the goal list, reading a hundred runs,
+     was the tallest thing in the set by a factor of three. */
+  :root { color-scheme:light dark; --card-height:600px;
+    font:14px/1.45 Inter,ui-sans-serif,-apple-system,
     BlinkMacSystemFont,"Segoe UI",sans-serif; --bg:light-dark(#fff,#151517);
     --soft:light-dark(#f5f5f7,#1d1d20); --hover:light-dark(#ededf0,#252529);
     --line:light-dark(#dedee3,#303035); --text:light-dark(#202024,#e8e8eb);
@@ -78,8 +83,8 @@ _CARD_STYLE = r"""
   main{padding:16px} header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
   .mark{display:block;width:28px;height:28px;flex:none;border-radius:7px} h1{margin:0;flex:1;font-size:14px}
   button{font:inherit}.icon{width:32px;height:32px;border:0;border-radius:8px;
-    color:var(--accent);background:transparent;cursor:pointer}.card{overflow:hidden;border:1px solid var(--line);
-    border-radius:12px} .empty,.error{padding:26px 16px;text-align:center;color:var(--muted)}
+    color:var(--accent);background:transparent;cursor:pointer}.card{max-height:var(--card-height);
+    overflow:hidden auto;border:1px solid var(--line);border-radius:12px} .empty,.error{padding:26px 16px;text-align:center;color:var(--muted)}
   .error{color:var(--bad)} .row{display:block;width:100%;padding:12px 14px;border:0;border-bottom:1px solid var(--line);
     color:inherit;text-align:left;background:transparent;cursor:pointer}.row:last-child{border-bottom:0}.row:hover{background:var(--hover)}
   .name{font-weight:650}.desc,.meta{margin-top:3px;color:var(--muted);font-size:11px;overflow-wrap:anywhere}
@@ -143,10 +148,8 @@ __CARD_STYLE__
        it must not turn the card into a page the host has to scroll past
        either, so the list scrolls inside the frame. Named, like the workflow
        card's own height, so the knob a host may need to reach is not buried
-       in a rule. */
-    :root { --dashboard-card-height: 640px; }
-    #card { height: var(--dashboard-card-height); margin-top: 12px;
-      overflow: hidden auto; }
+       in a rule — `--card-height`, shared with every other card. */
+    #card { height: var(--card-height); margin-top: 12px; }
     /* A goal can be a paragraph; three lines is enough to recognise one. */
     .goal { display: -webkit-box; -webkit-line-clamp: 3;
       -webkit-box-orient: vertical; overflow: hidden; }
@@ -716,9 +719,7 @@ def _card(
 
 
 _WORKFLOW_LIST_STYLE = r"""
-:root { --workflow-card-height: 600px; }
-#card.workflowList, #card.workflowDetail { height: var(--workflow-card-height); }
-#card.workflowList { overflow-y: auto; }
+#card.workflowList, #card.workflowDetail { height: var(--card-height); }
 #card.workflowDetail { display: flex; min-height: 0; flex-direction: column; }
 #card.workflowDetail .detailPanel { flex: 1 1 auto; height: auto; min-height: 0; }
 .workflowRow { position: relative; border-bottom: 1px solid var(--line); }
@@ -806,9 +807,9 @@ document.getElementById('refresh').onclick=refresh;onToolResult(value=>{if(value
 """)
 
 _RUN_STYLE = r"""
-:root { --goal-run-card-max-height: 600px; }
-#card.goalRun { height: auto; max-height: var(--goal-run-card-max-height);
-  overflow-y: auto; overscroll-behavior: contain; }
+/* Shorter than the ceiling whenever the run is short; `.card` supplies both
+   the ceiling and the scrolling. */
+#card.goalRun { overscroll-behavior: contain; }
 .goal { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
   overflow: hidden; }
 """
@@ -839,7 +840,7 @@ _GOALS_STYLE = r"""
 .goalTitle { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; font-weight: 650; }
 .goalStatus { flex: 0 0 auto; color: var(--muted); font-size: 12px; }
-.goalMeta { margin-top: 5px; color: var(--faint); font-size: 11px;
+.goalMeta { margin-top: 5px; color: var(--muted); font-size: 11px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 """
 
