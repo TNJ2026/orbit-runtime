@@ -9,23 +9,163 @@
 | Draws Orbit's cards | yes |
 | Event tools | the proxy's `wait_app_event`, `list_app_events`, `ack_app_event` |
 
-Download `orbit-marketplace-<version>.zip` from the matching GitHub Release,
-then run:
+## Install the repository/personal plugin
 
-```bash
-unzip orbit-marketplace-<version>.zip
-codex plugin marketplace add ./orbit-marketplace
-codex plugin add orbit@orbit-local
+Orbit is distributed through a local Marketplace archive attached to each
+[GitHub Release](https://github.com/TNJ2026/orbit/releases). Installing this
+archive registers it for the current user only; it does not publish Orbit to
+the public Plugins Directory.
+
+### Install with a Codex prompt
+
+Paste the following prompt into a Codex task. Codex will read the maintained
+instructions from this repository instead of depending on installation steps
+copied into the prompt. It may ask for approval before downloading the release
+or writing the user-level plugin configuration.
+
+```text
+Install the Orbit Codex plugin from https://github.com/TNJ2026/orbit.
 ```
 
-Alternatively, install it from the Codex plugin UI after adding the extracted
-Marketplace directory:
+For a specific release, add its exact version to the prompt, for example:
+`Install Orbit 0.4.0`.
+
+### 1. Check the prerequisites
+
+Install these before continuing:
+
+- The Codex desktop app and its `codex` CLI. Confirm the plugin commands are
+  available with `codex plugin --help`.
+- `uv`, which creates and maintains the Python environment used by Orbit.
+- Bash. macOS and Linux include it; on Windows, use Git Bash or another Bash
+  installation visible to Codex.
+
+### 2. Download and extract the Marketplace
+
+Download `orbit-marketplace-<version>.zip` from the matching release. Extract
+it into a stable directory: Codex keeps this directory as the Marketplace
+source, so do not leave it in a temporary download directory.
+
+On macOS or Linux:
+
+```bash
+mkdir -p "$HOME/.local/share/orbit-codex"
+unzip orbit-marketplace-<version>.zip -d "$HOME/.local/share/orbit-codex"
+```
+
+On Windows PowerShell:
+
+```powershell
+$installRoot = Join-Path $env:LOCALAPPDATA "Orbit\Codex"
+New-Item -ItemType Directory -Force -Path $installRoot
+Expand-Archive -Path .\orbit-marketplace-<version>.zip -DestinationPath $installRoot -Force
+```
+
+The extracted Marketplace root must contain all of these paths:
+
+```text
+orbit-marketplace/
+├── .agents/plugins/marketplace.json
+└── plugins/orbit/
+    ├── .codex-plugin/plugin.json
+    ├── .mcp.json
+    ├── start-orbit.sh
+    └── skills/orbit/SKILL.md
+```
+
+If extraction creates an additional directory level, use the inner
+`orbit-marketplace` directory in the next step.
+
+### 3. Register the Marketplace
+
+Pass the absolute extracted Marketplace path to Codex.
+
+On macOS or Linux:
+
+```bash
+codex plugin marketplace add "$HOME/.local/share/orbit-codex/orbit-marketplace"
+codex plugin marketplace list
+```
+
+On Windows PowerShell:
+
+```powershell
+codex plugin marketplace add (Join-Path $installRoot "orbit-marketplace")
+codex plugin marketplace list
+```
+
+The list should include a Marketplace named `orbit-local` whose root is the
+directory added above. If another `orbit-local` entry points elsewhere, remove
+that stale source with `codex plugin marketplace remove orbit-local`, then add
+the intended directory again.
+
+### 4. Install Orbit
+
+Install from the CLI:
+
+```bash
+codex plugin add orbit@orbit-local
+codex plugin list --marketplace orbit-local
+```
+
+The list should show `orbit` as installed and enabled. Alternatively, after
+registering the Marketplace:
 
 1. Open **Plugins** in the Codex app.
-2. Find **Orbit** under **Orbit Local** and select **Install**.
-3. Start a new Codex task so the installed Skill and MCP tools are loaded.
-4. Open the project that should own the workflow Runtime.
-5. Ask Codex: `Open Orbit`.
+2. Select the **Orbit Local** source.
+3. Find **Orbit** and select **Install**.
+
+### 5. Restart Codex and open Orbit
+
+1. Fully quit the Codex desktop app; closing only its window is not enough.
+2. Reopen Codex and start a new task so the installed Skill and MCP tools load.
+3. Open the project that should own the workflow Runtime.
+4. Ask Codex: `Open Orbit`.
+5. Confirm that the Orbit dashboard opens beside the conversation.
+
+The first start may take longer because `uv` must create the plugin's virtual
+environment and install its locked Python dependencies.
+
+### Upgrade an existing installation
+
+1. Download the new `orbit-marketplace-<version>.zip`.
+2. Fully quit Codex.
+3. Back up or remove the old extracted `orbit-marketplace` directory, then
+   extract the new archive at the same path. Do not merge it over old files.
+4. Reinstall and verify the plugin:
+
+   ```bash
+   codex plugin add orbit@orbit-local
+   codex plugin list --marketplace orbit-local
+   ```
+
+5. Reopen Codex and start a new task.
+
+If the Marketplace path changes, remove `orbit-local`, add the new absolute
+path, and then reinstall Orbit.
+
+### Remove the installation
+
+```bash
+codex plugin remove orbit@orbit-local
+codex plugin marketplace remove orbit-local
+```
+
+After those commands succeed, the extracted Marketplace directory can be
+deleted. Fully restart Codex to clear the plugin from new tasks.
+
+### Installation troubleshooting
+
+- **Marketplace not found:** run `codex plugin marketplace list` and verify the
+  registered root directly contains `.agents/plugins/marketplace.json`.
+- **Orbit is absent:** run `codex plugin list --available --json` and confirm
+  `orbit` is available from `orbit-local`, then repeat the install command.
+- **`bash` not found:** install Bash and ensure it is visible in the environment
+  used to launch Codex.
+- **No virtualenv or `uv` executable:** install `uv`, then restart Codex so its
+  environment sees the executable.
+- **Old instructions or tools remain:** fully quit Codex and create a new task
+  after reopening it; an existing task does not reload plugin metadata.
 
 The plugin ships the MCP proxy, and the plugin host sets
 `ORBIT_AGENT_APP_WORKSPACE` to the open project. The proxy registers that

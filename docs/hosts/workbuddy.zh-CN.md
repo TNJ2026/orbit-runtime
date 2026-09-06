@@ -9,11 +9,81 @@
 | 是否绘制 Orbit 卡片 | 是 |
 | 事件工具 | Runtime 的 `list_runtime_events` |
 
-没有插件，也没有 Proxy。添加一个自定义连接器，直接指向 Hub 的 HTTP 地址：
+## 从仓库配置连接器
+
+WorkBuddy 没有专用插件，也没有 Proxy。Orbit 在本地运行，WorkBuddy 通过自定义 HTTP MCP
+连接器直连它的回环 Hub。
+
+### 使用简单提示词配置
+
+把下面这句话交给能够读取公开仓库并运行本地命令的 WorkBuddy Agent：
 
 ```text
-http://127.0.0.1:8848/mcp
+请从这个仓库为 WorkBuddy 配置 Orbit 连接器：https://github.com/TNJ2026/orbit
 ```
+
+Agent 应通过仓库的宿主索引找到本文，安装并启动 Orbit、检查端点，然后引导你完成它无法
+代替操作的连接器设置。
+
+### 1. 检查前置条件
+
+- Git 和 `uv`。
+- Python 3.10 或更高版本。
+- 支持自定义 Streamable HTTP MCP 连接器的 WorkBuddy 版本。
+- 使用仓库启动脚本时需要 Bash；Windows 请使用 Git Bash 或 Agent 能找到的其他 Bash。
+
+### 2. 克隆并安装 Orbit
+
+把 checkout 保存在稳定目录：
+
+```bash
+git clone https://github.com/TNJ2026/orbit.git /绝对路径/稳定目录/orbit
+uv tool install /绝对路径/稳定目录/orbit
+uv tool update-shell
+orbit --version
+```
+
+如果 checkout 已存在，请先检查并保留本地修改。干净的 checkout 可用 `git pull --ff-only`
+更新，再运行 `uv tool install --force /绝对路径/稳定目录/orbit` 刷新已安装工具。
+
+### 3. 为目标项目启动 Orbit
+
+把需要拥有 Runtime 的项目路径交给仓库启动脚本：
+
+```bash
+/绝对路径/稳定目录/orbit/start-orbit.sh /绝对路径/目标项目
+```
+
+然后检查发现结果：
+
+```bash
+orbit runtimes --json
+```
+
+打开 `http://127.0.0.1:8848/ui`，其中应列出目标 Workspace。请保留该 checkout，因为启动
+脚本和 Agent App manifest 都属于本安装的一部分。
+
+### 4. 添加 WorkBuddy 连接器
+
+在 WorkBuddy 中打开连接器或 MCP 设置，添加自定义 Streamable HTTP 连接器。不同版本的
+界面名称可能略有差异，请填写以下值：
+
+| 字段 | 值 |
+| --- | --- |
+| 名称 | `Orbit` |
+| MCP URL | `http://127.0.0.1:8848/mcp` |
+| 传输方式 | Streamable HTTP |
+| 认证 | 无 |
+
+保存连接器，并为目标 Agent 或对话启用它。不要配置远程 URL：Orbit Hub 有意只监听回环
+地址。
+
+### 5. 验证连接
+
+1. 确认 WorkBuddy 显示 `Orbit` 连接器提供的工具。
+2. 让它调用 `list_workspaces`。
+3. 如果返回多个 Workspace，用 `select_workspace` 选择目标项；绝不要猜路径。
+4. 让它显示 Orbit 工作流或打开 Orbit，确认卡片能够渲染。
 
 不需要凭据：Hub 只在回环地址上，而回环上的调用方本来就是操作者。WorkBuddy 使用
 Streamable HTTP（`accept: application/json, text/event-stream`），以协议
@@ -23,6 +93,24 @@ Streamable HTTP（`accept: application/json, text/event-stream`），以协议
 **不要在这里用 `orbit mcp`。** 它的 stdio 传输虽然是 WorkBuddy 自家文档描述的形状，
 但它启动的进程要的是运行中的 Hub 或 `orbit serve` 已经持有的项目数据库，会以
 `Runtime database is already owned` 退出，而不是共享。
+
+### 升级或移除
+
+升级时更新干净的 checkout、重新安装工具，再为目标项目运行启动脚本：
+
+```bash
+cd /绝对路径/稳定目录/orbit
+git pull --ff-only
+uv tool install --force /绝对路径/稳定目录/orbit
+./start-orbit.sh /绝对路径/目标项目
+```
+
+连接器 URL 不变，因此通常无需修改 WorkBuddy 设置。如果它仍保留旧工具目录，请重新连接
+或重启 WorkBuddy。
+
+移除集成时，在 WorkBuddy 中禁用或删除 `Orbit` 自定义连接器。这不会删除 Runtime 数据。
+请通过 **停止 Orbit** 控件或你启动的精确 Runtime 进程单独停止 Orbit；不要把删除
+`~/.orbit` 当成卸载方式。
 
 WorkBuddy 会挂载 Orbit 的卡片，而**每张挂载的卡片都会开自己的 MCP 会话**并调用它需要
 的工具——所以一个对话里挂着六张卡，就是六套这样的调用。有一个工具为此做了特别处理：
@@ -70,6 +158,32 @@ WorkBuddy 从 MCP 服务器的初始化指令里收到这条规则：第一个�
 | 对 `/mcp` 发 GET 得到 `405` | 这是「有没有服务端推流」这个问题的**答案**，不是故障。 |
 | `Runtime database is already owned` | 用了 `orbit mcp`。把连接器指向 Hub 的 HTTP 端点。 |
 | 连接器报告没有工具 | Hub 没在跑。用 `./start-orbit.sh /absolute/path/to/project` 启动。 |
+
+## 示例：生成专家的提示词
+
+`Orbit` 连接器验证可用后，把下面的范文交给 WorkBuddy，即可生成一个可复用的专家，不必在
+每次对话中重复编排规则：
+
+```text
+请创建一个 WorkBuddy 专家，配置如下：
+
+- 名称：Orbit 工作流编排专家
+- 描述：选择并运行本地 Orbit 工作流、跟踪运行、处理人工中断，并安全地接手 Agent 步骤。
+- 连接器：启用现有的、名为 Orbit 的自定义 MCP 连接器。
+
+以仓库中的最新指南为唯一依据：
+https://github.com/TNJ2026/orbit/blob/main/docs/hosts/workbuddy.zh-CN.md
+
+读取其中的「示例：一份工作流编排提示词」一节，把该节代码块中的完整提示词作为专家指令。
+保留所有工具名、首轮恢复检查、Workspace 选择、卡片使用规则、allowed_commands 与 revision
+检查、中断响应格式和委托规则。不要虚构 Orbit 工具，也不要把安装命令写进专家指令。
+
+如果你不能直接创建专家，请按可直接复制的格式输出准确的「名称、描述、专家指令、已启用
+连接器」四项配置。若 Orbit 连接器缺失或未启用，请明确报告，不要静默换成其他连接器。
+```
+
+保存前请检查生成结果，尤其是已启用的连接器，以及首轮调用 `list_delegations` 的规则。这段
+提示词只负责生成专家，不负责安装或启动 Orbit。
 
 ## 示例：一份工作流编排提示词
 
