@@ -281,8 +281,12 @@ class EphemeralPortTests(unittest.TestCase):
                 # Its own session: the teardown below signals this process, and
                 # sharing a group with the test runner would end the run.
                 start_new_session=True,
+                # Inherited and then narrowed: a hand-built environment has
+                # no `SystemRoot`, and Windows cannot initialise Winsock
+                # without it — the child died on `import asyncio`, long before
+                # it could publish the port this test is about.
                 env={
-                    "HOME": str(home), "PATH": os.environ.get("PATH", ""),
+                    **os.environ, "HOME": str(home),
                     "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src"),
                 },
             )

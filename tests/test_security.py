@@ -386,9 +386,14 @@ class NetworkExposureTests(unittest.TestCase):
             [sys.executable, "-m", "orbit", "serve", "--help"],
             capture_output=True, text=True,
             cwd=str(Path(__file__).resolve().parents[1]),
+            # Inherited and then narrowed, rather than built from nothing.
+            # A hand-built environment dropped `SystemRoot`, without which
+            # Windows cannot initialise Winsock — so the child died on
+            # `import asyncio` before reaching any code this asserts about.
+            # The old value also hardcoded a POSIX `PATH`.
             env={
+                **os.environ,
                 "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src"),
-                "PATH": "/usr/bin:/bin",
             },
         )
         self.assertEqual(0, result.returncode, result.stderr)

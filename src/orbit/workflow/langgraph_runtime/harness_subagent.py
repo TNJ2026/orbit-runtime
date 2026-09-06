@@ -9,6 +9,7 @@ lease becomes unknown rather than being offered to a second Agent.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
@@ -135,10 +136,25 @@ class DelegationQueue:
             )
             db.commit()
 
+    @contextmanager
     def _connect(self):
+        """A connection that is committed *and* closed.
+
+        `with sqlite3.connect(...)` ends the transaction and leaves the
+        connection open — every one of the seventeen call sites below reads
+        as though it closes, and none of them did. On POSIX that is a handle
+        held until garbage collection; on Windows it is a file nobody can
+        delete, which is how a Runtime under test could not remove its own
+        temporary directory.
+        """
+
         db = sqlite3.connect(self.path, timeout=30)
         db.row_factory = sqlite3.Row
-        return db
+        try:
+            with db:
+                yield db
+        finally:
+            db.close()
 
     @staticmethod
     def _dto(row) -> dict[str, Any]:
