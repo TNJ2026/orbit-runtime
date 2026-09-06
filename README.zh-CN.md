@@ -36,13 +36,13 @@ uv run orbit serve
 ```
 
 UI 地址为 `http://127.0.0.1:8848/ui`。这个页面列出本机正在运行的 Workspace Runtime
-并链接进各自的 UI；它**不启动任何东西**，所以 Runtime 没起来的 Workspace 不会出现在那里。
+并链接到各自的 UI；它**不启动任何东西**，所以 Runtime 没起来的 Workspace 不会出现在那里。
 
 只有一个 UI、一个目录、一个已发布 Workflow 库。工作流点名哪些 Agent，就在这些
 Agent 存在的地方用它们。
 
 已发布的工作流钉住的是编译时那个精确的 Handler 构建，而 Agent 的构建就是它的 CLI
-版本——所以在别的机器上写的工作流、或者 CLI 升级过之后，它点名的东西可能不在这里。
+版本——所以在别的机器上写的工作流、或者 CLI 升级之后，它点名的东西可能不在这里。
 无处可去的步骤会被送到一个在的 Agent 上，且尽可能少动：优先送到同一个 Agent 已安装
 的构建，实在不行才送到本 Runtime 正在对话的那个 Agent。**点名的 Agent 在，就绝不
 移动**——所以刻意用两个 Agent 的工作流仍然用两个。
@@ -67,7 +67,7 @@ Orbit 是一个 Runtime，但有好几扇前门。每个宿主接入方式不同
 | [其他 MCP App](./docs/hosts/other-apps.zh-CN.md) | stdio Proxy | 自己的稳定名称 | 取决于宿主 |
 
 客户端名不得遮蔽已发现的 CLI。Runtime 会把已安装的 CLI 发现为 `codex`、`claude` 等
-Agent，所以 App 用其中之一注册会被**直接拒绝**而不是改名 —— `-app` 后缀就是为此存在的。
+Agent，所以 App 若用其中某个名字注册会被**直接拒绝**而不是改名——`-app` 后缀正是为此存在的。
 
 Orbit 还附带五张可以画在对话旁边的小页面 —— **[卡片](./docs/cards.zh-CN.md)** ——
 那里写了每张卡由哪个工具打开，以及升级之后为什么有时看到的还是旧的。
@@ -108,11 +108,11 @@ Runtime 会把这次 run 里每个 `agent.*` 节点改绑到 `app.delegate` Hand
 
 队列按 actor 隔离，所以别的对话拿不走这个对话的活。它同时也是**幂等边界**：一个确定性的
 delegation id 最多只能被认领一次；租约过期后会变成 `unknown`，而不是交给第二个 Agent。
-`reconcile_delegation` 为 `unknown` 的那条记录一个人工裁决，它**从不重试、也不改写**原来
+`reconcile_delegation` 为 `unknown` 的那条记录提供一个人工裁决，它**从不重试、也不改写**原来
 那次尝试——因为那次尝试很可能真的发生过。
 
 因为 run 的寿命长于对话，每个受支持的宿主都会在**对话的第一个用户轮次**检查有没有可恢复
-的工作：用默认状态调一次 `list_delegations`，空的就闭嘴，非空就告诉用户并询问。一条仍在
+的工作：用默认状态调一次 `list_delegations`，为空则不作声，非空则告知用户并询问。一条仍在
 租约中、且属于同一个稳定 worker 的委托，可以在续租后从它的 checkpoint 继续。
 
 `app.delegate` 也可以**直接写进工作流**，而不必经由 `execution_mode`。它的输入端口叫
@@ -166,7 +166,7 @@ orbit workflow publish <file> --catalog <catalog.json> --expected-version <n>
 ```
 
 `orbit serve` 默认只绑定 `127.0.0.1`。多 Workspace 时，Agent CLI、Workflow 源码模板
-和已发布 Workflow 全局共用；运行历史、人工任务、Artifact 及其他执行状态仍按 Workspace
+和已发布 Workflow 全局共享；运行历史、人工任务、Artifact 及其他执行状态仍按 Workspace
 隔离。Hub 还持有可复用的 Workflow 源码模板，并聚合在线 Workspace Runtime 的 Agent 统计。
 
 ## Codex 插件分发
@@ -192,7 +192,7 @@ codex plugin list
 codex plugin add orbit@orbit-local
 ```
 
-最后完全退出并重新打开 ChatGPT 桌面应用，再新建任务，让 Codex 重新加载插件元数据和技能。
+最后完全退出并重新打开 Codex 桌面应用，再新建任务，让 Codex 重新加载插件元数据和技能。
 
 ## 开发
 
