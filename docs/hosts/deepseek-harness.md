@@ -9,29 +9,125 @@
 | Draws Orbit's cards | no — it draws its own panel |
 | MCP tool profile | `harness`, a subset of the full surface |
 
-`integrations/deepseek-harness` is an installable Host Profile Bundle. Install
-it into a Harness Web Profile and restart that Profile:
+## Install from the repository
 
-```bash
-dsh plugin --profile web add /absolute/path/to/orbit/integrations/deepseek-harness
+`integrations/deepseek-harness` is the installable Host Profile Bundle. This
+installation keeps Orbit Runtime as an independent local process and adds the
+Orbit panel and tools to the Harness Web Profile.
+
+### Install with a simple prompt
+
+Paste this into a DeepSeek Harness Agent that can read public repositories and
+run local commands:
+
+```text
+Install the Orbit DeepSeek Harness integration from https://github.com/TNJ2026/orbit.
 ```
 
-Remove it with `dsh plugin --profile web remove @orbit-runtime/dsh-orbit`.
+The Agent should find this document from the repository's host index and
+follow the steps below. It must stop before restarting the active Harness
+Profile and tell you when that restart is required.
 
-Install `orbit` so the executable is on the Harness Host's `PATH`. Opening
-`/orbit` starts Orbit for the Harness Workspace when necessary; a Runtime
-started this way stays up after the panel or Profile closes. The Gateway looks
-for ownership records under `~/.orbit` — set `ORBIT_RUNTIME_ROOT` if the
-Runtime database lives elsewhere. The Orbit CLI holds a non-blocking ownership
-lock on that database and publishes its Workspace and MCP endpoint in the
-ownership record; Harness never owns that lock and never creates a second
-writer.
+### 1. Check the prerequisites
+
+- Git and `uv`.
+- Python 3.10 or newer for Orbit Runtime.
+- Node.js 22 or newer for the integration bundle.
+- A working `dsh` command and a Harness Web Profile named `web`.
+
+Check them before changing the Profile:
+
+```bash
+git --version
+uv --version
+node --version
+dsh --version
+```
+
+### 2. Clone Orbit into a stable directory
+
+```bash
+git clone https://github.com/TNJ2026/orbit.git /absolute/stable/path/orbit
+cd /absolute/stable/path/orbit
+```
+
+If the repository already exists, inspect its changes before updating it. Do
+not discard local work; update a clean checkout with `git pull --ff-only`.
+
+### 3. Install Orbit Runtime
+
+```bash
+uv tool install /absolute/stable/path/orbit
+uv tool update-shell
+orbit --version
+```
+
+Open a new terminal if `orbit` is not immediately visible after
+`uv tool update-shell`.
+
+### 4. Add the Harness bundle
+
+Stop the active Web Profile before replacing an existing bundle, then run:
+
+```bash
+dsh plugin --profile web add /absolute/stable/path/orbit/integrations/deepseek-harness
+dsh --profile web --dump-config
+```
+
+The dumped Profile configuration must contain
+`@orbit-runtime/dsh-orbit`. The source path should resolve to the checkout used
+above.
+
+### 5. Restart and verify
+
+1. Restart the Harness Web Profile.
+2. Open a workspace backed by a real directory.
+3. Run `/orbit`.
+4. Confirm the Orbit panel appears and its Settings row reports **connected**.
+5. Open one historical Run or ask the Agent to list Orbit workflows to verify
+   the Host-to-Runtime path.
+
+Opening `/orbit` starts Orbit for the Harness Workspace when necessary; a
+Runtime started this way stays up after the panel or Profile closes. The
+Gateway looks for ownership records under `~/.orbit` — set
+`ORBIT_RUNTIME_ROOT` for the Profile if the Runtime database lives elsewhere.
+The Orbit CLI holds a non-blocking ownership lock on that database and
+publishes its Workspace and MCP endpoint in the ownership record; Harness
+never owns that lock and never creates a second writer.
+
+### Upgrade, roll back, or remove
+
+For an upgrade, stop the Profile, update the clean checkout, refresh the Runtime
+tool, and add the bundle again:
+
+```bash
+cd /absolute/stable/path/orbit
+git pull --ff-only
+uv tool install --force /absolute/stable/path/orbit
+dsh plugin --profile web add /absolute/stable/path/orbit/integrations/deepseek-harness
+dsh --profile web --dump-config
+```
+
+Restart the Profile and repeat the verification above. To roll back, check out
+the intended released tag in a clean checkout, reinstall that Runtime and
+bundle, then restart. Do not delete the Orbit Runtime database during a bundle
+rollback.
+
+Remove only the Harness integration with:
+
+```bash
+dsh plugin --profile web remove @orbit-runtime/dsh-orbit
+dsh --profile web --dump-config
+```
+
+The second command should no longer list the bundle. Removing it does not stop
+or delete an independent Orbit Runtime.
 
 | Component | Supported range |
 | --- | --- |
 | Orbit Runtime | `>=0.4.0 <0.5.0` |
 | Orbit integration protocol | `orbit-harness/1` |
-| Harness packages | `>=0.1.1-rc.2 <0.2.0` |
+| Harness packages | `>=0.1.1-rc.2 <0.2.0` (alpha prereleases are not supported) |
 | React | `^18.2.0` |
 | Node.js | `>=22` |
 
@@ -148,15 +244,6 @@ rather than flowing through TypeScript assertions. When an MCP transport
 fails, the cached endpoint is discarded and the next Bridge poll or tool call
 reruns discovery, so `orbit serve` can restart on a new port without
 restarting Harness.
-
-## Upgrade and rollback
-
-Install the new bundle, rebuild the Profile, restart it. The independent Orbit
-Runtime can keep running when its protocol is compatible. Verify that the
-Orbit Settings row reports connected and open one historical Run.
-
-To roll back: stop the Profile, reinstall the previous bundle version,
-rebuild, restart. Rollback does not require deleting the Runtime database.
 
 Maintainers can verify install, Host/Web startup, HTTP readiness and clean
 removal in an isolated temporary Profile with `npm run smoke:profile`. Set

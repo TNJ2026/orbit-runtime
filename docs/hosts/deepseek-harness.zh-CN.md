@@ -9,27 +9,114 @@
 | 是否绘制 Orbit 卡片 | 否 —— 它画自己的面板 |
 | MCP 工具 profile | `harness`，完整工具面的子集 |
 
-`integrations/deepseek-harness` 是一个可安装的 Host Profile Bundle。装进目标
-Harness Web Profile 并重启该 Profile：
+## 从仓库安装
 
-```bash
-dsh plugin --profile web add /absolute/path/to/orbit/integrations/deepseek-harness
+`integrations/deepseek-harness` 是可安装的 Host Profile Bundle。安装后，Orbit Runtime
+仍是独立的本地进程，Harness Web Profile 则获得 Orbit 面板和工具。
+
+### 使用简单提示词安装
+
+把下面这句话交给能够读取公开仓库并运行本地命令的 DeepSeek Harness Agent：
+
+```text
+请安装这个仓库中的 Orbit DeepSeek Harness 集成：https://github.com/TNJ2026/orbit
 ```
 
-卸载用 `dsh plugin --profile web remove @orbit-runtime/dsh-orbit`。
+Agent 应从仓库的宿主索引找到本文，并执行下面的步骤。它必须在重启当前 Harness Profile
+之前停下，提醒你完成重启。
 
-需要先安装 `orbit`，使可执行文件在 Harness Host 的 `PATH` 上。打开 `/orbit` 时，
-必要则为该 Harness Workspace 启动 Orbit；这样启动的 Runtime 在面板或 Profile 关闭后
-依然存活。Gateway 默认在 `~/.orbit` 下寻找归属记录——如果 Runtime 数据库在别处，
-为该 Profile 设置 `ORBIT_RUNTIME_ROOT`。Orbit CLI 对该数据库持有一把非阻塞的归属锁，
-并在归属记录里公布自己的 Workspace 和 MCP 端点；Harness 从不持有这把锁，也从不制造
-第二个写入者。
+### 1. 检查前置条件
+
+- Git 和 `uv`。
+- Orbit Runtime 需要 Python 3.10 或更高版本。
+- 集成 Bundle 需要 Node.js 22 或更高版本。
+- 可用的 `dsh` 命令，以及名为 `web` 的 Harness Web Profile。
+
+修改 Profile 前先检查：
+
+```bash
+git --version
+uv --version
+node --version
+dsh --version
+```
+
+### 2. 把 Orbit 克隆到稳定目录
+
+```bash
+git clone https://github.com/TNJ2026/orbit.git /绝对路径/稳定目录/orbit
+cd /绝对路径/稳定目录/orbit
+```
+
+如果仓库已经存在，更新前先检查本地修改，不要丢弃未提交工作；干净的 checkout 可使用
+`git pull --ff-only` 更新。
+
+### 3. 安装 Orbit Runtime
+
+```bash
+uv tool install /绝对路径/稳定目录/orbit
+uv tool update-shell
+orbit --version
+```
+
+如果执行 `uv tool update-shell` 后仍暂时找不到 `orbit`，请打开一个新终端。
+
+### 4. 添加 Harness Bundle
+
+替换已有 Bundle 前先停止正在运行的 Web Profile，然后执行：
+
+```bash
+dsh plugin --profile web add /绝对路径/稳定目录/orbit/integrations/deepseek-harness
+dsh --profile web --dump-config
+```
+
+输出的 Profile 配置中必须包含 `@orbit-runtime/dsh-orbit`，其来源路径应指向上面使用的
+checkout。
+
+### 5. 重启并验证
+
+1. 重启 Harness Web Profile。
+2. 打开一个由真实目录支持的 Workspace。
+3. 执行 `/orbit`。
+4. 确认 Orbit 面板出现，且 Settings 行显示 **connected**。
+5. 打开一个历史 Run，或让 Agent 列出 Orbit 工作流，验证 Host 到 Runtime 的链路。
+
+打开 `/orbit` 时，必要则为该 Harness Workspace 启动 Orbit；这样启动的 Runtime 在面板或
+Profile 关闭后依然存活。Gateway 默认在 `~/.orbit` 下寻找归属记录——如果 Runtime 数据库
+在别处，为该 Profile 设置 `ORBIT_RUNTIME_ROOT`。Orbit CLI 对该数据库持有一把非阻塞的
+归属锁，并在归属记录里公布自己的 Workspace 和 MCP 端点；Harness 从不持有这把锁，也不
+制造第二个写入者。
+
+### 升级、回滚或移除
+
+升级时停止 Profile，更新干净的 checkout，刷新 Runtime 工具，再次添加 Bundle：
+
+```bash
+cd /绝对路径/稳定目录/orbit
+git pull --ff-only
+uv tool install --force /绝对路径/稳定目录/orbit
+dsh plugin --profile web add /绝对路径/稳定目录/orbit/integrations/deepseek-harness
+dsh --profile web --dump-config
+```
+
+重启 Profile 后重复上面的验证。需要回滚时，在干净 checkout 中切换到目标 Release 标签，
+重新安装该版本的 Runtime 和 Bundle，再重启 Profile。回滚 Bundle 不需要删除 Orbit Runtime
+数据库。
+
+仅移除 Harness 集成：
+
+```bash
+dsh plugin --profile web remove @orbit-runtime/dsh-orbit
+dsh --profile web --dump-config
+```
+
+第二条命令不应再列出该 Bundle。移除集成不会停止或删除独立运行的 Orbit Runtime。
 
 | 组件 | 支持范围 |
 | --- | --- |
 | Orbit Runtime | `>=0.4.0 <0.5.0` |
 | Orbit 集成协议 | `orbit-harness/1` |
-| Harness 包 | `>=0.1.1-rc.2 <0.2.0` |
+| Harness 包 | `>=0.1.1-rc.2 <0.2.0`（不支持 alpha 预发布版本） |
 | React | `^18.2.0` |
 | Node.js | `>=22` |
 
@@ -118,13 +205,6 @@ Gateway 在启动时就拒绝不兼容的 Orbit 集成协议；运行时编解�
 拒绝畸形的核心 DTO —— 畸形的 Run、Step、Output 或 Artifact 载荷会在 Gateway 边界失败，
 而不是一路穿过 TypeScript 断言。MCP 传输失败时，缓存的端点会被丢弃，下一次 Bridge 轮询或
 工具调用会重新发现，于是 `orbit serve` 可以换个端口重启而不必重启 Harness。
-
-## 升级与回滚
-
-安装新 bundle、重建 Profile、重启。协议兼容时，独立的 Orbit Runtime 可以一直跑着。
-确认 Orbit 设置那一行显示已连接，并打开一个历史 Run。
-
-回滚：停止 Profile、装回上一个 bundle 版本、重建、重启。**回滚不需要删除 Runtime 数据库。**
 
 维护者可以用 `npm run smoke:profile` 在一个隔离的临时 Profile 里验证安装、Host/Web 启动、
 HTTP 就绪和干净卸载。启动器在 `PATH` 上不叫 `dsh` 时设置 `DSH_BIN`；要测试确切的发布产物，

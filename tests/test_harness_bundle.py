@@ -23,6 +23,14 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
         self.assertNotIn("private", manifest)
         self.assertIn("@deepseek-ai/dsh-typert-protocol", manifest["peerDependencies"])
         self.assertIn("@deepseek-ai/dsh-attachment", manifest["peerDependencies"])
+        harness_peers = {
+            name: version
+            for name, version in manifest["peerDependencies"].items()
+            if name.startswith("@deepseek-ai/dsh-")
+        }
+        self.assertTrue(harness_peers)
+        self.assertEqual({">=0.1.1-rc.2 <0.2.0"}, set(harness_peers.values()))
+        self.assertTrue(all("alpha" not in version for version in harness_peers.values()))
 
     def test_patch_registers_the_host_gateway(self) -> None:
         patch = yaml.safe_load((BUNDLE / "cordis.patch.yml").read_text(encoding="utf-8"))

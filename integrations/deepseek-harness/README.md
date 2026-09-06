@@ -39,7 +39,7 @@ the exact release artifact, set `DSH_BUNDLE_SPEC` to an absolute `.tgz` path.
 | --- | --- |
 | Orbit Runtime | `>=0.4.0 <0.5.0` |
 | Orbit integration protocol | `orbit-harness/1` |
-| Harness packages | `>=0.1.1-rc.2 <0.2.0` |
+| Harness packages | `>=0.1.1-rc.2 <0.2.0` (alpha prereleases are not supported) |
 | Verified Harness launcher | `0.1.0-rc.6` |
 | React | `^18.2.0` |
 | Node.js | `>=22` (verified with Harness bundled Node.js 26) |

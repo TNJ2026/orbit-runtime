@@ -74,7 +74,7 @@ try {
   assert.match(installed.stdout, /name: '@orbit-runtime\/dsh-orbit'/)
 
   web = await startWeb()
-  // alpha profiles put a one-time authentication token in the printed URL;
+  // Some profiles put a one-time authentication token in the printed URL;
   // appending a slash after its query string corrupts that token.
   let response = await fetch(web.url, { redirect: 'manual' })
   if (response.status >= 300 && response.status < 400) {
