@@ -526,10 +526,24 @@ class DashboardCardTests(unittest.TestCase):
 
         # The way out is the same chevron the workflow card uses, big
         # enough to be a control rather than punctuation.
-        self.assertEqual("‹", page.text_content(".back"))
+        self.assertEqual("‹", page.text_content(".backGlyph"))
+        # One control, one hover: the chip covers the chevron and the title.
+        page.hover(".back")
+        page.wait_for_timeout(120)
+        covers = page.evaluate(
+            """() => {
+              const back = document.querySelector('.back').getBoundingClientRect();
+              const glyph = document.querySelector('.backGlyph').getBoundingClientRect();
+              const title = document.querySelector('.back .viewTitle').getBoundingClientRect();
+              return back.left <= glyph.left && back.right >= title.right
+                && getComputedStyle(document.querySelector('.back')).backgroundColor;
+            }"""
+        )
+        self.assertTrue(covers)
+        self.assertNotIn(covers, ("rgba(0, 0, 0, 0)", "transparent"))
         self.assertEqual(
             "24px",
-            page.eval_on_selector(".back", "node => getComputedStyle(node).fontSize"),
+            page.eval_on_selector(".backGlyph", "node => getComputedStyle(node).fontSize"),
         )
         page.click(".back")
         page.wait_for_selector(".historyRow")

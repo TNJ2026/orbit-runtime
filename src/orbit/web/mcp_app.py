@@ -14,11 +14,11 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v49.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v50.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v25.html"
+ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v26.html"
 ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v15.html"
 ORBIT_RUN_URI = "ui://orbit/goal-run-v21.html"
 ORBIT_GOALS_URI = "ui://orbit/goals-v15.html"
@@ -216,22 +216,28 @@ _CARD_STYLE = r"""
   /* One head for a view inside a card, and one way back out of it. Both
      cards that have a detail view drew these separately. */
   .viewHead{display:flex;align-items:center;gap:4px;padding:10px 12px;border-bottom:1px solid var(--line)}
-  /* One way back, on every card that has a second level. The glyph is the
-     workflow card's chevron rather than the dashboard's arrow, at a size of
-     its own: at the inherited 14px it read as punctuation.
+  /* One way back, on every card that has a second level, and it is the
+     chevron *and* the title: they name one action, so they are one control
+     and take one hover. A chip around the glyph alone was a chip around a
+     third of what a person aims at, and it sat off-centre besides — the
+     glyph having been nudged inside a fixed 30px box that the chip, not the
+     glyph, was drawn around.
 
-     Its placement is measured rather than eyeballed. `align-items:center`
-     lines up the two *boxes*, and the boxes were already centred — but a
-     chevron's ink is not centred in its own box, so it sat 2.8px below the
-     title's. And the declared 8px gap read as 20.5, because the glyph is
-     narrow and the rest of its button is air. So the glyph sits at the right
-     of its button and is lifted off the bottom, while the button keeps the
-     30x30 a finger needs: 8.5px of gap, 0.2px of drift. */
-  .back{display:flex;align-items:center;justify-content:flex-end;
-    width:30px;height:30px;padding:0 2px 6px 0;border:0;border-radius:8px;
-    color:var(--accent);background:transparent;cursor:pointer;
-    font-size:24px;line-height:1}
+     Nothing is nudged now. The button hugs its own contents, so the chip is
+     exactly what it covers; negative margins let it breathe past the text
+     without moving the text, and stop 6px short of the card's edge. Measured
+     between the two marks: 8.2px of gap, 0.8px of drift. */
+  .back{display:flex;align-items:center;gap:6px;margin:-5px -6px;padding:5px 6px;
+    border:0;border-radius:8px;color:var(--accent);background:transparent;
+    cursor:pointer;font:inherit;text-align:left}
+  /* The lift is `padding-bottom` on a flex box whose own content is centred:
+     it shrinks the content area from below, so the glyph rises by half of it.
+     Measured, that takes the ink from 2.8px under the title's to 0.8. */
+  .backGlyph{display:flex;align-items:center;padding-bottom:3px;font-size:24px;line-height:1}
   .viewTitle{min-width:0;flex:1;font-size:12px;font-weight:650}
+  /* Inside the button the title is a label, not a spacer, and keeps the
+     colour it has everywhere else. */
+  .back .viewTitle{flex:none;color:var(--text)}
   @keyframes pulse{50%{opacity:.35}} @media(prefers-reduced-motion:reduce){.dot.live{animation:none}}
 """ + _PROMPT_EDITOR_STYLE
 
@@ -516,7 +522,7 @@ __CARD_STYLE__
   }
 
   function viewHead(title,backView) {
-    return `<div class="viewHead"><button class="back" type="button" data-back-view="${backView}" aria-label="${esc(t().back)}">‹</button><div class="viewTitle">${esc(title)}</div></div>`;
+    return `<div class="viewHead"><button class="back" type="button" data-back-view="${backView}" aria-label="${esc(t().back)}"><span class="backGlyph">‹</span><span class="viewTitle">${esc(title)}</span></button></div>`;
   }
 
   function authoringStrip(job) {
@@ -1019,7 +1025,7 @@ function drawList(rows){current=null;
 function drawDetail(w){
  card.className='card workflowDetail';
  const nodes=w.nodes||w.definition?.nodes||[];const rows=nodes.map(n=>`<div class="definitionItem"><button class="step definitionItemToggle" type="button" aria-expanded="false"><span class="dot"></span><span>${esc(n.label||n.node_id||n.id)}</span><span class="meta">${esc(n.kind)}</span></button><div class="definitionDetails" hidden><div>${esc(t().handler)}${esc(n.handler||'—')}</div><pre>${esc(n.prompt||t().noPrompt)}</pre></div></div>`).join('');
- card.innerHTML=`<div class="viewHead"><button id="workflowBack" class="back" type="button" aria-label="${esc(t().back)}">‹</button><span class="viewTitle">${esc(t().detail)}</span></div><div class="summary"><div class="name">${esc(w.name)}</div><div class="desc">${esc(w.description||'')}</div>
+ card.innerHTML=`<div class="viewHead"><button id="workflowBack" class="back" type="button" aria-label="${esc(t().back)}"><span class="backGlyph">‹</span><span class="viewTitle">${esc(t().detail)}</span></button></div><div class="summary"><div class="name">${esc(w.name)}</div><div class="desc">${esc(w.description||'')}</div>
  <div class="meta">${esc(w.workflow_id)} · v${esc(w.latest_version)}</div></div>
  <div class="tabs" role="tablist" aria-label="${esc(t().views)}"><button id="workflowGraphTab" class="tab" type="button" role="tab" aria-selected="true" aria-controls="workflowGraphPanel">${esc(t().graph)}</button><button id="workflowDefinitionTab" class="tab" type="button" role="tab" aria-selected="false" aria-controls="workflowDefinitionPanel" tabindex="-1">${esc(t().definition)}</button></div>
  <div id="workflowGraphPanel" class="detailPanel" role="tabpanel" aria-labelledby="workflowGraphTab">${graphMarkup(w.graph)}</div>

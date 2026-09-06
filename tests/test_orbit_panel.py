@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v49.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v50.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -540,18 +540,19 @@ class CurrentTaskCardTests(unittest.TestCase):
 
         for html in (ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML):
             with self.subTest():
+                # The chevron and the title are one control: they name one
+                # action, so they take one hover. A chip around the glyph
+                # alone covered a third of what a person aims at.
+                self.assertIn('<span class="backGlyph">‹</span>', html)
                 self.assertIn(
-                    ".back{display:flex;align-items:center;justify-content:flex-end;", html,
+                    ".back{display:flex;align-items:center;gap:6px;margin:-5px -6px;", html,
                 )
-                self.assertIn("font-size:24px;line-height:1}", html)
-                # Placement measured rather than eyeballed: the glyph goes to
-                # the right of its button and is lifted off the bottom, so the
-                # ink lines up with the title's and the gap reads as the gap.
-                # The button keeps the 30x30 a finger needs.
-                self.assertIn("width:30px;height:30px;padding:0 2px 6px 0;", html)
-                self.assertIn(".viewHead{display:flex;align-items:center;gap:4px;", html)
-                self.assertIn("‹</button>", html)
-                self.assertNotIn("←</button>", html)
+                # The button hugs its contents, so the chip is what it covers.
+                self.assertNotIn("width:30px;height:30px;padding:0 2px 6px 0;", html)
+                self.assertIn(".backGlyph{display:flex;align-items:center;padding-bottom:3px;", html)
+                self.assertIn(".back .viewTitle{flex:none;color:var(--text)}", html)
+                self.assertIn("‹</span>", html)
+                self.assertNotIn("←", html)
         # And it is still one rule, not one per card.
         self.assertEqual(1, ORBIT_DASHBOARD_HTML.count(".back{"))
         self.assertEqual(1, ORBIT_WORKFLOWS_HTML.count(".back{"))
@@ -567,8 +568,12 @@ class CurrentTaskCardTests(unittest.TestCase):
             with self.subTest():
                 self.assertEqual(1, html.count(".viewHead{"))
                 self.assertEqual(0, html.count(".viewHead {"))
-                self.assertEqual(1, html.count(".viewTitle{"))
+                # `.viewTitle{` also appears inside `.back .viewTitle{`, so
+                # count the unscoped rule by what precedes it.
+                self.assertEqual(1, html.count("\n  .viewTitle{"))
                 self.assertEqual(0, html.count(".viewTitle {"))
+                # One more, scoped: inside the button it is a label.
+                self.assertEqual(1, html.count(".back .viewTitle{"))
 
     def test_it_does_not_request_a_large_display_surface(self) -> None:
         self.assertNotIn("request-display-mode", ORBIT_DASHBOARD_HTML)
