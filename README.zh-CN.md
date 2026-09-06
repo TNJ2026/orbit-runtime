@@ -1,5 +1,9 @@
 # Orbit
 
+<p align="center">
+  <img src="./docs/images/orbit-banner.png" alt="Orbit — 本地 Agent 工作流 Runtime" width="100%">
+</p>
+
 **简体中文** | [English](./README.md)
 
 Orbit 是面向 Agent App 的本地持久化 LangGraph 工作流 Runtime。Runtime、API、Web UI、
@@ -164,6 +168,31 @@ orbit workflow publish <file> --catalog <catalog.json> --expected-version <n>
 `orbit serve` 默认只绑定 `127.0.0.1`。多 Workspace 时，Agent CLI、Workflow 源码模板
 和已发布 Workflow 全局共用；运行历史、人工任务、Artifact 及其他执行状态仍按 Workspace
 隔离。Hub 还持有可复用的 Workflow 源码模板，并聚合在线 Workspace Runtime 的 Agent 统计。
+
+## Codex 插件分发
+
+Orbit 仅通过仓库/个人 Marketplace 分发，不提交到通用公共 Plugins Directory。
+完整步骤见 [Codex App 安装指南](./docs/hosts/codex-app.zh-CN.md)，其中也提供了让 Codex
+直接从本仓库安装的一行提示词。
+
+每个 GitHub Release 都包含 `orbit-marketplace-<version>.zip`。下载并解压后，注册解压目录并
+安装 Orbit：
+
+```bash
+unzip orbit-marketplace-<version>.zip
+codex plugin marketplace add ./orbit-marketplace
+codex plugin add orbit@orbit-local
+codex plugin list
+```
+
+请把解压出的 `orbit-marketplace` 目录保存在稳定位置，因为已配置的 Marketplace 源会引用
+该目录。升级时下载并解压新版本、替换旧目录，然后运行：
+
+```bash
+codex plugin add orbit@orbit-local
+```
+
+最后完全退出并重新打开 ChatGPT 桌面应用，再新建任务，让 Codex 重新加载插件元数据和技能。
 
 ## 开发
 

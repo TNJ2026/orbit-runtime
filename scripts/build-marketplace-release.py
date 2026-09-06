@@ -21,6 +21,7 @@ INCLUDE_FILES = (
     "README.zh-CN.md",
     "agent-app.json",
     "pyproject.toml",
+    "start-orbit.sh",
     "uv.lock",
 )
 INCLUDE_DIRS = (".codex-plugin", "scripts", "skills", "src")
@@ -133,6 +134,7 @@ def build(output: Path, version: str | None) -> None:
             (ARCHIVE_ROOT / ".agents/plugins/marketplace.json").as_posix(),
             (PLUGIN_ROOT / ".codex-plugin/plugin.json").as_posix(),
             (PLUGIN_ROOT / ".mcp.json").as_posix(),
+            (PLUGIN_ROOT / "start-orbit.sh").as_posix(),
             (PLUGIN_ROOT / "skills/orbit/SKILL.md").as_posix(),
         }
         missing = required - names

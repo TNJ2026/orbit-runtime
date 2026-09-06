@@ -9,15 +9,91 @@
 | Draws Orbit's cards | yes |
 | Event tools | the Runtime's `list_runtime_events` |
 
-There is no plugin and no proxy. Add a custom connector pointing straight at
-the Hub over HTTP:
+## Set up the connector from the repository
+
+There is no WorkBuddy plugin and no proxy. Orbit runs locally, and WorkBuddy
+connects directly to its loopback Hub with a custom HTTP MCP connector.
+
+### Set up with a simple prompt
+
+Paste this into a WorkBuddy Agent that can read public repositories and run
+local commands:
 
 ```text
-http://127.0.0.1:8848/mcp
+Set up the Orbit connector for WorkBuddy from https://github.com/TNJ2026/orbit.
 ```
 
-No credentials: the Hub is on loopback, and a loopback caller is already the
-operator. WorkBuddy speaks Streamable HTTP
+The Agent should find this document through the repository's host index,
+install and start Orbit, verify the endpoint, then guide you through any
+connector-setting action it cannot perform itself.
+
+### 1. Check the prerequisites
+
+- Git and `uv`.
+- Python 3.10 or newer.
+- A WorkBuddy version that supports custom Streamable HTTP MCP connectors.
+- Bash when using the repository launcher. On Windows, use Git Bash or another
+  Bash installation available to the Agent.
+
+### 2. Clone and install Orbit
+
+Keep the checkout in a stable location:
+
+```bash
+git clone https://github.com/TNJ2026/orbit.git /absolute/stable/path/orbit
+uv tool install /absolute/stable/path/orbit
+uv tool update-shell
+orbit --version
+```
+
+If the checkout already exists, inspect and preserve local changes. Update a
+clean checkout with `git pull --ff-only`, then refresh the installed tool with
+`uv tool install --force /absolute/stable/path/orbit`.
+
+### 3. Start Orbit for the intended project
+
+Run the repository launcher with the project that should own the Runtime:
+
+```bash
+/absolute/stable/path/orbit/start-orbit.sh /absolute/path/to/project
+```
+
+Then verify discovery and open the Hub UI:
+
+```bash
+orbit runtimes --json
+```
+
+Open `http://127.0.0.1:8848/ui`. It should list the intended Workspace. Keep
+the checkout in place because its launcher and Agent App manifest are part of
+this installation.
+
+### 4. Add the WorkBuddy connector
+
+In WorkBuddy, open its connector or MCP settings and add a custom Streamable
+HTTP connector. Labels can vary slightly by WorkBuddy release; use these
+values:
+
+| Field | Value |
+| --- | --- |
+| Name | `Orbit` |
+| MCP URL | `http://127.0.0.1:8848/mcp` |
+| Transport | Streamable HTTP |
+| Authentication | None |
+
+Save and enable the connector for the intended Agent or conversation. Do not
+configure a remote URL: Orbit's Hub is intentionally loopback-only.
+
+### 5. Verify the connection
+
+1. Confirm WorkBuddy reports tools for the `Orbit` connector.
+2. Ask it to call `list_workspaces`.
+3. If more than one Workspace is returned, select the intended one with
+   `select_workspace`; never guess a path.
+4. Ask to see Orbit workflows or open Orbit and confirm that its card renders.
+
+No credentials are required: the Hub is on loopback, and a loopback caller is
+already the operator. WorkBuddy speaks Streamable HTTP
 (`accept: application/json, text/event-stream`) and negotiates protocol
 `2025-11-25` against Orbit's `2025-06-18`, which it accepts. It also opens a
 GET on the endpoint looking for a server-initiated stream; the `405` it gets
@@ -27,6 +103,26 @@ Do not use `orbit mcp` here. Its stdio transport is the shape WorkBuddy's own
 documentation describes, but the process it starts wants the project database
 a running Hub or `orbit serve` already owns, and exits with
 `Runtime database is already owned` rather than sharing.
+
+### Upgrade or remove
+
+To upgrade, update a clean checkout, reinstall the tool, and rerun the launcher
+for the intended project:
+
+```bash
+cd /absolute/stable/path/orbit
+git pull --ff-only
+uv tool install --force /absolute/stable/path/orbit
+./start-orbit.sh /absolute/path/to/project
+```
+
+The connector URL does not change, so WorkBuddy normally needs no connector
+edit. Reconnect or restart WorkBuddy if it retains an old tool catalogue.
+
+To remove the integration, disable or delete the `Orbit` custom connector in
+WorkBuddy. That does not delete Runtime data. Stop Orbit separately with the
+**Stop Orbit** control or through the exact Runtime process you started; do not
+delete `~/.orbit` as an uninstall shortcut.
 
 WorkBuddy mounts Orbit's cards, and each mounted card opens its own MCP
 session and calls the tools it needs — so a conversation holding six cards is
@@ -85,6 +181,40 @@ ask before continuing or reconciling when not. See
 | `405` on a GET to `/mcp` | The answer to "is there a server-initiated stream?", not a fault. |
 | `Runtime database is already owned` | `orbit mcp` was used. Point the connector at the Hub's HTTP endpoint instead. |
 | The connector reports no tools | The Hub is not running. Start it with `./start-orbit.sh /absolute/path/to/project`. |
+
+## Example: a prompt that generates an expert
+
+Once the `Orbit` connector works, paste this into WorkBuddy to create a
+reusable expert instead of repeating the orchestration instructions in every
+conversation:
+
+```text
+Create a WorkBuddy expert with these settings:
+
+- Name: Orbit Workflow Orchestrator
+- Description: Selects and runs local Orbit workflows, follows their progress,
+  handles interrupts, and delegates Agent steps safely.
+- Connector: enable the existing custom MCP connector named Orbit.
+
+Use the current repository guide as the source of truth:
+https://github.com/TNJ2026/orbit/blob/main/docs/hosts/workbuddy.md
+
+Read the section "Example: a workflow orchestration prompt" and use the entire
+prompt in its fenced text block as the expert's instructions. Preserve its tool
+names, first-turn recovery check, workspace selection, card usage rules,
+allowed-command and revision checks, interrupt schema, and delegation rules.
+Do not invent Orbit tools or copy installation commands into the expert's
+instructions.
+
+If you cannot create the expert directly, return the exact Name, Description,
+Instructions, and Enabled connector fields in a copy-ready form. Report a
+missing or disabled Orbit connector instead of silently substituting another
+connector.
+```
+
+Review the generated expert before saving it, especially the enabled connector
+and the first-turn `list_delegations` rule. This prompt creates the expert; it
+does not install or start Orbit.
 
 ## Example: a workflow orchestration prompt
 

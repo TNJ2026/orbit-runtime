@@ -1,5 +1,9 @@
 # Orbit
 
+<p align="center">
+  <img src="./docs/images/orbit-banner.png" alt="Orbit — Local Agent Workflow Runtime" width="100%">
+</p>
+
 [简体中文](./README.zh-CN.md) | **English**
 
 Orbit is a local, durable LangGraph workflow Runtime for Agent Apps. It combines
@@ -201,6 +205,34 @@ orbit workflow publish <file> --catalog <catalog.json> --expected-version <n>
 project-scoped; published Workflow definitions are host-wide and visible from
 every Workspace. The Hub also owns reusable Workflow source templates and
 aggregates Agent statistics from live Workspace Runtimes.
+
+## Codex plugin distribution
+
+Orbit is distributed as a repository/personal Marketplace plugin. It is not
+submitted to the universal public Plugins Directory.
+See the [complete Codex app installation guide](./docs/hosts/codex-app.md),
+including the one-line prompt that lets Codex install it from this repository.
+
+Each GitHub Release includes `orbit-marketplace-<version>.zip`. Download and
+extract that archive, then register its root directory and install Orbit:
+
+```bash
+unzip orbit-marketplace-<version>.zip
+codex plugin marketplace add ./orbit-marketplace
+codex plugin add orbit@orbit-local
+codex plugin list
+```
+
+Keep the extracted `orbit-marketplace` directory in a stable location: the
+configured Marketplace source refers to it. To update, download and extract the
+new release, replace the previous directory, then run:
+
+```bash
+codex plugin add orbit@orbit-local
+```
+
+Fully quit and reopen the ChatGPT desktop app, then start a new task so Codex
+loads the updated plugin metadata and skills.
 
 ## Development
 

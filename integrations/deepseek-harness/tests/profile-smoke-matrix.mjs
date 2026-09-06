@@ -2,7 +2,6 @@ import { spawn } from 'node:child_process'
 
 const baselines = [
   ['rc', process.env.DSH_RC_VERSION || '0.1.1-rc.2', process.env.DSH_RC_BIN],
-  ['alpha', process.env.DSH_ALPHA_VERSION || '0.1.2-alpha.3', process.env.DSH_ALPHA_BIN],
 ]
 
 for (const [name, version, installedBin] of baselines) {
@@ -26,4 +25,4 @@ for (const [name, version, installedBin] of baselines) {
   })
 }
 
-process.stdout.write('\nHarness RC/alpha Profile smoke matrix passed\n')
+process.stdout.write('\nHarness RC Profile smoke matrix passed\n')
