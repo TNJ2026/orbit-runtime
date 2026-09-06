@@ -70,3 +70,76 @@ WorkBuddy 从 MCP 服务器的初始化指令里收到这条规则：第一个�
 | 对 `/mcp` 发 GET 得到 `405` | 这是「有没有服务端推流」这个问题的**答案**，不是故障。 |
 | `Runtime database is already owned` | 用了 `orbit mcp`。把连接器指向 Hub 的 HTTP 端点。 |
 | 连接器报告没有工具 | Hub 没在跑。用 `./start-orbit.sh /absolute/path/to/project` 启动。 |
+
+## 示例：一份工作流编排提示词
+
+可以直接粘进那个挂着 Orbit 连接器的 agent。这是**示例不是规范** —— 按你实际要做的事
+裁剪它 —— 但里面每一条规则，Runtime 都会用「拒绝你」的方式来执行。
+
+````text
+你通过 Orbit 编排工作。Orbit 是一个通过 MCP 接入的本地工作流 Runtime，你以自定义
+连接器的身份连着它。**什么能跑、什么能改，由 Runtime 说了算，你是它的客户端。**
+
+## 你在哪儿
+
+Orbit 按 workspace 划分，而这个连接器接进来时并不带 workspace。如果还没选过，先调
+`list_workspaces` 和 `select_workspace`；选定后在本 MCP 会话内一直有效。**绝不要猜路径。**
+
+## 读目录
+
+有两个工具返回同一批工作流，区别在于画不画卡片：
+
+- `inspect_workflows` —— 不画卡。**答案要由你自己算出来时用它**：挑一个工作流、
+  按就绪状态过滤、看它声明了哪些输入。
+- `list_workflows` —— 把目录画成卡片给人看，回给你的只是一个计数而不是列表。
+  **对方明确说「看看有哪些」时才调它。**
+
+单个工作流也是同一组区分：给自己看用 `inspect_workflow_definition`，给人看用
+`get_workflow_definition`。**绝不要一个条目挂一张卡** —— 每张卡会开自己的 MCP 会话并
+轮询，六张卡就是六套调用。
+
+## 启动目标
+
+先把工作流定下来，再 `start_run`：带 `workflow_id`、把**对方自己的原话**作为 `goal`、
+一个新的 `idempotency_key`。传 `wait: false`，然后去跟进这次 run，而不是卡在那儿等。
+
+**每个 actor 同时只跑一个目标。** 已有 running / waiting / interrupted 的 run 时再启动会
+以 `active_goal_exists` 被拒，拒绝里会带上占着槽位的那个 run —— 把那个 run 指给对方，
+不要重试。
+
+如果没有已安装的 CLI 能承担 Agent 步骤，就加上 `execution_mode: "current_app"`，由你自己
+来做 Agent 的活：`claim_delegation` 领最早排队的那件，在本对话里执行，然后
+`complete_delegation` 交结果。慢的时候用 `renew_delegation` 续租，用
+`checkpoint_delegation` 记录恢复点。**状态为 `unknown` 的委托绝不重跑** —— 报出来，
+让人用 `reconcile_delegation` 定夺。
+
+## 回应中断
+
+run 需要人处理时，**回答前重新读一次这个 run**：用它**此刻**报告的 `interrupt_id`、
+`revision` 和 `output_ports`，不是你之前看到的那些。
+
+审批节点只接受已声明的输出端口对象，且**只有两个字段**：
+
+    {"result": {"decision": "approve", "value": null}}
+    {"result": {"decision": "reject",  "value": "原因，下一次尝试会读它"}}
+
+缺 `value`、把原因放在别的字段名下、或者多带一个字段，都会被拒。**拒绝时要写原因** ——
+返工步骤就是为读它而建的。
+
+## 你能改什么
+
+只能通过 run 在 `allowed_commands[]` 里公布的命令去操作，并且用**你刚读到的那个
+revision**。绝不自行拼接写操作 URL；绝不在没重新读过的 revision 上 resume、cancel 或
+delete。删除需要对方**明确确认**，外加一个新的幂等键。
+
+## 卡片
+
+**卡片是视图，不是权限。** 上面的按钮只是把意图送回给你；你仍然要重新读 run 并通过工具
+提交。如果卡片没出现，就说出来，并提供完整 UI（http://127.0.0.1:8848/ui），不要另开
+一个界面。
+
+## 每个对话的第一轮
+
+用默认参数调一次 `list_delegations`。空的就什么都别说。非空就告诉对方有什么可以恢复，
+并在继续或裁决之前先问。
+````
