@@ -1,146 +1,808 @@
-"""CLI entry point: orbit serve|start|runner|config."""
+"""CLI entry point: orbit serve | run | workflow | db."""
 
 from __future__ import annotations
 
 import argparse
+import json
+import os
 from pathlib import Path
+import signal
+import sqlite3
+import subprocess
+import sys
 
 import uvicorn
 
 from . import __version__
-from .project_index import upsert_project
-from .store import Store, project_db_path, project_state_dir, resolve_project_root
-from .server import create_server, runner_loop
+from .platform.cutover import (
+    ACKNOWLEDGE_FLAG, CutoverRequired, ensure_cutover_acknowledged, read_marker,
+)
+from .platform.projects import (
+    project_db_path,
+    project_state_dir,
+    public_workflow_db_path,
+    resolve_project_root,
+    upsert_project,
+)
 
 
-def init_project(project_root: Path) -> dict[str, list[str]]:
-    """Bootstrap a project for orbit in one shot: default workflow config and
-    gitignore. Idempotent — existing files are left untouched."""
-    from .server import (
-        default_workflow_edges,
-        default_workflow_steps,
-        write_workflow_config,
+def _workflow_db_path(
+    explicit: str | None,
+    *,
+    project_root: Path | str | None = None,
+) -> str:
+    """Return the host-wide published-Workflow database.
+
+    Workflows are authored once and visible from every Workspace. Runtime
+    state remains per Workspace; only immutable definitions and their catalog
+    are shared. An explicit database still gives tests and embedders a fully
+    self-contained deployment.
+    """
+
+    if explicit:
+        return explicit
+    # Resolve first so callers still get the normal project cutover gate even
+    # though definitions themselves no longer live in that project's DB.
+    _runtime_db_path(None, project_root=project_root)
+    return str(public_workflow_db_path())
+
+
+def _runtime_db_path(
+    explicit: str | None,
+    *,
+    acknowledged: bool = False,
+    project_root: Path | str | None = None,
+) -> str:
+    """Resolve the runtime database, gating on the cutover acknowledgement.
+
+    Every command that touches the default database goes through here, so
+    neither the path rule nor the gate can drift between `serve`, `workflow
+    publish`, `run start` and `db check`. Putting the gate anywhere else is how
+    `orbit workflow publish` came to write a fresh `runtime.db` for a project
+    whose legacy data had never been acknowledged.
+
+    An explicit `--db` is not gated: the gate protects the *default* path,
+    where abandoning pre-migration data would otherwise be silent. Naming a
+    database on the command line is already an explicit choice of which one.
+    """
+
+    if explicit:
+        return explicit
+    try:
+        ensure_cutover_acknowledged(
+            acknowledged=acknowledged, project_dir=project_root,
+        )
+    except CutoverRequired as exc:
+        print(str(exc), flush=True)
+        raise SystemExit(exc.exit_code) from None
+    return str(project_db_path(resolve_project_root(project_root)))
+
+
+def _artifact_root_path(explicit: str | None, db_path: str | Path) -> Path:
+    """Resolve the local CAS beside the selected Runtime database by default."""
+
+    if explicit:
+        return Path(explicit).expanduser().absolute()
+    return Path(db_path).expanduser().absolute().parent / "artifacts"
+
+
+def _goal_readiness_buckets(path: Path) -> dict[str, list[dict[str, object]]]:
+    """Published Workflows grouped by whether a Goal can start them."""
+
+    from .workflow.api.workflow_catalog import WorkflowCatalogReadModelService
+    from .workflow.catalogs import InMemorySchemaCatalog
+    from .web.builtin_handlers import BUILTIN_SCHEMAS
+
+    buckets: dict[str, list[dict[str, object]]] = {
+        "ready": [], "needs_upgrade": [], "needs_migration": [],
+    }
+    # Goal readiness is a projection of the same entry-port contract the
+    # Runtime advertises.  An empty schema catalog makes every object prompt
+    # opaque and falsely reports that its conventional goal binding is absent.
+    reads = WorkflowCatalogReadModelService(
+        path, InMemorySchemaCatalog(BUILTIN_SCHEMAS)
+    )
+    for entry in reads.list():
+        buckets.setdefault(entry["goal_readiness"], []).append({
+            "workflow_id": entry["workflow_id"],
+            "name": entry["name"],
+            "reason": entry["readiness_reason"],
+            "source_available": entry["source_available"],
+        })
+    for group in buckets.values():
+        group.sort(key=lambda item: item["workflow_id"])
+    return buckets
+
+
+def _report_goal_readiness(db_path) -> None:
+    """Say at startup which Workflows cannot start a Goal.
+
+    The UI withholds `run.start` from anything that cannot run from a single
+    Goal, so the operator is told before their users find out. It never blocks
+    the boot: a report is information, not a gate.
+    """
+
+    try:
+        buckets = _goal_readiness_buckets(Path(db_path))
+    except Exception as exc:  # pragma: no cover - reporting must not stop serve
+        print(f"warning: could not survey workflow goal readiness: {exc}", flush=True)
+        return
+    upgrade, migrate = buckets["needs_upgrade"], buckets["needs_migration"]
+    print(
+        f"goal readiness: {len(buckets['ready'])} workflow(s) can start a goal, "
+        f"{len(upgrade)} need an upgrade, {len(migrate)} cannot be upgraded",
+        flush=True,
+    )
+    for label, group in (("needs upgrade", upgrade), ("cannot upgrade", migrate)):
+        for item in group:
+            print(f"  {label}: {item['workflow_id']}  {item['name']}", flush=True)
+    if upgrade or migrate:
+        print(
+            "  run `orbit workflow inventory --json` for the full report",
+            flush=True,
+        )
+
+
+def _workflow_inventory(args, machine_output: bool) -> None:
+    """Who can start a Goal today, and who cannot.
+
+    The UI hides every Workflow that cannot run from a single Goal, so an
+    operator deserves that list before their users find it. The report only
+    reads the catalog projection: it publishes nothing, edits nothing, and is
+    safe to run against a live database.
+    """
+
+    path = Path(_workflow_db_path(
+        args.db, project_root=getattr(args, "project_root", None),
+    ))
+    if not path.exists():
+        raise SystemExit(
+            f"no runtime database at {path}; run `orbit serve` once, or name the "
+            "Workspace with --project-root (or the file with --db)"
+        )
+    buckets = _goal_readiness_buckets(path)
+    report = {
+        "database": str(path),
+        "counts": {key: len(value) for key, value in buckets.items()},
+        "workflows": buckets,
+    }
+    if machine_output:
+        print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+        return
+    total = sum(report["counts"].values())
+    print(f"{total} published workflow(s) in {path}")
+    labels = {
+        "ready": "ready — can start a Goal",
+        "needs_upgrade": "needs upgrade — the author can fix this with a prompt",
+        "needs_migration": "needs migration — no author source; generate a replacement",
+    }
+    for key in ("ready", "needs_upgrade", "needs_migration"):
+        group = buckets.get(key) or []
+        print(f"\n{labels[key]}: {len(group)}")
+        for item in group:
+            suffix = "" if item["reason"] is None else f"  [{item['reason']}]"
+            print(f"  {item['workflow_id']}  {item['name']}{suffix}")
+
+
+def _workflow_command(args) -> None:
+    from .workflow.application import WorkflowDefinitionService, load_catalogs
+    from .workflow.domain.serialization import canonical_json
+    from .workflow.dsl import DiagnosticError, canonical_ir_json
+    from .workflow.persistence import PublishConflictError, SQLiteWorkflowVersionStore
+
+    machine_output = getattr(args, "json", False)
+    if args.workflow_action == "inventory":
+        _workflow_inventory(args, machine_output)
+        return
+    try:
+        catalogs = load_catalogs(args.catalog)
+        source_path = Path(args.file)
+        source = source_path.read_text(encoding="utf-8-sig")
+        source_format = "json" if source_path.suffix.lower() == ".json" else "yaml"
+        store = None
+        if args.workflow_action == "publish":
+            store = SQLiteWorkflowVersionStore(
+                _workflow_db_path(
+                    args.db, project_root=getattr(args, "project_root", None),
+                )
+            )
+        service = WorkflowDefinitionService(catalogs, store)
+        if args.workflow_action == "validate":
+            compiled = service.validate_workflow(
+                source, source_name=str(source_path), source_format=source_format
+            )
+            result = {
+                "valid": True,
+                "definition_hash": compiled.definition_hash.value,
+                "workflow_id": compiled.ir.workflow_id,
+            }
+            print(json.dumps(result, ensure_ascii=False, sort_keys=True) if machine_output else f"valid {result['workflow_id']} {result['definition_hash']}")
+            return
+        if args.workflow_action == "compile":
+            compiled = service.compile_workflow(
+                source, source_name=str(source_path), source_format=source_format
+            )
+            output = canonical_ir_json(compiled) + "\n"
+            if args.output == "-":
+                print(output, end="")
+            else:
+                Path(args.output).write_text(output, encoding="utf-8")
+            return
+        record = service.publish_workflow(
+            source,
+            source_name=str(source_path),
+            source_format=source_format,
+            expected_latest_version=args.expected_version,
+            actor=args.actor,
+        )
+        result = {
+            "workflow_id": record.workflow_id,
+            "version": record.version.value,
+            "definition_hash": record.definition_hash.value,
+        }
+        print(canonical_json(result) if machine_output else f"published {record.workflow_id}@{record.version.value} {record.definition_hash.value}")
+    except DiagnosticError as exc:
+        payload = [item.to_dict() for item in exc.diagnostics]
+        if machine_output:
+            print(json.dumps({"valid": False, "diagnostics": payload}, ensure_ascii=False, sort_keys=True))
+        else:
+            for item in exc.diagnostics:
+                location = ""
+                if item.source_range is not None:
+                    location = f"{item.source_range.source}:{item.source_range.start_line}:{item.source_range.start_column}: "
+                print(f"{location}{item.code} {item.json_path}: {item.message}")
+        raise SystemExit(2) from None
+    except PublishConflictError as exc:
+        print(json.dumps({"code": "WORKFLOW_PUBLISH_CONFLICT", "expected": exc.expected, "actual": exc.actual}) if machine_output else str(exc))
+        raise SystemExit(3) from None
+
+
+def _run_engine(args):
+    """The engine, wired for reading only.
+
+    No Handlers are registered. Reads never invoke one — `list`, `get` and
+    `steps` go to the run store and the checkpoint — so binding the Agent CLIs
+    a server would bind means discovering them, resolving their workspaces and
+    holding their secrets to answer a question about the past.
+
+    The state directory follows the same rule `serve` uses, or the two would
+    describe different engines against the same database.
+    """
+
+    from .workflow.langgraph_runtime import build_service
+
+    db_path = _runtime_db_path(args.db)
+    state = (
+        Path(args.langgraph_state_dir).expanduser().absolute()
+        if getattr(args, "langgraph_state_dir", None)
+        else Path(db_path).parent
+    )
+    return build_service(
+        Path(_workflow_db_path(args.db)),
+        [],
+        state_directory=state,
     )
 
-    created: list[str] = []
-    skipped: list[str] = []
 
-    def _mark(path: Path, was_created: bool) -> None:
-        (created if was_created else skipped).append(str(path.relative_to(project_root)))
+def _run_command(args) -> None:
+    """`orbit run list|inspect` — read-only.
 
-    # Per-project state dir: .orbit for fresh projects, or a legacy .dev_loop
-    # if that is what this project already uses.
-    state_dir = project_state_dir(project_root)
+    There is no `start` here. A run executes inside the process that starts
+    it, so a CLI that started one would have to rebuild the whole Handler
+    wiring a server has — discovery, workspaces, secrets — and would still
+    behave differently from the server that normally runs them. Starting
+    belongs to the UI, or to `start_run` over `orbit mcp`.
+    """
 
-    # 1. Default workflow.
-    workflow_path = state_dir / "workflow.json"
-    if workflow_path.exists():
-        _mark(workflow_path, False)
-    else:
-        write_workflow_config(
-            default_workflow_steps(), str(project_root), default_workflow_edges()
-        )
-        _mark(workflow_path, True)
+    engine = _run_engine(args)
+    if args.run_action == "list":
+        runs = engine.list_runs(limit=args.limit)
+        if args.json:
+            print(json.dumps(
+                [
+                    {
+                        "run_id": run.run_id, "workflow_id": run.workflow_id,
+                        "status": run.status, "goal": run.goal,
+                        "created_at": run.created_at,
+                        "updated_at": run.updated_at,
+                    }
+                    for run in runs
+                ],
+                ensure_ascii=False, indent=2, sort_keys=True,
+            ))
+            return
+        if not runs:
+            print("no runs")
+            return
+        for run in runs:
+            print(f"{run.status:<12} {run.run_id}  {run.goal or run.workflow_id}")
+        return
 
-    # 2. Keep runtime task logs and per-task worktree checkouts out of git.
-    gitignore = project_root / ".gitignore"
-    existing = gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
-    wanted = [f"{state_dir.name}/tasks/", f"{state_dir.name}/worktrees/"]
-    missing = [line for line in wanted if line not in existing]
-    if not missing:
-        _mark(gitignore, False)
-    else:
-        joiner = "" if not existing or existing.endswith("\n") else "\n"
-        gitignore.write_text(
-            existing + joiner + "".join(f"{line}\n" for line in missing),
-            encoding="utf-8",
-        )
-        _mark(gitignore, True)
-
-    return {"created": created, "skipped": skipped}
-
-# Database location used by orbit before databases became per-project.
-LEGACY_DB_PATH = Path.home() / ".dev_loop" / "messages.db"
-
-
-def _serve_hint(host: str, port: int) -> str:
-    """A serve command that actually works in the caller's shell: plain
-    orbit when it is on PATH, otherwise route through the checkout's env."""
-    import shutil
-
-    if shutil.which("orbit"):
-        return f"orbit serve --host {host} --port {port}"
-    repo = Path(__file__).resolve().parents[2]
-    if (repo / "pyproject.toml").exists():
-        return f"uv run --project {repo} orbit serve --host {host} --port {port}"
-    return f"python -m orbit serve --host {host} --port {port}"
-
-
-def append_missing_gitignore(project_root: Path, entries: list[str]) -> list[str]:
-    """Append any of `entries` not already in the repo's .gitignore, returning
-    the ones actually added. An entry counts as present with or without its
-    trailing slash. Already-tracked files are unaffected by gitignore, so a
-    project that committed a path keeps it tracked regardless."""
-    gitignore = project_root / ".gitignore"
-    existing = gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
-    present = {line.strip() for line in existing.splitlines()}
-    missing = [
-        e for e in entries if e not in present and e.rstrip("/") not in present
-    ]
-    if not missing:
-        return []
-    joiner = "" if not existing or existing.endswith("\n") else "\n"
-    gitignore.write_text(
-        existing + joiner + "".join(f"{e}\n" for e in missing), encoding="utf-8"
-    )
-    return missing
+    try:
+        run = engine.get(args.run_id)
+        steps = engine.steps(args.run_id)
+    except LookupError as exc:
+        raise SystemExit(f"orbit run: {exc}") from None
+    if args.json:
+        print(json.dumps({
+            "run_id": run.run_id, "workflow_id": run.workflow_id,
+            "status": run.status, "goal": run.goal, "error": run.error,
+            "created_at": run.created_at, "updated_at": run.updated_at,
+            "steps": [dict(step) for step in steps],
+        }, ensure_ascii=False, indent=2, sort_keys=True))
+        return
+    print(f"{run.run_id}  {run.status}")
+    if run.goal:
+        print(f"  goal      {run.goal}")
+    print(f"  workflow  {run.workflow_id}@{run.workflow_version}")
+    if run.error:
+        print(f"  error     {run.error}")
+    marks = {
+        "succeeded": "✓", "failed": "✕", "running": "●",
+        "waiting": "◔", "answered": "✓", "not_reached": "○",
+    }
+    for step in steps:
+        repeated = f"  ×{step['runs']}" if step["runs"] > 1 else ""
+        print(f"  {marks.get(step['status'], '○')} {step['label']}"
+              f"  [{step['status']}]{repeated}")
 
 
-def ensure_state_dir_gitignored(project_root: Path) -> bool:
-    """Add the per-project state dir (e.g. `.orbit/`) to the repo's .gitignore
-    so runtime task logs and worktrees never show up in `git status`. Returns
-    True if the file was modified."""
-    state_name = project_state_dir(project_root).name
-    return bool(append_missing_gitignore(project_root, [f"{state_name}/"]))
+def _structured_agents(values) -> dict[str, str] | None:
+    """Parse repeated `--structured-agent NAME=MODEL` into a mapping.
+
+    Both halves are required and neither may be blank: a bare name has no
+    model to call, and a bare model has no name an author could select.
+    """
+
+    if not values:
+        return None
+    agents: dict[str, str] = {}
+    for entry in values:
+        name, separator, model = str(entry).partition("=")
+        name, model = name.strip(), model.strip()
+        if not separator or not name or not model:
+            raise SystemExit(
+                f"error: --structured-agent expects NAME=MODEL, got {entry!r}"
+            )
+        if name in agents:
+            raise SystemExit(f"error: duplicate structured agent name: {name}")
+        agents[name] = model
+    return agents
 
 
 def _serve(args) -> None:
-    """Start the UI/API + Scheduler server (shared by `serve` and `up`)."""
-    project_root = resolve_project_root()
-    db_path = args.db or str(project_db_path(project_root))
-    if args.db is None and LEGACY_DB_PATH.exists():
-        print(
-            f"note: legacy shared database exists at {LEGACY_DB_PATH} and is NOT "
-            f"used anymore — agents and messages stored there will not appear.\n"
-            f"      To keep using it: orbit serve --db {LEGACY_DB_PATH}\n"
-            f"      To migrate it to this project: cp {LEGACY_DB_PATH} {db_path}",
-            flush=True,
-        )
-    project = upsert_project(
+    """Start the new Runtime composition root."""
+
+    from .web.app import create_app
+    from .web.builtin_handlers import BUILTIN_SCHEMAS, builtin_handlers
+    from .web.local_identity import (
+        LOCAL_ACTOR, local_authorizer, loopback_scoped_mcp_authenticator,
+    )
+    from .web.schema_guard import MixedSchemaError, assert_runtime_schema
+    from .workflow.artifacts import LocalCASBackend
+    from .platform.runtime_ownership import RuntimeOwnership, RuntimeOwnershipError
+
+    project_root = resolve_project_root(getattr(args, "project_root", None))
+
+    # `serve` is the one command that can *grant* the acknowledgement; the gate
+    # itself lives in _runtime_db_path so every other command is covered too.
+    db_path = _runtime_db_path(
+        args.db,
+        acknowledged=args.acknowledge_discard_legacy_data,
         project_root=project_root,
-        db_path=db_path,
-        host=args.host,
-        port=args.port,
     )
-    app = create_server(
-        host=args.host,
-        port=args.port,
-        db_path=db_path,
-        project=project,
-        run_worker=not args.no_runner,
-        worker_concurrency=args.runner_concurrency,
+    if args.acknowledge_discard_legacy_data:
+        marker = read_marker(project_root)
+        if marker is not None:
+            print(
+                f"cutover acknowledged at {marker.acknowledged_at}; "
+                "legacy files are left untouched",
+                flush=True,
+            )
+
+    # Preserve the cutover fail-closed boundary: a refused legacy database must
+    # not create even an empty Artifact directory as a startup side effect.
+    try:
+        assert_runtime_schema(db_path)
+    except MixedSchemaError as exc:
+        raise SystemExit(f"error: {exc}") from None
+
+    ownership = RuntimeOwnership(db_path)
+    try:
+        ownership.acquire()
+    except RuntimeOwnershipError as exc:
+        raise SystemExit(f"orbit serve: {exc}") from None
+
+    artifact_root = _artifact_root_path(args.artifact_root, db_path)
+    try:
+        artifact_backend = LocalCASBackend(artifact_root)
+    except (OSError, ValueError) as exc:
+        ownership.release()
+        raise SystemExit(
+            f"orbit serve: cannot initialize Artifact store at "
+            f"{artifact_root}: {exc}"
+        ) from None
+
+    handlers = list(builtin_handlers())
+    if args.dev_tools:
+        # Opt-in on purpose: this is the only switch that lets a workflow run a
+        # child process against the checkout, so it is never the default.
+        from .web.builtin_handlers import dev_tool_handlers
+        from .workflow.handlers.dev_tools import VerifyProfile
+
+        dev_handlers, tool_names = dev_tool_handlers(
+            project_root,
+            project_state_dir(project_root),
+            verify_profiles=(
+                VerifyProfile(
+                    "unit", ("python", "-m", "unittest", "discover", "-s", "tests"),
+                    "the project's unittest suite",
+                ),
+            ),
+            environment={
+                "PATH": os.environ.get("PATH", ""),
+                "HOME": os.environ.get("HOME", ""),
+            },
+        )
+        handlers.extend(dev_handlers)
+        print(f"dev tools: {', '.join(tool_names) or 'none granted'}", flush=True)
+
+    workflow_db_path = Path(
+        _workflow_db_path(args.db, project_root=project_root)
     )
-    worker = "no in-process runner (start `orbit runner` separately)" if args.no_runner \
-        else f"with in-process runner (concurrency={args.runner_concurrency})"
+    langgraph_state_directory = (
+        Path(args.langgraph_state_dir).expanduser().absolute()
+        if args.langgraph_state_dir else Path(db_path).parent
+    )
+
+    structured_agents = _structured_agents(getattr(args, "structured_agent", None))
+
+    from .web.app import HandlerRegistration
+    from .workflow.langgraph_runtime.harness_subagent import (
+        APP_DELEGATE_MANIFEST, AppDelegationHandler, DelegationQueue,
+    )
+    # Interactive App delegation deliberately has no unattended execution
+    # lease. The actor-scoped MCP conversation is the worker and a leased item
+    # still becomes unknown if that conversation disappears.
+    delegation_queue = DelegationQueue(
+        Path(db_path).parent / "langgraph-runs.sqlite3",
+        require_execution_lease=False,
+    )
+    handlers.append(HandlerRegistration(
+        APP_DELEGATE_MANIFEST, AppDelegationHandler(delegation_queue),
+        "app.delegate@1.0.0",
+    ))
+
+    def request_shutdown() -> None:
+        # Uvicorn owns graceful shutdown and lifespan cleanup. Raising the same
+        # signal as Ctrl-C keeps its public `run` entrypoint (and embedders that
+        # patch it) intact while still stopping workers through app lifespan.
+        os.kill(os.getpid(), signal.SIGINT)
+
+    try:
+        # Not conditional on the tool profile. The prefix decides which header
+        # values are *accepted*, never what they may do — a scoped actor holds
+        # exactly the scopes a loopback caller already held — and the Hub
+        # launches Runtimes without `--mcp-tool-profile`. Gating it on the
+        # profile meant every call routed through the Hub arrived as `local`,
+        # so a Workspace the Hub manages recorded every Run, every cancellation
+        # and every authoring job against one name.
+        harness_actor_prefix = "harness:session:"
+        authenticator = lambda request: loopback_scoped_mcp_authenticator(
+            request, trusted_prefix=harness_actor_prefix,
+        )
+        app = create_app(
+            db_path,
+            workflow_db_path=workflow_db_path,
+            handlers=handlers,
+            schemas=BUILTIN_SCHEMAS,
+            artifact_backend=artifact_backend,
+            discover_agents=not args.no_agent_discovery,
+            serve_ui=True,
+            authenticator=authenticator,
+            authorizer=local_authorizer(trusted_prefix=harness_actor_prefix),
+            # One operator, one machine: the rate limit would only ever throttle
+            # this person's own browser, which polls several endpoints per tick.
+            unlimited_actors=(LOCAL_ACTOR,),
+            # The approval token proves the answer came from the person the
+            # task was delivered to. On loopback that person is the only actor
+            # there is, and they can fetch the token at will — so requiring
+            # them to paste it back buys nothing.
+            token_exempt_actors=(LOCAL_ACTOR,),
+            # Recovery takeovers are answered by this person too.
+            operator_actors=(LOCAL_ACTOR,),
+            shutdown_request=request_shutdown,
+            langgraph_state_directory=langgraph_state_directory,
+            agent_workspace_root=args.agent_workspace,
+            structured_agents=structured_agents,
+            mcp_tool_profile=args.mcp_tool_profile,
+            execution_workers=args.execution_workers,
+            serve_mcp=False,
+            workspace_path=project_root,
+            agent_project_access=args.agent_project_access,
+            delegation_queue=delegation_queue,
+        )
+    except MixedSchemaError as exc:
+        ownership.release()
+        raise SystemExit(f"error: {exc}") from None
+    except (ValueError, ImportError) as exc:
+        ownership.release()
+        # A misspelled --structured-agent, a name that collides with a
+        # discovered CLI, or the optional dependency not installed. All are
+        # things the operator typed, so they get an error at the prompt rather
+        # than a Runtime that starts and refuses the first generation.
+        raise SystemExit(f"error: {exc}") from None
+
+    # Bound here rather than by the server, because with `--port 0` the kernel
+    # chooses and nothing below — the banner, the project record, the ownership
+    # record a client discovers this Runtime by — can say where it answers until
+    # the choice has been made. Asking the server to bind and then guessing the
+    # number would be a guess that is wrong exactly when it matters.
+    config = uvicorn.Config(app, host=args.host, port=args.port, log_level="info")
+    try:
+        listener = config.bind_socket()
+    except SystemExit:
+        ownership.release()
+        raise
+    port = listener.getsockname()[1]
+    # Listening, not merely bound, before anything below says where to connect.
+    # `bind_socket` binds; `listen` happens inside `Server.run` — and a bound
+    # socket that is not listening refuses connections outright. So a client
+    # that read the record and connected at once could be refused by a Runtime
+    # that was starting perfectly well. The backlog holds those connections
+    # until the server's loop reaches them; asyncio calls `listen` again with
+    # its own backlog, which is allowed.
+    listener.listen()
+
+    upsert_project(
+        project_root=project_root, db_path=db_path,
+        host=args.host, port=port,
+    )
     print(
-        f"orbit UI/Scheduler listening on http://{args.host}:{args.port}/ui "
-        f"({worker}) (db: {db_path})",
+        f"orbit Runtime listening on http://{args.host}:{port}/ui/ "
+        f"(health: /health/ready, engine: langgraph) "
+        f"(db: {db_path}, artifacts: {artifact_backend.root})",
         flush=True,
     )
-    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+    _report_goal_readiness(workflow_db_path)
+    # Publish where this Runtime answers, so a client that did not start it can
+    # find it. A wildcard bind is not an address anyone can connect to, so the
+    # record names loopback — the interface a local client actually uses.
+    reachable = "127.0.0.1" if args.host in ("0.0.0.0", "::", "") else args.host
+    base_url = f"http://{reachable}:{port}"
+    ownership.publish(
+        transport="http",
+        project_root=str(project_root),
+        base_url=base_url,
+        mcp_url=f"{base_url}/mcp",
+    )
+    try:
+        uvicorn.Server(config).run(sockets=[listener])
+    finally:
+        listener.close()
+        ownership.release()
 
 
-def main() -> None:
+def _mcp(args) -> None:
+    """Serve MCP over stdin/stdout, with the Runtime running in this process.
+
+    Not a client for a `serve` that is already up: this stands up the same
+    composition and starts its workers, so a run an agent starts here actually
+    executes. A client that can only speak stdio therefore needs nothing else
+    running — but it does mean two of these against one database are two
+    Runtimes, exactly as two `serve` processes would be.
+
+    Everything diagnostic goes to stderr. stdout carries the protocol, and one
+    stray line on it is a parse error at the other end.
+    """
+
+    from .web.app import create_app
+    from .web.builtin_handlers import BUILTIN_SCHEMAS, builtin_handlers
+    from .web.local_identity import LOCAL_ACTOR, local_authorizer
+    from .web.mcp import serve_stdio
+    from .web.schema_guard import MixedSchemaError, assert_runtime_schema
+    from .workflow.artifacts import LocalCASBackend
+    from .platform.runtime_ownership import RuntimeOwnership, RuntimeOwnershipError
+
+    actor_prefix = getattr(args, "actor_prefix", None)
+    if actor_prefix is not None and not actor_prefix.strip():
+        raise SystemExit("orbit mcp: --actor-prefix cannot be empty")
+    project_root = resolve_project_root(getattr(args, "project_root", None))
+    db_path = _runtime_db_path(args.db, project_root=project_root)
+    try:
+        assert_runtime_schema(db_path)
+    except MixedSchemaError as exc:
+        raise SystemExit(f"error: {exc}") from None
+
+    # Ownership first, the way `orbit serve` takes it: the cleanup below
+    # releases the lock, so the lock has to exist by the time anything can
+    # fail into it. Taken the other way round, an Artifact store that failed
+    # for a reason other than OSError/ValueError raised UnboundLocalError from
+    # the handler and buried the fault that actually happened.
+    ownership = RuntimeOwnership(db_path)
+    try:
+        ownership.acquire()
+    except RuntimeOwnershipError as exc:
+        raise SystemExit(f"orbit mcp: {exc}") from None
+    # Discoverable, but deliberately without an endpoint: this Runtime speaks
+    # only to the process holding its stdio. Saying so keeps a client from
+    # reading "no base_url yet" as "still starting up" and waiting forever.
+    ownership.publish(transport="stdio", project_root=str(project_root))
+
+    artifact_root = _artifact_root_path(args.artifact_root, db_path)
+    try:
+        artifact_backend = LocalCASBackend(artifact_root)
+    except (OSError, ValueError) as exc:
+        ownership.release()
+        raise SystemExit(
+            f"orbit mcp: cannot initialize Artifact store at "
+            f"{artifact_root}: {exc}"
+        ) from None
+    except Exception:
+        ownership.release()
+        raise
+
+    from .web.app import HandlerRegistration
+    from .workflow.langgraph_runtime.harness_subagent import (
+        DelegationQueue, HARNESS_SUBAGENT_MANIFEST, HarnessSubagentHandler,
+    )
+
+    delegation_queue = DelegationQueue(Path(db_path).parent / "langgraph-runs.sqlite3")
+    handlers = list(builtin_handlers())
+    handlers.append(HandlerRegistration(
+        HARNESS_SUBAGENT_MANIFEST, HarnessSubagentHandler(delegation_queue),
+        "harness.subagent@1.0.0",
+    ))
+    try:
+        app = create_app(
+            db_path,
+            workflow_db_path=_workflow_db_path(
+                args.db, project_root=project_root,
+            ),
+            handlers=handlers,
+            schemas=BUILTIN_SCHEMAS,
+            artifact_backend=artifact_backend,
+            discover_agents=not args.no_agent_discovery,
+            serve_ui=False,
+            # There is no connection to authenticate. The person who started this
+            # process is the caller, and on a local runtime that is `local` —
+            # the same actor loopback would have resolved to.
+            authorizer=local_authorizer(
+                args.actor, trusted_prefix=actor_prefix,
+            ),
+            unlimited_actors=(args.actor,),
+            token_exempt_actors=(args.actor,),
+            operator_actors=(args.actor,),
+            langgraph_state_directory=Path(db_path).parent,
+            mcp_tool_profile=args.mcp_tool_profile,
+            delegation_queue=delegation_queue,
+            workspace_path=project_root,
+        )
+    except Exception:
+        ownership.release()
+        raise
+    composition = app.state.runtime
+    try:
+        # Started by hand because no ASGI server will run the lifespan here.
+        composition.start()
+        print(
+            f"orbit MCP on stdio (db: {db_path}, engine: langgraph)",
+            file=sys.stderr, flush=True,
+        )
+        serve_stdio(
+            app.state.mcp_dispatch, args.actor,
+            actor_prefix=actor_prefix,
+        )
+    except KeyboardInterrupt:
+        pass
+    finally:
+        # Nested, because stopping is the part that can fail: a composition
+        # that raises on the way down would otherwise carry the exception out
+        # past the release and leave the database owned. A CLI process exiting
+        # has the kernel to fall back on; an embedded caller, a test, or
+        # anything that catches this and keeps running does not.
+        try:
+            stragglers = composition.stop()
+        finally:
+            ownership.release()
+        if stragglers:
+            print(f"loops still running at exit: {stragglers}", file=sys.stderr)
+
+
+def _agent_app(args) -> None:
+    """Run the generic local Agent App host without coupling it to Orbit Runtime."""
+
+    from dataclasses import replace
+
+    from .agent_apps.host import (
+        AgentAppHost, AgentAppHostError, default_state_root, default_workspace,
+    )
+    from .agent_apps.manifest import EventSpec, McpSpec, load_manifest
+    from .agent_apps.mcp_proxy import (
+        HubUnavailableError, HubWorkspaceRegistrationError,
+        register_workspace_with_hub, serve_proxy,
+    )
+    from .hub import WorkspaceRegistry, workspace_urls
+    from .platform.projects import project_state_dir
+
+    host = AgentAppHost(state_root=args.state_dir)
+    workspace = (
+        Path(args.workspace).expanduser().resolve()
+        if args.workspace is not None else default_workspace()
+    )
+    if args.agent_app_action == "ensure":
+        identifier, _ = WorkspaceRegistry().register(
+            workspace, create=args.workspace is None,
+        )
+        try:
+            host.ensure(args.manifest)
+        except (AgentAppHostError, ValueError) as exc:
+            raise SystemExit(f"orbit agent-app: {exc}") from None
+        print(workspace_urls(identifier)["ui_url"])
+        return
+
+    try:
+        manifest = load_manifest(args.manifest)
+    except ValueError as exc:
+        raise SystemExit(f"orbit agent-app: {exc}") from None
+    if manifest.mcp is None:
+        raise SystemExit(f"orbit agent-app: {manifest.app_id} does not declare an MCP endpoint")
+    try:
+        registration = register_workspace_with_hub(
+            manifest.mcp.url, workspace, create=args.workspace is None,
+        )
+    except HubUnavailableError:
+        # Non-Codex hosts may use the stdio proxy without separately managing
+        # the manifest-declared service. Preserve that self-starting behavior,
+        # but only after the read-only Hub request proves nothing is listening.
+        try:
+            host.ensure(args.manifest)
+        except (AgentAppHostError, ValueError) as exc:
+            raise SystemExit(f"orbit agent-app: {exc}") from None
+        try:
+            registration = register_workspace_with_hub(
+                manifest.mcp.url, workspace, create=args.workspace is None,
+            )
+        except (HubUnavailableError, HubWorkspaceRegistrationError) as exc:
+            raise SystemExit(f"orbit agent-app mcp-proxy: {exc}") from None
+    except HubWorkspaceRegistrationError as exc:
+        raise SystemExit(f"orbit agent-app mcp-proxy: {exc}") from None
+    identifier = str(registration["workspace_id"])
+    selected = replace(
+        manifest,
+        ui_url=str(registration["ui_url"]),
+        mcp=McpSpec(url=str(registration["mcp_url"])),
+        events=EventSpec(url=str(registration["events_url"])),
+    )
+    configured_state = args.state_dir or os.environ.get("AGENT_APP_STATE_DIR")
+    if configured_state:
+        proxy_state = (
+            default_state_root() / manifest.app_id / "global" / "workspaces" / identifier
+        )
+    else:
+        proxy_state = (
+            project_state_dir(Path(registration["workspace_path"]))
+            / "agent-apps" / manifest.app_id
+        )
+    try:
+        # The Hub process is global, but each proxy session still needs an
+        # isolated event inbox so one workspace cannot consume another's
+        # Runtime events.
+        serve_proxy(
+            selected,
+            state_dir=proxy_state,
+        )
+    except RuntimeError as exc:
+        raise SystemExit(f"orbit agent-app mcp-proxy: {exc}") from None
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """The whole command line, as a value.
+
+    Separate from `main` so that what a command resolves — which database,
+    which library — can be asserted without running it.
+    """
+
     parser = argparse.ArgumentParser(prog="orbit", description="Local multi-agent workflow orchestrator")
     parser.add_argument(
         "--version", action="version", version=f"orbit {__version__}",
@@ -148,166 +810,505 @@ def main() -> None:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    # Shared flags for the two ways to bring the server up (serve / up).
-    serve_common = argparse.ArgumentParser(add_help=False)
-    serve_common.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)")
-    serve_common.add_argument("--port", type=int, default=8848, help="Port (default: 8848)")
-    serve_common.add_argument(
+    serve_cmd = sub.add_parser(
+        "serve", help="Start the Runtime: API, UI and background loops"
+    )
+    serve_cmd.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)")
+    serve_cmd.add_argument(
+        "--port", type=int, default=8848,
+        help=(
+            "Port (default: 8848). Use 0 to let the kernel pick a free one — "
+            "the number it chose is published in the Runtime's ownership "
+            "record, so `orbit runtimes` and any client that discovers this "
+            "Runtime still find it."
+        ),
+    )
+    serve_cmd.add_argument(
+        "--project-root", default=None,
+        help="Project directory used for Runtime state (default: current directory)",
+    )
+    serve_cmd.add_argument(
         "--db",
         default=None,
         help="SQLite path (default: per-project database under ~/.orbit/projects/)",
     )
-    serve_common.add_argument(
-        "--no-runner",
+    serve_cmd.add_argument(
+        "--artifact-root",
+        default=None,
+        help=(
+            "Local content-addressed Artifact directory "
+            "(default: artifacts/ beside the Runtime database)"
+        ),
+    )
+    serve_cmd.add_argument(
+        "--agent-workspace",
+        default=None,
+        metavar="DIR",
+        help=(
+            "Directory a run's Agents work in, one subdirectory per run "
+            "(default: agent-workspaces/ beside the Runtime database). An "
+            "Agent does what it is asked in the directory it is given, so "
+            "point this at a checkout only when that is the intent."
+        ),
+    )
+    serve_cmd.add_argument(
+        "--no-agent-discovery",
         action="store_true",
-        help="Do not run an in-process worker; start standalone `orbit "
-        "runner` process(es) instead (decoupled / multi-host / restart-safe).",
+        help="Skip probing for installed Agent CLIs at startup",
     )
-    serve_common.add_argument(
-        "--runner-concurrency",
-        type=int,
-        default=5,
-        help="How many jobs the in-process worker runs in parallel (default: 5).",
+    serve_cmd.add_argument(
+        "--dev-tools",
+        action="store_true",
+        help=(
+            "Register the trusted git and verify tools. Workflows may then run "
+            "reviewed commands inside a git worktree; they still cannot supply "
+            "a command of their own."
+        ),
     )
-
-    sub.add_parser(
-        "serve",
-        parents=[serve_common],
-        help="Start the UI/API + Scheduler server",
+    serve_cmd.add_argument(
+        "--agent-project-access",
+        action="store_true",
+        help=(
+            "Let a workflow node that declares a workspace_access policy see "
+            "the project it runs in. Git projects use one disposable worktree "
+            "per Run; non-git projects use the complete real directory and "
+            "serialize Runs. This grants read/write access and is never the default."
+        ),
     )
-
-    sub.add_parser(
-        "start",
-        aliases=["up"],  # back-compat: `orbit up` still works
-        parents=[serve_common],
-        help="Zero-setup start: gitignore the state dir, then serve with the "
-        "packaged workflow defaults — no config copied into the repo. "
-        "Run `orbit config` instead to customize and commit them.",
-    )
-
-    runner = sub.add_parser(
-        "runner",
-        help="Start a Runner server that claims queued workflow run jobs",
-    )
-    runner.add_argument(
-        "--db",
-        default=None,
-        help="SQLite path (default: per-project database under ~/.orbit/projects/)",
-    )
-    runner.add_argument(
-        "--name",
-        default="runner-local",
-        help="Runner instance name for job leases (default: runner-local)",
-    )
-    runner.add_argument(
-        "--agent",
+    serve_cmd.add_argument(
+        "--structured-agent",
         action="append",
-        default=[],
-        help="Only run jobs assigned to this agent; repeatable. Default: all agents.",
-    )
-    runner.add_argument(
-        "--steps",
-        default="",
-        help="Only run jobs for these workflow step ids (comma-separated, e.g. "
-        "implement,review). Default: all steps.",
-    )
-    runner.add_argument(
-        "--project",
         default=None,
-        help="Project root to serve (default: resolved from the current directory).",
+        metavar="NAME=MODEL",
+        help=(
+            "Add a workflow writer that asks a model API for a typed "
+            "definition instead of forking a local Agent CLI, e.g. "
+            "--structured-agent gpt=openai:gpt-5.2. Repeatable. Needs the "
+            "optional 'pydantic-ai-slim' dependency and that provider's "
+            "credentials in the environment."
+        ),
     )
-    runner.add_argument(
-        "--max-concurrency",
-        type=int,
-        default=5,
-        help="Run up to this many jobs in parallel (default: 5).",
+    serve_cmd.add_argument(
+        "--langgraph-state-dir",
+        default=None,
+        help=(
+            "Directory for LangGraph run and checkpoint databases "
+            "(default: beside the Runtime database)."
+        ),
     )
-    runner.add_argument(
-        "--poll-seconds",
-        type=float,
-        default=2.0,
-        help="Polling interval when no jobs are available (default: 2.0)",
+    serve_cmd.add_argument(
+        "--mcp-tool-profile", choices=("full", "harness"), default="full",
+        help="MCP tool surface to advertise (default: full)",
     )
-    runner.add_argument(
-        "--once",
+    serve_cmd.add_argument(
+        "--execution-workers", type=int, default=1, metavar="N",
+        help="Independent Handler worker processes per workspace (default: 1, max: 16)",
+    )
+    serve_cmd.add_argument(
+        ACKNOWLEDGE_FLAG,
         action="store_true",
-        help="Claim at most one job and exit when no job is available.",
+        help=(
+            "Acknowledge, once, that pre-migration data from the legacy engine "
+            "is abandoned. orbit never opens, imports or deletes those files."
+        ),
     )
 
-    config_cmd = sub.add_parser(
-        "config",
-        aliases=["init"],  # back-compat: `orbit init` still works
-        help="Generate editable, committable workflow config. Optional — "
-        "start/serve work without it; use this to customize the workflow.",
+    mcp_cmd = sub.add_parser(
+        "mcp",
+        help="Serve the MCP tools over stdio, Runtime included",
     )
-    config_cmd.add_argument("--host", default="127.0.0.1", help="Host for the printed serve hint (default: 127.0.0.1)")
-    config_cmd.add_argument("--port", type=int, default=8848, help="Port for the printed serve hint (default: 8848)")
+    mcp_cmd.add_argument(
+        "--project-root", default=None,
+        help="Project directory used for Runtime state (default: current directory)",
+    )
+    mcp_cmd.add_argument(
+        "--db", default=None,
+        help="SQLite path (default: per-project database under ~/.orbit/projects/)",
+    )
+    mcp_cmd.add_argument(
+        "--artifact-root", default=None,
+        help=(
+            "Local content-addressed Artifact directory "
+            "(default: artifacts/ beside the Runtime database)"
+        ),
+    )
+    mcp_cmd.add_argument(
+        "--no-agent-discovery", action="store_true",
+        help="Skip probing for installed Agent CLIs at startup",
+    )
+    mcp_cmd.add_argument(
+        "--mcp-tool-profile", choices=("full", "harness"), default="full",
+        help="MCP tool surface to advertise (default: full)",
+    )
+    mcp_cmd.add_argument(
+        "--actor", default="local",
+        help="Owner actor for stdio calls (default: local)",
+    )
+    mcp_cmd.add_argument(
+        "--actor-prefix", default=None,
+        help="Trust per-call _meta orbit/actor values under this prefix",
+    )
 
-    args = parser.parse_args()
+    runtimes_cmd = sub.add_parser(
+        "runtimes",
+        help="Live Runtimes on this machine and where they answer",
+    )
+    runtimes_cmd.add_argument(
+        "--json", action="store_true",
+        help="Machine-readable output, for a client discovering a Runtime",
+    )
 
-    if args.command in ("config", "init"):
-        project_root = resolve_project_root()
-        summary = init_project(project_root)
-        for path in summary["created"]:
-            print(f"created  {path}")
-        for path in summary["skipped"]:
-            print(f"kept     {path}")
-        print(
-            f"\nproject ready: {project_root}\n"
-            f"next: {_serve_hint(args.host, args.port)}\n"
-            f"then open http://{args.host}:{args.port}/ui to configure Agents and workflow",
-            flush=True,
+    worker_cmd = sub.add_parser(
+        "agent-worker", help="Run the machine-wide unattended Agent worker",
+    )
+    worker_backend = worker_cmd.add_mutually_exclusive_group()
+    worker_backend.add_argument(
+        "--backend", choices=("codex",), default="codex",
+        help="Built-in Agent backend (default: codex)",
+    )
+    worker_backend.add_argument(
+        "--command", dest="agent_command",
+        help="Custom child command; receives delegation JSON and returns a JSON object",
+    )
+    worker_cmd.add_argument("--hub-url", default="http://127.0.0.1:8848")
+    worker_cmd.add_argument(
+        "--pool", action="append", default=None,
+        help="Background pool to serve (repeatable; default: default)",
+    )
+    worker_cmd.add_argument("--lease-seconds", type=int, default=30)
+    worker_cmd.add_argument("--poll-seconds", type=float, default=1.0)
+    worker_cmd.add_argument("--parent-pid", type=int, default=None, help=argparse.SUPPRESS)
+    runtimes_cmd.add_argument(
+        "--root", default=None,
+        help="Directory to search (default: ~/.orbit)",
+    )
+
+    hub_cmd = sub.add_parser("hub", help="Run or configure the multi-workspace Hub")
+    hub_sub = hub_cmd.add_subparsers(dest="hub_action", required=True)
+    hub_serve = hub_sub.add_parser("serve", help="Serve the stable workspace router")
+    hub_serve.add_argument("--host", default="127.0.0.1")
+    hub_serve.add_argument("--port", type=int, default=8848)
+    hub_serve.add_argument(
+        "--background-agent-command",
+        default=os.environ.get("ORBIT_BACKGROUND_AGENT_COMMAND"),
+        help=(
+            "Start one machine background Agent worker using this JSON "
+            "stdin/stdout child command (or ORBIT_BACKGROUND_AGENT_COMMAND)"
+        ),
+    )
+    hub_serve.add_argument(
+        "--background-agent-backend", choices=("codex",),
+        default=os.environ.get("ORBIT_BACKGROUND_AGENT_BACKEND"),
+        help="Enable the supervised worker with a built-in backend (or set the environment variable)",
+    )
+    hub_serve.add_argument(
+        "--background-agent-pool", action="append", default=None,
+        help="Pool served by the background Agent (repeatable; default: default)",
+    )
+    hub_register = hub_sub.add_parser("register", help="Register a workspace and print its URLs")
+    hub_register.add_argument("workspace")
+    hub_register.add_argument(
+        "--agent-project-access",
+        dest="project_access", action="store_true", default=None,
+        help=(
+            "Explicitly enable read/write project access for this workspace "
+            "(already the default for a newly registered workspace). Git projects "
+            "use a disposable Run worktree; non-git projects expose the real "
+            "directory with no automatic rollback. Start future Runtimes with "
+            "--agent-project-access. Recorded "
+            "rather than applied: an ordinary re-registration leaves the "
+            "decision alone, and a Runtime already running keeps whatever it "
+            "was started with until it is restarted."
+        ),
+    )
+    hub_register.add_argument(
+        "--no-agent-project-access",
+        dest="project_access", action="store_false",
+        help=(
+            "Persistently disable project access for this workspace. The next "
+            "Runtime start is without it."
+        ),
+    )
+    hub_forget = hub_sub.add_parser(
+        "forget",
+        help="Drop one workspace registration; the directory and any Runtime stay",
+    )
+    hub_forget.add_argument("workspace", help="Workspace id or path")
+    hub_sub.add_parser(
+        "prune",
+        help="Forget registrations whose directory is gone and which serve no Runtime",
+    )
+
+    agent_app_cmd = sub.add_parser(
+        "agent-app", help="Host a manifest-declared local Agent App",
+    )
+    agent_app_sub = agent_app_cmd.add_subparsers(
+        dest="agent_app_action", required=True,
+    )
+    for action, help_text in (
+        ("ensure", "Start the App if needed and print its UI URL"),
+        ("mcp-proxy", "Carry its HTTP JSON-RPC MCP endpoint over stdio"),
+    ):
+        command = agent_app_sub.add_parser(action, help=help_text)
+        command.add_argument("manifest", help="Path to agent-app.json")
+        command.add_argument(
+            "--workspace", default=None,
+            help=(
+                "Workspace identity and working directory for workspace-scoped Apps "
+                "(default: ORBIT_DEFAULT_WORKSPACE or ~/.orbit/workspaces/default)"
+            ),
         )
+        command.add_argument(
+            "--state-dir", default=None,
+            help="Host state directory (default: AGENT_APP_STATE_DIR or user state)",
+        )
+
+    run_cmd = sub.add_parser(
+        "run", help="Look at workflow runs. Read-only."
+    )
+    run_sub = run_cmd.add_subparsers(dest="run_action", required=True)
+    run_list = run_sub.add_parser("list", help="Runs, newest first")
+    run_list.add_argument(
+        "--limit", type=int, default=20, help="How many to show (default: 20)"
+    )
+    run_inspect = run_sub.add_parser(
+        "inspect", help="One run, and how far through its steps it got"
+    )
+    run_inspect.add_argument("run_id")
+    for command in (run_list, run_inspect):
+        command.add_argument("--db", default=None, help="SQLite database path")
+        command.add_argument(
+            "--langgraph-state-dir", default=None,
+            help="Engine state directory (default: beside the database)",
+        )
+        command.add_argument(
+            "--json", action="store_true", help="Emit stable machine-readable JSON"
+        )
+
+    workflow_cmd = sub.add_parser(
+        "workflow",
+        help="Validate, compile, or publish a Workflow DSL 1.0 definition",
+    )
+    workflow_sub = workflow_cmd.add_subparsers(
+        dest="workflow_action", required=True
+    )
+    inventory = workflow_sub.add_parser(
+        "inventory",
+        help=(
+            "Report which published Workflows can start a Goal, which the "
+            "author can upgrade, and which need operator attention. "
+            "Read-only."
+        ),
+    )
+    inventory.add_argument("--db", default=None, help="SQLite database path")
+    # Without this the command resolved a Workspace from wherever it was run,
+    # while `serve` had been pointed somewhere with `--project-root`. Both
+    # succeeded, against different databases: a Workflow published from a
+    # terminal was then invisible in the UI on the same machine.
+    inventory.add_argument(
+        "--project-root", default=None,
+        help=(
+            "Workspace whose Runtime database to use "
+            "(default: resolved from the current directory)"
+        ),
+    )
+    inventory.add_argument(
+        "--json", action="store_true", help="Emit stable machine-readable JSON"
+    )
+    for action in ("validate", "compile", "publish"):
+        command = workflow_sub.add_parser(action)
+        command.add_argument("file", help="Workflow DSL .yaml, .yml, or .json file")
+        command.add_argument(
+            "--catalog",
+            required=True,
+            help="Compile-time Handler, Schema, and Extension catalog JSON",
+        )
+        if action in {"validate", "publish"}:
+            command.add_argument("--json", action="store_true", help="Emit stable machine-readable JSON")
+        if action == "compile":
+            command.add_argument("--output", default="-", help="Canonical IR output path (default: stdout)")
+        if action == "publish":
+            command.add_argument("--db", default=None, help="SQLite database path")
+            command.add_argument(
+                "--project-root", default=None,
+        help=(
+            "Workspace whose Runtime database to use "
+            "(default: resolved from the current directory)"
+        ),
+            )
+            command.add_argument("--expected-version", type=int, required=True)
+            command.add_argument("--actor", default="local-cli")
+    return parser
+
+
+def _runtimes(args) -> None:
+    """List the Runtimes a client could connect to right now.
+
+    The discovery entry point for anything that did not start a Runtime
+    itself. `--json` is the contract a plugin host reads; the plain output is
+    for a person asking "is one up, and on what port".
+    """
+
+    from .platform.runtime_ownership import discover_runtimes
+
+    found = discover_runtimes(args.root)
+    if args.json:
+        print(json.dumps(
+            [
+                {
+                    "db_path": runtime.db_path,
+                    "pid": runtime.pid,
+                    **{
+                        key: value for key, value in runtime.facts.items()
+                        if key not in ("db_path", "pid")
+                    },
+                }
+                for runtime in found
+            ],
+            indent=2, sort_keys=True,
+        ))
+        return
+    if not found:
+        print("no Runtime is running")
+        return
+    for runtime in found:
+        where = runtime.base_url or f"({runtime.facts.get('transport', 'starting')})"
+        print(f"{where}\tpid {runtime.pid}\t{runtime.db_path}")
+
+
+def main() -> None:
+    args = build_parser().parse_args()
+
+    if args.command == "workflow":
+        _workflow_command(args)
         return
 
-    if args.command in ("start", "up"):
-        project_root = resolve_project_root()
-        state_name = project_state_dir(project_root).name
-        # Keep the per-project state dir out of git; `start` copies nothing you
-        # need to commit.
-        added = append_missing_gitignore(project_root, [f"{state_name}/"])
-        if added:
-            print(f"gitignore: added {', '.join(added)}", flush=True)
-        else:
-            print(f"gitignore: {state_name}/ already ignored", flush=True)
-        print(
-            "orbit start: serving with packaged workflow defaults — no files "
-            "copied into the repo. Run `orbit config` to customize and commit them.",
-            flush=True,
-        )
-        _serve(args)
+    if args.command == "run":
+        _run_command(args)
         return
 
     if args.command == "serve":
         _serve(args)
         return
 
-    if args.command == "runner":
-        project_root = resolve_project_root(args.project)
-        db_path = args.db or str(project_db_path(project_root))
-        steps = [s.strip() for s in (args.steps or "").split(",") if s.strip()]
-        scope = []
-        if args.agent:
-            scope.append(f"agents={','.join(args.agent)}")
-        if steps:
-            scope.append(f"steps={','.join(steps)}")
-        if args.max_concurrency > 1:
-            scope.append(f"concurrency={args.max_concurrency}")
-        suffix = f" [{'; '.join(scope)}]" if scope else ""
-        print(
-            f"orbit Runner {args.name} watching {project_root} (db: {db_path}){suffix}",
-            flush=True,
+    if args.command == "mcp":
+        _mcp(args)
+        return
+
+    if args.command == "agent-app":
+        _agent_app(args)
+        return
+
+    if args.command == "runtimes":
+        _runtimes(args)
+        return
+
+    if args.command == "agent-worker":
+        from .background_agent import BackgroundAgentWorker
+
+        BackgroundAgentWorker(
+            args.agent_command, backend=args.backend, hub_url=args.hub_url,
+            pools=tuple(args.pool or ("default",)),
+            lease_seconds=args.lease_seconds, poll_seconds=args.poll_seconds,
+            parent_pid=args.parent_pid,
+        ).serve_forever()
+        return
+
+    if args.command == "hub":
+        from .hub import (
+            ProjectAccessGrants, WorkspaceRegistry, WorkspaceRuntimeManager,
+            create_hub_app, workspace_urls,
         )
-        runner_loop(
-            Store(db_path),
-            str(project_root),
-            runner_name=args.name,
-            agents=args.agent or None,
-            poll_seconds=args.poll_seconds,
-            once=args.once,
-            steps=steps or None,
-            max_concurrency=args.max_concurrency,
-        )
+        from .platform.projects import project_id, resolve_project_root
+        from .workspace.git import is_git_repo
+
+        registry = WorkspaceRegistry()
+        if args.hub_action == "register":
+            identifier, _ = registry.register(args.workspace)
+            registered_workspace = registry.resolve(identifier)
+            grants = ProjectAccessGrants()
+            if args.project_access is None:
+                grants.enable_by_default(identifier)
+            else:
+                grants.set(identifier, allowed=args.project_access)
+            # Reported on every registration, not only when it changes: this
+            # is the one place the operator sees whether the Workspace they
+            # just opened will let a workflow read the project it runs in.
+            print(json.dumps(
+                {
+                    **workspace_urls(identifier),
+                    "agent_project_access": grants.granted(identifier),
+                    "agent_project_access_mode": grants.mode(identifier),
+                    "effective_project_access": (
+                        "git_worktree"
+                        if grants.mode(identifier) and is_git_repo(registered_workspace)
+                        else "non_git_direct_read_write_no_rollback"
+                        if grants.mode(identifier) == "read_write"
+                        else "disabled"
+                    ),
+                },
+                sort_keys=True,
+            ))
+            return
+        if args.hub_action == "forget":
+            # By id or by path, because the caller that most wants to undo a
+            # registration is the one that made it, and it made it by path.
+            candidate = args.workspace
+            if candidate not in {item["workspace_id"] for item in registry.list()}:
+                candidate = project_id(resolve_project_root(
+                    Path(args.workspace).expanduser().resolve()
+                ))
+            print(json.dumps(
+                {"workspace_id": candidate, "forgotten": registry.forget(candidate)},
+                sort_keys=True,
+            ))
+            return
+        if args.hub_action == "prune":
+            # A Runtime answering for a directory outranks a `stat` of it.
+            manager = WorkspaceRuntimeManager(registry=registry)
+            live = {
+                item["workspace_id"] for item in registry.list()
+                if manager.serving(item["path"])
+            }
+            print(json.dumps({"forgotten": registry.prune(live=live)}, sort_keys=True))
+            return
+        from .global_control import WorkflowTemplateStore
+
+        templates = WorkflowTemplateStore()
+        background = None
+        if args.background_agent_command and args.background_agent_backend:
+            raise SystemExit(
+                "choose either --background-agent-command or --background-agent-backend"
+            )
+        if args.background_agent_command or args.background_agent_backend:
+            command = [
+                sys.executable, "-m", "orbit", "agent-worker",
+                "--hub-url", f"http://127.0.0.1:{args.port}",
+                "--parent-pid", str(os.getpid()),
+            ]
+            if args.background_agent_command:
+                command.extend(("--command", args.background_agent_command))
+            else:
+                command.extend(("--backend", args.background_agent_backend))
+            for pool in args.background_agent_pool or ("default",):
+                command.extend(("--pool", pool))
+            background = subprocess.Popen(
+                command, stdin=subprocess.DEVNULL,
+                start_new_session=os.name != "nt",
+            )
+        try:
+            uvicorn.run(
+                create_hub_app(template_store=templates),
+                host=args.host, port=args.port, log_level="info",
+            )
+        finally:
+            if background is not None and background.poll() is None:
+                background.terminate()
+                try:
+                    background.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    background.kill()
+                    background.wait(timeout=5)
         return
 
 

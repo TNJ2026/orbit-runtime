@@ -8,5 +8,30 @@ build/
 *.egg-info/
 .codegraph/
 .DS_Store
-docs/orbit-与-loop-engineering.md
+# The editor's dependencies. Its *build output* under
+# src/orbit/static/workflow-editor/ is committed on purpose — a pip install
+# has no node and cannot produce it — but the tree that builds it is not.
+node_modules/
 .playwright-cli/
+
+# docs/ is versioned. It used to be the other way round — everything under it
+# ignored, with a growing allowlist of the few files that had to be reviewable
+# — and the cost of that arrangement was that a document only counted once
+# somebody remembered to add a line here. The host guides are the ones people
+# are sent to; they cannot depend on that.
+#
+# Anything genuinely local belongs somewhere that is not the documentation
+# directory.
+
+# Design spec, kept local to the repo but out of version control
+DESIGN.md
+
+# Visual regression scratch output (baselines themselves are committed)
+tests/visual_baselines/*.actual.png
+tests/visual_baselines/*.diff.png
+!docs/ui/workflow-prompt-authoring.md
+
+# Build output is *not* ignored: the DeepSeek-Harness plugin is loaded from
+# `lib/` by the host, and `integration-core/lib/` is what its bare import
+# resolves to — a checkout without them cannot load the plugin at all.
+integration-core/node_modules/

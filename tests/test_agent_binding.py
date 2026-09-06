@@ -1,0 +1,636 @@
+"""An Agent step whose Agent is not on this machine still runs, somewhere.
+
+A Workflow published against `agent.codex` is the same Workflow here whether
+or not codex is installed: where it is, it runs on it; where it is not, the
+step is carried to an Agent that exists. These tests cover the four places
+that has to be true — the substitution itself, which Agent it picks, the
+engine that starts a run with it, and the catalog that has to stop calling a
+carried step broken.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from pathlib import Path
+import tempfile
+from types import SimpleNamespace
+import unittest
+
+from orbit.workflow.agent_binding import (
+    AgentRebindError,
+    AgentFallback,
+    preferred_agent,
+    recent_agent_clients,
+)
+from orbit.workflow.catalogs.agent_discovery import (
+    TRUSTED_AGENT_CLIS, DiscoveredAgent, agent_manifest,
+)
+from orbit.workflow.domain.definitions import (
+    CompiledWorkflow, IRHandlerRef, IRNode, IRPort, IRResult, WorkflowIR,
+)
+from orbit.workflow.domain.serialization import definition_hash
+from orbit.workflow.langgraph_runtime.compiler import (
+    BoundHandler, LangGraphHandlerRegistry,
+)
+from orbit.workflow.langgraph_runtime.service import (
+    LangGraphRunConflict, LangGraphWorkflowService,
+)
+from orbit.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
+from orbit.web.api_v1 import READ_SCOPE, WRITE_SCOPE, Authorizer
+
+OBJECT = "schema://object/1.0"
+ABSENT = IRHandlerRef("agent.absent", "sha256:" + "b" * 64)
+
+
+def manifest_for(name: str, version: str = "1.2.3"):
+    """A real Agent manifest, minted the way discovery mints one."""
+
+    spec = next(item for item in TRUSTED_AGENT_CLIS if item.name == name)
+    return agent_manifest(
+        DiscoveredAgent(spec, f"/usr/local/bin/{spec.executable}", version)
+    )
+
+
+def port(name: str, schema: str = OBJECT) -> IRPort:
+    return IRPort(name, schema, True, False, None, "")
+
+
+def agent_step(
+    node_id: str = "execute",
+    *,
+    handler: IRHandlerRef = ABSENT,
+    config=None,
+    inputs=None,
+    outputs=None,
+) -> IRNode:
+    return IRNode(
+        node_id, "action",
+        inputs if inputs is not None else (port("prompt"),),
+        outputs if outputs is not None else (port("result"),),
+        handler,
+        {"prompt": "do the thing"} if config is None else config,
+        (), None,
+    )
+
+
+def single_step_workflow(step: IRNode, workflow_id="workflow:single") -> WorkflowIR:
+    return WorkflowIR(
+        "1.3", workflow_id, "Single", "", {},
+        (port("prompt"),), (port("result"),), (step,), (),
+        (step.id,), (step.id,), (), (), {}, IRResult(step.id, "result"),
+    )
+
+
+class AgentInterchangeabilityTests(unittest.TestCase):
+    """The fact the whole feature rests on, asserted rather than assumed.
+
+    Rebinding is only ever safe because every Agent Handler this Runtime mints
+    has the same shape. Nothing forces a new `AgentCliSpec` to keep that shape,
+    so this is where somebody adding one finds out — rather than a person
+    finding out at a start button that stopped working.
+    """
+
+    def test_every_trusted_agent_can_stand_in_for_every_other(self) -> None:
+        manifests = [
+            manifest_for(spec.name) for spec in TRUSTED_AGENT_CLIS
+            if spec.runtime_compatible
+        ]
+        self.assertGreater(len(manifests), 1)
+        first = manifests[0]
+        for manifest in manifests[1:]:
+            with self.subTest(agent=manifest.name):
+                self.assertEqual(dict(first.inputs), dict(manifest.inputs))
+                self.assertEqual(dict(first.outputs), dict(manifest.outputs))
+                self.assertEqual(
+                    first.config_schema["properties"].keys(),
+                    manifest.config_schema["properties"].keys(),
+                )
+                self.assertEqual(first.node_kinds, manifest.node_kinds)
+                self.assertIn("agent.invoke", manifest.capabilities)
+
+
+class SubstitutionTests(unittest.TestCase):
+    def test_a_stranded_step_moves_to_an_agent_that_is_here(self) -> None:
+        claude = manifest_for("claude")
+        ir = single_step_workflow(agent_step())
+        rebinding = AgentFallback([claude])(ir)
+
+        self.assertIsNotNone(rebinding)
+        self.assertEqual(("execute",), tuple(rebinding.rebound))
+        self.assertEqual("agent.claude", rebinding.identity)
+        self.assertEqual(
+            IRHandlerRef("agent.claude", claude.fingerprint),
+            rebinding.ir.nodes[0].handler,
+        )
+        # The step's own instruction is not the Agent's, and does not move.
+        self.assertEqual("do the thing", rebinding.ir.nodes[0].config["prompt"])
+
+    def test_steps_that_are_not_agents_are_left_alone(self) -> None:
+        transform = IRNode(
+            "shape", "action", (port("result"),), (port("result"),),
+            IRHandlerRef("transform.identity", "sha256:" + "d" * 64),
+            {}, (), None,
+        )
+        ir = WorkflowIR(
+            "1.3", "workflow:mixed", "Mixed", "", {},
+            (port("prompt"),), (port("result"),),
+            (agent_step(), transform), (),
+            ("execute",), ("shape",), (), (), {},
+            IRResult("shape", "result"),
+        )
+
+        rebinding = AgentFallback([manifest_for("claude")])(ir)
+
+        self.assertEqual(("execute",), tuple(rebinding.rebound))
+        self.assertEqual(transform.handler, rebinding.ir.nodes[1].handler)
+
+    def test_a_step_already_on_an_installed_agent_does_not_move(self) -> None:
+        claude = manifest_for("claude")
+        reference = IRHandlerRef("agent.claude", claude.fingerprint)
+        ir = single_step_workflow(agent_step(handler=reference))
+
+        self.assertIsNone(AgentFallback([claude])(ir))
+
+    def test_an_installed_agent_matches_without_cli_version_or_fingerprint(self) -> None:
+        claude = manifest_for("claude", "2.0.0")
+        reference = IRHandlerRef(
+            "agent.claude", "sha256:" + "a" * 64,
+        )
+        ir = single_step_workflow(agent_step(handler=reference))
+
+        self.assertIsNone(AgentFallback([claude])(ir))
+
+    def test_a_graph_with_no_agent_step_needs_no_agent(self) -> None:
+        transform = IRNode(
+            "shape", "action", (port("prompt"),), (port("result"),),
+            IRHandlerRef("transform.identity", "sha256:" + "d" * 64),
+            {}, (), None,
+        )
+        ir = single_step_workflow(transform, workflow_id="workflow:plain")
+
+        self.assertIsNone(AgentFallback([manifest_for("claude")])(ir))
+        # And through the binder, where there is no Agent to be found at all:
+        # a Workflow that never wanted one must still start.
+        self.assertIsNone(AgentFallback([])(ir))
+
+    def test_a_port_the_agent_does_not_offer_is_refused(self) -> None:
+        ir = single_step_workflow(agent_step(inputs=(port("payload"),)))
+
+        with self.assertRaisesRegex(AgentRebindError, "input ports"):
+            AgentFallback([manifest_for("claude")])(ir)
+
+    def test_a_budget_above_the_new_agents_ceiling_is_lowered(self) -> None:
+        claude = manifest_for("claude")
+        ceiling = claude.resource_profile.max_duration_seconds
+        ir = single_step_workflow(agent_step(
+            config={"prompt": "do it", "timeout_seconds": ceiling + 600},
+        ))
+
+        rebound = AgentFallback([claude])(ir).ir.nodes[0]
+
+        self.assertEqual(ceiling, rebound.config["timeout_seconds"])
+        # A budget the new Agent can honour is the author's, and stays.
+        under = single_step_workflow(agent_step(
+            config={"prompt": "do it", "timeout_seconds": 60},
+        ))
+        self.assertEqual(
+            60, AgentFallback([claude])(under).ir.nodes[0].config["timeout_seconds"],
+        )
+
+
+class AgentSelectionTests(unittest.TestCase):
+    def test_a_connected_client_names_the_agent(self) -> None:
+        agents = [manifest_for("claude"), manifest_for("codex")]
+
+        self.assertEqual(
+            "agent.codex", preferred_agent(agents, ["codex"]).name,
+        )
+        # The client's name for itself is not always the CLI's.
+        self.assertEqual(
+            "agent.codex", preferred_agent(agents, ["chatgpt"]).name,
+        )
+
+    def test_one_registered_agent_needs_no_client(self) -> None:
+        agents = [manifest_for("claude")]
+
+        self.assertEqual("agent.claude", preferred_agent(agents, []).name)
+
+    def test_two_agents_and_no_client_is_ambiguous(self) -> None:
+        agents = [manifest_for("claude"), manifest_for("codex")]
+
+        self.assertIsNone(preferred_agent(agents, []))
+
+    def test_an_unnameable_agent_leaves_the_graph_as_published(self) -> None:
+        """Single-Agent mode must never be worse than not having it on.
+
+        Several CLIs installed and nothing connected yet is the state a fresh
+        `orbit serve` is in on a developer's machine — the session registry
+        lives in the process, so every restart returns to it. Refusing there
+        stopped Workflows that had started perfectly well the moment before,
+        bound to an Agent that is installed, for a substitution nobody asked
+        for. With no Agent to bind to, the Agent the author published is the
+        binding, and the compiler decides whether it works exactly as it does
+        in multi-Agent mode.
+        """
+
+        for agents in ([manifest_for("claude"), manifest_for("codex")], []):
+            with self.subTest(registered=len(agents)):
+                self.assertIsNone(
+                    AgentFallback(agents)(single_step_workflow(agent_step()))
+                )
+
+
+class ConnectedClientTests(unittest.TestCase):
+    """Who counts as "the Agent connected right now", and in what order.
+
+    Only one Agent is ever connected to this Runtime at a time, so the whole
+    question is which single name to trust. Getting the *order* wrong is not a
+    tie-break detail: it is how a Runtime keeps running workflows on an Agent
+    the person swapped out.
+    """
+
+    def test_the_client_that_spoke_last_wins(self) -> None:
+        from orbit.web.mcp import McpSessionRegistry
+
+        now = [0.0]
+        sessions = McpSessionRegistry(presence_seconds=60, clock=lambda: now[0])
+        sessions.observe("alice", "initialize", {"clientInfo": {"name": "codex"}})
+        now[0] = 30.0
+        sessions.observe("bob", "initialize", {"clientInfo": {"name": "claude"}})
+
+        self.assertEqual(
+            ("claude", "codex"), recent_agent_clients(sessions),
+        )
+        self.assertEqual(
+            "agent.claude",
+            preferred_agent(
+                [manifest_for("claude"), manifest_for("codex")],
+                recent_agent_clients(sessions),
+            ).name,
+        )
+
+    def test_one_actor_keeps_one_session_so_a_swap_replaces_it(self) -> None:
+        """Loopback is one actor: the row *is* the Agent connected now."""
+
+        from orbit.web.mcp import McpSessionRegistry
+
+        sessions = McpSessionRegistry()
+        sessions.observe("local", "initialize", {"clientInfo": {"name": "codex"}})
+        sessions.observe("local", "initialize", {"clientInfo": {"name": "claude"}})
+
+        self.assertEqual(("claude",), recent_agent_clients(sessions))
+
+    def test_a_quiet_client_is_still_the_last_agent_seen(self) -> None:
+        """Sticky on purpose: silence is not a reason to refuse to run."""
+
+        from orbit.web.mcp import McpSessionRegistry
+
+        now = [0.0]
+        sessions = McpSessionRegistry(presence_seconds=60, clock=lambda: now[0])
+        sessions.observe("local", "initialize", {"clientInfo": {"name": "claude"}})
+        now[0] = 10_000.0
+        self.assertFalse(sessions.sessions()[0]["connected"])
+
+        self.assertEqual(("claude",), recent_agent_clients(sessions))
+
+    def test_mcp_outranks_the_authoring_broker(self) -> None:
+        """The broker's window is ten minutes and its list is sorted by name."""
+
+        from orbit.web.mcp import McpSessionRegistry
+
+        sessions = McpSessionRegistry()
+        sessions.observe("local", "initialize", {"clientInfo": {"name": "codex"}})
+        broker = SimpleNamespace(clients=lambda: ["claude", "codex"])
+
+        self.assertEqual(
+            ("codex", "claude"), recent_agent_clients(sessions, broker),
+        )
+
+    def test_a_client_names_itself_however_it_likes(self) -> None:
+        agents = [manifest_for("claude"), manifest_for("codex")]
+        for spoken, expected in (
+            ("Codex", "agent.codex"),
+            ("claude-code", "agent.claude"),
+            ("Claude Code", "agent.claude"),
+            ("claude-code-2.1", "agent.claude"),
+            ("chatgpt", "agent.codex"),
+            ("Claude Desktop", "agent.claude"),
+        ):
+            with self.subTest(client=spoken):
+                self.assertEqual(
+                    expected, preferred_agent(agents, [spoken]).name,
+                )
+
+    def test_a_name_that_means_nothing_here_falls_through(self) -> None:
+        agents = [manifest_for("claude"), manifest_for("codex")]
+
+        self.assertIsNone(preferred_agent(agents, ["some-other-editor"]))
+        # And with one Agent installed there was never a choice to make.
+        self.assertEqual(
+            "agent.claude",
+            preferred_agent([manifest_for("claude")], ["some-other-editor"]).name,
+        )
+
+
+class SingleAgentEngineTests(unittest.TestCase):
+    """What a start does when the Workflow names an Agent that is not here."""
+
+    def engine(self, root: Path, ir: WorkflowIR, *, manifests, rebind=True):
+        store = SQLiteWorkflowVersionStore(root / "workflows.db")
+        store.publish(
+            CompiledWorkflow(ir, definition_hash(ir), "test", "sha256:" + "c" * 64),
+            expected_latest_version=0, source_format="json", source_text="{}",
+            actor="test:author", dsl_version="1.3",
+        )
+        return LangGraphWorkflowService(
+            store,
+            LangGraphHandlerRegistry([
+                BoundHandler(
+                    manifest.name, manifest.version, manifest.fingerprint,
+                    lambda values, config, context: {
+                        "result": {"prompt": config.get("prompt")},
+                    },
+                )
+                for manifest in manifests
+            ]),
+            run_db_path=root / "runs.sqlite3",
+            checkpoint_db_path=root / "checkpoints.sqlite3",
+            rebind=AgentFallback(manifests) if rebind else None,
+            clock=lambda: datetime(2026, 1, 1, tzinfo=timezone.utc),
+        )
+
+    def test_a_workflow_pinned_to_a_missing_agent_runs_on_this_one(self) -> None:
+        claude = manifest_for("claude")
+        ir = single_step_workflow(agent_step())
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
+            engine = self.engine(Path(directory), ir, manifests=[claude])
+
+            self.assertEqual(
+                {
+                    "compatible": True, "workflow_version": 1,
+                    "engine": "langgraph", "agent_binding": "agent.claude",
+                },
+                engine.compatibility("workflow:single"),
+            )
+            run = engine.start(
+                "workflow:single", {"prompt": {"goal": "x"}},
+                idempotency_key="start-1", actor="local",
+            )
+
+            self.assertEqual("completed", run.status)
+            self.assertEqual({"prompt": "do the thing"}, run.result)
+
+    def test_the_same_workflow_refuses_without_the_binding(self) -> None:
+        """The premise: this is a Workflow multi-Agent mode genuinely cannot run."""
+
+        claude = manifest_for("claude")
+        ir = single_step_workflow(agent_step())
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
+            engine = self.engine(
+                Path(directory), ir, manifests=[claude], rebind=False,
+            )
+
+            answer = engine.compatibility("workflow:single")
+
+            self.assertFalse(answer["compatible"])
+            self.assertIn("agent.absent", answer["detail"])
+
+    def test_the_bound_graph_is_written_down_with_the_run(self) -> None:
+        """Or a recovered run would revert to the Agent it was told to ignore.
+
+        A run is named by `(workflow_id, version)`, and everything that reads a
+        run's definition later — resume, recovery, the step projection — starts
+        from that name. The rebinding happened once, at the start; if it is not
+        stored, the half of the run that outlives this process runs on the
+        published Agent instead.
+        """
+
+        claude = manifest_for("claude")
+        ir = single_step_workflow(agent_step())
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
+            engine = self.engine(Path(directory), ir, manifests=[claude])
+            run = engine.start(
+                "workflow:single", {"prompt": {"goal": "x"}},
+                idempotency_key="start-1", actor="local",
+            )
+
+            stored = engine._run_ir(engine.get(run.run_id))
+
+            self.assertEqual(
+                IRHandlerRef("agent.claude", claude.fingerprint),
+                stored.nodes[0].handler,
+            )
+
+    def test_the_run_remembers_who_ran_it_after_the_binding_moves(self) -> None:
+        """A finished run is auditable by what ran it, not by what runs today."""
+
+        claude, codex = manifest_for("claude"), manifest_for("codex")
+        ir = single_step_workflow(agent_step())
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
+            engine = self.engine(Path(directory), ir, manifests=[claude])
+            run = engine.start(
+                "workflow:single", {"prompt": {"goal": "x"}},
+                idempotency_key="start-1", actor="local",
+            )
+            self.assertEqual("agent.claude", run.agent_binding)
+
+            # The Runtime moves on; the run does not.
+            engine.rebind = AgentFallback([codex])
+
+            self.assertEqual(
+                "agent.claude", engine.get(run.run_id).agent_binding,
+            )
+            self.assertEqual(
+                "agent.claude", engine.list_runs()[0].agent_binding,
+            )
+
+    def test_a_run_that_rebinds_nothing_stores_no_graph(self) -> None:
+        """A Workflow with no Agent step is the same run in either mode."""
+
+        transform = IRNode(
+            "shape", "action", (port("prompt"),), (port("result"),),
+            IRHandlerRef("transform.identity", "sha256:" + "d" * 64),
+            {}, (), None,
+        )
+        manifest = manifest_for("claude")
+        ir = single_step_workflow(transform, workflow_id="workflow:plain")
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
+            root = Path(directory)
+            engine = self.engine(root, ir, manifests=[manifest])
+            # Registered under the name the graph actually pins.
+            engine.handlers = LangGraphHandlerRegistry([BoundHandler(
+                "transform.identity", "1.0.0", "sha256:" + "d" * 64,
+                lambda values, config, context: {"result": {"ok": True}},
+            )])
+            run = engine.start(
+                "workflow:plain", {"prompt": {"goal": "x"}},
+                idempotency_key="start-1", actor="local",
+            )
+
+            with engine._connect() as connection:
+                snapshot = connection.execute(
+                    "SELECT graph_snapshot_json FROM langgraph_runs WHERE run_id=?",
+                    (run.run_id,),
+                ).fetchone()["graph_snapshot_json"]
+
+            self.assertIsNone(snapshot)
+            self.assertIsNone(engine.get(run.run_id).agent_binding)
+
+    def test_replaying_a_start_after_the_agent_changed_is_a_conflict(self) -> None:
+        """The receipt has to know which Agent ran, or it hands back the wrong run."""
+
+        claude, codex = manifest_for("claude"), manifest_for("codex")
+        ir = single_step_workflow(agent_step())
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
+            engine = self.engine(Path(directory), ir, manifests=[claude])
+            engine.start(
+                "workflow:single", {"prompt": {"goal": "x"}},
+                idempotency_key="start-1", actor="local",
+            )
+            engine.rebind = AgentFallback([codex])
+
+            with self.assertRaises(LangGraphRunConflict):
+                engine.start(
+                    "workflow:single", {"prompt": {"goal": "x"}},
+                    idempotency_key="start-1", actor="local",
+                )
+
+    def test_a_port_the_current_agent_lacks_is_this_pairings_fault(self) -> None:
+        """Not `unsupported_workflow`: the definition is fine, this Agent is not.
+
+        The only way rebinding still refuses. Every Agent this Runtime mints
+        has the same ports today, so reaching it takes a graph built against
+        different ones — and the answer has to say the pairing failed rather
+        than condemn a definition another Agent would run.
+        """
+
+        ir = single_step_workflow(agent_step(inputs=(port("payload"),)))
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
+            engine = self.engine(
+                Path(directory), ir, manifests=[manifest_for("claude")],
+            )
+
+            answer = engine.compatibility("workflow:single")
+
+            self.assertFalse(answer["compatible"])
+            self.assertEqual("agent_rebind_failed", answer["reason"])
+            self.assertIn("input ports", answer["detail"])
+
+    def test_an_unrunnable_definition_says_a_connection_would_fix_it(self) -> None:
+        """The Agent is missing *and* no substitute can be named yet.
+
+        The compiler's verdict is the accurate one and stays the reason. What
+        it cannot know is that connecting an Agent App would make this
+        startable — which is the difference between a dead end and a step.
+        """
+
+        ir = single_step_workflow(agent_step())
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
+            engine = self.engine(
+                Path(directory), ir,
+                manifests=[manifest_for("claude"), manifest_for("codex")],
+            )
+
+            answer = engine.compatibility("workflow:single")
+
+            self.assertFalse(answer["compatible"])
+            self.assertEqual("unsupported_workflow", answer["reason"])
+            self.assertIn("agent.absent", answer["detail"])
+            self.assertIn("no Agent App has introduced itself", answer["detail"])
+
+
+class AgentFallbackCatalogTests(unittest.TestCase):
+    """What the catalog says about a step that will be carried elsewhere.
+
+    A pinned Agent that is not installed is drift everywhere else, and drift
+    is offered a recompile. For an Agent step it is neither: the step needs no
+    repair, because the start it is waiting for will carry it to an Agent that
+    is here.
+    """
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.db = self.root / "runtime.db"
+        self.claude = manifest_for("claude")
+
+    def publish(self, ir) -> None:
+        SQLiteWorkflowVersionStore(self.db).publish(
+            CompiledWorkflow(ir, definition_hash(ir), "test", "sha256:" + "c" * 64),
+            expected_latest_version=0, source_format="json", source_text="{}",
+            actor="test:author", dsl_version="1.3",
+        )
+
+    def catalog(self, workflow_id="workflow:single"):
+        from orbit.web.app import HandlerRegistration, create_app
+        from orbit.workflow.handlers import TransformHandler
+        from tests.test_web_composition import (
+            SCHEMAS, AsgiHarness, transform_registration,
+        )
+
+        app = create_app(
+            self.db,
+            handlers=[
+                transform_registration(),
+                HandlerRegistration(
+                    self.claude, TransformHandler(),
+                    f"{self.claude.name}@{self.claude.version}",
+                ),
+            ],
+            schemas=SCHEMAS, poll_seconds=0.02,
+            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authorizer=Authorizer(lambda actor: [READ_SCOPE, WRITE_SCOPE]),
+            single_goal_mode=False,
+            langgraph_state_directory=self.root / "langgraph",
+        )
+        with AsgiHarness(app) as client:
+            workflows = client.get(
+                "/api/v1/workflows", actor="local",
+            ).json()["data"]["workflows"]
+            capabilities = client.get(
+                "/api/v1/capabilities", actor="local",
+            ).json()["data"]
+        return next(
+            item for item in workflows if item["workflow_id"] == workflow_id
+        ), capabilities
+
+    def test_a_step_with_nowhere_to_go_is_carried_not_called_broken(self) -> None:
+        self.publish(single_step_workflow(agent_step()))
+
+        item, capabilities = self.catalog()
+
+        binding = item["handler_compatibility"]["bindings"][0]
+        self.assertEqual("rebound", binding["status"])
+        self.assertEqual("agent.claude", binding["rebound_to"])
+        self.assertTrue(item["handler_compatibility"]["compatible"])
+        self.assertTrue(item["langgraph_compatibility"]["compatible"])
+        self.assertEqual("ready", item["goal_readiness"])
+        self.assertEqual(
+            {"handler_name": "agent.claude", "version": "1.2.3"},
+            capabilities["product_mode"]["agent_fallback"],
+        )
+
+    def test_a_step_whose_agent_is_here_is_left_alone(self) -> None:
+        """The whole point of removing the mode: naming an Agent still means it.
+
+        A graph that deliberately picks an Agent keeps it, and nothing about
+        the fallback touches a step that has somewhere to go.
+        """
+
+        pinned = IRHandlerRef(
+            self.claude.name, self.claude.fingerprint,
+        )
+        self.publish(single_step_workflow(agent_step(handler=pinned)))
+
+        item, _ = self.catalog()
+
+        binding = item["handler_compatibility"]["bindings"][0]
+        self.assertEqual("current", binding["status"])
+        self.assertNotIn("rebound_to", binding)
+        self.assertTrue(item["langgraph_compatibility"]["compatible"])
+        self.assertNotIn("agent_binding", item["langgraph_compatibility"])
+
+
+if __name__ == "__main__":
+    unittest.main()

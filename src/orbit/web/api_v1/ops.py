@@ -1,0 +1,357 @@
+"""Operator and meta endpoints: catalog, liveness, status, capabilities."""
+
+from __future__ import annotations
+
+import asyncio
+from typing import Any, Mapping
+
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+from starlette.routing import Route
+
+from ...workflow.api.dto import CursorError, decode_cursor, encode_cursor, envelope
+from ...workflow.domain.serialization import to_primitive
+from ...workflow.persistence.database import connect_workflow_database
+from ..run_visibility import reading_actor
+
+from .common import (
+    OPS_READ_SCOPE, OPS_WRITE_SCOPE, READ_SCOPE, WRITE_SCOPE,
+    _required_version, error,
+)
+
+
+def _proposal_commands(ctx, actor) -> list[dict]:
+    """The one command this page offers, issued by the server that owns it.
+
+    A page that knew this URL would be a page deciding for itself what it may
+    do, which is the arrangement `allowed_commands[]` exists to prevent. It
+    matters more here than usual: what is on the other end proposes additions
+    to the allowlist that stands between a workflow step and arbitrary
+    execution, so who may reach it is the server's answer to give.
+    """
+
+    if ctx.authoring_service is None or not ctx.guard.allows(actor, WRITE_SCOPE):
+        return []
+    return [{
+        "command": "agent.proposal.probe",
+        "label": "Look for another Agent CLI",
+        "method": "POST",
+        "href": "/api/v1/agent-proposals",
+        "payload_schema": "agent-proposal/1.0",
+    }]
+
+
+def build_routes(ctx) -> list[Route]:
+    async def handler_catalog(request: Request) -> JSONResponse:
+        """Installed handlers for the authoring UI.
+
+        Identity and capabilities only: no secrets, and nothing a caller could
+        paste together into a shell command.
+        """
+
+        actor = ctx.authenticate(request, READ_SCOPE)
+        if isinstance(actor, JSONResponse):
+            return actor
+        registry = ctx.execution_registry
+        if registry is None or not registry.sealed:
+            return JSONResponse(
+                envelope({
+                    "handlers": [],
+                    "agents": [
+                        {**dict(item), "registration_status": "discovered"}
+                        for item in ctx.agent_catalog
+                    ],
+                    "status_semantics": "registration_only",
+                    "allowed_commands": _proposal_commands(ctx, actor),
+                })
+            )
+        recent, attempt_counts, failed_counts = ctx.recent_handler_attempts()
+        handlers = [
+            {
+                "name": entry.manifest.name,
+                "version": entry.manifest.version,
+                "manifest_fingerprint": entry.manifest.fingerprint,
+                "node_kinds": list(entry.manifest.node_kinds),
+                "inputs": dict(entry.manifest.inputs),
+                "outputs": dict(entry.manifest.outputs),
+                # Handler manifests recursively freeze JSON objects as
+                # mappingproxy values.  Convert the full schema at the HTTP
+                # boundary; dict() only thaws its outermost object.
+                "config_schema": to_primitive(entry.manifest.config_schema),
+                "execution_safety": entry.manifest.execution_safety.value,
+                "capabilities": list(entry.manifest.capabilities),
+                "required_secrets": list(entry.manifest.required_secrets),
+                "supports_cancel": entry.manifest.supports_cancel,
+                "supports_recover": entry.manifest.supports_recover,
+                "registration_status": "registered",
+                "recent_attempt": recent.get(entry.manifest.name),
+                "attempt_count": attempt_counts.get(entry.manifest.name, 0),
+                "failed_count": failed_counts.get(entry.manifest.name, 0),
+            }
+            for entry in registry.entries()
+        ]
+        return JSONResponse(
+            envelope({
+                "handlers": handlers,
+                "agents": [
+                    {**dict(item), "registration_status": "discovered"}
+                    for item in ctx.agent_catalog
+                ],
+                "status_semantics": "registration_only",
+                "allowed_commands": _proposal_commands(ctx, actor),
+            })
+        )
+
+    async def live_cursor(request: Request) -> JSONResponse:
+        actor = ctx.authenticate(request, READ_SCOPE)
+        if isinstance(actor, JSONResponse):
+            return actor
+        try:
+            previous = decode_cursor(request.query_params.get("cursor"))
+        except CursorError as exc:
+            return error("invalid_cursor", str(exc))
+        run_changes = []
+        events_after = getattr(ctx.langgraph_service, "events_after", None)
+        events = ()
+        previous_position = previous.get("event_position")
+        if (
+            previous
+            and events_after is not None
+            and isinstance(previous_position, int)
+            and not isinstance(previous_position, bool)
+            and previous_position >= 0
+        ):
+            # `/live` used to say only that *something* changed.  A Run started
+            # by MCP could begin and finish between two UI polls; by the time
+            # the Home view refreshed there was no active Run left to discover.
+            # Carry the bounded event identities already covered by this cursor
+            # so clients can open the exact Run even after it has settled.
+            latest_by_run = {}
+            # Through the same question every other Run read asks, and for the
+            # same reason: the Workspace is the boundary and which Runtime you
+            # reached is what enforces it. The answer is nobody today, so this
+            # changes nothing — but `/live` was the one Run read whose call
+            # site did not say which rule it was following.
+            events = events_after(
+                previous_position, limit=500, actor=reading_actor(actor),
+            )
+            for item in events:
+                latest_by_run[item["run_id"]] = {
+                    "run_id": item["run_id"],
+                    "event_type": item["event_type"],
+                    "position": int(item["position"]),
+                }
+            run_changes = sorted(
+                latest_by_run.values(), key=lambda item: item["position"],
+            )
+        marker = ctx.change_marker()
+        # Advance the event part of the opaque cursor only through events this
+        # response actually returned. This preserves a retry point when the
+        # bounded read is full, and also closes the race where a new event is
+        # appended while the marker is being assembled.
+        if previous and isinstance(previous_position, int) and not isinstance(
+            previous_position, bool
+        ) and previous_position >= 0 and events_after is not None:
+            marker = dict(marker)
+            marker["event_position"] = (
+                int(events[-1]["position"]) if events else previous_position
+            )
+        cursor = encode_cursor(marker)
+        # Which part of the marker moved, not only that one did. `changed`
+        # alone made every client re-read everything it draws: one chunk of an
+        # Agent's output moved the same boolean as a run settling, so a page
+        # listing finished runs paged the whole history again to find nothing
+        # new in it. The names are the marker's own keys; a client that does
+        # not recognise one is expected to refresh as it always did, so this
+        # can gain a part without breaking a reader that predates it.
+        changed_parts = sorted(
+            key
+            for key in set(marker) | set(previous or {})
+            if (previous or {}).get(key) != marker.get(key)
+        ) if previous else []
+        return JSONResponse(envelope({
+            "cursor": cursor,
+            "changed": bool(previous) and previous != marker,
+            "changed_parts": changed_parts,
+            "run_changes": run_changes,
+            "observed_at": ctx.now().isoformat(),
+        }))
+
+    # quick_check walks the whole database file; on a grown runtime.db that is
+    # seconds, not milliseconds, and Ops/Settings render on every visit. The
+    # verdict is cached briefly — counts below stay live on every call.
+    integrity_cache: dict[str, Any] = {"verdict": None, "checked_at": None}
+    INTEGRITY_TTL_SECONDS = 300.0
+
+    def integrity_verdict() -> tuple[str, str]:
+        current = ctx.now()
+        checked_at = integrity_cache["checked_at"]
+        if (
+            integrity_cache["verdict"] is None
+            or (current - checked_at).total_seconds() >= INTEGRITY_TTL_SECONDS
+        ):
+            with connect_workflow_database(ctx.path, read_only=True) as connection:
+                integrity_cache["verdict"] = connection.execute(
+                    "PRAGMA quick_check(1)"
+                ).fetchone()[0]
+            integrity_cache["checked_at"] = current
+        return integrity_cache["verdict"], integrity_cache["checked_at"].isoformat()
+
+    async def ops_status(request: Request) -> JSONResponse:
+        actor = ctx.authenticate(request, OPS_READ_SCOPE)
+        if isinstance(actor, JSONResponse):
+            return actor
+        quick, integrity_checked_at = integrity_verdict()
+        with connect_workflow_database(ctx.path) as connection:
+            migration_version = int(connection.execute(
+                "SELECT COALESCE(MAX(version), 0) FROM workflow_schema_migrations"
+            ).fetchone()[0])
+        # Straight from the engine that runs the work. This used to count the
+        # job, lease and timer rows of a second engine; those tables are gone,
+        # and while they existed unwritten this page reported zeros as though
+        # the Runtime were idle.
+        counts = getattr(ctx.langgraph_service, "counts", None)
+        engine = counts() if counts is not None else {
+            "runs_by_status": {}, "timers_by_status": {},
+            "handler_attempts_by_status": {},
+        }
+        runs = engine["runs_by_status"]
+        return JSONResponse(envelope({
+            "observed_at": ctx.now().isoformat(),
+            "integrity": {
+                "status": "ok" if quick == "ok" else "failed",
+                "check": "sqlite_quick_check", "checked_at": integrity_checked_at,
+                "migration_version": migration_version,
+            },
+            "capacity": {
+                "poll_seconds": ctx.operational_config.get("poll_seconds"),
+                "running_runs": runs.get("running", 0),
+                "waiting_runs": runs.get("waiting", 0) + runs.get("interrupted", 0),
+            },
+            "engine": engine,
+            # What the engine is keeping. It grows with every run and nothing
+            # else would say so, which is how an operator ends up deciding
+            # about retention only once a disk is full.
+            "storage_bytes": (
+                ctx.langgraph_service.store_sizes()
+                if getattr(ctx.langgraph_service, "store_sizes", None) else {}
+            ),
+            "server_config": {
+                "poll_seconds": ctx.operational_config.get("poll_seconds"),
+                "artifact_store_configured": ctx.artifact_backend is not None,
+            },
+        }))
+
+    async def capability_read(request: Request) -> JSONResponse:
+        """What this deployment can actually do, and why not when it cannot.
+
+        The delivery plan's empty states need three distinguishable answers —
+        no data, no permission, not provided — and the client must never learn
+        "not provided" by probing for 404s (plan §8, API-7). Capabilities are
+        composition facts injected at build time, not guesses.
+        """
+        actor = ctx.authenticate(request, READ_SCOPE)
+        if isinstance(actor, JSONResponse):
+            return actor
+        may_shutdown = (
+            ctx.shutdown_request is not None
+            and actor in ctx.operators
+            and ctx.guard.allows(actor, OPS_WRITE_SCOPE)
+        )
+        # The actor rides along so the shell can display who is signed in
+        # without a separate whoami endpoint.
+        return JSONResponse(envelope({
+            "actor": actor,
+            "capabilities": dict(ctx.capabilities or {}),
+            "product_mode": {
+                "single_goal_mode": ctx.single_goal_mode,
+                # Where a step whose Agent is not installed here would be
+                # carried. Null when there is nowhere to carry it — no Agent
+                # registered, or several with nothing saying which one this
+                # Runtime uses. The client is told; it never infers this.
+                "agent_fallback": (
+                    None if (target := ctx.agent_fallback()) is None
+                    else {"handler_name": target.name, "version": target.version}
+                ),
+            },
+            "permissions": {
+                "start_run": ctx.guard.allows(actor, WRITE_SCOPE),
+                "ops_read": ctx.guard.allows(actor, OPS_READ_SCOPE),
+                "ops_write": ctx.guard.allows(actor, OPS_WRITE_SCOPE),
+                # Whether this actor must carry the approval token back. The
+                # client is told; it never infers this from being on loopback.
+                "human_token_required": actor not in ctx.token_exempt_actors,
+            },
+            "runtime": {
+                "status": "running",
+                "workspace_path": ctx.operational_config.get("workspace_path"),
+                "allowed_commands": ([{
+                    "command": "runtime.shutdown",
+                    "label": "Stop Orbit",
+                    "method": "POST",
+                    "href": "/api/v1/runtime/shutdown",
+                    "target_aggregate_id": "runtime",
+                    "expected_version": 0,
+                    "payload_schema": "runtime-shutdown/1.0",
+                }] if may_shutdown else []),
+            },
+        }))
+
+    async def runtime_shutdown(request: Request) -> JSONResponse:
+        """Accept the operator command before asking the ASGI host to exit."""
+
+        if ctx.shutdown_request is None:
+            return error("not_supported", "runtime shutdown is not configured", 404)
+
+        def command(
+            body: Mapping[str, Any], actor: str, _key: str,
+        ) -> Mapping[str, Any]:
+            if actor not in ctx.operators:
+                raise PermissionError("only a Runtime operator may stop Orbit")
+            unknown = set(body) - {"expected_version"}
+            if unknown:
+                raise ValueError(
+                    f"unknown runtime shutdown field: {sorted(unknown)[0]}"
+                )
+            if _required_version(body) != 0:
+                raise ValueError("expected_version must be 0")
+            return {"status": "stopping"}
+
+        response = await ctx.mutate(
+            request, OPS_WRITE_SCOPE, "runtime.shutdown", command,
+        )
+        if 200 <= response.status_code < 300:
+            # Persist the idempotency receipt and flush the HTTP response before
+            # uvicorn begins lifespan shutdown. A successful replay is safe too.
+            asyncio.get_running_loop().call_later(0.05, ctx.shutdown_request)
+        return response
+
+    async def mcp_session_list(request: Request) -> JSONResponse:
+        """Which MCP clients the Runtime has heard from, and for how long ago.
+
+        The HTTP `/mcp` transport has no connection to report, so this answers
+        "is an Agent connected" the only honest way: who called, what they
+        called themselves at `initialize`, and whether their last message is
+        inside the presence window.
+        """
+
+        actor = ctx.authenticate(request, READ_SCOPE)
+        if isinstance(actor, JSONResponse):
+            return actor
+        registry = ctx.mcp_sessions
+        return JSONResponse(envelope({
+            "sessions": registry.sessions() if registry is not None else [],
+            "presence_seconds": (
+                registry.presence_seconds if registry is not None else None
+            ),
+            "observed_at": ctx.now().isoformat(),
+        }))
+
+    return [
+        Route("/api/v1/handler-catalog", handler_catalog, methods=["GET"]),
+        Route("/api/v1/live", live_cursor, methods=["GET"]),
+        Route("/api/v1/mcp/sessions", mcp_session_list, methods=["GET"]),
+        Route("/api/v1/ops/status", ops_status, methods=["GET"]),
+        Route("/api/v1/capabilities", capability_read, methods=["GET"]),
+        Route("/api/v1/runtime/shutdown", runtime_shutdown, methods=["POST"]),
+    ]

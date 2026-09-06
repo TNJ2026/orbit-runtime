@@ -1,0 +1,286 @@
+/* The editor's components. Document-level rules — the palette, the reset
+ * and body — live in page.css, which only the standalone editor loads;
+ * this file is also bundled into the MCP App card, where nothing may
+ * repaint the host document. */
+
+.editor { display: flex; flex-direction: column; height: 100vh; }
+
+.bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.bar .spacer { flex: 1; }
+.bar .version { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.bar button,
+.bar select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.bar button:disabled { opacity: 0.45; cursor: default; }
+.bar button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.notice { margin: 0; padding: 8px 14px; border-bottom: 1px solid var(--line); }
+.notice.error { color: var(--bad); }
+.notice.ok { color: var(--ok); }
+.notice.info { color: var(--muted); }
+
+.workspace { flex: 1; min-height: 0; display: flex; }
+.canvas { flex: 1; min-width: 0; position: relative; }
+
+/* The inspector is a column beside the canvas rather than over it, so the
+   minimap and the controls stay where React Flow put them and nothing is
+   drawn underneath a panel. */
+.inspector { max-height: 100%; }
+
+.inspector {
+  width: 320px;
+  flex: none;
+  overflow-y: auto;
+  padding: 12px 14px;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+}
+
+.inspector.empty { color: var(--muted); }
+.inspector h2 { margin: 0 0 2px; font-size: 14px; }
+.inspector h2 code, .inspector .path { color: var(--muted); font-weight: 400; }
+.inspector .path { margin: 0 0 12px; font-size: 12px; }
+
+.inspector label { display: block; margin-bottom: 12px; }
+.inspector label > span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+.inspector label.inline { display: flex; gap: 6px; align-items: center; }
+.inspector label.inline > span { margin: 0; color: var(--ink); }
+
+.inspector input[type="text"],
+.inspector input:not([type]),
+.inspector input[type="number"],
+.inspector select,
+.inspector textarea {
+  width: 100%;
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 5px 7px;
+  resize: vertical;
+}
+
+.inspector input:focus, .inspector select:focus, .inspector textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.inspector textarea[readonly] { color: var(--muted); }
+.inspector .hint { display: block; margin-top: 4px; font-size: 11px; color: var(--muted); font-style: normal; }
+.inspector .hint code { background: var(--bg); border: 1px solid var(--line); border-radius: 3px; padding: 0 3px; margin-right: 4px; }
+.inspector .problem { display: block; margin-top: 4px; font-size: 11px; color: var(--bad); font-style: normal; }
+.inspector fieldset { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 0 0 12px; }
+.inspector legend { font-size: 12px; color: var(--muted); padding: 0 4px; }
+.inspector fieldset em { color: var(--muted); font-size: 11px; }
+
+.diagnostics {
+  margin: 0;
+  padding: 10px 14px;
+  max-height: 30vh;
+  overflow: auto;
+  list-style: none;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.diagnostics li { padding: 3px 0; }
+.diagnostics code { color: var(--bad); }
+.diagnostics .path { color: var(--muted); }
+
+.node {
+  min-width: 210px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.node.selected { border-color: var(--accent); }
+/* Name on the left, what it is in the corner. A row rather than a stack: the
+   kind is small print about the label, not a heading over it, and the card is
+   a line shorter for it — which matters on a canvas that places nodes in
+   fixed lanes. `flex-start` so the corner stays level with the label's first
+   line when the label wraps to two. */
+.node header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+}
+.node header > .title { flex: 1 1 auto; min-width: 0; }
+.node .kind { font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.06em; }
+.node .title {
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 1px 3px;
+  margin: -1px -3px;
+  width: 100%;
+}
+.node .title:hover { border-color: var(--line); }
+.node .title:focus { border-color: var(--accent); outline: none; background: var(--bg); }
+/* The viewer's label is a span, so it must not offer the field's affordances:
+   a box that lights up under the pointer says it can be typed in. */
+span.title {
+  display: -webkit-box; overflow: hidden;
+  -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+}
+span.title:hover { border-color: transparent; }
+.node .handler { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+.node .handler .version { opacity: 0.7; }
+/* A substituted Handler: the published name stays legible but stops being
+   the answer, and the one that will run is the one at full strength. */
+.node .handler .superseded { text-decoration: line-through; opacity: 0.55; }
+.node .handler .rebound-arrow { opacity: 0.55; }
+.node .handler .rebound { color: var(--ink); }
+
+/* Terminal and human nodes read differently at a glance; the kind is also
+   written out, so colour is never the only carrier. */
+.node-terminal { border-left: 3px solid var(--ok); }
+.node-human { border-left: 3px solid var(--accent); }
+.node-decision { border-left: 3px solid #d97706; }
+.node-join { border-left: 3px solid var(--muted); }
+
+.node .ports { display: flex; justify-content: space-between; margin-top: 8px; position: relative; }
+.node .side { list-style: none; margin: 0; padding: 0; }
+.node .side li { position: relative; height: 22px; display: flex; align-items: center; color: var(--muted); }
+.node .side.right li { justify-content: flex-end; }
+
+/* A handle anchors to its own port row, which gets the vertical position
+   right for free; the horizontal offset pulls it back out through the node's
+   padding so it sits on the border where an author expects to grab it. */
+.node .side li .react-flow__handle { left: -11px; right: auto; transform: translateY(-50%); }
+.node .side.right li .react-flow__handle { left: auto; right: -11px; }
+.node .side li .react-flow__handle { width: 9px; height: 9px; background: var(--muted); border: 1px solid var(--panel); }
+.node .side li .react-flow__handle:hover { background: var(--accent); }
+
+.inspector .policies { list-style: none; margin: 0 0 8px; padding: 0; }
+.inspector .policies li { margin-bottom: 8px; }
+.inspector .policy-head { display: flex; gap: 6px; align-items: baseline; font-size: 12px; }
+.inspector .policy-head .kind { color: var(--muted); flex: 1; }
+.inspector .policy-add { display: flex; flex-wrap: wrap; gap: 4px; }
+.inspector .policy-add button,
+.inspector .port-add button {
+  font: 11px/1.4 inherit; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; cursor: pointer;
+}
+.inspector button.link {
+  font: 11px/1.4 inherit; color: var(--bad); background: none;
+  border: none; padding: 0; cursor: pointer; text-decoration: underline;
+}
+.inspector .ports-list { list-style: none; margin: 0 0 6px; padding: 0; font-size: 12px; }
+.inspector .ports-list li { display: flex; gap: 6px; align-items: baseline; padding: 2px 0; }
+.inspector .ports-list .schema {
+  flex: 1; color: var(--muted); overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.inspector .port-add { display: flex; gap: 4px; }
+.inspector .port-add input { flex: 1; min-width: 0; }
+
+.bar button.active { border-color: var(--accent); color: var(--accent); }
+
+.inspector .required { color: var(--bad); }
+.inspector fieldset > label:last-child { margin-bottom: 0; }
+
+/* Above the edges, below the nodes. Pointer events stay off so the label
+   never steals a click meant for the edge underneath it. */
+.edge-label {
+  position: absolute;
+  pointer-events: none;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  max-width: 260px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.edge-label.selected { border-color: var(--accent); }
+.edge-label code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--ink);
+}
+.edge-label .route { font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 10px; }
+.edge-label .route-error { color: var(--bad); }
+.edge-label .route-timeout { color: #d97706; }
+.edge-label .route-cancel { color: var(--muted); }
+.edge-label .mapped { color: var(--muted); }
+
+/* The read-only viewer the Runtime's pages embed. It fills whatever frame it
+   is given rather than assuming a page: the same drawing appears in a modal,
+   in the editing page and in a draft preview, and each is a different size. */
+.viewer { width: 100%; height: 100vh; }
+
+/* A node the embedding page can open. The cursor is the whole affordance —
+   the viewer does not know what opening it does. */
+.node-editable { cursor: pointer; }
+/* The viewer's anchors. Present so an edge has an end; invisible because
+   there is nothing to connect them to. */
+.node .react-flow__handle { opacity: 0; }
+.node .side .react-flow__handle { opacity: 1; }
+.node-editable:hover { border-color: var(--accent); }
+
+.viewer-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  margin: 0;
+  color: var(--muted);
+}
+
+.viewer-state.error { color: var(--bad); }
+
+/* A run drawn on the definition. The border says which state at a glance and
+   the chip spells it, so the picture stays readable without colour — the same
+   rule the route labels follow. A node with no status is a definition nobody
+   has run, and is left exactly as it was. */
+.node-run { border-left-width: 3px; border-left-style: solid; }
+.node-run-succeeded { border-left-color: var(--ok); }
+.node-run-failed { border-left-color: var(--bad); }
+.node-run-unknown { border-left-color: var(--accent); }
+.node-run-cancelled { border-left-color: var(--bad); }
+.node-run-running { border-left-color: var(--accent); }
+.node-run-waiting { border-left-color: #d97706; }
+.node-run-not_reached { border-left-color: var(--line); opacity: .62; }
+/* Never squeezed: it is two short words in a corner, and letting the label
+   push them into wrapping would cost the line the corner exists to save. */
+.node .meta {
+  display: flex; align-items: baseline; gap: 7px;
+  flex: 0 0 auto; white-space: nowrap;
+}
+.run-status {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--muted); white-space: nowrap;
+}
+.node-run-succeeded .run-status { color: var(--ok); }
+.node-run-failed .run-status { color: var(--bad); }
+.node-run-unknown .run-status { color: var(--accent); }
+.node-run-cancelled .run-status { color: var(--bad); }
+.node-run-running .run-status { color: var(--accent); }

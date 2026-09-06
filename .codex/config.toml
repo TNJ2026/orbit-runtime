@@ -1,0 +1,2 @@
+# Orbit MCP is provided by the installed Codex plugin. Its stdio proxy starts
+# or discovers the workspace Runtime before forwarding requests to it.

@@ -1,0 +1,610 @@
+"""M4 Gate: the UI carries no runtime knowledge and no monolingual text.
+
+These are static assertions over the shipped assets. They are cheap, they run
+without a browser, and they catch the two regressions the plan calls out by
+name: a UI that re-implements the state machine, and a UI that quietly becomes
+single-language.
+"""
+
+from __future__ import annotations
+
+from importlib import resources
+import json
+from pathlib import Path
+import re
+import unittest
+
+
+UI_ROOT = Path(str(resources.files("orbit").joinpath("static/workflow-ui")))
+ASSETS = UI_ROOT / "assets"
+LOCALES = ("zh-CN", "en-US")
+
+
+def catalog(locale: str) -> dict[str, str]:
+    return json.loads((ASSETS / f"i18n.{locale}.json").read_text(encoding="utf-8"))
+
+
+def source_files() -> list[Path]:
+    return [UI_ROOT / "index.html", *sorted(ASSETS.rglob("*.js"))]
+
+
+EDITOR_SOURCE = Path(__file__).resolve().parents[1] / "ui" / "editor" / "src"
+
+
+def stylesheet_source() -> str:
+    return "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted(ASSETS.rglob("*.css"))
+    )
+
+
+class CatalogTests(unittest.TestCase):
+    def test_catalogs_have_identical_keys(self) -> None:
+        zh, en = catalog("zh-CN"), catalog("en-US")
+        self.assertEqual(
+            set(), set(zh) ^ set(en),
+            f"catalog parity broken: {sorted(set(zh) ^ set(en))}",
+        )
+
+    def test_no_translation_is_empty(self) -> None:
+        for locale in LOCALES:
+            for key, value in catalog(locale).items():
+                with self.subTest(locale=locale, key=key):
+                    self.assertTrue(value.strip(), f"{locale}:{key} is empty")
+
+    def test_placeholders_match_across_locales(self) -> None:
+        """A placeholder dropped in one locale silently loses data at runtime."""
+
+        zh, en = catalog("zh-CN"), catalog("en-US")
+        pattern = re.compile(r"\{(\w+)\}")
+        for key in zh:
+            with self.subTest(key=key):
+                self.assertEqual(
+                    set(pattern.findall(zh[key])), set(pattern.findall(en[key]))
+                )
+
+    def test_the_chinese_catalog_is_actually_translated(self) -> None:
+        zh, en = catalog("zh-CN"), catalog("en-US")
+        shared = {key for key in zh if zh[key] == en[key]}
+        # Brand names, identifiers, and terms deliberately kept in English.
+        intentional = {
+            "agents.title",
+            "app.title",
+            "artifacts.idLabel",
+            "artifacts.title",
+            "nav.agents",
+            "nav.artifacts",
+            "run.console.stderr",
+            "run.console.stdout",
+            "run.data.kind.artifact",
+            "shell.breadcrumb.root",
+            "wait.none",
+        }
+        self.assertEqual(
+            set(), shared - intentional,
+            f"untranslated zh-CN entries: {sorted(shared - intentional)}",
+        )
+
+    def test_replaced_keys_are_not_kept_as_dead_ones(self) -> None:
+        """A key nothing reads is a translation nobody maintains.
+
+        Nothing else notices one: the catalog check runs the other way, from
+        the source to the keys, so a key left behind by a rename is invisible
+        until somebody translates it again.
+        """
+
+        keys = set(catalog("en-US"))
+        self.assertTrue({
+            "action.newRun", "newRun.workflow.hint",
+            # Merged into `workflows.graph`: the run page and the workflow
+            # page draw the same graph and had a word each for it.
+            "simplified.steps.canvas",
+            "ops.agents", "ops.agents.empty", "ops.handlers", "ops.health",
+            "ops.health.notReady", "ops.health.ready",
+            "nav.runs", "runs.title", "runs.empty", "runs.orderHint",
+            # Renamed into the `authoring.job.modify.*` family, so one status
+            # line can be spelled by swapping a prefix rather than by a second
+            # vocabulary for the same five states.
+            "editor.revisionQueued", "editor.revisionRunning",
+        }.isdisjoint(keys))
+
+
+def translation_calls(text: str):
+    """Every literal key inside an `i18n.t(...)` call, wherever it sits.
+
+    Not just the first argument. A key chosen by a conditional —
+    `i18n.t(count === 1 ? "history.artifacts.one" : "history.artifacts.many")`
+    — is as much a key as a literal one, and matching only the leading
+    literal made three of them invisible: two rendered their own key on the
+    history list for any goal that produced an Artifact, and the catalog
+    check passed the whole time.
+    """
+
+    for call in re.finditer(r"i18n\.t\(", text):
+        depth, index = 1, call.end()
+        while index < len(text) and depth:
+            if text[index] == "(":
+                depth += 1
+            elif text[index] == ")":
+                depth -= 1
+            index += 1
+        arguments = text[call.end():index - 1]
+        # A dotted lowercase literal is a key; `{ count: x }` and message
+        # strings are not.
+        yield from re.findall(r"""["']([a-z][\w]*(?:\.[\w]+)+)["']""", arguments)
+
+
+class SourceTests(unittest.TestCase):
+    def test_every_key_used_in_source_exists(self) -> None:
+        used = set()
+        for path in source_files():
+            text = path.read_text(encoding="utf-8")
+            used |= set(translation_calls(text))
+            used |= set(re.findall(r'data-i18n(?:-label)?="([\w.]+)"', text))
+        known = set(catalog("en-US"))
+        # Keys built from a variable (`${titleKey}.empty`) are checked by the
+        # dynamic-prefix test below rather than here.
+        self.assertEqual(set(), used - known, f"missing catalog keys: {sorted(used - known)}")
+
+    def test_dynamically_built_keys_resolve(self) -> None:
+        known = set(catalog("en-US"))
+        # A key built from a variable is invisible to the source scan above,
+        # so every family that is spelled `${prefix}.${value}` has to be named
+        # here or it silently stops being checked at all.
+        statuses = ("queued", "running", "done", "failed", "cancelled")
+        stages = ("preparing", "generating", "validating", "publishing")
+        for key in (
+            "human.decision.approve", "human.decision.reject",
+            "state.loading", "state.empty", "state.error", "state.stale",
+            "state.pending", "state.retry",
+            *(f"authoring.job.{status}" for status in statuses),
+            *(f"authoring.job.modify.{status}" for status in statuses),
+            *(f"generate.progress.{stage}" for stage in stages),
+        ):
+            with self.subTest(key=key):
+                self.assertIn(key, known)
+
+    def test_no_hardcoded_user_visible_chinese(self) -> None:
+        """The prototype's hardcoded zh aria-labels must not come back."""
+
+        han = re.compile(r"[一-鿿]")
+        for path in source_files():
+            with self.subTest(path=path.name):
+                self.assertIsNone(han.search(path.read_text(encoding="utf-8")))
+
+    def test_the_ui_has_no_runtime_state_machine(self) -> None:
+        """No status-to-next-status table, and no invented mutation endpoints."""
+
+        joined = "\n".join(
+            path.read_text(encoding="utf-8") for path in ASSETS.rglob("*.js")
+        )
+        for forbidden in ("succeeded ->", "TRANSITIONS", "nextStatus", "advanceRun"):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, joined)
+
+    def test_mutations_only_travel_through_allowed_commands(self) -> None:
+        """Every mutation path in the client comes from the server."""
+
+        api_js = (ASSETS / "api.js").read_text(encoding="utf-8")
+        literals = set(re.findall(r'request\(\s*"(POST|PUT|PATCH|DELETE)",\s*"([^"]+)"', api_js))
+        self.assertEqual(set(), literals)
+
+        app_js = "\n".join(path.read_text(encoding="utf-8") for path in source_files())
+        self.assertNotIn("/api/v1/human-tasks", app_js)
+        self.assertNotIn("/cancel", app_js)
+        self.assertIn("allowed.href", api_js)
+
+class AccessibilityTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.index = (UI_ROOT / "index.html").read_text(encoding="utf-8")
+
+    def test_the_page_has_a_skip_link_and_a_live_region(self) -> None:
+        self.assertIn('class="skip-link"', self.index)
+        self.assertIn('aria-live="polite"', self.index)
+
+    def test_icon_only_controls_carry_labels(self) -> None:
+        self.assertIn('data-i18n-label="action.more"', self.index)
+        self.assertIn('data-i18n-label="theme.light"', self.index)
+        self.assertIn('data-i18n-label="theme.dark"', self.index)
+        self.assertIn('data-i18n-label="locale.switch"', self.index)
+
+    def test_focus_is_visible(self) -> None:
+        css = stylesheet_source()
+        self.assertIn(":focus-visible", css)
+
+    def test_text_tokens_meet_wcag_aa_contrast(self) -> None:
+        """Body and muted text remain readable on both page and panel surfaces."""
+
+        tokens = (ASSETS / "styles/tokens.css").read_text(encoding="utf-8")
+
+        def block(selector: str) -> str:
+            match = re.search(rf"{re.escape(selector)}\s*\{{(.*?)\}}", tokens, re.S)
+            self.assertIsNotNone(match, selector)
+            return match.group(1)
+
+        def variables(source: str) -> dict[str, str]:
+            return dict(re.findall(r"--([\w-]+):\s*(#[0-9a-fA-F]{6})", source))
+
+        def luminance(hex_color: str) -> float:
+            channels = [int(hex_color[index:index + 2], 16) / 255 for index in (1, 3, 5)]
+            linear = [
+                channel / 12.92 if channel <= 0.04045
+                else ((channel + 0.055) / 1.055) ** 2.4
+                for channel in channels
+            ]
+            return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+        def contrast(left: str, right: str) -> float:
+            bright, dark = sorted((luminance(left), luminance(right)), reverse=True)
+            return (bright + 0.05) / (dark + 0.05)
+
+        dark = variables(block(":root"))
+        light = {**dark, **variables(block('html[data-theme="light"]'))}
+        for theme, palette in (("dark", dark), ("light", light)):
+            for foreground in ("text", "muted"):
+                for background in ("bg", "panel"):
+                    with self.subTest(theme=theme, foreground=foreground, background=background):
+                        self.assertGreaterEqual(
+                            contrast(palette[foreground], palette[background]), 4.5
+                        )
+
+    def test_no_colour_is_written_for_one_theme_only(self) -> None:
+        """A colour decided while looking at one theme is a colour half-made.
+
+        Three have shipped that way and each was invisible rather than
+        wrong-looking, so nothing caught them: a 2% white row hover that is a
+        fill on the dark canvas and nothing on the light one; a written-out
+        mint halo around a dot that goes dark ink on the light theme; and
+        every field, list and button near-black on white, because the three
+        control tokens were written once for the dark theme and copied.
+
+        The baselines cannot catch this class. They photograph four pages in
+        their resting state, and these live in `:hover`, in a keyframe, and on
+        pages that have no baseline at all. This reads the stylesheets
+        instead, which costs nothing and answers at the moment the colour is
+        written down.
+
+        Two rules. A colour token must not be defined to the same value in
+        both themes — that is how `--control-bg` was black on white. And a
+        colour written into a rule must either be a token or be overridden for
+        the light theme within the next few lines, the way
+        `.console-chunk.stderr` is.
+        """
+
+        styles = ASSETS / "styles"
+        colour = re.compile(r"#[0-9a-fA-F]{3,8}\b|\brgba?\([^)]*\)|\bhsla?\([^)]*\)")
+
+        # Empty, and worth keeping that way. The two scrims that used to sit
+        # here are `--scrim` now, which says the same thing where a reader
+        # will look for it. Anything added back needs a reason of that kind.
+        exempt: set[tuple[str, str]] = set()
+
+        tokens = (styles / "tokens.css").read_text(encoding="utf-8")
+
+        def block(selector: str) -> dict[str, str]:
+            match = re.search(
+                rf"{re.escape(selector)}\s*\{{(.*?)\n\}}", tokens, re.S,
+            )
+            self.assertIsNotNone(match, selector)
+            return dict(re.findall(r"(--[\w-]+)\s*:\s*([^;]+);", match.group(1)))
+
+        dark = block(":root")
+        light = block('html[data-theme="light"]')
+        shared = sorted(
+            name for name, value in dark.items()
+            if colour.search(value) and light.get(name, "").strip() == value.strip()
+        )
+        self.assertEqual(
+            [], shared,
+            "colour tokens carrying one theme's value into the other: "
+            + ", ".join(shared),
+        )
+
+        offenders = []
+        for path in sorted(styles.glob("*.css")):
+            if path.name == "tokens.css":
+                continue
+            lines = path.read_text(encoding="utf-8").splitlines()
+            selector = ""
+            for index, line in enumerate(lines):
+                code = line.split("/*")[0]
+                if "{" in code:
+                    selector = code.split("{")[0].strip() or selector
+                if not colour.search(code) or "white-space" in code:
+                    continue
+                if (path.name, selector) in exempt:
+                    continue
+                # The override is written directly under the rule it corrects.
+                following = "\n".join(lines[index + 1:index + 4])
+                if 'data-theme="light"' in following:
+                    continue
+                offenders.append(f"{path.name}:{index + 1} {code.strip()[:60]}")
+        self.assertEqual(
+            [], offenders,
+            "colours written for one theme with no light-theme answer:\n  "
+            + "\n  ".join(offenders),
+        )
+
+    def test_the_layout_responds_to_small_screens(self) -> None:
+        css = stylesheet_source()
+        self.assertIn("@media (max-width", css)
+
+    def test_goal_composer_has_designed_structure_and_shortcut(self) -> None:
+        app_js = "\n".join(path.read_text(encoding="utf-8") for path in source_files())
+        css = stylesheet_source()
+        for marker in (
+            "simplified-goal-page", "simplifiedGoalTitle",
+            "simplified.start.description", "simplified.start.shortcut",
+        ):
+            self.assertIn(marker, app_js)
+        self.assertIn("event.currentTarget.form?.requestSubmit()", app_js)
+        self.assertRegex(css, r"\.simplified-goal-field textarea\s*\{[^}]*min-height:\s*168px")
+        self.assertIn(".simplified-workflow-picker { grid-template-columns: 1fr; }", css)
+
+    def test_run_views_do_not_render_the_raw_result_document(self) -> None:
+        app_js = "\n".join(path.read_text(encoding="utf-8") for path in source_files())
+
+        self.assertNotIn("JSON.stringify(run.result", app_js)
+
+    def test_workflow_generation_progress_offers_server_authorized_cancel(self) -> None:
+        generation_js = (
+            ASSETS / "workflow" / "generation-progress.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn('class: "button workflow-generation-cancel"', generation_js)
+        self.assertIn(
+            '(item) => item.command === "workflow.authoring.cancel"', generation_js
+        )
+        self.assertIn(
+            '`workflow.authoring.cancel:${job.job_id}`', generation_js
+        )
+
+    def messages(self, text: str) -> set[str]:
+        return set(re.findall(r'"(orbit-viewer-[a-z-]+)"', text))
+
+    def test_both_ends_name_the_same_messages(self) -> None:
+        page = (ASSETS / "workflow" / "definition-views.js").read_text(
+            encoding="utf-8"
+        )
+        canvas = (EDITOR_SOURCE / "catalog-graph.mjs").read_text(encoding="utf-8")
+        self.assertEqual(
+            {
+                "orbit-viewer-ready", "orbit-viewer-graph",
+                "orbit-viewer-node-click", "orbit-viewer-theme",
+            },
+            self.messages(page),
+        )
+        self.assertEqual(self.messages(page), self.messages(canvas))
+
+    def test_the_canvas_has_no_editor_mode(self) -> None:
+        """The embedded bundle always renders the read-only viewer."""
+
+        page = (ASSETS / "workflow" / "definition-views.js").read_text(
+            encoding="utf-8"
+        )
+        main = (EDITOR_SOURCE / "main.jsx").read_text(encoding="utf-8")
+        self.assertNotIn("?readonly=1", page)
+        self.assertIn("<Viewer />", main)
+        self.assertNotIn("<App />", main)
+
+    def test_every_native_canvas_keeps_zoom_at_or_above_half(self) -> None:
+        viewer = (EDITOR_SOURCE / "Viewer.jsx").read_text(encoding="utf-8")
+        self.assertIn("const MIN_ZOOM = 0.5", viewer)
+        self.assertIn("minZoom: MIN_ZOOM", viewer)
+        self.assertIn("minZoom={MIN_ZOOM}", viewer)
+
+
+class HandlerConsoleRenderingTests(unittest.TestCase):
+    def test_the_console_follows_only_while_the_run_is_alive(self) -> None:
+        """Polling a finished run's console for ever is a busy loop for nothing."""
+
+        app_js = "\n".join(path.read_text(encoding="utf-8") for path in source_files())
+        self.assertIn("else if (live) timer = setTimeout(poll, 2000);", app_js)
+        self.assertIn("activeViewCleanup = () => {", app_js)
+
+    def test_the_console_loads_only_when_it_is_opened(self) -> None:
+        """An Agent's output is the largest thing on the page.
+
+        Fetching it on every visit to a run detail spends the request on
+        something most visits never look at.
+        """
+
+        app_js = "\n".join(path.read_text(encoding="utf-8") for path in source_files())
+        self.assertIn('details.addEventListener("toggle"', app_js)
+        self.assertIn("if (stopped || loading || !details.open) return;", app_js)
+
+    def test_the_console_reads_the_engine_route(self) -> None:
+        api_js = (ASSETS / "api.js").read_text(encoding="utf-8")
+        self.assertIn(
+            "/api/v1/langgraph-runs/${encodeURIComponent(runId)}/output", api_js,
+        )
+
+
+class SelfContainedAssetTests(unittest.TestCase):
+    def test_the_ui_loads_nothing_from_a_third_party(self) -> None:
+        """A Runtime that binds to loopback should not phone anywhere.
+
+        It used to fetch its typefaces from a font CDN on every page load,
+        which made an offline machine fall back anyway, gave a proxied one a
+        pause first, and told a third party when this tool was opened.
+        """
+
+        page = (ASSETS.parent / "index.html").read_text(encoding="utf-8")
+        css = stylesheet_source()
+        for source in (page, css):
+            for host in ("//fonts.googleapis.com", "//fonts.gstatic.com", "http://", "https://"):
+                self.assertNotIn(host, source)
+
+    def test_type_is_asked_of_the_platform(self) -> None:
+        css = stylesheet_source()
+        self.assertIn("--font: ui-sans-serif, system-ui", css)
+        self.assertIn("--mono: ui-monospace", css)
+        # The display token survives the face it used to name, so a heading
+        # still says it is one and can be given a face again in one place.
+        self.assertIn("--font-display: var(--font)", css)
+
+
+class StepListRenderingTests(unittest.TestCase):
+    def test_the_steps_still_to_come_are_drawn_too(self) -> None:
+        """A list that grew as the run progressed would hide how much is left.
+
+        The rows come from the definition, so the shape of the run is legible
+        before it has done anything.
+        """
+
+        app_js = "\n".join(path.read_text(encoding="utf-8") for path in source_files())
+        self.assertIn("api.runSteps(runId)", app_js)
+        self.assertIn("not_reached", app_js)
+
+    def test_a_repeated_step_is_one_row_that_says_so(self) -> None:
+        app_js = "\n".join(path.read_text(encoding="utf-8") for path in source_files())
+        self.assertIn('i18n.t("simplified.steps.repeated"', app_js)
+
+    def test_every_branch_state_the_server_can_send_has_a_word(self) -> None:
+        """The status is a template hole, so a missing word is a raw key.
+
+        The list is the engine's own: `edges()` documents six answers, and a
+        seventh added there without a string here would render as
+        `simplified.branches.status.whatever` on the page.
+        """
+
+        english = json.loads(
+            (ASSETS / "i18n.en-US.json").read_text(encoding="utf-8")
+        )
+        chinese = json.loads(
+            (ASSETS / "i18n.zh-CN.json").read_text(encoding="utf-8")
+        )
+        from orbit.workflow.langgraph_runtime.service import EDGE_STATUSES
+
+        self.assertGreaterEqual(len(EDGE_STATUSES), 6)
+        for status in EDGE_STATUSES:
+            with self.subTest(status=status):
+                self.assertIn(f"simplified.branches.status.{status}", english)
+                self.assertIn(f"simplified.branches.status.{status}", chinese)
+
+    def test_only_forks_are_reported_so_the_footnote_stays_one(self) -> None:
+        app_js = "\n".join(path.read_text(encoding="utf-8") for path in source_files())
+        self.assertIn("api.runEdges(runId)", app_js)
+        self.assertIn("items.length > 1", app_js)
+
+    def test_every_step_state_has_a_word_and_a_colour(self) -> None:
+        """Meaning never rides on colour alone, the run pills' own rule."""
+
+        app_js = "\n".join(path.read_text(encoding="utf-8") for path in source_files())
+        css = stylesheet_source()
+        english = json.loads(
+            (ASSETS / "i18n.en-US.json").read_text(encoding="utf-8")
+        )
+        chinese = json.loads(
+            (ASSETS / "i18n.zh-CN.json").read_text(encoding="utf-8")
+        )
+        for status in (
+            "succeeded", "failed", "unknown", "cancelled", "running", "waiting",
+            "answered", "not_reached",
+        ):
+            with self.subTest(status=status):
+                self.assertIn(f"simplified.steps.status.{status}", english)
+                self.assertIn(f"simplified.steps.status.{status}", chinese)
+                self.assertIn(f"{status}:", app_js.split("STEP_MARKS")[1][:200])
+        self.assertIn(".step-row.succeeded .step-mark", css)
+        self.assertIn(".step-row.failed .step-mark", css)
+        self.assertIn(".step-row.unknown .step-mark", css)
+
+        node = (EDITOR_SOURCE / "WorkflowNode.jsx").read_text(encoding="utf-8")
+        editor_css = (EDITOR_SOURCE / "app.css").read_text(encoding="utf-8")
+        self.assertIn('unknown: "outcome unknown"', node)
+        self.assertIn(".node-run-unknown", editor_css)
+
+    def test_one_panel_watches_an_authoring_job(self) -> None:
+        """The edit page had a second, weaker console of its own.
+
+        Two panels reading one job DTO drift: this one never showed the
+        instruction or the Agent, and printed the Runtime's `orbit-progress`
+        control lines as if they were output. Both surfaces mount the shared
+        progress panel now, and nothing here should grow a console again.
+        """
+
+        views = (ASSETS / "views" / "index.js").read_text(encoding="utf-8")
+        css = (ASSETS / "styles" / "views.css").read_text(encoding="utf-8")
+        self.assertNotIn("workflow-authoring-console", views)
+        self.assertNotIn("workflow-authoring-console", css)
+        # Two mounts of the one panel: the catalog page and the edit page.
+        self.assertEqual(2, views.count("workflowGenerationProgress("))
+        # The edit page asks for the revision's own wording.
+        self.assertIn('statusPrefix: "authoring.job.modify"', views)
+
+    def test_the_definition_list_scrolls_inside_its_frame(self) -> None:
+        """The tab bar must not scroll away with the list it switches.
+
+        `min-height` was a floor with no ceiling, so the definition tab grew
+        the framed box to whatever the list came to and the page scrolled
+        instead — carrying the tabs, the title and the close button off the
+        top. The frame is a size now, and the list moves within it.
+        """
+
+        css = (ASSETS / "styles" / "views.css").read_text(encoding="utf-8")
+        frame = css.split(".workflow-detail .workflow-tabs, .workflow-edit-page")[1]
+        declaration = frame.split("}")[0]
+        self.assertIn("height: 600px", declaration)
+        self.assertNotIn("min-height: 600px", declaration)
+        # The detail is inside a modal, which on a short viewport has no room
+        # for the full frame plus its head.
+        self.assertIn(
+            "height: min(600px, calc(100vh - var(--topbar-h, 64px) - 200px))", css,
+        )
+        listing = css.split(
+            ".workflow-detail .workflow-tab-content > .definition-list"
+        )[1]
+        self.assertIn("overflow-y: auto", listing.split("}")[0])
+
+    def test_the_diagram_names_the_agent_without_its_version(self) -> None:
+        """A build number is not something anyone reads off a diagram.
+
+        The exception is a substitution between two builds of one Agent: the
+        version is then the only thing the arrow points at, and dropping it
+        would leave the card reading "claude → claude".
+        """
+
+        node = (EDITOR_SOURCE / "WorkflowNode.jsx").read_text(encoding="utf-8")
+        self.assertIn(
+            "data.rebound && data.rebound.name === data.handler?.name", node,
+        )
+        # Every version on the card is behind that condition — none is printed
+        # unconditionally the way both used to be.
+        for part in node.split('<span className="version">')[:-1]:
+            self.assertTrue(
+                part.rstrip().endswith("{versioned ? ("),
+                f"an unconditional version survives: ...{part[-70:]!r}",
+            )
+
+    def test_a_run_node_card_is_no_taller_than_a_definition_one(self) -> None:
+        """The lane a node is placed in has a fixed height; the card does not.
+
+        Positions come from the server as a depth and a lane, and the canvas
+        multiplies the lane by LANE_HEIGHT — so a card that outgrows that
+        spacing is drawn on top of the node beneath it. Drawing a run used to
+        add a whole line for the status, which put a two-line label over the
+        edge on the run page while the same workflow read fine on its own.
+
+        Three rules keep the card inside the lane: the state shares the kind's
+        row rather than taking one of its own, that row sits in the corner
+        beside the label rather than on a line above it, and the label stops
+        at two lines instead of growing without limit.
+        """
+
+        node = (EDITOR_SOURCE / "WorkflowNode.jsx").read_text(encoding="utf-8")
+        css = (EDITOR_SOURCE / "app.css").read_text(encoding="utf-8")
+
+        # One row carrying both, not a status line under the kind line.
+        self.assertIn('<span className="meta">', node)
+        self.assertIn("display: flex", css.split(".node .meta {")[1][:120])
+        # And that row beside the label, not stacked over it — the header is a
+        # row, and the corner is never squeezed by a long name.
+        header = css.split(".node header {")[1][:220]
+        self.assertIn("justify-content: space-between", header)
+        self.assertIn("flex: 0 0 auto", css.split(".node .meta {")[1][:160])
+        meta = node.split('<span className="meta">')[1].split("</span>\n        </span>")[0]
+        self.assertIn('className="kind"', meta)
+        self.assertIn("run-status run-status-", meta)
+
+        # A bounded label, with the whole of it still reachable.
+        self.assertIn("-webkit-line-clamp: 2", css.split("span.title {")[1][:200])
+        self.assertIn('title={data.label ?? id}', node)

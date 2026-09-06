@@ -1,0 +1,45 @@
+name: Tests
+
+# The gate a release runs, run before the merge rather than after the tag.
+# Nothing else runs the Python suite on a pull request: `harness.yml` is
+# path-scoped to the integration, and `release.yml` only fires on a tag — so a
+# change could reach `main` without a single test having run against it.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A pull request that is pushed to twice does not need the first answer.
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Orbit
+        run: uv sync --extra dev
+
+      # `run-release-tests.py`, not plain discovery: it leaves out the visual
+      # and browser suites, which need a browser this job does not install.
+      # The suites that can skip themselves do; the rest all run.
+      - name: Run the release gate
+        run: uv run python scripts/run-release-tests.py
+
+      - name: Test the UI client modules
+        run: node --test tests/ui/client_modules.test.mjs

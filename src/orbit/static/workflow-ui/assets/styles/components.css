@@ -1,0 +1,249 @@
+/* Generic primitives: buttons, panels, tables, pills, fields, dialogs,
+   banners and the data-state block. Nothing here knows what a run is.
+   Density and type scale follow the Mission Control prototype. */
+/* A button carries no edge at all: the fill is the whole of it, and the
+   variants differ only in the colour of their label. It is the same surface
+   every text field and option list takes, so a row of controls reads as one
+   family whatever each of them does. */
+.button {
+  background: var(--control-bg); border: 0; border-radius: var(--radius-control);
+  padding: 8px 12px; cursor: pointer; font-size: 13px; font-weight: 600;
+  color: var(--control-fg);
+}
+/* One hover for all of them: the surface lifts to --control-raised and the
+   label keeps whatever colour its variant gave it. --hover is a step *below*
+   the control colour and would read as a dip. Each variant still restates its
+   colour below, because a primary button that inherited the neutral rule lost
+   its accent the moment the pointer arrived. */
+.button:hover:not(:disabled) { background: var(--control-raised); }
+.button:disabled { opacity: .5; cursor: not-allowed; }
+/* Primary is the accent in the label, not a slab of saturated blue. Nothing
+   on these pages is saturated any more; colour is left to say status. */
+.button.primary { color: var(--blue); }
+.button.primary:hover:not(:disabled) { background: var(--control-raised); color: var(--blue); }
+.button.danger { color: var(--red); }
+.button.danger:hover:not(:disabled) { background: var(--control-raised); color: var(--red); }
+/* Kept as an alias only: nothing in the UI asks for `.solid` any more, and
+   with one control surface it is the base button in every respect but the
+   label colour. */
+.button.solid { background: var(--control-bg); color: var(--text); }
+.button.solid:hover:not(:disabled) { background: var(--control-raised); }
+
+/* Custom select: the closed control uses the same surface as .button, while
+   the option popup stays inside our theme instead of falling back to the
+   operating system's unstyled menu. The native select remains in the form for
+   value semantics and automation, but is removed from the visual/focus flow. */
+.custom-select {
+  position: relative; display: inline-flex; min-width: 0; vertical-align: middle;
+}
+.custom-select-native {
+  position: absolute !important; width: 1px !important; height: 1px !important;
+  margin: 0 !important; padding: 0 !important; opacity: 0 !important;
+  pointer-events: none !important; overflow: hidden !important;
+}
+.custom-select-trigger {
+  width: 100%; min-width: 0; display: inline-flex; align-items: center;
+  justify-content: space-between; gap: 10px; color: var(--text); text-align: left;
+}
+.custom-select-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Drawn rather than typed: the ⌄ glyph sits low in its em box, so no amount
+   of flex centring lines it up with the label. Two borders of a rotated square
+   give a chevron whose ink we can place exactly — the ink of a square rotated
+   45° hangs half a diagonal below the box centre, hence the nudge. */
+.custom-select-chevron {
+  flex: 0 0 auto; width: 6px; height: 6px;
+  border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform .14s ease;
+}
+.custom-select.open .custom-select-chevron { transform: translateY(2px) rotate(-135deg); }
+.custom-select-options {
+  position: absolute; z-index: 80; top: calc(100% + 6px); right: 0;
+  min-width: max(100%, 170px); max-width: min(320px, 88vw); max-height: 260px;
+  overflow-y: auto; padding: 5px; border: 0;
+  border-radius: var(--radius-control); background: var(--panel-2); box-shadow: var(--shadow);
+}
+.custom-select-options[hidden] { display: none; }
+.custom-select-option {
+  width: 100%; display: flex; align-items: center; border: 0; border-radius: var(--radius-chip);
+  padding: 8px 10px; background: transparent; color: var(--text);
+  font-size: 13px; font-weight: 600; text-align: left; cursor: pointer;
+}
+.custom-select-option:hover:not(:disabled), .custom-select-option:focus-visible {
+  background: var(--hover);
+}
+.custom-select-option.selected { background: var(--blue-soft); color: var(--blue); }
+.custom-select-option:disabled { opacity: .45; cursor: not-allowed; }
+.field .custom-select { width: 100%; }
+.filter-bar .custom-select { flex: 0 1 auto; }
+
+/* A page section is not a box. What is left of structure is the space around
+   things and one line between a row and the next; only a tile in a grid keeps
+   an outline, and a faint one — see .card below. */
+.panel { background: transparent; border: 0; border-radius: var(--radius); }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; }
+.panel-head > * { min-width: 0; }
+.panel-title {
+  font-family: var(--font-display); font-weight: 650; font-size: 13px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.panel-sub { color: var(--muted-2); font-size: 12px; margin-top: 2px; }
+.panel-body { padding: 12px 0; display: flex; flex-direction: column; gap: 10px; }
+/* One tile among others: outlined just enough to hold a grid together, filled
+   only while the pointer is on it. */
+.card { background: transparent; border: 1px solid var(--line-card); border-radius: var(--radius); }
+.card:hover { background: var(--hover); }
+/* display:flex above wins over the UA [hidden] rule, so reassert it. */
+.panel-body[hidden] { display: none; }
+
+
+.eyebrow {
+  color: var(--muted-2); font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .12em;
+}
+
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 560px; font-size: 13px; }
+th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line-soft); }
+th {
+  color: var(--muted-2); font-family: var(--font-display); font-size: 12px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  background: var(--panel-2);
+}
+/* Subtle zebra striping (DESIGN.md): a low-luminance wash so rows read as a
+   set without any hard rule between them. */
+tbody tr:nth-child(even) { background: color-mix(in srgb, var(--text) 3%, transparent); }
+tbody tr:hover { background: var(--hover); }
+td.numeric, th.numeric { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* A status is a filled chip and an action is not, which is the whole of what
+   a fill means once nothing is outlined. */
+.pill { display: inline-block; border-radius: var(--radius-chip); padding: 3px 9px; font-size: 12px; font-weight: 600; background: var(--chip-bg); color: var(--muted); }
+.pill.running, .pill.blue { background: var(--blue-soft); color: var(--blue); }
+.pill.waiting, .pill.interrupted, .pill.amber { background: var(--amber-soft); color: var(--amber); }
+/* `completed` is what the run engine calls a run that finished; `succeeded` is
+   what a step is called. They are the same fact and had two different colours
+   — one green, one the neutral fallback — so the History list showed every
+   finished run in the same grey as one whose fate it did not know. */
+.pill.succeeded, .pill.completed, .pill.answered, .pill.green {
+  background: var(--green-soft); color: var(--green);
+}
+.pill.failed, .pill.cancelled, .pill.red { background: var(--red-soft); color: var(--red); }
+.pill.purple { background: var(--purple-soft); color: var(--purple); }
+
+/* The prototype's status language: a small dot, active states carry a soft
+   glow. The paired pill still spells the state out, so meaning never rides
+   on colour alone. */
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto;
+  display: inline-block; background: var(--muted-2);
+}
+.status-dot.running { background: var(--blue); box-shadow: 0 0 0 4px var(--blue-soft); }
+.status-dot.waiting { background: var(--amber); box-shadow: 0 0 0 4px var(--amber-soft); }
+.status-dot.failed, .status-dot.cancelled { background: var(--red); box-shadow: 0 0 0 4px var(--red-soft); }
+.status-dot.succeeded { background: var(--green); }
+.status-dot.pending { background: var(--muted-2); }
+
+/* Entity ids are content-addressed hashes: show the head, keep the full value
+   available on hover and to a screen reader, and never let one blow up a row. */
+.id-button {
+  font-family: var(--mono); font-size: 13px; max-width: 22ch;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Hashes have no spaces to break on, so they must be told they may wrap —
+   otherwise one id gives the whole page a horizontal scrollbar. */
+.mono { font-family: var(--mono); font-size: 13px; overflow-wrap: anywhere; min-width: 0; }
+.muted { color: var(--muted); }
+.empty { padding: 24px 16px; color: var(--muted); text-align: center; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 12px; font-weight: 600; }
+/* One line: the fill is the whole control. Many lines: it keeps a 1px edge,
+   which is now the only thing a line means on these pages. */
+.field input, .field select,
+.filter-bar input, .filter-bar select {
+  background: var(--panel-2); border: 0; border-radius: var(--radius-control);
+  padding: 9px 12px; font-size: 13px;
+}
+.field textarea {
+  background: var(--panel-2); border: 1px solid var(--line-soft);
+  border-radius: var(--radius-control); padding: 12px 14px; font-size: 13px;
+  min-height: 88px; resize: none;
+}
+
+/* A banner says something with colour, so it needs no line to say it twice. */
+.banner { border-radius: var(--radius); padding: 12px 14px; border: 0; font-size: 13px; }
+.banner.error { background: var(--red-soft); color: var(--red); }
+.banner.success { background: var(--green-soft); color: var(--green); }
+.banner.info { background: var(--blue-soft); color: var(--blue); }
+.banner.warn { background: var(--amber-soft); color: var(--amber); }
+.workflow-drift { display: grid; gap: 8px; margin-bottom: 14px; }
+.workflow-drift .eyebrow { color: inherit; }
+.workflow-drift-list { margin: 0; padding-left: 16px; display: grid; gap: 3px; }
+.workflow-drift-list li { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.workflow-drift button { justify-self: start; }
+
+/* The five generic data states (plan P1). Each carries a text label plus a
+   distinct border treatment, so state is never expressed by colour alone. */
+/* Empty and loading keep a dashed edge — a state with nothing in it has no
+   fill to be recognised by. The three that carry a colour drop theirs. */
+.data-state { border-radius: var(--radius); padding: 18px 16px; border: 1px dashed var(--line-card); color: var(--muted); text-align: center; }
+.data-state.loading { border-style: dotted; }
+.data-state.error { border: 0; background: var(--red-soft); color: var(--red); text-align: left; }
+.data-state.stale { border: 0; background: var(--amber-soft); color: var(--amber); }
+.data-state.pending { border: 0; background: var(--blue-soft); color: var(--blue); }
+.data-state .actions { justify-content: center; margin-top: 10px; }
+.data-state.error .actions { justify-content: flex-start; }
+
+dialog {
+  border: 0; border-radius: 14px; background: var(--panel);
+  color: var(--text); padding: 0; width: min(560px, 92vw); box-shadow: var(--shadow);
+}
+/* Overlays keep context with a subtle backdrop blur (DESIGN.md) rather than a
+   flat blackout. */
+dialog::backdrop { background: var(--scrim); backdrop-filter: blur(8px); }
+/* A short viewport must never push the confirm button out of reach: the body
+   scrolls, the actions stay pinned. */
+dialog { max-height: 85vh; display: flex; }
+dialog form { display: flex; flex-direction: column; gap: 16px; padding: 24px 26px; min-height: 0; flex: 1; overflow-y: auto; }
+dialog form .actions {
+  position: sticky; bottom: -16px; margin-top: auto; justify-content: flex-end;
+  background: var(--panel); padding: 12px 0 0; border-top: 1px solid var(--line-row);
+}
+
+/* Keep text-entry and option surfaces on the requested control colour.
+   Buttons retain their component-specific backgrounds, including transparent
+   treatments; checkbox/radio/range/file inputs keep their native affordances. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+textarea,
+select,
+option,
+optgroup,
+.custom-select-trigger,
+.custom-select-options,
+.custom-select-option {
+  background: var(--control-bg) !important;
+  color: var(--control-fg);
+}
+
+/* Preserve interaction state after the common control surface rule above.
+   These are intentionally important because the base background is important
+   to win over native/select defaults, but state must still be visible. */
+.custom-select-option:hover:not(:disabled),
+.custom-select-option:focus-visible { background: var(--hover) !important; }
+.custom-select-option.selected {
+  background: var(--blue-soft) !important; color: var(--blue) !important;
+}
+
+textarea {
+  resize: none !important;
+}
+
+/* Match every visible option picker to the 44px workflow picker on the Goal
+   page. The hidden native select behind a custom picker must stay 1px. */
+select:not(.custom-select-native),
+.custom-select,
+.custom-select > .custom-select-trigger {
+  min-height: 44px !important;
+}

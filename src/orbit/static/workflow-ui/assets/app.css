@@ -1,0 +1,6 @@
+/* Stable public stylesheet entry. The implementation is split by concern so
+   old cached HTML and package consumers can keep requesting assets/app.css. */
+@import url("styles/tokens.css");
+@import url("styles/shell.css");
+@import url("styles/components.css");
+@import url("styles/views.css");

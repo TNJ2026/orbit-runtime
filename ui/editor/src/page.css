@@ -1,0 +1,62 @@
+/* What a whole page is: the palette on :root, the reset, and body.
+ *
+ * Split out of app.css because app.css is also compiled into the MCP App
+ * bundle, where this canvas is a component inside somebody else's
+ * document. A `:root` block there is not this viewer's palette — it is
+ * the card's, replaced. The card declares #7772ff and got #2563eb, and
+ * its body font and background came from here too. So the page rules
+ * belong to the page that owns the document; the viewer carries its own
+ * copy of the same tokens, scoped to itself, in mcp-workflow-graph.css. */
+/* Theme-aware to match the Runtime UI it sits beside.
+ *
+ * Three states, because there are three. The embedding page posts the palette
+ * the operator chose and it wins outright — this is a canvas inside a page,
+ * not a document with a preference of its own, and following the *system*
+ * while the page followed the operator is how a white canvas ended up in the
+ * middle of a dark page. Opened on its own it has nobody to ask, so the
+ * system preference decides. Neither palette is defined only inside a media
+ * query, so nothing renders on an unpainted background. */
+:root {
+  color-scheme: light dark;
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --ink: #14161a;
+  --muted: #5d6470;
+  --line: #d8dce3;
+  --accent: #2563eb;
+  --ok: #15803d;
+  --bad: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --ink: #e8eaee;
+    --muted: #9aa2b1;
+    --line: #2a2f39;
+    --accent: #3b82f6;
+    --ok: #4ade80;
+    --bad: #f87171;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --ink: #e8eaee;
+  --muted: #9aa2b1;
+  --line: #2a2f39;
+  --accent: #3b82f6;
+  --ok: #4ade80;
+  --bad: #f87171;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}

@@ -1,0 +1,183 @@
+/* App shell: sidebar, grouped navigation, topbar, content column.
+   Composition follows the Mission Control prototype: brand-mark, icon nav,
+   inbox badge, runtime health card in the sidebar foot. */
+.skip-link {
+  position: absolute; left: 8px; top: -60px; z-index: 20;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 10px 14px; transition: top .15s;
+}
+.skip-link:focus { top: 8px; }
+
+.app { display: flex; flex-direction: column; min-height: 100vh; }
+
+.main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 24px;
+  border-bottom: 1px solid var(--line-soft); background: var(--chrome);
+  position: sticky; top: 0; z-index: 9; flex-wrap: wrap;
+}
+
+.brand { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+/* The mark is an inline SVG (see index.html), sized beside the wordmark and
+   drawn with the theme's own accent tokens. */
+.brand-mark { flex: 0 0 auto; }
+.brand-copy { font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: .02em; line-height: 1.25; color: var(--text); }
+
+/* Navigation: one segmented control, sized to its labels.
+   `flex: 0 0 auto` rather than `flex: 1` — stretching four fixed choices
+   across whatever the runtime card leaves over made the group's width a
+   function of the status text beside it, so the same nav sat differently on
+   two pages. It now stays put next to the brand and the controls keep their
+   `margin-left: auto`. 36px matches the Refresh button and the theme toggle,
+   so the whole bar shares one baseline. */
+/* Four words. No track around them, no icons beside them, and no fill on the
+   current one: where you are is said in colour and weight alone. */
+.nav {
+  display: inline-flex; align-items: center; flex: 0 0 auto;
+  gap: 24px; height: 36px; margin-left: 16px;
+  border: 0; background: none;
+}
+/* The height is the group's, not the button's: the 36px the top bar's other
+   controls use is an outer measurement, and a button sized to it inside a
+   bordered group would stand 2px taller than the Refresh button beside it. */
+.nav-button {
+  display: inline-flex; align-items: center;
+  height: 100%; padding: 0;
+  background: none; border: 0; border-radius: 0;
+  cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 500;
+  white-space: nowrap;
+  /* One of these is an anchor — the editor leaves the shell rather than
+     routing inside it — so the link defaults are cleared here instead of
+     letting one entry sit underlined beside four buttons. */
+  text-decoration: none; font-family: inherit;
+}
+.nav-button:hover { color: var(--text); }
+.nav-button[aria-current="page"] { color: var(--blue); font-weight: 600; }
+/* Drawn icons, so the weight comes from the stroke and not from a font that
+   happens to have the glyph. `currentColor` is what carries the active state
+   into the artwork; the filled dots inside an icon opt out of the stroke
+   locally rather than needing a rule of their own. */
+.nav-icon {
+  /* Kept in the markup: the narrow layout below falls back to them once the
+     labels go. Beside a label they are one thing too many. */
+  display: none;
+  width: 16px; height: 16px; flex: 0 0 auto;
+  fill: none; stroke: currentColor; stroke-width: 1.5;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
+.topbar-controls {
+  display: flex; align-items: center; gap: 20px; flex: 0 0 auto; margin-left: auto;
+}
+/* Top-bar action buttons share one height so the icon-only theme toggle lines
+   up exactly with the text Refresh button beside it — a glyph and a CJK label
+   otherwise disagree by ~1px under line-height:normal. */
+/* The bar is the one place a control is a word rather than a surface. */
+.topbar-controls .button {
+  height: 36px; display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; background: none; border-radius: 0; color: var(--text);
+}
+.topbar-controls .button:hover:not(:disabled) { background: none; color: var(--blue); }
+
+/* The Agent-mode control reuses the theme toggle's segmented shape; its
+   options carry text instead of glyphs, so they size to their labels and
+   match the 36px top-bar row. */
+.ui-mode-toggle .theme-option {
+  width: auto; height: 34px; padding: 0 10px; font-size: 12px;
+  white-space: nowrap;
+}
+
+/* "More" popover: theme, language and refresh interval tucked behind one
+   button. An overlay, so it uses the reading surface with a 1px border and a
+   backdrop blur (DESIGN.md), and it sits above the sticky top bar. */
+.more-menu { position: relative; display: inline-flex; }
+.more-menu-popover {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 40;
+  min-width: 248px; display: grid; gap: 2px; padding: 8px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); backdrop-filter: blur(8px);
+}
+.more-menu-popover[hidden] { display: none; }
+.more-menu-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 6px 8px; border-radius: var(--radius);
+}
+.more-menu-label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.more-menu-row .custom-select { flex: 0 1 auto; min-width: 132px; }
+.more-menu-row .custom-select-trigger,
+.more-menu-row .custom-select-options {
+  background: var(--control-bg) !important;
+  border-radius: var(--radius-control) !important;
+}
+/* Theme is a two-option segmented control: a sun and a moon, the active one
+   carrying the accent so the current theme reads at a glance. */
+.theme-toggle {
+  display: inline-flex; flex: 0 0 auto; overflow: hidden;
+  border: 0; border-radius: var(--radius-chip); background: var(--panel-2);
+}
+.theme-option {
+  display: grid; place-items: center; width: 36px; height: 30px; padding: 0;
+  border: 0; background: transparent; color: var(--muted); cursor: pointer;
+  font-size: 14px; line-height: 1;
+}
+.theme-option + .theme-option { border-left: 1px solid var(--line); }
+.theme-option:hover { background: var(--hover); color: var(--text); }
+.theme-option.active { background: var(--blue-soft); color: var(--blue); }
+
+/* Runtime health sits in the top-bar action group immediately before Refresh.
+   The markup owns that order; this rule keeps the status compact without
+   turning it into a viewport-level floating layer. */
+/* Healthy is the state the Runtime is in every second somebody is looking at
+   this page, so a green dot saying so was a light that is always on: it cost
+   a slot in the bar and told nobody anything. The indicator now appears only
+   when there is something to say. The status text on the container is set
+   either way, so a screen reader still hears "healthy" — it asks, rather than
+   being told continuously. */
+.runtime-card-inline {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 36px; pointer-events: none;
+}
+.live-dot { display: none; }
+.live-dot.degraded {
+  display: block; width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto;
+  margin-right: 20px;
+  background: var(--red); box-shadow: 0 0 0 4px var(--red-soft);
+}
+
+/* One frame for every page. The same title used to start at x=160 on Goal,
+   x=51 on Workflows and x=16 on History; now every page shares this width and
+   this gutter, and only the Goal page narrows further inside it. */
+.content {
+  width: min(1160px, 100%); margin: 0 auto; padding: 32px;
+  display: flex; flex-direction: column; gap: 32px;
+}
+#liveRegion { width: min(1160px, 100%); margin: 16px auto 0; padding-inline: 32px; }
+.workspace-path {
+  width: 100%; margin: auto 0 0; padding: 16px 32px 8px 12px;
+  color: var(--muted-2); opacity: .45; font-size: 11px; line-height: 1.4;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  pointer-events: none; user-select: text;
+}
+
+@media (max-width: 860px) {
+  .topbar { gap: 12px; padding: 10px 12px; }
+  /* Icons only, rather than a full-width row that scrolls sideways. Four
+     destinations fit on a phone once the labels go; a scroll container hides
+     some of them behind a gesture nothing on the page suggests. The label
+     stays in the accessibility tree — `aria-label` copied from it — so the
+     button is still named for a screen reader. */
+  .nav { margin-left: 12px; gap: 4px; }
+  .nav-button { padding: 0; width: 40px; justify-content: center; gap: 0; }
+  .nav-icon { display: block; }
+  .nav-label { display: none; }
+  /* Controls wrap under the brand instead of pushing the page wider than
+     the viewport; the runtime detail ellipsizes rather than forcing width. */
+  .topbar-controls {
+    margin-left: auto; flex-wrap: wrap; row-gap: 8px;
+    justify-content: flex-end; min-width: 0; max-width: 100%;
+  }
+  .content { padding: 14px 12px; gap: 20px; }
+  #liveRegion { margin: 12px auto 0; padding-inline: 12px; }
+  .workspace-path { padding: 12px 12px 8px; }
+}
+[hidden] { display: none !important; }

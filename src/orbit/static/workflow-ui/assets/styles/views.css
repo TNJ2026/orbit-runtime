@@ -1,0 +1,1903 @@
+/* View-specific rules. Grows with P2+ (Home, Goals, Workflows); shell and
+   primitives stay out of here. Density and state language follow the
+   Mission Control prototype. */
+
+
+
+
+/* Prose from an Agent is read, not scanned: it wraps, it keeps its newlines,
+   and it scrolls inside its own box rather than stretching the panel. */
+
+.console-log {
+  max-height: 320px; min-height: 64px; min-width: 0; overflow: auto;
+  white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word;
+}
+.console-log:empty::before { content: ""; }
+.console-chunk.stderr { color: #ffffff; }
+/* White is invisible on the light theme's chip background; fall back to the
+   theme's primary text colour there. */
+html[data-theme="light"] .console-chunk.stderr { color: var(--text); }
+/* Each stream sits on its own card: a quiet label over a chip-toned body, so
+   stdout and stderr scan as sections, not one undifferentiated scroll. */
+.console-stream-block {
+  margin-top: 8px; padding: 8px 12px;
+  background: var(--chip-bg); border: 1px solid var(--line-soft);
+  border-radius: 8px;
+}
+.console-stream-block:first-child { margin-top: 0; }
+.console-stream-title {
+  margin: 0 0 8px; color: var(--blue);
+  font-size: 14px; font-weight: 700; letter-spacing: .08em;
+}
+.console-stream-body {
+  margin: 0; white-space: pre-wrap;
+  overflow-wrap: anywhere; word-break: break-word;
+}
+
+.with-dot { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+/* The text next to the dot ellipsizes; pills keep their full state word. */
+.with-dot > span:last-child:not(.pill) {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+
+
+
+
+
+/* One column, two thirds of the frame, centred on the page: a goal is one
+   sentence and a choice, and the page has nothing else to be about. */
+.simplified-goal-page {
+  width: min(680px, 100%); margin: 0 auto;
+  min-height: 62vh; display: flex; flex-direction: column; justify-content: center;
+  padding-block: clamp(20px, 5vh, 56px);
+}
+.simplified-goal-intro { margin-bottom: 34px; text-align: center; }
+.simplified-goal-intro h1 {
+  margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -.02em;
+}
+/* The composer is the box; the page around it is not. */
+.simplified-workspace-composer {
+  display: grid; gap: 10px; padding: 0; border: 0;
+  background: transparent; box-shadow: none;
+}
+.simplified-composer-fields { display: grid; gap: 10px; }
+.simplified-composer-fields > .field { display: grid; gap: 0; margin: 0; }
+/* The picker carries a chevron and the box carries a placeholder, so a label
+   over each would name what is already named. Kept for a screen reader. */
+.simplified-composer-fields label {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.simplified-workflow-picker {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch; gap: 10px;
+}
+.simplified-workflow-picker > select,
+.simplified-workflow-picker > .custom-select { width: 100%; min-width: 0; }
+
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .55rem;
+  margin-top: .75rem;
+  padding: .85rem;
+  border: 1px solid var(--line);
+  border-radius: .6rem;
+  background: var(--line-soft);
+}
+
+  padding: .4rem .65rem;
+  border: 1px solid var(--line);
+  border-radius: .45rem;
+  background: var(--panel);
+  font-size: .85rem;
+  font-weight: 600;
+}
+
+.template-edge { color: var(--muted); }
+.simplified-workflow-picker > select,
+.simplified-workflow-picker > .custom-select,
+.simplified-workflow-picker > .button { min-height: 44px; }
+.simplified-workflow-picker > .button { padding-inline: 20px; white-space: nowrap; }
+#homeGenerateWorkflow { background: var(--control-bg) !important; }
+#homeGenerateWorkflow:hover:not(:disabled) { background: var(--control-raised) !important; }
+.simplified-goal-input { position: relative; width: 100%; }
+.simplified-goal-field textarea {
+  width: 100%; box-sizing: border-box;
+  min-height: 168px; resize: none; padding: 16px 16px 52px;
+  border: 1px solid var(--line-soft); border-radius: var(--radius-control);
+  background: var(--panel-2); font-size: 14px; line-height: 1.6;
+}
+/* A keyboard hint belongs below the writing surface rather than looking like
+   part of the text already entered there. */
+.simplified-goal-shortcut {
+  display: block; margin: 6px 4px 0; color: var(--muted-2); opacity: .58;
+  pointer-events: none; font-family: var(--mono); font-size: 11px;
+}
+/* Inside the box it belongs to, one step above the control surface the box
+   wears, so it reads as raised rather than as more of the box. */
+.simplified-composer-actions {
+  position: absolute; right: 12px; bottom: 10px; margin: 0; justify-content: flex-end;
+}
+.simplified-composer-actions .button.primary {
+  min-height: 34px; padding-inline: 16px; font-weight: 600;
+  background: var(--control-raised) !important; color: var(--control-fg); box-shadow: none;
+}
+.simplified-composer-actions .button.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--control-raised) 86%, var(--control-fg)) !important;
+  color: var(--control-fg);
+}
+.workflows-page { display: grid; gap: 0; }
+.simplified-workflow-generator {
+  display: block; margin-top: 24px; padding: 0;
+  border: 0; background: transparent;
+}
+.simplified-workflow-generator-inner { width: 100%; margin: 0 auto; }
+.simplified-workflow-generator-copy { display: grid; gap: 5px; }
+.simplified-workflow-generator-copy h2 { margin: 0 0 2px; font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.simplified-workflow-generator-copy p { margin: 0; max-width: 68ch; font-size: 13px; }
+.simplified-workflow-generator-form {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px;
+}
+.simplified-workflow-generator-form .field { margin: 0; }
+.simplified-workflow-generator-agent { width: min(280px, 100%); }
+.simplified-workflow-generator-agent:empty { display: none; }
+.simplified-workflow-generator-agent > .field { display: grid; gap: 8px; }
+/* A field label reads as a label, not as a section heading: sentence case at
+   the body size, the same as every other label on these pages. */
+.simplified-workflow-generator-agent label,
+.simplified-workflow-generator-agent .field-label {
+  margin: 0; color: var(--text); font-size: 13px; font-weight: 600;
+  letter-spacing: 0; text-transform: none;
+}
+.simplified-workflow-generator-agent select,
+.simplified-workflow-generator-agent .agent-choice-static {
+  min-height: 40px; border-radius: var(--radius-control);
+}
+.simplified-workflow-generator-form textarea {
+  min-height: 152px; resize: none; padding: 16px 16px 52px;
+  border: 1px solid var(--line-soft); border-radius: var(--radius-control);
+  background: var(--panel-2); font-family: inherit; font-size: 14px; line-height: 1.55;
+}
+/* The same composer as the Goal page: the limit on the left of the last line,
+   the button on the right, both inside the box. The textarea keeps room for
+   them at its foot so a long instruction never runs under either. */
+.simplified-workflow-generator-field { position: relative; }
+.simplified-workflow-generator-limit {
+  position: absolute; left: 16px; bottom: 16px;
+  pointer-events: none; font-size: 11px; color: var(--muted-2);
+}
+.simplified-workflow-generator-actions {
+  position: absolute; right: 12px; bottom: 10px; margin: 0;
+  justify-content: flex-end; padding-bottom: 0;
+}
+.simplified-workflow-generator-actions .button {
+  min-height: 34px; display: inline-flex; align-items: center;
+  padding-inline: 14px; gap: 7px; border-radius: var(--radius-control); font-weight: 600;
+  background: var(--control-raised) !important; color: var(--control-fg);
+}
+.simplified-workflow-generator-actions .button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--control-raised) 86%, var(--control-fg)) !important;
+  color: var(--control-fg);
+}
+.generate-spark { font-size: 18px; line-height: 1; }
+.workflow-generation-progress { display: grid; gap: 20px; }
+/* State first, and the way to stop it beside the state. */
+.workflow-generation-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+/* What the host offers once the job is over. Holds a change summary as
+   readily as a button, so it is a stack rather than an action row. */
+.workflow-generation-outcome { display: grid; gap: 12px; }
+.workflow-generation-outcome > .actions { justify-content: flex-end; }
+.workflow-generation-request {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
+  align-items: start; gap: 16px;
+}
+.workflow-generation-prompt,
+.workflow-generation-agent { display: grid; gap: 6px; min-width: 0; }
+.workflow-generation-prompt .field-label,
+.workflow-generation-agent .field-label { margin: 0; color: var(--muted); font-size: 12px; }
+.workflow-generation-prompt-value {
+  min-height: 74px; padding: 12px 14px; border: 0;
+  border-radius: var(--radius-control); background: var(--control-bg);
+  color: var(--control-fg); white-space: pre-wrap;
+  overflow-wrap: anywhere; font-family: var(--mono); font-size: 13px; line-height: 1.55;
+}
+.workflow-generation-agent .agent-choice-static { min-height: 38px; }
+.workflow-generation-stages {
+  display: grid; gap: 8px; padding: 11px 16px;
+  border: 0; border-radius: var(--radius); background: var(--panel-3);
+}
+.workflow-generation-stages-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.workflow-generation-stages-head h3 { margin: 0; font-size: 14px; }
+.workflow-generation-progress-detail { font-size: 12px; }
+.workflow-generation-step-list {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0; margin: 0; padding: 0; list-style: none;
+}
+.workflow-generation-step {
+  position: relative; display: grid; justify-items: center; gap: 4px;
+  min-width: 0; color: var(--muted); font-size: 12px; text-align: center;
+}
+.workflow-generation-step::before {
+  content: ""; position: absolute; z-index: 0; top: 11px; right: 50%; left: -50%;
+  height: 2px; background: var(--line-row);
+}
+.workflow-generation-step:first-child::before { display: none; }
+.workflow-generation-step-marker {
+  position: relative; z-index: 1; display: grid; place-items: center;
+  width: 24px; height: 24px; border: 0; border-radius: 50%;
+  background: var(--control-bg); font-weight: 700;
+  color: color-mix(in srgb, var(--control-fg) 68%, transparent);
+}
+.workflow-generation-step.completed::before,
+.workflow-generation-step.current::before { background: var(--blue); }
+.workflow-generation-step.completed .workflow-generation-step-marker,
+.workflow-generation-step.current .workflow-generation-step-marker {
+  color: white; background: var(--blue);
+}
+.workflow-generation-step.current .workflow-generation-step-marker {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--blue) 16%, transparent);
+}
+.workflow-generation-step.current .workflow-generation-step-label {
+  color: var(--text); font-weight: 700;
+}
+.workflow-generation-step.failed .workflow-generation-step-marker {
+  color: var(--red); background: var(--red-soft);
+}
+.workflow-generation-step.failed .workflow-generation-step-label { color: var(--red); }
+.workflow-generation-output {
+  display: grid; gap: 10px; padding-top: 18px; border-top: 1px solid var(--line-row);
+}
+.workflow-generation-output-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.workflow-generation-output-head h3 { margin: 0; font-size: 14px; }
+.workflow-generation-output-empty { font-size: 12px; }
+.workflow-generation-console {
+  width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box;
+  min-height: 180px; max-height: 320px; margin: 0; padding: 14px; overflow: auto;
+  border: 0; border-radius: var(--radius); background: var(--panel-3);
+  white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word;
+}
+.workflow-generation-failure { margin-top: 2px; }
+
+.simplified-workflow-generator-form > .authoring-job-state,
+.simplified-workflow-generation-problem { grid-column: 1 / -1; }
+.simplified-workflow-list-heading { margin-top: 44px; margin-bottom: 14px; }
+.simplified-workflow-list-heading h2 { font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.simplified-workflow-list-heading p { font-size: 12px; }
+.simplified-execution-head { align-items: center; }
+.simplified-execution-head > .actions { justify-content: flex-end; }
+.simplified-execution .panel-body { padding-top: 8px; }
+.simplified-step-list { display: grid; }
+.simplified-step-row {
+  display: grid; grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line-soft);
+}
+.simplified-step-row:last-child { border-bottom: 0; }
+.simplified-step-mark {
+  display: grid; width: 28px; height: 28px; place-items: center; border-radius: 999px;
+  color: var(--muted); background: var(--panel-2); border: 1px solid var(--line);
+  font-size: 13px; font-weight: 700;
+}
+.simplified-step-row.running .simplified-step-mark { color: var(--blue); border-color: var(--blue); background: var(--blue-soft); }
+.simplified-step-row.succeeded .simplified-step-mark { color: var(--green); border-color: var(--green); background: var(--green-soft); }
+.simplified-step-row.failed .simplified-step-mark,
+.simplified-step-row.cancelled .simplified-step-mark { color: var(--red); border-color: var(--red); background: var(--red-soft); }
+.simplified-step-row.unknown .simplified-step-mark { color: var(--blue); border-color: var(--blue); background: var(--blue-soft); }
+.simplified-step-copy { display: grid; gap: 3px; min-width: 0; }
+.simplified-step-copy strong { overflow-wrap: anywhere; }
+.simplified-step-copy span { font-size: 12px; }
+.simplified-step-prompt { font-size: 13px; -webkit-line-clamp: 2; }
+.simplified-step-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 10px; }
+/* Liveness evidence sits under the step it describes, quieter than the step's
+   own status: it qualifies "running", it does not compete with it. */
+.simplified-step-liveness { font-size: 12px; font-variant-numeric: tabular-nums; }
+.simplified-step-runner {
+  display: inline-flex; align-items: center; max-width: 100%; padding: 2px 7px;
+  overflow: hidden; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--panel-2); font-weight: 650; text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.simplified-step-runner.agent {
+  color: var(--blue); border-color: color-mix(in srgb, var(--blue) 30%, var(--line));
+  background: var(--blue-soft);
+}
+.simplified-step-runner.human {
+  color: var(--amber); border-color: color-mix(in srgb, var(--amber) 30%, var(--line));
+  background: var(--amber-soft);
+}
+.simplified-step-output { grid-column: 2 / -1; min-width: 0; }
+.simplified-step-output > summary {
+  width: fit-content; cursor: pointer; color: var(--blue); font-size: 13px; font-weight: 650;
+}
+.simplified-step-output-body { display: grid; gap: 4px; padding-top: 6px; }
+/* The run log expands to its full height; the page scrolls, not the box. */
+.simplified-step-output-log { min-height: 0; max-height: none; overflow: visible; margin-top: 2px; }
+/* Five lines keep a long instruction from swallowing the executing step. The
+   adjacent control restores the complete prompt when the reader asks for it. */
+.simplified-step-prompt {
+  margin-top: 0; -webkit-line-clamp: 5;
+  width: 100%; padding: 0; border: 0; background: transparent;
+}
+.simplified-step-prompt.expanded { display: block; -webkit-line-clamp: unset; }
+.step-prompt-block {
+  display: grid; justify-items: start; width: 100%; box-sizing: border-box;
+  padding: 8px 10px; border-radius: var(--radius);
+  background: var(--chrome, var(--panel)); border: 1px solid var(--line-soft);
+}
+.step-prompt-toggle {
+  display: inline-flex; align-items: center; gap: 3px; margin-top: 5px;
+  padding: 0; border: 0; background: none; color: var(--blue);
+  font: inherit; font-size: 12px; cursor: pointer;
+}
+.step-prompt-toggle:hover { opacity: .8; }
+.step-prompt-toggle svg { transition: transform .2s ease; }
+.step-prompt-toggle.expanded svg { transform: rotate(180deg); }
+.simplified-attention { border-color: color-mix(in srgb, var(--amber) 28%, var(--line)); }
+.simplified-result .panel-body { font-size: 14px; line-height: 1.65; }
+.simplified-result .pill { background: transparent; }
+.simplified-result-value { white-space: pre-wrap; overflow-wrap: anywhere; }
+.simplified-artifacts { display: grid; gap: 12px; }
+.simplified-artifacts .section-heading h2 { margin: 0; font-size: 15px; font-weight: 600; }
+/* What a modification changed, one step per line. The mark carries the kind so
+   the sentence does not have to spell out "added" before every name. */
+.change-summary { margin: 0; padding: 0; display: grid; gap: 8px; list-style: none; }
+.change-entry { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: baseline; }
+.change-mark { font-family: var(--mono); font-weight: 700; }
+.change-entry.added .change-mark { color: var(--green); }
+.change-entry.removed .change-mark { color: var(--red); }
+.change-entry.changed .change-mark { color: var(--amber); }
+.change-copy { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+
+/* The why card is the first thing an operator reads, so it carries the
+   amber "needs attention" wash from the prototype, not just a border. */
+
+
+
+.responsibility-row {
+  display: grid; grid-template-columns: minmax(180px, 1fr) auto auto;
+  align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line-row);
+}
+
+
+
+
+.run-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--line-row); }
+.run-tab {
+  padding: 10px 12px; border: 0; border-bottom: 2px solid transparent;
+  background: transparent; color: var(--muted); cursor: pointer; white-space: nowrap;
+  font-size: 13px;
+}
+.run-tab:hover { color: var(--text); }
+.run-tab.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 650; }
+.run-tab-content { min-height: 220px; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.active-goal-hero { border-color: color-mix(in srgb, var(--blue) 36%, var(--line)); }
+
+
+.empty-goal-hero { min-height: 168px; }
+.workbench-grid { grid-template-columns: minmax(360px, 1.35fr) minmax(260px, .65fr); }
+.workbench-action { cursor: default; }
+.workbench-action:hover { background: transparent; }
+.workbench-action .actions { justify-content: flex-end; }
+.workbench-running { display: flex; align-items: flex-start; gap: 12px; padding: 18px; }
+.workbench-running .live-dot { margin-top: 5px; }
+.workbench-running p { margin: 4px 0 0; }
+.workbench-facts { gap: 0; }
+.workbench-facts > div { display: grid; gap: 5px; padding: 11px 0; border-bottom: 1px solid var(--line-soft); }
+.workbench-facts > div:last-child { border-bottom: 0; }
+.workspace-history { display: grid; gap: 12px; margin-top: 8px; }
+.workspace-history .section-heading h2 { margin: 3px 0; font-size: 20px; font-weight: 600; }
+.workspace-history .section-heading p { margin: 0; }
+.workflow-card-heading { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.stat-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.stat-label {
+  color: var(--muted-2); font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .12em;
+}
+.stat-value {
+  margin-top: 8px; font-family: var(--font-display); font-size: 24px;
+  font-weight: 720; letter-spacing: -.04em; font-variant-numeric: tabular-nums;
+}
+.stat-card.waiting { border-bottom: 3px solid var(--amber); }
+.stat-card.failed { border-bottom: 3px solid var(--red); }
+.home-grid { display: grid; grid-template-columns: minmax(240px, .8fr) minmax(360px, 1.4fr); gap: 16px; }
+.attention-panel .panel-body { align-items: flex-start; }
+.panel-subtitle { margin-top: 3px; color: var(--muted); font-size: 12px; }
+.attention-home-list { padding: 0; gap: 0; }
+.home-attention-row {
+  width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center; gap: 10px; padding: 11px 14px;
+  border: 0; border-bottom: 1px solid var(--line-soft);
+  background: transparent; color: inherit; text-align: left; cursor: pointer;
+}
+.home-attention-row:hover { background: var(--panel-2); }
+.attention-symbol {
+  width: 28px; height: 28px; border-radius: var(--radius); display: grid; place-items: center;
+  background: var(--amber-soft); color: var(--amber); font-size: 12px; font-weight: 800;
+}
+.attention-symbol.budget { background: var(--red-soft); color: var(--red); }
+.attention-symbol.unknown { background: var(--blue-soft); color: var(--blue); }
+.home-attention-row .pill.human { background: var(--amber-soft); color: var(--amber); }
+.home-attention-row .pill.budget { background: var(--red-soft); color: var(--red); }
+.home-attention-row .pill.unknown { background: var(--blue-soft); color: var(--blue); }
+.attention-copy { min-width: 0; display: grid; gap: 3px; }
+.attention-copy strong, .attention-copy span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attention-open { margin: 12px 14px; }
+
+.artifact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.artifact-card { min-width: 0; overflow: hidden; transition: transform .15s ease, border-color .15s ease; }
+.artifact-card:hover { transform: translateY(-2px); border-color: var(--muted-2); }
+.artifact-card-main {
+  width: 100%; padding: 14px; border: 0; background: transparent; color: inherit;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  text-align: left; cursor: pointer;
+}
+.artifact-card-main .mono { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.artifact-top { width: 100%; display: flex; justify-content: space-between; align-items: flex-start; }
+.file-icon {
+  width: 34px; height: 39px; border: 1px solid var(--line); border-radius: var(--radius);
+  display: grid; place-items: center; background: var(--panel-2); color: var(--blue);
+}
+.artifact-size { color: var(--muted-2); font-family: var(--mono); font-size: 12px; }
+/* An image card leads with the picture: the badge column collapses and the
+   thumbnail takes the width, with the size caption floating over it. */
+.artifact-top-image { position: relative; display: block; }
+.artifact-thumb {
+  /* Contain, not cover: a chart or screenshot cropped to a square stops
+     being the thing the operator is scanning for. */
+  width: 100%; height: 132px; display: block; object-fit: contain;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2);
+}
+.artifact-top-image .artifact-size {
+  position: absolute; right: 6px; bottom: 6px; padding: 2px 5px;
+  border-radius: var(--radius); background: var(--panel); color: var(--muted);
+}
+.artifact-name { margin-top: 3px; font-size: 13px; overflow-wrap: anywhere; }
+/* Label over value: a goal title needs the full card width to survive on one
+   line, and an inline label eats a third of it. */
+.artifact-origin { width: 100%; display: grid; gap: 4px; min-width: 0; font-size: 12px; }
+.artifact-origin-label {
+  font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.artifact-origin-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.artifact-image {
+  /* align-self keeps the flex column from stretching a small image across the
+     panel; width/height stay intrinsic up to the ceiling. */
+  align-self: flex-start; width: auto; height: auto;
+  max-width: 100%; max-height: 420px; margin: 4px 0; display: block;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2);
+}
+/* The detail is a modal over the catalog: the head stays put, the facts and
+   the preview scroll under it. Wider than a confirm dialog because it carries
+   an image and a lineage list, not one field. */
+/* A dialog is not a page. `.panel-head` and `.panel-body` carry vertical
+   rhythm only — on a page the content column supplies the margins either
+   side — and nothing supplies them here, so the eyebrow sat against the left
+   edge and Close was cut off by the right one. The inset is the dialog's,
+   and the two blocks inside it keep only the gap between them. */
+.artifact-dialog {
+  width: min(720px, 94vw); flex-direction: column; overflow: hidden;
+  padding: 22px 26px;
+}
+.artifact-dialog .panel-head { flex: none; padding: 0 0 16px; }
+.artifact-dialog .panel-body { min-height: 0; overflow-y: auto; padding: 0; }
+.artifact-dialog > .data-state { margin: 0; }
+/* One scrollbar, and it belongs to the dialog. A box that scrolls inside a
+   box that scrolls hides how much document is left and traps the wheel. */
+.artifact-dialog .artifact-preview { max-height: none; overflow: visible; }
+/* A run in flight, over the composer that started it. Wide enough for the
+   step list to read as rows rather than as wrapped text, and no taller than
+   the viewport — the body scrolls, the head with the goal in it does not. */
+.run-modal-panel {
+  display: flex; flex-direction: column; width: min(860px, 96vw);
+  padding: 0; overflow: hidden;
+}
+.run-modal-titlebar {
+  display: flex; align-items: center; justify-content: space-between;
+  flex: none; padding: 4px 20px 4px 12px;
+}
+.run-modal-title { margin: 0; font-size: 16px; font-weight: 650; }
+.run-modal-scroll {
+  --run-title-card-gap: 8px;
+  min-height: 0; overflow-y: auto; padding: 12px;
+}
+.run-modal-panel > .data-state { margin: 12px; }
+/* `.page-modal-panel` already insets and already scrolls; a second inset
+   here would double it and a second scroller would trap the wheel. */
+/* 20px, not a value of its own: `.run-modal-body`'s sections are already
+   this far apart (`gap: 20px` below), and the Goal block above `body` is
+   one more section in that same stack. It only looks separate because
+   `.run-modal-head` and `body` are plain siblings with no shared gap
+   property — this padding is what stands in for it, so it has to match. */
+.run-modal-head {
+  display: block; padding: 0 0 20px;
+}
+.run-modal-headline { display: grid; gap: 6px; width: 100%; min-width: 0; }
+.run-modal-headline .goal-text-clamp { --goal-line-box: 22.5px; }
+.run-modal-goal-section {
+  display: grid; gap: var(--run-title-card-gap, 8px); min-width: 0;
+}
+.run-modal-goal-title { margin: 0; font-size: 13px; font-weight: 650; }
+.run-modal-goal-card {
+  display: grid; justify-items: start; width: 100%; min-width: 0;
+  box-sizing: border-box; padding: 10px 12px;
+  border: 0; border-radius: var(--radius); background: var(--panel-3);
+}
+/* The shared goal block owns the five-line clamp and its explicit way to
+   expand. This selector only gives the modal copy its stronger typography. */
+.run-modal-goal {
+  margin: 0; font-size: 15px; font-weight: 600; line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.run-modal-body { display: flex; flex-direction: column; gap: 20px; }
+/* Inside the modal the hero has the panel's own inset around it already. */
+.run-modal-body .simplified-run-hero { padding: 0; }
+
+/* The workflow detail is a drawer over the catalog: full-height, sliding in
+   from the right, so a tall graph gets vertical room a centered dialog never
+   has. The catalog stays rendered (and visible) under the scrim. The inner
+   panel drops its own chrome — the drawer already draws the card. */
+/* A detail opens as a centred modal over the dimmed page that listed it —
+   the Workflow catalog and the History list both use this shell. The root
+   sits one layer below the sticky topbar, so the bar stays live and un-dimmed
+   while everything under it darkens; Escape, the scrim and the Close button
+   all walk back. */
+.page-modal-root { position: fixed; inset: 0; z-index: 8; }
+.page-modal-scrim {
+  position: absolute; top: var(--topbar-h, 0px); left: 0; right: 0; bottom: 0;
+  background: var(--scrim);
+  -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+  opacity: 0; transition: opacity .24s ease;
+}
+.page-modal {
+  position: absolute; top: var(--topbar-h, 0px); left: 0; right: 0; bottom: 0;
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.page-modal-panel {
+  width: min(1120px, 100%); max-height: 100%; overflow: auto;
+  padding: 24px 28px; background: var(--bg); border: 0;
+  border-radius: 14px; box-shadow: var(--shadow); outline: none;
+  opacity: 0; transform: translateY(10px) scale(.985);
+  transition: opacity .24s ease, transform .24s cubic-bezier(.45, .05, .35, 1);
+}
+.page-modal-root.open .page-modal-scrim { opacity: 1; }
+.page-modal-root.open .page-modal-panel { opacity: 1; transform: none; }
+.page-modal-root.closing .page-modal-scrim { opacity: 0; }
+.page-modal-root.closing .page-modal-panel {
+  opacity: 0; transform: translateY(8px) scale(.99);
+}
+.page-drawer-root .page-modal {
+  align-items: stretch; justify-content: flex-end; padding: 0;
+}
+.page-drawer-panel {
+  width: min(880px, calc(100vw - 48px)); height: 100%; max-height: none;
+  padding: 24px 28px; border-left: 1px solid var(--line-row); border-radius: 0;
+  transform: translateX(32px); overflow-y: auto;
+  transition: opacity .2s ease, transform .24s cubic-bezier(.2, .7, .2, 1);
+}
+.page-drawer-root.open .page-drawer-panel { opacity: 1; transform: translateX(0); }
+.page-drawer-root.closing .page-drawer-panel {
+  opacity: 0; transform: translateX(32px);
+}
+.page-modal-panel > .data-state { margin: 8px 0; }
+/* The panel owns the entrance, so the inner page animation would double up. */
+.page-modal-panel .workflow-detail { animation: none; }
+/* The goal detail follows the History prototype (prototypes/goal-detail/code.html):
+   four titled sections, each heading outside its card. The head pairs the
+   first heading with the Close button. */
+.goal-modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 16px;
+}
+/* The way out of an overlay: one control, one class, wherever the overlay is
+   a run sheet, a goal sheet, a dialog, the workflow page or its editor. Three
+   of those drew this cross and three printed the word "Close" in a button the
+   width of the word; the same gesture is now the same mark in the same
+   corner. `flex: 0 0 auto` because every head it sits in is a flex row that
+   would otherwise squeeze it. */
+.icon-close, .goal-modal-close {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+  width: 30px; height: 30px; padding: 0;
+  color: var(--muted-2); background: transparent; border: 0;
+  border-radius: var(--radius-control); cursor: pointer;
+}
+.icon-close:hover, .goal-modal-close:hover { color: var(--text); background: var(--hover); }
+.icon-close:focus-visible,
+.goal-modal-close:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+.goal-modal-body { display: flex; flex-direction: column; gap: 16px; }
+
+/* Goal detail sections. Headings sit outside their card at 16px semibold,
+   the prototype's body-md weight; cards are 12px-rounded tonal surfaces with
+   a hairline border and 24px of air inside. */
+.goal-section-title { margin: 0; padding: 0; font-size: 15px; font-weight: 600; }
+/* A section under its heading, not a box: the Goal is prose and the Steps are
+   a list that already has rules between its rows. */
+.goal-card {
+  display: flex; flex-direction: column; gap: 12px;
+  background: transparent; border: 0; border-radius: var(--radius); padding: 0;
+}
+/* One exception: what the run produced is a thing rather than a grouping, so
+   it is filled — one step above the page, which keeps the recessed output
+   block and the two buttons inside it reading as recessed. */
+.goal-card.goal-result-card {
+  background: var(--panel-3); padding: 16px 18px;
+}
+/* The Goal folds at five lines and unfolds in place; the toggle beneath it is a
+   link with a caret, exactly as the prototype draws it. */
+.goal-text-clamp {
+  --goal-line-box: 21.45px;
+  max-height: calc(var(--goal-line-box) * 5); overflow: hidden;
+  font-size: 13px; line-height: 1.65;
+}
+.goal-text-clamp.expanded { max-height: none; }
+.goal-text {
+  margin: 0; font-size: inherit; font-weight: 400; line-height: inherit;
+  overflow-wrap: anywhere; white-space: pre-wrap;
+}
+.goal-expand-toggle {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 8px;
+  padding: 0; border: 0; background: none; cursor: pointer;
+  color: var(--blue); font-size: 14px; font-weight: 500; width: fit-content;
+}
+.goal-expand-toggle:hover { opacity: .8; }
+.goal-expand-toggle svg { transition: transform .2s ease; }
+.goal-expand-toggle.expanded svg { transform: rotate(180deg); }
+/* The Result leads with one status chip: low-alpha wash, saturated text and
+   a tinted hairline, so the fate scans without vibrating on the dark card. */
+.goal-status-pill {
+  display: inline-flex; align-items: center; gap: 6px; width: fit-content;
+  padding: 4px 9px; border-radius: var(--radius-chip); border: 0;
+  font-size: 12px; font-weight: 600;
+}
+.goal-status-pill.completed, .goal-status-pill.succeeded,
+.goal-status-pill.answered {
+  color: var(--green); background: var(--green-soft);
+}
+.goal-status-pill.failed, .goal-status-pill.cancelled {
+  color: var(--red); background: var(--red-soft);
+}
+.goal-status-pill.running, .goal-status-pill.waiting,
+.goal-status-pill.interrupted, .goal-status-pill.unknown {
+  color: var(--blue); background: var(--blue-soft);
+}
+.goal-result-code {
+  margin: 0; padding: 14px 16px; border-radius: var(--radius);
+  background: var(--panel-2); border: 0;
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.65;
+  overflow-x: auto; white-space: pre;
+}
+/* The full step list, no inner scroll: the drawer's own scrollbar is the
+   only one on the page. A step that never ran is dimmed rather than
+   absent, the way the prototype keeps it on the page. */
+.goal-steps-card { padding: 0; gap: 0; }
+.goal-steps-note { margin: 0; padding: 16px; }
+.goal-step-row {
+  display: flex; align-items: flex-start; gap: 16px;
+  padding: 16px; border-bottom: 1px solid var(--line-soft);
+}
+.goal-step-row:last-child { border-bottom: 0; }
+/* The hover every other row on these pages uses. A 2% white wash is a fill
+   on the dark canvas and nothing at all on the light one, where the card
+   underneath it is already white. */
+.goal-step-row:not(.not_reached):hover { background: var(--hover); }
+.goal-step-row.not_reached { opacity: .6; }
+.goal-step-row.not_reached:hover { opacity: 1; }
+.goal-step-glyph { display: inline-flex; flex: none; margin-top: 2px; color: var(--muted-2); }
+.goal-step-row.succeeded .goal-step-glyph,
+.goal-step-row.answered .goal-step-glyph { color: var(--green); }
+.goal-step-row.failed .goal-step-glyph,
+.goal-step-row.cancelled .goal-step-glyph { color: var(--red); }
+.goal-step-row.running .goal-step-glyph,
+.goal-step-row.unknown .goal-step-glyph { color: var(--blue); }
+.goal-step-row.waiting .goal-step-glyph { color: var(--amber); }
+.goal-step-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.goal-step-line {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; width: 100%;
+}
+.goal-step-label { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.goal-step-handler { font-size: 12px; }
+/* The log fold reads as the prototype's link-with-arrow: a caret that turns
+   with the open state instead of the browser's disclosure triangle. */
+.goal-step-row .simplified-step-output { grid-column: auto; }
+/* The fold is a control like any other on these pages: recessed, unedged and
+   named. It was the one blue link left among a page of filled buttons. */
+.goal-step-row .simplified-step-output > summary {
+  display: inline-flex; align-items: center; gap: 6px; width: fit-content;
+  margin-top: 6px; padding: 5px 10px; border-radius: var(--radius-control);
+  background: var(--panel-2); color: var(--muted); font-size: 12px; font-weight: 600;
+  list-style: none; cursor: pointer;
+}
+.goal-step-row .simplified-step-output > summary:hover { background: var(--hover); color: var(--text); }
+.goal-step-row .simplified-step-output > summary::-webkit-details-marker { display: none; }
+.goal-step-row .simplified-step-output > summary::marker { content: ""; }
+.goal-step-row .simplified-step-output > summary::before {
+  content: ""; width: 0; height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+  transition: transform .15s ease;
+}
+.goal-step-row .simplified-step-output[open] > summary::before { transform: rotate(90deg); }
+.goal-step-row .simplified-step-output-body { padding: 6px 0 0 11px; }
+/* The diagram card is a fixed-height dotted canvas; the frame brings its own
+   panning and zooming, the card only the surface it sits on. */
+/* Same reasoning as the tabbed frame below: 600px is what the diagram wants,
+   not what every window has. A short viewport — or this UI embedded in a panel
+   — gets back what it actually has rather than scrolling the page to reach one
+   card. */
+.goal-canvas-card {
+  height: min(420px, calc(100vh - var(--topbar-h, 64px) - 200px));
+  padding: 0; overflow: hidden; border-radius: var(--radius);
+}
+.goal-canvas-body {
+  display: flex; width: 100%; height: 100%;
+  background: var(--panel-2) radial-gradient(circle, var(--line-soft) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+.goal-canvas-body > .muted { padding: 16px; }
+.goal-canvas-body .workflow-graph-pane { flex: 1; min-height: 0; }
+.goal-canvas-body .workflow-graph-frame { min-height: 0; background: transparent; }
+
+@media (max-width: 640px) {
+  .page-drawer-panel { width: 100%; padding: 18px 16px; }
+  /* The button and the hint share the composer's last line; on a narrow
+     screen the hint is the one that can go, because the keyboard it names
+     is not the one in front of the reader. */
+  .simplified-goal-shortcut { display: none; }
+}
+
+/* Workflow detail is its own page (design/workflow_detail.html): an identity
+   header, a two-up stat row, then one bordered, tabbed surface that holds the
+   diagram. The graph SVG the catalog draws is left byte-for-byte as-is — only
+   the frame around it changes. */
+.workflow-detail {
+  display: flex; flex-direction: column; gap: 24px; padding: 4px 0 0;
+  animation: workflow-detail-in .16s ease-out;
+}
+@keyframes workflow-detail-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.workflow-detail-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 20px;
+}
+.workflow-detail-id { font-size: 11px; letter-spacing: .16em; }
+.workflow-detail-name {
+  margin: 6px 0 0; font-size: 20px; font-weight: 600; line-height: 1.25;
+  letter-spacing: -.01em;
+}
+.workflow-detail-desc { margin: 8px 0 0; max-width: 70ch; color: var(--muted); font-size: 13px; }
+.workflow-detail-back {
+  flex: 0 0 auto; padding: 8px 16px; border-radius: var(--radius-control);
+  background: var(--panel-2); border: 0; color: var(--text);
+}
+.workflow-detail-back:hover { background: var(--hover); }
+/* Tabs over a diagram. The bar used to be the top edge of a bordered box;
+   nothing is boxed any more, so the tabs became a segmented control of their
+   own and the canvas below carries its surface instead of an outline.
+   Shared verbatim by the read-only detail and the editor — both render the
+   same workflowDefinitionTabs, so the chrome must match. (The run view uses
+   .run-tabs too but never inside .workflow-tabs / these ancestors, so it is
+   untouched.) */
+.workflow-detail .workflow-tabs, .workflow-edit-page .workflow-tabs {
+  /* A height, not a floor. `min-height` let the definition tab grow the box
+     to whatever the list came to — 1300px for a nine-node workflow — and the
+     page around it scrolled instead: the tab bar you switched with scrolled
+     away with everything else. The graph tab already lived inside exactly
+     this much, so the list gets the same box and scrolls within it. */
+  gap: 0; height: 600px; overflow: hidden;
+  border: 0; border-radius: var(--radius); background: transparent;
+}
+/* The detail opens in a modal, so on a short viewport 600px plus the head
+   above it does not fit and the modal scrolls after all. The modal's own
+   height is knowable — the viewport, less the top bar it hangs under and the
+   two paddings between it and this box — so the frame gives that back rather
+   than insisting on a size the window has no room for. */
+.workflow-detail .workflow-tabs, .workflow-edit-page .workflow-tabs {
+  height: min(600px, calc(100vh - var(--topbar-h, 64px) - 200px));
+}
+.workflow-detail .run-tabs, .workflow-edit-page .run-tabs {
+  flex: none; align-self: flex-start; gap: 2px; margin-bottom: 14px;
+  padding: 3px; border-bottom: 0; border-radius: var(--radius-chip);
+  background: var(--panel-2); overflow: visible;
+}
+.workflow-detail .run-tab, .workflow-edit-page .run-tab {
+  padding: 0 13px; height: 28px; display: inline-flex; align-items: center;
+  border: 0; border-radius: var(--radius-chip);
+  background: transparent; color: var(--muted); font-weight: 500;
+}
+.workflow-detail .run-tab:hover, .workflow-edit-page .run-tab:hover { background: transparent; color: var(--text); }
+/* The selected tab is raised out of the rail rather than underlined. */
+.workflow-detail .run-tab.active, .workflow-edit-page .run-tab.active {
+  background: var(--hover); color: var(--blue); font-weight: 600; border-bottom: 0;
+}
+.workflow-detail .workflow-tab-content, .workflow-edit-page .workflow-tab-content { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+/* The definition list reads as prose inside the frame; the graph is full-bleed.
+   It is also the part that scrolls: the frame is a fixed size, so a long
+   definition moves inside it rather than moving the page. */
+.workflow-detail .workflow-tab-content > .definition-list, .workflow-edit-page .workflow-tab-content > .definition-list {
+  padding: 18px 20px; overflow-y: auto; min-height: 0;
+}
+.workflow-detail .workflow-graph-pane, .workflow-edit-page .workflow-graph-pane {
+  flex: 1; min-height: 0; border-radius: var(--radius); overflow: hidden;
+  background: var(--panel-2);
+}
+/* The revision editor band is shared by the dedicated Workflow edit page. */
+.workflow-editor-wrap {
+  display: grid; grid-template-rows: 0fr; flex: none;
+  transition: grid-template-rows .3s cubic-bezier(.32, .72, .22, 1);
+}
+.workflow-editor-wrap.open { grid-template-rows: 1fr; }
+.workflow-editor {
+  display: grid; gap: 10px; min-height: 0; overflow: hidden;
+  padding: 12px 0; background: transparent; border-top: 0;
+}
+.workflow-editor .actions { justify-content: flex-end; }
+/* Modify form: an authored-by field over a titled prompt section whose mono
+   textarea carries a floating syntax hint. */
+.workflow-edit-page .workflow-editor { gap: 14px; }
+.workflow-modify-prompt { display: grid; gap: 6px; }
+/* The grid gap owns the spacing here, so the heading drops the margin a
+   browser gives an h3 by default — it stacked on top of the gap above. */
+.workflow-modify-prompt > .field-label { margin: 0; }
+/* Helper prose sits a step quieter than the heading above it: the tertiary
+   grey, not the secondary one used for reading text. */
+.workflow-modify-prompt .muted { margin: 0; font-size: 13px; color: var(--muted-2); }
+/* The Agent CLI's console while it writes: a terminal tail, so it keeps its
+   newlines, scrolls inside its own box, and never stretches the form. */
+.workflow-modify-input-wrap { position: relative; }
+.workflow-modify-input {
+  width: 100%; min-height: 152px; resize: none; display: block;
+  padding: 16px 16px 44px; background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--line-soft); border-radius: var(--radius-control);
+  font-size: 13px; line-height: 1.6;
+}
+.workflow-modify-syntax {
+  position: absolute; left: 16px; bottom: 16px; pointer-events: none;
+  font-size: 11px; color: var(--muted-2);
+}
+/* A whole-page route swap, so the entrance is just a short fade with a hair of
+   rise — enough to soften the jump in from the detail drawer, never enough to
+   make a frequent edit feel like it waits on an animation. */
+.workflow-edit-page {
+  min-height: min(760px, calc(100vh - 150px)); overflow: hidden;
+  animation: workflow-edit-in .14s ease-out;
+}
+@keyframes workflow-edit-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: none; }
+}
+.workflow-edit-page > .panel-head { align-items: flex-start; }
+/* Edit-page header: a large action title over the workflow id and the version
+   it builds on, with the editor's status as an amber badge to the right. */
+.workflow-edit-head { padding: 0 0 4px; }
+.workflow-edit-head > .actions { align-items: center; }
+.workflow-edit-heading { display: grid; gap: 4px; min-width: 0; }
+.workflow-edit-title { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.workflow-edit-id { overflow-wrap: anywhere; }
+/* Which version is being edited is a fact, not a control. Beside the one
+   button in this header it read like a second one, so it is no longer drawn —
+   only announced. */
+.workflow-editing-version {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.workflow-edit-canvas { min-width: 0; overflow: auto; }
+/* On the edit page the form is the page, not a band laid over it: it inherits
+   the surrounding surface instead of carrying its own tone. */
+.workflow-edit-page > .workflow-editor-wrap { border-top: 0; background: transparent; }
+.workflow-edit-page .workflow-editor {
+  padding: 0; background: transparent; border-top: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workflow-editor-wrap, .page-modal-scrim, .page-modal-panel { transition: none; }
+  .defn-row, .defn-glyph, .defn-tools, .defn-edit { transition: none; }
+  .workflow-edit-page, .workflow-detail { animation: none; }
+}
+.artifact-content { min-width: 0; }
+/* The same filled block every other read-only output on these pages is —
+   the Agent console, the finder's output — rather than the one frame the
+   borderless pass left behind. */
+.artifact-preview {
+  margin: 0; max-height: 24rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere;
+  padding: 14px 16px; border: 0; border-radius: var(--radius);
+  background: var(--panel-3);
+}
+
+
+
+
+
+
+
+.filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.filter-bar input[type="search"] { flex: 1 1 260px; min-width: 160px; }
+.history-filter-controls { display: grid; gap: 6px; }
+.history-filter-bar { margin: 0; }
+.history-filter-bar input[type="search"] { height: 44px; }
+.history-status-filters {
+  display: flex; flex-wrap: wrap; gap: 7px; margin: 0;
+}
+.history-status-filter {
+  min-height: 32px; padding: 6px 13px; border-radius: var(--radius-control);
+  background: var(--control-bg) !important;
+}
+.history-status-filter:hover:not(:disabled) { background: var(--control-raised) !important; }
+/* Which filter is on says so the way the nav does: colour and weight. */
+.history-status-filter.active { color: var(--blue); }
+/* Nothing to clip any more: the list had rounded corners of its own and had
+   to hide what ran past them. Now the only thing that runs past its edge is
+   the hover fill, which is meant to — and `overflow: hidden` was squaring off
+   the very corners it was given. */
+.history-goal-list { overflow: visible; }
+.history-day-group + .history-day-group { border-top: 0; }
+/* A day is a label over its rows, not a bar across the page. */
+.history-day-heading {
+  margin: 0; padding: 22px 0 8px; color: var(--muted-2);
+  background: transparent; font-size: 12px; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.history-day-rows { display: grid; }
+.history-goal-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center; gap: 18px; width: 100%; padding: 13px 0;
+  border: 0; border-bottom: 1px solid var(--line-row); background: transparent;
+  color: inherit; text-align: left; cursor: pointer;
+}
+/* The hover fill is drawn as a rounded block behind the row rather than as
+   the row's own background. Two things follow, and both are the point: it can
+   have corners, and it stops at the padding box — so the rule that separates
+   this row from the next stays a rule, instead of being swallowed by the
+   highlight the way a 12px box-shadow spread swallowed it. The bleed is what
+   gives the text the same air on the left that the corner needs on the right. */
+.history-goal-row { position: relative; }
+.history-goal-row::before {
+  content: ""; position: absolute; inset: 2px -12px;
+  border-radius: var(--radius); background: transparent; z-index: 0;
+  transition: background-color .12s ease;
+}
+/* An absolutely positioned pseudo-element paints after the row's in-flow
+   content, so the row's own two halves have to be lifted over it. A negative
+   z-index would have put the fill behind the page's background instead of
+   behind the row: the row makes no stacking context of its own. */
+.history-goal-row > * { position: relative; z-index: 1; }
+.history-goal-row:hover::before { background: var(--hover); }
+.history-goal-row:focus-visible { outline: 2px solid var(--blue); outline-offset: -3px; }
+.history-goal-copy { display: grid; gap: 5px; min-width: 0; }
+/* The goal remains the row's largest sentence, but uses the secondary text
+   tone so a long history list does not become a wall of bright labels. */
+.history-goal-title {
+  display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2; line-clamp: 2; line-height: 1.4;
+  color: #cccccc; font-size: 14px; font-weight: 400;
+}
+html[data-theme="light"] .history-goal-title { color: var(--muted); }
+.history-goal-meta { color: #aaaaaa; overflow-wrap: anywhere; font-size: 12px; }
+html[data-theme="light"] .history-goal-meta { color: var(--muted); }
+/* The run id belongs on the run, which prints it in full at the top of the
+   drawer. In the list it was the longest thing in the row and the least
+   read. Kept for a screen reader and for anything naming the row. */
+.history-goal-id {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.history-goal-artifacts { color: var(--muted-2); font-size: 12px; font-weight: 600; }
+.history-goal-artifacts::before { content: " · "; }
+.history-goal-artifacts.available { color: var(--blue); }
+/* The verdict sits in a slot of its own, right-aligned, so its right edge is
+   the row's right edge and the column reads straight down. The pill hugs its
+   word rather than being stretched to the slot: what varies down the column
+   is the width of the word, and the edge that lines up is the one nearest
+   the eye. */
+.history-goal-tail {
+  flex: none; width: 96px; display: inline-flex; align-items: center;
+  justify-content: flex-end;
+}
+
+.history-list-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; min-height: 36px; margin-top: 12px;
+}
+.history-result-count { margin: 0; font-size: 13px; }
+
+
+
+/* Selectable collections use the prototype's scan-first option language:
+   a quiet card at rest, a lifted surface on hover, and a bounded selected
+   state. Tables keep their semantics while each row reads as one option. */
+.list-option-card {
+  border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--panel);
+  transition: transform .15s ease, border-color .15s ease, background .15s ease;
+}
+.list-option-card:hover { transform: translateY(-2px); border-color: var(--muted-2); }
+.list-option-card.selected {
+  border-color: var(--line); background: var(--panel-2);
+  box-shadow: inset 3px 0 var(--blue);
+}
+.list-option-link {
+  padding: 0; border: 0; background: transparent; color: var(--text);
+  cursor: pointer; font-weight: 650; text-align: left;
+}
+.list-option-link:hover { color: var(--blue); }
+
+
+.list-option-row td {
+  background: var(--panel); border-top: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft); transition: background .15s ease, border-color .15s ease;
+}
+.list-option-row td:first-child { border-left: 1px solid var(--line-soft); border-radius: var(--radius) 0 0 var(--radius); }
+.list-option-row td:last-child { border-right: 1px solid var(--line-soft); border-radius: 0 var(--radius) var(--radius) 0; }
+.list-option-row:hover td { background: var(--panel-2); border-color: var(--line); }
+
+/* Keep the semantic table on desktop, then turn each row into a labelled
+   summary card where a four-column table would otherwise force phone users
+   to pan sideways. The labels come from the active locale in the DOM. */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.fact-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 0; }
+.fact-grid div { padding: 10px; border-radius: var(--radius); background: var(--panel-2); }
+.fact-grid dt { color: var(--muted); font-size: 12px; }
+.fact-grid dd { margin: 5px 0 0; overflow-wrap: anywhere; font-size: 13px; }
+/* A goal is a prompt: its title is one line, and a paragraph must not push
+   every other fact down the panel. */
+.fact-grid dd.fact-line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+
+
+
+
+@media (max-width: 900px) {
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  
+  
+}
+@media (max-width: 520px) {
+  .simplified-goal-page { padding-block: 16px; }
+  .simplified-goal-intro { margin-bottom: 20px; }
+  .simplified-workspace-composer { padding: 20px 16px; }
+  .simplified-workflow-picker { grid-template-columns: 1fr; }
+  .simplified-workflow-picker > .button { width: 100%; }
+  .simplified-composer-actions { justify-content: stretch; }
+  .simplified-composer-actions > * { width: 100%; flex: 1 1 auto; }
+  .simplified-workflow-generator { padding: 18px 16px; }
+  .simplified-workflow-generator-form { grid-template-columns: 1fr; }
+  .simplified-workflow-generator-actions { justify-content: stretch; }
+  .simplified-workflow-generator-actions > * { flex: 1 1 auto; }
+  /* Both are pinned to the same line inside the box, and at this width the
+     button reaches back over the hint and cuts it off mid-word. The hint is
+     the secondary of the two and the textarea's own maxlength keeps the limit
+     whether it is written down or not. */
+  .simplified-workflow-generator-limit { display: none; }
+  .workflow-generation-request { grid-template-columns: 1fr; }
+  .simplified-execution-head { align-items: flex-start; flex-direction: column; }
+  .simplified-execution-head > .actions { justify-content: flex-start; }
+  .simplified-step-row { grid-template-columns: 30px minmax(0, 1fr); }
+  .simplified-step-row > .pill { grid-column: 2; justify-self: start; }
+  .workflow-editor-panel .panel-head { align-items: flex-start; flex-wrap: wrap; }
+  .workflow-editor-panel #draftControls { width: 100%; }
+  
+  
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .filter-bar > input[type="search"], .filter-bar > .custom-select, .filter-bar > button {
+    flex: 1 1 100%; width: 100%; min-height: 40px;
+  }
+  .history-filter-bar > button { flex: 0 0 auto; width: auto; }
+  .history-status-filters { gap: 6px; }
+  .history-status-filter { flex: 1 1 auto; padding-inline: 10px; }
+  .history-day-heading { padding-inline: 14px; }
+  .history-goal-row { align-items: start; gap: 10px; padding: 14px; }
+  .history-goal-tail { gap: 7px; }
+  .history-goal-chevron { font-size: 21px; }
+  .history-list-footer { align-items: stretch; flex-direction: column; }
+  .history-list-footer .button { width: 100%; }
+  .filter-bar > .custom-select > .custom-select-trigger { min-height: 40px; }
+  
+  .fact-grid { grid-template-columns: 1fr; }
+  .responsibility-row { grid-template-columns: 1fr auto; }
+  .responsibility-row .actions { grid-column: 1 / -1; }
+  
+  
+}
+
+.view-intro {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 20px;
+  padding: 4px 0 2px;
+}
+.view-intro h2 { margin: 5px 0; font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.view-intro p { margin: 0; max-width: 68ch; font-size: 13px; }
+.workflow-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.workflow-card {
+  padding: 0; overflow: hidden; display: flex; flex-direction: column;
+  min-width: 0; border-radius: var(--radius);
+  background: color-mix(in srgb, var(--panel) 74%, transparent);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.workflow-card { border: 1px solid var(--line-card); }
+.workflow-card:hover { border-color: var(--line-card); background: var(--hover); }
+.workflow-card-main {
+  display: grid; gap: 8px; width: 100%; margin: 0;
+  padding: 20px; border: 0; flex: 1 1 auto; align-content: start;
+  background: transparent; color: inherit; text-align: left; cursor: pointer;
+}
+.workflow-card-main:hover { background: transparent; }
+.workflow-card-main strong { min-width: 0; overflow-wrap: anywhere; font-size: 15px; font-weight: 600; line-height: 1.35; transition: color .2s ease; }
+.workflow-card:hover .workflow-card-main strong { color: var(--blue); }
+.workflow-card-description {
+  color: var(--muted-2); font-size: 10px; line-height: 1.45; opacity: .72;
+}
+/* The tile names the workflow; its id belongs on the detail view, which
+   prints it in full. Kept for a screen reader and for anything reading the
+   card by its accessible name. */
+.workflow-card .eyebrow {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.workflow-meta { color: var(--muted); font-size: 12px; }
+.workflow-stats { display: flex; align-items: center; gap: 16px; margin-top: 2px; }
+.workflow-stats > span::before { content: "◇"; margin-right: 5px; color: var(--muted-2); }
+.workflow-stats > span + span::before { content: "↳"; }
+.workflow-card-facts { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+/* The card's own action sits outside its clickable body: a button inside a
+   button is not markup a browser will honour. */
+.workflow-card-actions {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 20px; border-top: 1px solid var(--line-row);
+  background: transparent;
+}
+.workflow-card-primary-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.workflow-card-actions .button { background: var(--control-bg) !important; }
+.workflow-card-primary-actions .button { min-height: 28px; padding: 4px 11px; border-radius: var(--radius-control); font-size: 12px; }
+.workflow-card-actions .button.danger { min-height: 28px; padding: 4px 11px; font-size: 12px; }
+.workflow-delete-icon {
+  width: 30px; height: 30px; flex: 0 0 30px; display: grid; place-items: center;
+  padding: 5px; border: 0; background: transparent; color: var(--muted);
+  opacity: .65; cursor: pointer; transition: color .15s ease, opacity .15s ease;
+}
+.workflow-delete-icon:hover, .workflow-delete-icon:focus-visible {
+  color: var(--red); opacity: 1; outline: 1px solid transparent;
+}
+.workflow-delete-dialog { width: min(480px, 92vw); }
+.workflow-delete-warning { margin: 0; color: var(--text); line-height: 1.6; }
+.workflow-delete-id {
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--panel-2); color: var(--muted); overflow-wrap: anywhere;
+}
+.workflow-visual {
+  min-height: 24px; display: flex; align-items: center; gap: 0;
+  margin: 0 0 14px; padding: 0; overflow: hidden; background: transparent; border: 0;
+}
+.workflow-node {
+  width: 24px; height: 24px; flex: 0 0 24px; display: grid; place-items: center; position: relative;
+  border: 1px solid var(--line); border-radius: 50%; background: var(--panel);
+  color: var(--blue); font-family: var(--mono); font-size: 10px; font-weight: 700;
+}
+.workflow-node + .workflow-node { margin-left: 12px; }
+.workflow-node + .workflow-node::before {
+  content: ""; position: absolute; right: 100%; top: 50%; width: 12px;
+  border-top: 1px solid var(--muted-2);
+}
+.workflow-node.human { color: var(--amber); }
+.workflow-node.terminal { color: var(--green); }
+.workflow-node.decision { color: var(--purple); }
+.workflow-node.more { color: var(--muted); }
+.workflow-detail { scroll-margin-top: 72px; }
+.definition-list { display: grid; gap: 8px; }
+.definition-list .actions { padding: 0; border-bottom: 0; }
+/* Published-definition list (design/workflow_detail2.html): each node is a
+   card row — a tinted kind glyph, the id with its kind/handler, the authored
+   prompt in a framed well (or an I/O signature when there is none), and an
+   edit affordance that fades in on hover/focus. */
+.defn-list { gap: 12px; }
+.defn-row {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr) auto; align-items: center; gap: 16px;
+  padding: 16px 18px; border: 1px solid var(--line-soft); border-radius: var(--radius);
+  background: color-mix(in srgb, var(--panel) 72%, transparent);
+  transition: border-color .18s ease, background-color .18s ease, transform .18s ease;
+}
+.defn-row:hover {
+  transform: translateY(-1px);
+  border-color: var(--row-accent, var(--line));
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+.defn-row.kind-action   { --row-accent: var(--blue); }
+.defn-row.kind-human    { --row-accent: var(--amber); }
+.defn-row.kind-decision { --row-accent: var(--purple); }
+.defn-row.kind-terminal { --row-accent: var(--muted-2); }
+.defn-id { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.defn-id-text { min-width: 0; flex: 1; }
+.defn-glyph {
+  width: 36px; height: 36px; border-radius: var(--radius-chip); flex: 0 0 auto;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  transition: background-color .18s ease, color .18s ease;
+}
+.defn-glyph svg { display: block; }
+.glyph-blue   { color: var(--blue); }
+.glyph-amber  { color: var(--amber); }
+.glyph-purple { color: var(--purple); }
+.glyph-muted  { color: var(--muted-2); }
+/* The page's own colour, like the three rows under it. Written-out white was
+   right on the light theme's blue and unreadable on the dark theme's, which is
+   a pale one — and this is a hover, so nothing that watches a screenshot was
+   ever going to say so. */
+.defn-row:hover .glyph-blue   { background: var(--blue);   color: var(--chrome); }
+.defn-row:hover .glyph-amber  { background: var(--amber);  color: var(--chrome); }
+.defn-row:hover .glyph-purple { background: var(--purple); color: var(--chrome); }
+.defn-row:hover .glyph-muted  { background: var(--muted-2); color: var(--chrome); }
+.defn-name {
+  font-family: var(--mono); font-weight: 700; font-size: 14px; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.defn-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-top: 5px; }
+.defn-kind {
+  font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: var(--radius); background: var(--panel-3); color: var(--muted-2);
+}
+.defn-kind-amber  { background: var(--amber-soft);  color: var(--amber); }
+.defn-kind-purple { background: var(--purple-soft); color: var(--purple); }
+.defn-handler {
+  font-family: var(--mono); font-size: 12px; color: var(--muted-2);
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Prompt reads as a little panel (design/workflow_detail3.html): a captioned
+   bar over a bounded, independently scrollable body. */
+.defn-prompt {
+  flex: 1 1 280px; min-width: 0;
+  --defn-prompt-bg: color-mix(in srgb, var(--panel) 62%, var(--bg));
+  border: 1px solid color-mix(in srgb, var(--line) 45%, transparent);
+  border-radius: var(--radius); overflow: hidden;
+  background: var(--defn-prompt-bg);
+}
+.defn-prompt-bar {
+  padding: 5px 12px; border-bottom: 1px solid color-mix(in srgb, var(--line) 30%, transparent);
+  background: color-mix(in srgb, var(--panel-3) 50%, transparent);
+  font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted-2);
+}
+.defn-prompt-body {
+  box-sizing: border-box;
+  padding: 10px 14px; color: var(--muted);
+  font-family: var(--mono); font-size: 13px; line-height: 20px;
+  max-height: 200px; overflow: auto;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.defn-prompt-key { font-weight: 700; margin-right: 8px; color: var(--row-accent, var(--blue)); }
+.defn-note {
+  flex: 1 1 280px; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  color: var(--muted-2); font-size: 13px; font-style: italic;
+}
+.defn-note > svg { flex: 0 0 auto; opacity: .8; }
+.defn-io { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.defn-chip {
+  font-family: var(--mono); font-style: normal; font-size: 11px;
+  padding: 2px 8px; border-radius: var(--radius); border: 1px solid var(--line-soft);
+  background: var(--panel-2); color: var(--muted);
+}
+.defn-chip.in  { color: var(--blue);  border-color: color-mix(in srgb, var(--blue) 35%, transparent); }
+.defn-chip.out { color: var(--green); border-color: color-mix(in srgb, var(--green) 35%, transparent); }
+.defn-arrow { color: var(--muted-2); font-style: normal; }
+.defn-tools {
+  display: flex; align-items: center; gap: 6px; justify-self: end;
+  opacity: 0; transition: opacity .18s ease;
+}
+.defn-row:hover .defn-tools, .defn-row:focus-within .defn-tools { opacity: 1; }
+.defn-edit {
+  width: 32px; height: 32px; padding: 0; display: grid; place-items: center;
+  border: 1px solid var(--line-soft); border-radius: var(--radius); background: transparent;
+  color: var(--muted-2); cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, background-color .15s ease;
+}
+.defn-edit:hover { color: var(--blue); border-color: var(--blue); background: var(--blue-soft); }
+/* Narrow modal: stack the columns so the prompt never gets squeezed to zero. */
+@media (max-width: 600px) {
+  .defn-row { grid-template-columns: 1fr; gap: 10px; }
+  .defn-tools { justify-self: end; }
+}
+.step-prompt {
+  margin-top: 4px; white-space: pre-wrap; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.review-list { display: grid; gap: 10px; margin: 0; }
+.review-list div { padding: 12px; border-radius: var(--radius); background: var(--panel-2); }
+.review-list dt { color: var(--muted); font-size: 12px; }
+.review-list dd { margin: 6px 0 0; white-space: pre-wrap; font-size: 13px; }
+
+@media (max-width: 900px) {
+  .workflow-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .view-intro { align-items: flex-start; flex-direction: column; }
+  .view-intro .button { width: 100%; min-height: 40px; }
+  .workflow-grid { grid-template-columns: 1fr; }
+  .simplified-workflow-generator { margin-top: 20px; padding: 18px 16px; }
+  .simplified-workflow-list-heading { margin-top: 34px; }
+  .workflow-card-heading { align-items: flex-start; flex-direction: column; }
+  .workflow-card-actions { align-items: flex-end; }
+  .workflow-card-primary-actions { flex: 1 1 auto; }
+  
+  
+  
+  
+}
+
+/* Inbox: the kind block gives each row the prototype's scan-first shape;
+   colour varies by kind, the pill next to it spells the kind out. */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.editor-facts { padding-top: 10px; border-top: 1px solid var(--line-soft); color: var(--muted-2); }
+
+/* Agent-only editor: instructions are writable; the generated definition is
+   deliberately a read-only preview. */
+.agent-editor-layout { display: grid; gap: 16px; }
+.agent-editor-prompt, .agent-editor-preview, .agent-editor-candidate,
+.agent-editor-history { display: grid; gap: 10px; min-width: 0; }
+.agent-editor-prompt[hidden] { display: none; }
+.agent-editor-prompt textarea {
+  width: 100%; min-height: 150px; resize: none; color: var(--text);
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px; font: inherit; line-height: 1.55;
+}
+.field-label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; }
+/* Stands in for the agent select when there is only one choice, so it takes
+   the control surface rather than a frame of its own. */
+.agent-choice-static {
+  padding: 9px 10px; border: 0; border-radius: var(--radius-control);
+  background: var(--control-bg); color: var(--control-fg); font-size: 13px;
+}
+.agent-editor-preview .definition-list { max-height: 280px; overflow: auto; }
+.agent-editor-preview .artifact-preview { max-height: 360px; overflow: auto; }
+.agent-editor-diff {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+}
+.agent-editor-diff > div { min-width: 0; display: grid; gap: 6px; }
+.agent-editor-diff .artifact-preview { max-height: 300px; overflow: auto; }
+.agent-editor-semantic-diff {
+  display: grid; gap: 10px; padding: 12px; background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: var(--radius);
+}
+.agent-editor-semantic-diff > .actions { justify-content: space-between; }
+.semantic-diff-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.semantic-diff-group {
+  min-width: 0; padding: 10px; border-left: 3px solid var(--blue);
+  background: color-mix(in srgb, var(--panel) 82%, transparent); border-radius: var(--radius);
+}
+.semantic-diff-group.added { border-left-color: var(--green); }
+.semantic-diff-group.removed { border-left-color: var(--red); }
+.semantic-diff-items { display: grid; gap: 4px; margin-top: 6px; }
+.semantic-diff-items span { overflow-wrap: anywhere; }
+.agent-editor-history { border-top: 1px solid var(--line-soft); padding-top: 12px; }
+.agent-workflow-editor .editor-diagnostics {
+  border-left: 0; border-top: 1px solid var(--line-soft); padding: 12px 0 0;
+}
+@media (max-width: 700px) {
+  .agent-editor-diff { grid-template-columns: 1fr; }
+  .semantic-diff-grid { grid-template-columns: 1fr; }
+}
+
+/* The published definition drawn from the server's layout hint: depth is the
+   column, lane the row. Wide graphs scroll inside the panel rather than giving
+   the page a horizontal scrollbar. */
+.workflow-tabs { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.workflow-tab-content { min-height: 0; }
+/* The graph is drawn by the editor's canvas in a frame, which brings its own
+   panning, zooming and background. Nothing here styles the drawing — the
+   inside of the frame is the editor's stylesheet, and a second opinion about
+   what a decision node looks like is the thing this replaced. */
+.workflow-graph-pane { display: grid; min-width: 0; min-height: 420px; }
+.workflow-graph-frame {
+  width: 100%; height: 100%; min-height: 420px; border: 0; display: block;
+  background: var(--panel);
+}
+.action-editor-dialog textarea { min-height: 150px; resize: none; }
+
+/* Registered Agent handlers are a single scannable list, not a second set of
+   dashboard cards. The route owns the whole content view and each handler is
+   one row within it. */
+.agents-list { border-top: 1px solid var(--line-card); }
+.agents-list-head, .agent-row {
+  display: grid; grid-template-columns: minmax(220px, 1.5fr) minmax(150px, 1fr) 96px 96px;
+  align-items: center; column-gap: 24px;
+}
+.agents-list-head {
+  min-height: 36px; padding: 0 14px; color: var(--muted-2);
+  border-bottom: 1px solid var(--line-card); font-size: 11px; font-weight: 600;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+.agent-row {
+  min-height: 68px; padding: 10px 14px; border-bottom: 1px solid var(--line-card);
+  transition: background-color .2s ease;
+}
+.agent-row:hover { background: var(--hover); }
+.agent-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.agent-avatar {
+  width: 36px; height: 36px; border-radius: var(--radius-chip); flex: 0 0 auto;
+  display: grid; place-items: center;
+  font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .04em;
+}
+.agent-avatar.hue-blue    { background: var(--hue-blue-soft);    color: var(--hue-blue); }
+.agent-avatar.hue-purple  { background: var(--hue-purple-soft);  color: var(--hue-purple); }
+.agent-avatar.hue-emerald { background: var(--hue-emerald-soft); color: var(--hue-emerald); }
+.agent-avatar.hue-indigo  { background: var(--hue-indigo-soft);  color: var(--hue-indigo); }
+.agent-avatar.hue-amber   { background: var(--hue-amber-soft);   color: var(--hue-amber); }
+.agent-avatar.hue-cyan    { background: var(--hue-cyan-soft);    color: var(--hue-cyan); }
+.agent-avatar.hue-rose    { background: var(--hue-rose-soft);    color: var(--hue-rose); }
+.agent-avatar.hue-pink    { background: var(--hue-pink-soft);    color: var(--hue-pink); }
+.agent-id { min-width: 0; }
+.agent-name {
+  margin: 0; font-size: 14px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.agent-version { min-width: 0; font-size: 12px; color: var(--muted-2); overflow-wrap: anywhere; }
+.agent-stat-pill {
+  width: max-content; min-width: 32px; text-align: center;
+  font-size: 11px; font-weight: 600; color: var(--muted);
+  background: var(--chip-bg); border-radius: 999px; padding: 2px 9px;
+}
+.agent-stat-pill.err { background: var(--red-soft); color: var(--red); }
+@media (max-width: 700px) {
+  .agents-list-head { display: none; }
+  .agent-row {
+    grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px;
+    padding-block: 14px;
+  }
+  .agent-version { grid-column: 1 / -1; grid-row: 2; padding-left: 48px; }
+}
+/* Live counter in the intro row; the dot breathes while the Runtime is up. */
+.agents-online {
+  display: flex; align-items: center; gap: 8px;
+  color: var(--muted-2); font-size: 12px; white-space: nowrap;
+}
+.agents-online-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+  animation: agents-pulse 2.4s ease-out infinite;
+}
+/* The halo is the dot's own colour, faded. Written out it stayed mint while
+   --green went to a dark ink on the light theme, so the ring and the dot it
+   came out of were two different greens. */
+@keyframes agents-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 45%, transparent); }
+  70%, 100% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--green) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agents-online-dot { animation: none; }
+}
+
+/* Goal run detail: summary, 2:1 working area and a server-backed execution
+   timeline. This is deliberately scoped so the application shell is unchanged. */
+.simplified-run-page { display: grid; gap: 24px; min-width: 0; }
+/* `.panel` carries no padding of its own — it is spaced by a `panel-head`
+   and a `panel-body`, and this card has neither, so its contents sat against
+   the border. Same scale as the cards beside it. */
+.simplified-run-hero {
+  display: flex; flex-direction: column; gap: 16px; padding: 24px;
+}
+.simplified-run-meta-card {
+  padding: 14px 16px; border-radius: var(--radius); background: var(--panel-3);
+}
+/* Identity on one side, fate and the way to stop it on the other. Wrapping
+   rather than shrinking: on a phone the run id alone fills the width, and a
+   Cancel button squeezed to three characters is worse than one on its own
+   line. `.split`, which this replaces, was a class name with no rule behind
+   it — the two halves had never been side by side. */
+.simplified-run-identity {
+  display: flex; flex-wrap: wrap; align-items: center;
+  justify-content: space-between; gap: 12px 16px;
+}
+.simplified-run-ids { display: grid; gap: 9px; min-width: 0; margin: 0; }
+.run-meta-item { display: grid; gap: 2px; }
+.run-meta-item dt { color: var(--muted-2); font-size: 11px; }
+.run-meta-item dd { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+.simplified-run-state {
+  display: flex; flex-wrap: wrap; align-items: center; align-self: center;
+  gap: 8px; margin-left: auto;
+}
+.run-meta-status { display: flex; align-items: center; }
+.simplified-goal-summary {
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start; gap: 16px; padding: 24px; overflow: hidden;
+}
+.simplified-goal-icon {
+  display: grid; place-items: center; width: 44px; height: 44px;
+  border-radius: var(--radius); color: var(--blue); background: var(--blue-soft);
+  font-size: 25px; font-weight: 700;
+}
+.simplified-goal-copy { min-width: 0; }
+.simplified-goal-copy h1 { margin: 0 0 7px; font-size: 18px; }
+.simplified-goal-copy p {
+  max-width: 780px; margin: 0; color: var(--muted); line-height: 1.65;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.simplified-goal-status {
+  display: inline-flex; align-items: center; gap: 8px; max-width: 280px;
+  padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px;
+  color: var(--muted); background: var(--panel-2); font-size: 12px; font-weight: 650;
+}
+.simplified-goal-status-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: currentColor; }
+.simplified-goal-status.running { color: var(--blue); border-color: color-mix(in srgb, var(--blue) 28%, var(--line)); background: var(--blue-soft); }
+.simplified-goal-status.succeeded { color: var(--green); }
+.simplified-goal-status.failed, .simplified-goal-status.cancelled { color: var(--red); }
+.simplified-goal-status.running .simplified-goal-status-dot { animation: simplified-run-pulse 1.8s ease-out infinite; }
+@keyframes simplified-run-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--blue) 45%, transparent); }
+  70%, 100% { box-shadow: 0 0 0 7px transparent; }
+}
+.simplified-run-columns {
+  display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  align-items: start; gap: 24px; min-width: 0;
+}
+.simplified-run-main, .simplified-run-side { display: grid; gap: 16px; min-width: 0; }
+.simplified-run-side { position: sticky; top: calc(var(--topbar-h, 64px) + 20px); }
+.simplified-run-side .panel-head, .simplified-run-side .panel-body { padding-left: 16px; padding-right: 16px; }
+.simplified-run-info dd { overflow-wrap: anywhere; word-break: break-word; }
+.simplified-result-value { max-height: 260px; overflow: auto; }
+.simplified-attention {
+  border-color: color-mix(in srgb, var(--amber) 42%, var(--line));
+  background: color-mix(in srgb, var(--amber-soft) 45%, var(--panel));
+}
+.simplified-attention .responsibility-row {
+  grid-template-columns: minmax(0, 1fr) auto; align-items: start;
+}
+.simplified-attention .responsibility-row > .actions { grid-column: 1 / -1; justify-content: stretch; }
+.simplified-attention .responsibility-row > .actions > button { flex: 1; }
+.simplified-execution { min-width: 0; }
+.simplified-execution .panel-body.simplified-step-list {
+  display: grid; gap: 0; max-height: 620px; padding: 16px 18px 20px;
+  overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+}
+.simplified-live-label {
+  padding: 4px 7px; color: var(--muted-2); background: var(--panel-2);
+  border-radius: var(--radius); font-family: var(--mono); font-size: 10px;
+  font-weight: 650; letter-spacing: .06em; text-transform: uppercase;
+}
+.simplified-step-row {
+  position: relative; display: grid; grid-template-columns: 38px minmax(0, 1fr);
+  align-items: stretch; gap: 14px; padding: 0 0 16px; border: 0;
+}
+.simplified-step-row:last-child { padding-bottom: 0; }
+.simplified-step-track { position: relative; display: flex; justify-content: center; z-index: 0; }
+.simplified-step-track::after {
+  content: ""; position: absolute; z-index: -1; top: 32px; bottom: -16px;
+  width: 2px; background: var(--line);
+}
+.simplified-step-row:last-child .simplified-step-track::after { display: none; }
+.simplified-step-mark { width: 34px; height: 34px; flex: none; }
+.simplified-step-card {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 11px 16px;
+  min-width: 0; padding: 16px; border: 1px solid var(--line);
+  border-radius: var(--radius); background: var(--panel-2);
+  transition: border-color .18s ease, background-color .18s ease;
+}
+.simplified-step-card:hover { border-color: color-mix(in srgb, var(--blue) 30%, var(--line)); }
+.simplified-step-card-head {
+  grid-column: 1 / -1; display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 12px; min-width: 0;
+}
+.simplified-step-card-head .simplified-step-copy { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px; }
+.simplified-step-order {
+  padding: 2px 6px; border-radius: var(--radius); color: var(--muted-2);
+  background: var(--panel-3); font-family: var(--mono); font-size: 10px;
+  font-weight: 700; text-transform: uppercase;
+}
+.simplified-step-card > .simplified-step-meta,
+.simplified-step-card > .simplified-step-prompt,
+.simplified-step-card > .simplified-step-liveness,
+.simplified-step-card > .simplified-step-output { grid-column: 1 / -1; }
+.simplified-step-card > .simplified-step-prompt {
+  margin: 0; padding: 10px 12px; border: 1px solid var(--line-soft);
+  border-radius: var(--radius); background: var(--bg); font-family: var(--mono);
+  line-height: 1.55;
+}
+.simplified-step-output { min-width: 0; }
+.simplified-artifacts .section-heading p { margin: 5px 0 0; font-size: 12px; }
+.simplified-artifacts-empty {
+  display: grid; place-items: center; align-content: center; gap: 8px;
+  min-height: 250px; padding: 30px; text-align: center;
+  border: 1px dashed var(--line); border-radius: var(--radius);
+  background: color-mix(in srgb, var(--panel) 55%, transparent);
+}
+.simplified-artifacts-empty-mark {
+  display: grid; place-items: center; width: 48px; height: 48px;
+  margin-bottom: 4px; border-radius: var(--radius); color: var(--blue);
+  background: var(--blue-soft);
+}
+/* Drawn marks inherit their weight from the stroke and their colour from the
+   tile around them, the same way the navigation icons do. */
+.empty-mark-icon {
+  width: 24px; height: 24px;
+  fill: none; stroke: currentColor; stroke-width: 1.5;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.simplified-artifacts-empty .muted { max-width: 480px; font-size: 13px; }
+@media (max-width: 900px) {
+  .simplified-run-columns { grid-template-columns: 1fr; }
+  .simplified-run-side { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .simplified-attention { grid-column: 1 / -1; }
+}
+@media (max-width: 620px) {
+  .simplified-goal-summary { grid-template-columns: auto minmax(0, 1fr); padding: 18px; }
+  .simplified-goal-status { grid-column: 1 / -1; max-width: none; justify-self: stretch; }
+  .simplified-run-side { grid-template-columns: 1fr; }
+  .simplified-execution-head { align-items: flex-start; flex-direction: column; }
+  .simplified-execution-head > .actions { width: 100%; justify-content: flex-start; }
+  .simplified-execution .panel-body.simplified-step-list { padding-inline: 12px; }
+  .simplified-step-row { grid-template-columns: 30px minmax(0, 1fr); gap: 9px; }
+  .simplified-step-mark { width: 28px; height: 28px; }
+  .simplified-step-track::after { top: 28px; }
+  .simplified-step-card { padding: 13px; }
+  .simplified-step-card-head { align-items: stretch; flex-direction: column; }
+  .simplified-step-card-head > .pill { align-self: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .simplified-goal-status-dot { animation: none !important; }
+}
+
+/* Where a run got to. The mark carries the state at a glance and the pill
+   spells it out, so meaning never rides on colour alone — the same rule the
+   run status pills follow. */
+/* Filled, like the Result card and the Agent console: what a run got to is
+   a thing it produced, not a grouping of other things. The rules between the
+   rows drop to the faint one every other list on these pages separates with,
+   now that they are inside a card rather than loose on the page. */
+.simplified-steps {
+  background: var(--panel-3); border-radius: var(--radius); padding: 6px 16px 12px;
+}
+/* Keep the heading and its card in one section. Otherwise the run body's 20px
+   section gap stacks on top of this local 8px title gap. */
+.simplified-steps-section {
+  display: grid; gap: var(--run-title-card-gap, 8px);
+}
+.simplified-steps-head { padding: 0; }
+.simplified-steps .step-list {
+  list-style: none; margin: 0; padding: 0; display: grid; gap: 2px;
+}
+.step-row {
+  display: grid; grid-template-columns: 24px 1fr auto; align-items: center;
+  gap: 10px; padding: 8px 4px; border-top: 1px solid var(--line-row);
+}
+.step-row:first-child { border-top: none; }
+.step-mark {
+  justify-self: center; font-size: 13px; line-height: 1; color: var(--muted-2);
+}
+.step-row.succeeded .step-mark, .step-row.answered .step-mark { color: var(--green); }
+.step-row.failed .step-mark { color: var(--red); }
+.step-row.unknown .step-mark { color: var(--blue); }
+.step-row.running .step-mark { color: var(--blue); }
+.step-row.waiting .step-mark { color: var(--amber); }
+.step-copy { display: grid; gap: 2px; min-width: 0; }
+.step-label { font-size: 14px; overflow-wrap: anywhere; }
+.step-detail { font-size: 12px; overflow-wrap: anywhere; }
+/* A step still to come is on the page from the first render, so the run's
+   shape is legible before it has done anything — but it must not compete
+   with the steps that have. */
+.step-row.not_reached .step-label,
+.step-row.not_reached .step-detail { color: var(--muted-2); }
+
+/* The graph as a second view of the same run. Closed by default: a frame is
+   the heaviest thing on this page and most visits read the list. */
+/* The graph is a section of its own, same card as the steps beside it, and
+   open from the first paint: the frame fetches itself while the rest of the
+   page settles, so nothing waits on it and nothing hides behind a fold. */
+.run-canvas { overflow: hidden; }
+.run-canvas > .panel-head { padding-bottom: var(--run-title-card-gap, 8px); }
+.run-canvas-body { padding: 0; border-radius: var(--radius); overflow: hidden; }
+.run-canvas-body:empty { padding: 0; }
+
+/* Which way the run went at each fork. Only forks appear, so this stays a
+   footnote to the step list rather than a second copy of the graph. Every
+   pill carries its word: the colours only rank attention. */
+/* Its own block inside the steps panel, so it is spaced like one: the panel
+   has no padding of its own and this section had only a top edge, which left
+   the summary against the left border and the last branch against the bottom
+   one. Same scale as the panel head above it. */
+.run-branches {
+  border-top: 1px solid var(--line); margin-top: 4px; padding: 12px 14px;
+}
+.run-branches > summary { cursor: pointer; font-size: 13px; color: var(--blue); }
+.run-branches-body { display: grid; gap: 12px; margin-top: 10px; }
+.run-branch-source { font-size: 13px; }
+.run-branch-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; }
+.run-branch {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 4px 0 4px 12px; font-size: 13px;
+}
+.run-branch-target::before { content: "\2192"; color: var(--muted-2); margin-right: 6px; }
+.run-branch-target { overflow-wrap: anywhere; }
+.run-branch.not_taken .run-branch-target,
+.run-branch.not_reached .run-branch-target,
+.run-branch.other_route .run-branch-target { color: var(--muted-2); }
+.pill.taken { background: var(--green-soft); color: var(--green); }
+.pill.not_taken, .pill.shadowed { background: var(--panel-3); color: var(--muted); }
+.pill.undecidable { background: var(--amber-soft); color: var(--amber); }
+
+/* Branches the runs have never entered. Absent unless there is a finding, so
+   the panel's presence is itself the signal. */
+.workflow-branch-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+.workflow-branch-finding {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px;
+  padding: 6px 0; border-top: 1px solid var(--line); font-size: 13px;
+}
+.workflow-branch-finding:first-child { border-top: 0; }
+
+/* Agents page: proposing one more trusted CLI.
+   The diff is the product, so it gets room to be read rather than a one-line
+   preview somebody would copy without looking at. */
+/* The button sits under the grid. The form it opens borrows the Workflow
+   detail's shell outright, so there is nothing to style here but the form. */
+/* In the head now, beside the count: no top margin of its own, and the two
+   sit on one line with the online dot nearest the words it belongs to. */
+.agents-head-tail { display: flex; align-items: center; gap: 16px; flex: 0 0 auto; }
+.agent-finder-launch { display: inline-flex; }
+/* Wide enough to fill in a name, and no wider — until there is a patch, and
+   then wide enough to read one. The shell it borrows is sized for a workflow
+   diagram, which for one text field was most of a screen of nothing. */
+.page-modal-panel.agent-finder-panel { width: min(620px, 100%); }
+.page-modal-panel.agent-finder-panel.has-patch { width: min(960px, 100%); }
+.agent-finder { display: grid; gap: 20px; }
+.agent-finder-stage, .agent-finder-form { display: grid; gap: 20px; }
+.agent-finder-running { margin: 0; font-weight: 600; }
+.agent-finder-output {
+  display: grid; gap: 8px; padding: 14px 16px;
+  background: var(--panel-3); border-radius: var(--radius);
+  max-height: 300px; overflow: auto;
+}
+.agent-finder-output pre {
+  margin: 0; min-height: 96px;
+  white-space: pre-wrap; font-size: 12px; font-weight: 400;
+}
+.agent-finder-output.has-output pre { min-height: 0; }
+.agent-finder-status-title { margin: 0; font-size: 15px; font-weight: 600; }
+.agent-finder-success-detail { white-space: pre-line; }
+/* The panel lays itself out with a grid gap, so the headings' own margins are
+   a second spacing system arguing with the first. */
+.agent-finder > h3, .agent-finder > p, .agent-finder h4 { margin: 0; }
+.agent-finder-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.agent-finder-head h3 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.agent-finder-hint { margin: -14px 0 0; font-size: 13px; line-height: 1.65; }
+.agent-finder-field { display: grid; gap: 8px; }
+.agent-finder-field .field-label { margin: 0; font-size: 13px; font-weight: 600; color: var(--text); }
+.agent-finder-field textarea {
+  width: 100%; min-width: 0; min-height: 112px; padding: 12px 14px;
+  background: var(--panel-2); border: 0; border-radius: var(--radius-control);
+  font-size: 13px; line-height: 1.55; resize: vertical;
+}
+.agent-finder-actions { justify-content: flex-end; gap: var(--space-2); }
+.agent-finder-results:empty { display: none; }
+.agent-finder-results { display: grid; gap: 14px; }
+.agent-finder-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+/* A row rather than a box: recessed like everything else you can read, with
+   the verdict's own wash doing the work the coloured edge used to do. */
+.agent-finder-item {
+  display: flex; gap: 10px; align-items: center;
+  padding: 10px 14px; border: 0; border-radius: var(--radius);
+  background: var(--panel-2); font-size: 13px;
+}
+.agent-finder-item > .mono { flex: 1 1 auto; min-width: 0; font-size: 12.5px; }
+.agent-finder-patch { display: grid; gap: 10px; }
+.agent-finder-patch h4 { font-size: 15px; font-weight: 600; }
+.agent-finder-patch p { margin: 0; font-size: 12.5px; line-height: 1.65; }
+.agent-finder-patch > .button { justify-self: start; }
+.agent-finder-diff {
+  max-height: 340px; overflow: auto; padding: 14px 16px;
+  background: var(--panel-2); border: 0;
+  border-radius: var(--radius); white-space: pre; font-size: 12px; line-height: 1.6;
+}
+
+/* The revise button sits in the box it acts on, raised back to the page's own
+   surface so it reads as raised rather than as more of the box. */
+.workflow-modify-actions {
+  position: absolute; right: 12px; bottom: 10px; margin: 0; justify-content: flex-end;
+}
+.workflow-modify-actions .button.primary {
+  min-height: 32px; padding-inline: 14px;
+  background: var(--control-bg) !important; color: var(--text);
+}
+.workflow-modify-actions .button.primary:hover:not(:disabled) {
+  background: var(--control-raised) !important;
+}
+/* The header, the form and the diagram are three sections of one page. */
+.workflow-edit-page { display: flex; flex-direction: column; gap: 24px; }
+.workflow-edit-id {
+  font-family: var(--mono); font-size: 11px; font-weight: 400;
+  letter-spacing: .04em; text-transform: none; color: var(--muted-2);
+}
+
+/* What a run changed in the project (§7). One row per path, and the coverage
+   note last so it reads as a qualifier on everything above it rather than as
+   another finding. */
+.goal-changes-card { gap: 6px; }
+.goal-change-row {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+}
+.goal-change-path {
+  font-family: var(--mono);
+  font-size: 12px; overflow-wrap: anywhere; min-width: 0;
+}
+.goal-changes-coverage { margin-top: 4px; font-size: 12px; }

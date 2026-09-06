@@ -1,0 +1,1199 @@
+"""The single production composition root.
+
+Everything the Runtime needs is wired here and nowhere else: the database, the
+handler registry, the LangGraph service and the background loops that drive
+what no request can. Those loops are owned by Starlette's lifespan, so a
+shutdown that leaves one (or its child process) running is a test failure
+rather than a thing to notice in production.
+
+This module deliberately contains no state machine, no routing decision and
+no SQL.
+"""
+
+from __future__ import annotations
+
+import asyncio
+from collections import ChainMap
+from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+import threading
+from typing import Any, Callable, Mapping, Sequence
+
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+from starlette.routing import Mount, Route, WebSocketRoute
+
+from ..workflow.application.handler_runtime_service import HandlerRuntimeBuilder
+from ..workflow.application.revision_worker import (
+    RevisionDispatcher, RevisionRecoveryScanner,
+)
+from ..workflow.catalogs import InMemorySchemaCatalog
+from ..workflow.persistence.database import connect_workflow_database
+from ..workflow.persistence.migrations import migrate_workflow_database
+from ..workflow.authoring import AuthoringUnavailableError
+from .schema_guard import MixedSchemaError, assert_runtime_schema
+
+
+DEFAULT_POLL_SECONDS = 0.5
+DEFAULT_SHUTDOWN_SECONDS = 10.0
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+@dataclass
+class BackgroundLoop:
+    """A single-step component driven on its own thread.
+
+    The loop owns no business logic — it calls `run_once()` and reports the
+    last error so `/health/ready` can surface a component that is failing
+    instead of letting it die quietly.
+    """
+
+    name: str
+    step: Callable[[], bool]
+    poll_seconds: float = DEFAULT_POLL_SECONDS
+    _stop: threading.Event = field(default_factory=threading.Event, repr=False)
+    _thread: threading.Thread | None = field(default=None, repr=False)
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+    error_count: int = 0
+    last_error: str | None = None
+    iterations: int = 0
+
+    def start(self) -> None:
+        if self._thread is not None:
+            raise RuntimeError(f"{self.name} already started")
+        self._thread = threading.Thread(target=self._run, name=self.name, daemon=True)
+        self._thread.start()
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            try:
+                did_work = self.step()
+                with self._lock:
+                    self.iterations += 1
+            except Exception as exc:  # noqa: BLE001 - surfaced through health
+                did_work = False
+                with self._lock:
+                    self.error_count += 1
+                    self.last_error = f"{type(exc).__name__}: {exc}"
+            # Only idle when there was nothing to do, so a busy queue drains at
+            # full speed instead of one item per poll interval.
+            if not did_work:
+                self._stop.wait(self.poll_seconds)
+
+    def request_stop(self) -> None:
+        """Ask the loop to finish its current step and exit."""
+
+        self._stop.set()
+
+    def join(self, timeout: float = DEFAULT_SHUTDOWN_SECONDS) -> bool:
+        thread = self._thread
+        if thread is None:
+            return True
+        thread.join(timeout=timeout)
+        return not thread.is_alive()
+
+    def stop(self, timeout: float = DEFAULT_SHUTDOWN_SECONDS) -> bool:
+        self.request_stop()
+        return self.join(timeout)
+
+    @property
+    def alive(self) -> bool:
+        return self._thread is not None and self._thread.is_alive()
+
+    def status(self) -> dict[str, Any]:
+        with self._lock:
+            return {
+                "name": self.name,
+                "alive": self.alive,
+                "iterations": self.iterations,
+                "error_count": self.error_count,
+                "last_error": self.last_error,
+            }
+
+
+@dataclass(frozen=True)
+class HandlerRegistration:
+    """One trusted handler to register before the registry is sealed."""
+
+    manifest: Any
+    implementation: Any
+    implementation_id: str
+    # Capabilities this *deployment* granted on top of the ones the Handler's
+    # own manifest declares — `--agent-project-access`'s "workspace.read", so
+    # far. Deliberately not folded into the manifest: capabilities are part of
+    # `HandlerManifest.fingerprint`, which a published Workflow records and
+    # binding matches exactly, so granting one there would change every agent
+    # Handler's fingerprint and break every Workflow already published against
+    # it the moment an operator flipped the switch. A grant is a fact about
+    # where this Runtime runs, not about the contract a Workflow was compiled
+    # against, so it travels beside the manifest and reaches the compiler
+    # through `BoundHandler.capabilities` instead.
+    granted_capabilities: frozenset[str] = frozenset()
+
+
+class RuntimeComposition:
+    """Owns the wired Runtime and the lifecycle of its background components."""
+
+    def __init__(
+        self,
+        db_path: Path | str,
+        *,
+        handlers: Sequence[HandlerRegistration] = (),
+        schemas: Mapping[str, Any] | None = None,
+        secret_values: Mapping[str, str] | None = None,
+        poll_seconds: float = DEFAULT_POLL_SECONDS,
+        clock: Callable[[], datetime] = utc_now,
+        artifact_backend: Any = None,
+        draft_service: Any = None,
+        revision_agent_command: str | None = None,
+        revision_agent_commands: Mapping[str, str] | None = None,
+        revision_model_id: str | None = None,
+        workflow_db_path: Path | str | None = None,
+        langgraph_service: Any = None,
+        run_retention_days: int | None = None,
+        project_workspace_grant: Any = None,
+        project_access: Any = None,
+    ) -> None:
+        self.db_path = Path(db_path)
+        self.workflow_db_path = Path(workflow_db_path or db_path)
+        self.clock = clock
+        self.poll_seconds = poll_seconds
+        self.artifact_backend = artifact_backend
+        # Set when a reviser is wired; the revision loops key off it.
+        self.draft_service = draft_service
+        self.revision_agent_command = revision_agent_command
+        self.revision_agent_commands = dict(revision_agent_commands or {})
+        self.revision_model_id = revision_model_id
+        self.langgraph_service = langgraph_service
+        # Off unless asked for. A run is a goal somebody set, and deleting
+        # their history because a default said so is worse than a database
+        # they can see the size of on the Ops page.
+        self.run_retention_days = run_retention_days
+        # The grant `--agent-project-access` built (a `GitWorktreeGrant` or a
+        # `GitWorktreeGrant`), or `None` when the switch is off. Only used to
+        # drive the cleanup loop below — the grant itself was already handed
+        # to the Agent client that acquires from it.
+        self.project_workspace_grant = project_workspace_grant
+        # The coordinator holding project directories, when this Runtime
+        # grants them. Drives the recovery-point retention loop below.
+        self.project_access = project_access
+
+        # A file carrying legacy tables is refused before anything is wired:
+        # continuing would mean serving a database whose semantics are half
+        # owned by an engine that no longer exists.
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        assert_runtime_schema(self.db_path)
+        connection = connect_workflow_database(self.db_path)
+        try:
+            migrate_workflow_database(connection)
+        finally:
+            connection.close()
+        self.tables = assert_runtime_schema(self.db_path)
+
+        self.schema_catalog = InMemorySchemaCatalog(dict(schemas or {}))
+        builder = HandlerRuntimeBuilder(
+            self.schema_catalog, secret_values=dict(secret_values or {}),
+        )
+        for registration in handlers:
+            builder.register(
+                registration.manifest,
+                registration.implementation,
+                implementation_id=registration.implementation_id,
+            )
+        self.handler_registry = builder.seal()
+        self.handler_summary = builder.summary()
+
+        self.loops: list[BackgroundLoop] = []
+        self._started = False
+
+    # -- background components -------------------------------------------
+
+    def _build_loops(self) -> list[BackgroundLoop]:
+        loops: list[BackgroundLoop] = []
+        # A durable timer that came due while nothing was running is the one
+        # piece of a LangGraph run no request can drive: the run is suspended
+        # and there is no caller left to resume it.
+        if callable(getattr(self.langgraph_service, "recover_due", None)):
+            loops.append(BackgroundLoop(
+                "langgraph-timer", lambda: bool(
+                    self.langgraph_service.recover_due(limit=100)
+                ), self.poll_seconds,
+            ))
+        if self.run_retention_days and callable(
+            getattr(self.langgraph_service, "prune", None)
+        ):
+            loops.append(BackgroundLoop(
+                "run-retention", self._prune_once, max(self.poll_seconds, 300.0),
+            ))
+        # Agent workflow revisions are durable jobs: the editor enqueues, this
+        # loop spends the model call, and a recovery pass fails jobs whose
+        # worker died mid-flight.
+        if getattr(self.draft_service, "reviser", None) is not None:
+            revisions = RevisionDispatcher(
+                self.draft_service, worker_id="revision-1", clock=self.clock,
+                agent_command=self.revision_agent_command,
+                agent_commands=self.revision_agent_commands,
+                model_id=self.revision_model_id,
+            )
+            loops.append(BackgroundLoop(
+                "revision-1", revisions.run_once, self.poll_seconds,
+            ))
+            revision_recovery = RevisionRecoveryScanner(
+                self.draft_service, clock=self.clock,
+            )
+            loops.append(BackgroundLoop(
+                "revision-recovery", revision_recovery.run_once,
+                max(self.poll_seconds, 5.0),
+            ))
+        if self.project_workspace_grant is not None and callable(
+            getattr(self.langgraph_service, "live_workspace_refs", None)
+        ):
+            loops.append(BackgroundLoop(
+                "agent-project-access-cleanup", self._sweep_project_workspace_once,
+                max(self.poll_seconds, 300.0),
+            ))
+        if self.project_access is not None and callable(
+            getattr(self.langgraph_service, "live_run_ids", None)
+        ):
+            loops.append(BackgroundLoop(
+                "recovery-point-retention", self._sweep_recovery_points_once,
+                max(self.poll_seconds, 300.0),
+            ))
+        return loops
+
+    def _sweep_project_workspace_once(self) -> bool:
+        """Reclaim a `--agent-project-access` grant's worktree/copy once its run has settled.
+
+        A run in one of `PRUNABLE_STATUSES` cannot resume, so nothing can ever
+        acquire its workspace again — that is what makes reclaiming it safe.
+        `live_workspace_refs()` is the same "still open" set `run-retention`
+        would eventually delete the run rows for, just without waiting for
+        `run_retention_days` to pass: an unfinished run's directory would be
+        wrong to keep charging disk for merely because its row is kept longer.
+        """
+
+        live_refs = self.langgraph_service.live_workspace_refs()
+        reclaimed = self.project_workspace_grant.sweep(live_refs)
+        return bool(reclaimed)
+
+    def _sweep_recovery_points_once(self) -> bool:
+        """Reclaim the ways back nobody can still need (§6.3).
+
+        These refs live in the *user's* repository and each pins a tree of
+        their whole project, so never reclaiming them is real growth in
+        somebody else's .git rather than in Orbit's own state. Two conditions
+        guard it, both required: the run is settled, and the point has
+        outlived the retention period — because a run finishing is not the
+        moment somebody stops wanting to undo it.
+        """
+
+        live = self.langgraph_service.live_run_ids()
+        return bool(self.project_access.sweep_recovery_points(live))
+
+    def _prune_once(self) -> bool:
+        """Forget runs that ended longer ago than the operator keeps them."""
+
+        cutoff = self.clock() - timedelta(days=self.run_retention_days)
+        summary = self.langgraph_service.prune(
+            before=cutoff.isoformat().replace("+00:00", "Z"), limit=100,
+        )
+        return bool(summary.get("runs"))
+
+    def start(self) -> None:
+        if self._started:
+            return
+        self.loops = self._build_loops()
+        for loop in self.loops:
+            loop.start()
+        self._started = True
+
+    def stop(self, timeout: float = DEFAULT_SHUTDOWN_SECONDS) -> list[str]:
+        """Stop every loop; returns the names that did not exit in time."""
+
+        for loop in self.loops:
+            loop.request_stop()
+        stragglers = [loop.name for loop in self.loops if not loop.join(timeout)]
+        # Runs whose caller did not wait have nobody else to wait for them.
+        # Walking away is safe — they stay `running` and startup recovery
+        # re-enters them — but re-entering costs a superstep that letting them
+        # finish does not.
+        settle = getattr(self.langgraph_service, "wait_for_background", None)
+        if settle is not None:
+            stragglers.extend(settle(timeout))
+        worker = getattr(self.langgraph_service, "execution_worker", None)
+        if worker is not None and not worker.stop(timeout):
+            stragglers.append("execution-worker")
+        self._started = False
+        return stragglers
+
+    # -- health -----------------------------------------------------------
+
+    def liveness(self) -> dict[str, Any]:
+        return {"status": "live"}
+
+    def readiness(self) -> tuple[bool, dict[str, Any]]:
+        checks: dict[str, Any] = {}
+
+        try:
+            tables = assert_runtime_schema(self.db_path)
+            checks["database"] = {"ok": True, "tables": len(tables)}
+        except (MixedSchemaError, OSError) as exc:
+            checks["database"] = {"ok": False, "error": str(exc)}
+
+        try:
+            with connect_workflow_database(self.db_path, read_only=True) as connection:
+                versions = [
+                    row[0] for row in connection.execute(
+                        "SELECT version FROM workflow_schema_migrations ORDER BY version"
+                    )
+                ]
+            checks["migrations"] = {"ok": bool(versions), "applied": versions}
+        except Exception as exc:  # noqa: BLE001 - reported, not raised
+            checks["migrations"] = {"ok": False, "error": str(exc)}
+
+        checks["handlers"] = {
+            "ok": self.handler_registry.sealed,
+            "sealed": self.handler_registry.sealed,
+            "count": len(self.handler_summary.handlers),
+        }
+        worker = getattr(self.langgraph_service, "execution_worker", None)
+        if worker is not None:
+            checks["execution_worker"] = {
+                "ok": worker.alive,
+                "pid": worker.pid,
+                "pids": list(getattr(worker, "pids", (worker.pid,))),
+                "mode": "process_pool",
+            }
+
+        components = [loop.status() for loop in self.loops]
+        # Every loop that exists is alive — not "at least one exists". A
+        # Runtime used only for authoring has nothing to drive in the
+        # background, and while the worker pool was unconditional an empty
+        # list could only mean the loops had died. It no longer does.
+        checks["components"] = {
+            "ok": all(item["alive"] for item in components),
+            "detail": components,
+        }
+
+        ready = all(item.get("ok") for item in checks.values())
+        return ready, checks
+
+
+class _LiveCapabilities(Mapping):
+    """Composition facts, with the few that outlive composition read again.
+
+    Nearly every capability is settled when the app is built and never moves.
+    Generation is the exception: an Agent App connects over MCP and becomes a
+    name an author may send work to, then disconnects and stops being one. A
+    dict captured at build time would advertise a client that has gone and hide
+    one that has arrived, so those entries are computed on read instead.
+    """
+
+    def __init__(
+        self,
+        static: Mapping[str, Any],
+        live: Mapping[str, Callable[[], Any]],
+    ) -> None:
+        self._static, self._live = static, live
+
+    def __getitem__(self, key: str) -> Any:
+        recompute = self._live.get(key)
+        return self._static[key] if recompute is None else recompute()
+
+    def __iter__(self):
+        return iter(self._static)
+
+    def __len__(self) -> int:
+        return len(self._static)
+
+
+def _connected_client_first(broker, forked):
+    """Write with the Agent already operating this Runtime; fork one if none is.
+
+    An Agent App connected over MCP is a writer that is *here* — it has the
+    conversation the request came out of, and the person watching it can see it
+    work. A forked CLI is a second, blind writer started for the occasion. So
+    the connected one goes first.
+
+    The choice is taken when the prompt is written, not when the Runtime
+    started: authoring is a job that runs minutes after it is asked for, and
+    clients arrive and leave the whole time. `broker.clients()` is presence as
+    observed — a client holding an event stream, or one that polled recently —
+    not presence as declared.
+
+    Falling back on `AuthoringUnavailableError` is the whole reason this is
+    safe. That error means the prompt was parked and *never handed to anybody*:
+    nothing was spent and nothing happened, so forking a CLI now is the first
+    attempt at the work rather than a second. `AuthoringUnknownResultError` is
+    the opposite case — a client took it and went quiet, and may already have
+    paid for a model call — so it is left to propagate. Retrying that is how
+    one request becomes two bills, which this codebase refuses everywhere else
+    it can happen.
+    """
+
+    def resolve():
+        return broker if broker.clients() else forked
+
+    def generate(prompt: str) -> str:
+        if not broker.clients():
+            return forked(prompt)
+        try:
+            return broker(prompt)
+        except AuthoringUnavailableError:
+            # Present when asked, gone before it answered. The parked prompt
+            # reached nobody, so this is still the first attempt.
+            return forked(prompt)
+
+    generate.resolve = resolve
+    return generate
+
+
+def create_app(
+    db_path: Path | str,
+    *,
+    handlers: Sequence[HandlerRegistration] = (),
+    schemas: Mapping[str, Any] | None = None,
+    secret_values: Mapping[str, str] | None = None,
+    poll_seconds: float = DEFAULT_POLL_SECONDS,
+    clock: Callable[[], datetime] = utc_now,
+    artifact_backend: Any = None,
+    extra_routes: Sequence[Route | Mount] = (),
+    authenticator: Callable[[Any], str | None] | None = None,
+    authorizer: Any = None,
+    rate_limiter: Any = None,
+    unlimited_actors: Sequence[str] = (),
+    token_exempt_actors: Sequence[str] = (),
+    operator_actors: Sequence[str] = (),
+    serve_ui: bool = False,
+    discover_agents: bool = False,
+    agent_capabilities: Sequence[str] | None = None,
+    workflow_generator: Callable[[str], str] | None = None,
+    workflow_generators: Mapping[str, Callable[[str], str]] | None = None,
+    structured_agents: Mapping[str, Any] | None = None,
+    authoring_broker: Any = None,
+    single_goal_mode: bool = True,
+    mcp_tool_profile: str = "full",
+    workflow_db_path: Path | str | None = None,
+    shutdown_request: Callable[[], None] | None = None,
+    langgraph_service: Any = None,
+    langgraph_state_directory: Path | str | None = None,
+    run_retention_days: int | None = None,
+    agent_workspace_root: Path | str | None = None,
+    delegation_queue: Any = None,
+    execution_workers: int = 0,
+    serve_mcp: bool = True,
+    workspace_path: Path | str | None = None,
+    agent_project_access: bool = False,
+) -> Starlette:
+    """Build the Runtime application.
+
+    `extra_routes` is the seam for protocol adapters (`/api/v1` in M3, `/mcp`
+    in M3): they mount alongside health, and get the composition through
+    `app.state.runtime` rather than by importing anything from the old engine.
+    """
+
+
+    # Discovery runs *before* the composition, because the composition seals
+    # the handler registry in its constructor. Registering afterwards is not
+    # merely late — it is impossible, and that is how discovered agents ended
+    # up visible in the catalog and uncallable from a workflow.
+    agent_catalog: Sequence[Mapping[str, Any]] = ()
+    # Named generators an author may choose between. Discovery fills this
+    # below; an explicit mapping (tests, embedders) wins outright. Held rather
+    # than copied, so an embedder may supply a mapping that changes — which is
+    # what a set of connected Agent Apps is.
+    generation_agents: Mapping[str, Any] = (
+        {} if workflow_generators is None else workflow_generators
+    )
+    registrations = list(handlers)
+    # Populated for a git workspace whenever project access is enabled. Agent
+    # CLIs and App/Harness delegations share this same Run-scoped grant.
+    project_workspace: Any = None
+    # The real project directory for non-git direct access.
+    project_root_for_agents: Path | None = None
+    grant_capabilities: frozenset[str] = frozenset()
+    if agent_project_access:
+        from ..platform.projects import project_state_dir
+        from ..workspace import (
+            GitWorkspaceProvider, GitWorktreeGrant,
+            git_available, has_commits, is_git_repo,
+        )
+
+        if workspace_path is None:
+            raise ValueError(
+                "--agent-project-access requires workspace_path to be set "
+                "explicitly; it never defaults to the Runtime's cwd"
+            )
+        project_root = Path(workspace_path).expanduser().resolve()
+        if not project_root.is_dir():
+            raise ValueError(f"project directory does not exist: {project_root}")
+        state_dir = project_state_dir(project_root)
+        if (project_root / ".git").exists():
+            if not git_available() or not is_git_repo(project_root):
+                raise ValueError(
+                    f"--agent-project-access requires a usable git repository "
+                    f"at {project_root}"
+                )
+            if not has_commits(project_root):
+                raise ValueError(
+                    "--agent-project-access requires at least one git commit"
+                )
+            project_workspace = GitWorktreeGrant(
+                GitWorkspaceProvider(project_root, state_dir)
+            )
+            grant_capabilities = frozenset({"workspace.read"})
+        else:
+            project_root_for_agents = project_root
+            grant_capabilities = frozenset({
+                "workspace.project.read", "workspace.project.write",
+            })
+    if discover_agents:
+        from ..workflow.catalogs.agent_discovery import (
+            catalog_entries, discover_agent_clis_cached,
+        )
+
+        from .builtin_handlers import agent_handlers
+
+        discovered = discover_agent_clis_cached()
+        agent_catalog = catalog_entries(discovered)
+        invokable_agents = tuple(
+            agent for agent in discovered if agent.spec.runtime_compatible
+        )
+        # Where a run's Agents are put to work. Beside the Runtime database by
+        # default, and never the directory `orbit serve` was started in: an
+        # Agent asked to merge a pull request will merge whatever repository it
+        # wakes up in, and on a developer's machine that is theirs.
+        workspace_root = (
+            Path(agent_workspace_root).expanduser().absolute()
+            if agent_workspace_root is not None
+            else Path(db_path).expanduser().absolute().parent / "agent-workspaces"
+        )
+        if project_root_for_agents is not None:
+            # Agents working in the project are told to put scratch files
+            # under its state directory (`_run_scratch`), which is only a
+            # tidier place than the project root if git is actually ignoring
+            # it. Ensured here, once, at startup — §2. Idempotent, and one
+            # line in .gitignore is a great deal less invasive than the
+            # editing this switch has already consented to.
+            from ..workspace.git import GitWorkspaceProvider, is_git_repo
+
+            if is_git_repo(project_root_for_agents):
+                try:
+                    GitWorkspaceProvider(
+                        project_root_for_agents,
+                        project_root_for_agents / ".orbit",
+                    ).ensure_state_dir_ignored()
+                except OSError as exc:
+                    raise ValueError(
+                        f"could not ensure {project_root_for_agents}/.gitignore "
+                        f"covers the Orbit state directory: {exc}"
+                    ) from exc
+        agent_registrations, _names = agent_handlers(
+            invokable_agents,
+            allowed_capabilities=agent_capabilities,
+            workspace_root=workspace_root,
+            grant_capabilities=grant_capabilities,
+            project_root=project_root_for_agents,
+            project_workspace=project_workspace,
+        )
+        registrations.extend(agent_registrations)
+
+        # Workflow generation rides the same discovery result and the same
+        # trust rule. Every discovered CLI gets a generator so the author can
+        # name one per request; the first stays the default for callers that
+        # do not care. An explicit `workflow_generator` (tests, embedders)
+        # takes precedence below.
+        if invokable_agents:
+            from ..workflow.authoring import TrustedCliDslGenerator
+
+            if not generation_agents:
+                generation_agents = {
+                    agent.name: TrustedCliDslGenerator(
+                        (agent.executable_path, *agent.spec.invocation.args),
+                        prompt_flag=agent.spec.invocation.prompt_flag,
+                        prompt_positional=agent.spec.invocation.prompt_positional,
+                        workspace=workspace_root / "authoring",
+                    )
+                    for agent in invokable_agents
+                }
+            if workflow_generator is None:
+                workflow_generator = generation_agents.get(
+                    invokable_agents[0].name, next(iter(generation_agents.values()))
+                )
+
+        # An author may also route generation to an MCP client that is already
+        # connected — an Agent App operating this Runtime rather than a fresh
+        # CLI it forks. These names are layered *under* the discovered CLIs so
+        # a client can never shadow one, and so none of them becomes the
+        # default by accident: a forked CLI runs, while a parked prompt only
+        # waits, and nobody may ever come for it. An explicitly injected
+        # mapping is left exactly as the embedder wrote it.
+        if not workflow_generators:
+            from ..workflow.authoring import ExternalAuthoringBroker
+
+            if authoring_broker is None:
+                # Read at registration, not captured: `generation_agents` is
+                # rebound below when operator-configured writers are added,
+                # and a late-connecting App must be refused a name that took
+                # in the meantime.
+                authoring_broker = ExternalAuthoringBroker(
+                    reserved_names=lambda: set(generation_agents),
+                )
+            # A ChainMap rather than a merged dict: which Apps are connected
+            # changes while the Runtime runs, so the set of names an author may
+            # pick from has to be read, not remembered.
+            generation_agents = ChainMap(
+                generation_agents, authoring_broker.generators()
+            )
+            if workflow_generator is None:
+                # No CLI to fall back on, and no App has connected yet — but
+                # one may, so authoring is wired rather than declared
+                # unavailable for the life of the process. The broker itself is
+                # the unnamed fallback; the names in the menu are the ones Apps
+                # report for themselves.
+                workflow_generator = authoring_broker
+
+    # Delegated App/Harness Agents receive the same Run workspace contract as
+    # local CLIs. The Host must execute inside the returned absolute path.
+    if agent_project_access:
+        configured = []
+        for registration in registrations:
+            implementation = registration.implementation
+            configure = getattr(implementation, "configure_workspace", None)
+            if callable(configure):
+                configure(
+                    project_workspace=project_workspace,
+                    project_root=project_root_for_agents,
+                )
+                registration = HandlerRegistration(
+                    registration.manifest, implementation,
+                    registration.implementation_id,
+                    granted_capabilities=(
+                        registration.granted_capabilities | grant_capabilities
+                    ),
+                )
+            configured.append(registration)
+        registrations = configured
+
+    if structured_agents:
+        # Operator-configured names, so they sit *over* discovery rather than
+        # under it like a connected App does — an operator who named one meant
+        # it. A collision is refused outright instead: two different writers
+        # answering to one name means an author cannot be told truthfully which
+        # one wrote their workflow, and being told the wrong one is worse than
+        # an error.
+        from ..workflow.authoring.structured import structured_generators
+
+        clash = sorted(set(structured_agents) & set(generation_agents))
+        if clash:
+            raise ValueError(
+                "structured agent names collide with discovered ones: "
+                + ", ".join(clash)
+            )
+        built = structured_generators(tuple(structured_agents.items()))
+        generation_agents = ChainMap(dict(built), generation_agents)
+        if workflow_generator is None:
+            workflow_generator = built[sorted(built)[0]]
+
+    # One registry for both transports: HTTP messages and the stdio pump feed
+    # the same dispatcher, and `/api/v1/mcp/sessions` reads it back. Built up
+    # here rather than beside the dispatcher because it is also the answer to
+    # "which Agent is connected", which a substitution is decided on.
+    from .mcp import McpSessionRegistry
+
+    mcp_sessions = McpSessionRegistry()
+
+    # Most recent first, MCP before the authoring broker. Read at call time,
+    # never captured: which Agent is current follows who last introduced
+    # itself, and this composition happens once at startup.
+    def connected_agent_clients() -> tuple[str, ...]:
+        from ..workflow.agent_binding import recent_agent_clients
+
+        return recent_agent_clients(mcp_sessions, authoring_broker)
+
+    # A Workflow names the exact Handler build it was compiled against, and
+    # for an Agent that build is its CLI version — so a Workflow written on
+    # another machine, or one whose CLI has since been upgraded, names
+    # something that is not here. A step with nowhere to go is carried to an
+    # Agent that is, and a step whose Agent *is* here is left alone.
+    from ..workflow.agent_binding import AgentFallback
+
+    agent_rebind = AgentFallback(
+        [registration.manifest for registration in registrations],
+        connected_agent_clients,
+    )
+
+    if langgraph_state_directory is not None:
+        if langgraph_service is not None:
+            raise ValueError(
+                "provide langgraph_service or langgraph_state_directory, not both"
+            )
+        from ..workflow.langgraph_runtime import build_service
+        from ..workflow.langgraph_runtime.project_access import (
+            ProjectAccessCoordinator, UnprotectedDirectRecoveryPoints,
+        )
+
+        langgraph_service = build_service(
+            workflow_db_path or db_path,
+            registrations,
+            state_directory=langgraph_state_directory,
+            secret_values=secret_values,
+            schemas=schemas,
+            # The capability report has always said this; now the engine
+            # keeps it, so the report is a promise rather than a label.
+            single_goal=single_goal_mode,
+            rebind=agent_rebind,
+            execution_workers=execution_workers,
+            # Only when this Runtime grants the project directory. Without
+            # it the service holds nothing and every run takes the path it
+            # took before the feature existed.
+            project_access=(
+                None if project_root_for_agents is None
+                else ProjectAccessCoordinator(
+                    project_root_for_agents, write_granted=True,
+                    recovery_points=UnprotectedDirectRecoveryPoints(
+                        project_root_for_agents,
+                    ),
+                )
+            ),
+        )
+
+    composition = RuntimeComposition(
+        db_path,
+        handlers=registrations,
+        schemas=schemas,
+        secret_values=secret_values,
+        poll_seconds=poll_seconds,
+        clock=clock,
+        artifact_backend=artifact_backend,
+        workflow_db_path=workflow_db_path,
+        langgraph_service=langgraph_service,
+        run_retention_days=run_retention_days,
+        project_workspace_grant=project_workspace,
+        project_access=getattr(langgraph_service, "project_access", None),
+    )
+    if composition.workflow_db_path != composition.db_path:
+        from ..workflow.persistence.workflow_versions import merge_workflow_library
+
+        # Definitions published into the project database, carried forward so
+        # a Workflow published by an earlier build stays visible.
+        carried = merge_workflow_library(
+            composition.db_path, composition.workflow_db_path
+        )
+        if carried:
+            print(
+                f"workflow library: carried {carried} definition version(s) "
+                f"forward into {composition.workflow_db_path}",
+                flush=True,
+            )
+
+    @asynccontextmanager
+    async def lifespan(app: Starlette):
+        if langgraph_service is not None:
+            # A process may stop after LangGraph wrote a checkpoint but before
+            # the adapter settled its run metadata. Recover those bounded,
+            # explicitly opted-in runs before accepting new work.
+            failures: list[dict[str, str]] = []
+
+            def record(run_id: str, exc: Exception) -> None:
+                failures.append(
+                    {"run_id": run_id, "error": f"{type(exc).__name__}: {exc}"}
+                )
+
+            try:
+                # In a worker thread: recovery replays whole workflows
+                # synchronously, so running it here would mean the server
+                # accepts no connection until every left-over run has finished.
+                await asyncio.get_running_loop().run_in_executor(
+                    None, lambda: langgraph_service.recover_running(on_error=record)
+                )
+            except Exception as exc:  # noqa: BLE001 - startup outlives recovery
+                # Per-run failures are already isolated inside recover_running;
+                # reaching here means recovery itself could not run at all. The
+                # Runtime still starts: refusing to serve anything because some
+                # older run cannot be replayed is a worse outage than the one
+                # being reported.
+                record("*", exc)
+            if failures:
+                # Surfaced rather than swallowed, like shutdown_stragglers
+                # below: a run that cannot be recovered is a thing an operator
+                # has to see, not a thing to discover from a silent status.
+                app.state.startup_recovery_failures = failures
+        composition.start()
+        try:
+            yield
+        finally:
+            stragglers = composition.stop()
+            if stragglers:
+                # Surfaced rather than swallowed: a loop that will not stop is
+                # a bug, and hiding it here is how zombie workers survive a
+                # restart.
+                app.state.shutdown_stragglers = stragglers
+
+    async def health_live(_request: Request) -> JSONResponse:
+        return JSONResponse(composition.liveness())
+
+    async def health_ready(_request: Request) -> JSONResponse:
+        ready, checks = composition.readiness()
+        return JSONResponse(
+            {"status": "ready" if ready else "not_ready", "checks": checks},
+            status_code=200 if ready else 503,
+        )
+
+    from ..workflow.application.authoring_job_service import AuthoringJobService
+    from .api_v1 import authoring_timeout_seconds, build_api_v1
+    from .mcp import (
+        agent_tool_routes, background_delegation_routes, build_mcp_dispatcher,
+        mcp_routes,
+    )
+
+    from importlib import resources as _resources
+
+    workflow_viewer_available = _resources.files("orbit").joinpath(
+        "static/workflow-editor/index.html"
+    ).is_file()
+
+    # Composition facts for /api/v1/capabilities: what this deployment can do,
+    # with a reason when it cannot. The UI renders "service not provided" from
+    # these instead of probing endpoints for 404s (delivery plan API-7).
+    # An injected mapping without discovery still needs one default, and it has
+    # to be settled before capabilities are declared or the Runtime would
+    # report generation unavailable while holding generators.
+    if workflow_generator is None and generation_agents:
+        workflow_generator = next(iter(generation_agents.values()))
+
+    if authoring_broker is not None and workflow_generator is not authoring_broker:
+        workflow_generator = _connected_client_first(
+            authoring_broker, workflow_generator,
+        )
+
+    # Which name in the list the Runtime actually falls back to. The list is
+    # sorted for display, so the default is not simply its first entry; it is
+    # settled above and identified here by identity, whichever path set it.
+    #
+    # Asked rather than compared, because the default is now a decision taken
+    # per request: `resolve` answers who would write one if an author asked
+    # now. A connected client answers as the broker, which is deliberately not
+    # a name in the menu — so the report says "no named default", which is the
+    # truth about "whoever turns up".
+    def default_generation_agent() -> str | None:
+        resolve = getattr(workflow_generator, "resolve", None)
+        active = workflow_generator if resolve is None else resolve()
+        return next(
+            (
+                name for name, generator in generation_agents.items()
+                if generator is active
+            ),
+            None,
+        )
+
+    def generation_facts() -> dict[str, Any]:
+        # Recomputed per request: a connected client is a name an author may
+        # pick, and clients arrive and leave while the Runtime runs.
+        return {
+            "available": True, "agents": sorted(generation_agents),
+            "default_agent": default_generation_agent(),
+        }
+
+    capabilities = {
+        "static_graph": {"available": True},
+        "human_tasks": {"available": True},
+        # The read-only workflow canvas ships as a build artifact. It is an
+        # implementation detail of the workflow and run pages, not a separate
+        # authoring surface.
+        "workflow_viewer": (
+            {"available": True, "url": "/viewer/"}
+            if workflow_viewer_available
+            else {"available": False, "reason": "viewer_bundle_not_built"}
+        ),
+        "artifacts": (
+            {"available": True}
+            if artifact_backend is not None
+            else {"available": False, "reason": "artifact_store_not_configured"}
+        ),
+        "agent_handlers": {
+            "available": bool(agent_catalog),
+            "agents": sorted(
+                str(item["agent"]) for item in agent_catalog
+                if "agent" in item and "agent.invoke" in item.get("capabilities", ())
+            ),
+            **({} if agent_catalog else {"reason": "no_discovered_agents"}),
+        },
+        # Neither is a kind an author may draw (`LANGGRAPH_NODE_KINDS`) nor a
+        # kind the engine compiles. They were the deleted engine's, and this
+        # report went on advertising them after it went.
+        "foreach": {"available": False, "reason": "not_supported_by_engine"},
+        "subflow": {"available": False, "reason": "not_supported_by_engine"},
+        "history_overlay": {"available": True},
+        "langgraph_workflows": (
+            {"available": True, "api": "/api/v1/langgraph-runs"}
+            if langgraph_service is not None
+            else {"available": False, "reason": "service_not_configured"}
+        ),
+        "workflow_generation": (
+            # The names an author may pick from. Empty means this Runtime has
+            # exactly one way to write DSL and the choice is not offered.
+            generation_facts()
+            if workflow_generator is not None
+            else {
+                "available": False,
+                "reason": (
+                    "no_generation_agent" if discover_agents
+                    else "agent_discovery_disabled"
+                ),
+            }
+        ),
+        "workflow_editing": generation_facts(),
+    }
+    if workflow_generator is not None:
+        # The two generation entries are the only ones that can change after
+        # startup, so they are the only ones read again per request.
+        capabilities = _LiveCapabilities(capabilities, {
+            "workflow_generation": generation_facts,
+            "workflow_editing": generation_facts,
+        })
+
+    # Authoring shares the sealed registry's manifests and the composition's
+    # schema catalog, so a generated draft can only reference what a published
+    # workflow could. Publishing goes through the same definition service the
+    # CLI uses — one validation path, two entrances.
+    from ..workflow.application.workflows import (
+        WorkflowCatalogs, WorkflowDefinitionService,
+    )
+    from ..workflow.catalogs import InMemoryHandlerCatalog
+    from ..workflow.catalogs.extensions import InMemoryExtensionRegistry
+    from ..workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
+
+    manifests = [entry.manifest for entry in composition.handler_registry.entries()]
+    authoring_catalogs = WorkflowCatalogs(
+        InMemoryHandlerCatalog(manifests),
+        composition.schema_catalog,
+        InMemoryExtensionRegistry(),
+    )
+    workflow_publisher = WorkflowDefinitionService(
+        authoring_catalogs, SQLiteWorkflowVersionStore(composition.workflow_db_path)
+    )
+    from ..workflow.application.workflow_draft_service import (
+        WorkflowDraftApplicationService,
+    )
+
+    # Authoring is built first so the draft service can borrow its reviser:
+    # editing a workflow means describing the change to the same agent that
+    # generates one from scratch.
+    authoring_service = None
+    if workflow_generator is not None:
+        from ..workflow.authoring import WorkflowAuthoringService
+
+        authoring_service = WorkflowAuthoringService(
+            authoring_catalogs.handlers,
+            composition.schema_catalog,
+            workflow_generator,
+            generators=generation_agents,
+            handler_facts=[
+                {
+                    "name": manifest.name, "version": manifest.version,
+                    "node_kinds": list(manifest.node_kinds),
+                    "inputs": dict(manifest.inputs),
+                    "outputs": dict(manifest.outputs),
+                    "config_schema": dict(manifest.config_schema),
+                }
+                for manifest in manifests
+            ],
+            # Discovered Agent generation serves the simplified Goal UI and
+            # must produce a directly runnable prompt ingress. Explicitly
+            # injected generators are an embedding seam and may intentionally
+            # target a different input contract.
+            require_goal_binding=discover_agents,
+        )
+
+    draft_service = WorkflowDraftApplicationService(
+        composition.db_path, workflow_publisher,
+        reviser=authoring_service.revise if authoring_service is not None else None,
+        workflow_db_path=composition.workflow_db_path,
+    )
+    # Hand the service to the composition before lifespan startup builds its
+    # loops, so the revision dispatcher and its recovery pass are supervised
+    # like every other background component.
+    composition.draft_service = draft_service
+    generator_command = getattr(workflow_generator, "command", None)
+    composition.revision_agent_command = (
+        generator_command[0] if generator_command else None
+    )
+    # The dispatcher records which CLI actually ran a job, so it needs the
+    # command behind each name the author could have chosen.
+    composition.revision_agent_commands = {
+        name: generator.command[0]
+        for name, generator in generation_agents.items()
+        if getattr(generator, "command", None)
+    }
+
+    operational_config = {
+        "poll_seconds": poll_seconds,
+        "workspace_path": (
+            None if workspace_path is None
+            else str(Path(workspace_path).expanduser().resolve())
+        ),
+    }
+    # One AuthoringJobService for the whole process. It owns in-flight jobs —
+    # their cancel scopes, their deadline timers, and the recovery that
+    # restarts queued work at startup — so a second instance would run every
+    # queued job a second time and cancel what the first had started. A job
+    # dispatched over MCP and one started from the UI are the same job, in the
+    # same list, cancellable from either.
+    authoring_jobs = (
+        AuthoringJobService(
+            composition.db_path, authoring_service, workflow_publisher,
+            workflow_db_path=composition.workflow_db_path,
+            timeout_seconds=authoring_timeout_seconds(operational_config),
+            clock=composition.clock,
+        )
+        if authoring_service is not None and workflow_publisher is not None
+        else None
+    )
+
+    # The MCP surface is a second protocol over the same application services
+    # and the same identity, not a second implementation. Built here rather
+    # than inside the route factory so `orbit mcp` can carry this very
+    # dispatcher over stdio instead of standing up its own services against a
+    # database this process already has open.
+    mcp_dispatch = build_mcp_dispatcher(
+        composition.db_path,
+        clock=composition.clock,
+        workflow_db_path=composition.workflow_db_path,
+        authorizer=authorizer,
+        schema_catalog=composition.schema_catalog,
+        artifact_backend=artifact_backend,
+        workflow_publisher=workflow_publisher,
+        authoring_jobs=authoring_jobs,
+        authoring_broker=authoring_broker,
+        langgraph_service=langgraph_service,
+        session_registry=mcp_sessions,
+        execution_registry=composition.handler_registry,
+        tool_profile=mcp_tool_profile,
+        delegation_queue=delegation_queue,
+    )
+
+    routes: list[Route | Mount | WebSocketRoute] = [
+        Route("/health/live", health_live, methods=["GET"]),
+        Route("/health/ready", health_ready, methods=["GET"]),
+        *build_api_v1(
+            composition.db_path,
+            execution_registry=composition.handler_registry,
+            workflow_db_path=composition.workflow_db_path,
+            authenticator=authenticator, authorizer=authorizer,
+            rate_limiter=rate_limiter,
+            unlimited_actors=unlimited_actors,
+            token_exempt_actors=token_exempt_actors,
+            operator_actors=operator_actors,
+            agent_catalog=agent_catalog,
+            capabilities=capabilities,
+            schema_catalog=composition.schema_catalog,
+            artifact_backend=artifact_backend,
+            authoring_service=authoring_service,
+            workflow_publisher=workflow_publisher,
+            draft_service=draft_service,
+            operational_config=operational_config,
+            authoring_jobs=authoring_jobs,
+            shutdown_request=shutdown_request,
+            langgraph_service=langgraph_service,
+            mcp_sessions=mcp_sessions,
+            agent_fallback=agent_rebind,
+        ),
+        # The MCP surface is a second protocol over the same application
+        # services and the same identity, not a second implementation.
+        *(mcp_routes(mcp_dispatch, authenticator=authenticator) if serve_mcp else ()),
+        # The fixed Hub owns the public MCP protocol. This private, loopback
+        # backend exposes only the workspace's Agent tool catalog and calls.
+        *agent_tool_routes(mcp_dispatch, authenticator=authenticator),
+        *(background_delegation_routes(delegation_queue)
+          if delegation_queue is not None else ()),
+    ]
+
+    # Durable notifications for Agent Apps. Frames are hints only: consumers
+    # re-read HTTP/MCP state and execute only server-issued allowed_commands.
+    # Mounted only with an engine behind it: a socket that accepts, heartbeats
+    # and never delivers is worse than one that is not there, because a
+    # consumer cannot tell it apart from a quiet Runtime.
+    if langgraph_service is not None:
+        from .runtime_events import runtime_event_routes
+
+        routes.extend(runtime_event_routes(
+            langgraph_service, authenticator=authenticator, authorizer=authorizer,
+        ))
+
+    if authoring_broker is not None:
+        # The push half of client-written generation. Claiming stays the only
+        # way work changes hands; this only removes the wait for a poll.
+        from .authoring_events import authoring_event_routes
+
+        routes.extend(
+            authoring_event_routes(authoring_broker, authenticator=authenticator)
+        )
+
+    if serve_ui:
+        # The modular UI is static files only: it holds no server-side session
+        # and no mock adapter, and reaches the runtime exclusively through
+        # /api/v1. Mounting it here is the whole integration.
+        from importlib import resources
+
+        from starlette.staticfiles import StaticFiles
+
+        class RevalidatedStaticFiles(StaticFiles):
+            """Serve the UI with `cache-control: no-cache`.
+
+            The UI is ES modules that import each other by fixed path. Without
+            an explicit directive a browser applies heuristic freshness per
+            file, so one changed module can load beside a cached copy of its
+            neighbour — the import then fails and the page renders nothing at
+            all. `no-cache` still revalidates with the ETag, so an unchanged
+            file costs a 304 rather than a re-download; what it removes is the
+            chance of a half-old module graph.
+            """
+
+            def file_response(self, *args, **kwargs):
+                response = super().file_response(*args, **kwargs)
+                response.headers["cache-control"] = "no-cache"
+                return response
+
+        ui_root = resources.files("orbit").joinpath("static/workflow-ui")
+        routes.append(
+            Mount(
+                "/ui",
+                app=RevalidatedStaticFiles(directory=str(ui_root), html=True),
+                name="ui",
+            )
+        )
+
+        # The graph canvas is embedded by workflow and run pages. It remains a
+        # separate bundle so the rest of the UI does not acquire its framework,
+        # but it is no longer exposed as an editor page.
+        viewer_root = resources.files("orbit").joinpath("static/workflow-editor")
+        if viewer_root.joinpath("index.html").is_file():
+            routes.append(
+                Mount(
+                    "/viewer",
+                    app=RevalidatedStaticFiles(
+                        directory=str(viewer_root), html=True
+                    ),
+                    name="workflow-viewer",
+                )
+            )
+
+    routes.extend(extra_routes)
+    app = Starlette(routes=routes, lifespan=lifespan)
+    app.state.runtime = composition
+    # `orbit mcp` reaches the tools through this instead of over its own HTTP
+    # connection: same dispatcher, same services, one transport removed.
+    app.state.mcp_dispatch = mcp_dispatch
+    app.state.mcp_sessions = mcp_sessions
+    # Kept separate from the Orbit composition by design (ADR 002). Embedders
+    # may operate the optional adapter without implying it is the default
+    # event-sourced Runtime.
+    app.state.langgraph_service = langgraph_service
+    return app

@@ -1,0 +1,297 @@
+"""Deterministic Workflow DSL to Canonical WorkflowIR compiler."""
+
+from __future__ import annotations
+
+import hashlib
+from typing import Any
+
+from ..catalogs.handlers import HandlerCatalog
+from ..catalogs.extensions import InMemoryExtensionRegistry
+from ..catalogs.schemas import InMemorySchemaCatalog
+from ..domain.definitions import (
+    CompiledWorkflow,
+    IREdge,
+    IRExtension,
+    IRHandlerRef,
+    IRNode,
+    IRPolicy,
+    IRPort,
+    IRResult,
+    WorkflowIR,
+)
+from ..domain.data import ArtifactVisibility, PortDataPolicy, PortTransport
+from ..domain.serialization import canonical_json, definition_hash, to_primitive
+from .diagnostics import Diagnostic, DiagnosticError
+from .expressions import compile_condition, expression_references
+from .mapping import compile_mapping, mapping_references
+from .parser import ParsedDslDocument, parse_dsl
+from .semantic import analyze_dsl
+from .validator import validate_dsl_structure
+
+
+COMPILER_VERSION = "1.3"
+
+
+def _port(value: dict[str, Any]) -> IRPort:
+    transport = PortTransport(value.get("transport", "inline"))
+    return IRPort(
+        id=value["id"],
+        schema_id=value["schema_id"],
+        required=value.get("required", True),
+        has_default="default" in value,
+        default=value.get("default"),
+        description=value.get("description", ""),
+        data_policy=PortDataPolicy(
+            transport,
+            value.get("max_size_bytes"),
+            tuple(value.get("content_types", ())),
+            None if "visibility" not in value else ArtifactVisibility(value["visibility"]),
+        ),
+    )
+
+
+def _extension(value: dict[str, Any]) -> IRExtension:
+    return IRExtension(value["extension_id"], value["extension_version"], value["config"])
+
+
+def compile_document(
+    document: ParsedDslDocument,
+    handlers: HandlerCatalog,
+    schemas: InMemorySchemaCatalog,
+    extensions: InMemoryExtensionRegistry | None = None,
+) -> CompiledWorkflow:
+    extensions = extensions or InMemoryExtensionRegistry()
+    validate_dsl_structure(document)
+    analysis = analyze_dsl(document, handlers, schemas, extensions)
+    data = to_primitive(document.data)
+    node_data = {item["id"]: item for item in data["nodes"]}
+
+    nodes: list[IRNode] = []
+    for value in sorted(data["nodes"], key=lambda item: item["id"]):
+        manifest = analysis.handlers.get(value["id"])
+        nodes.append(
+            IRNode(
+                id=value["id"],
+                kind=value["kind"],
+                inputs=tuple(_port(item) for item in sorted(value.get("inputs", []), key=lambda item: item["id"])),
+                outputs=tuple(_port(item) for item in sorted(value.get("outputs", []), key=lambda item: item["id"])),
+                handler=None if manifest is None else IRHandlerRef(
+                    manifest.name, manifest.fingerprint
+                ),
+                config=value.get("config", {}),
+                label=value.get("label"),
+                policies=tuple(sorted(value.get("policies", []))),
+                extension=_extension(value["extension"]) if "extension" in value else None,
+                route_mode=value.get("route_mode"),
+            )
+        )
+
+    edges: list[IREdge] = []
+    for index, value in sorted(enumerate(data["edges"]), key=lambda item: item[1]["id"]):
+        source = node_data[value["from"]["node"]]
+        source_port = next(item for item in source.get("outputs", []) if item["id"] == value["from"]["port"])
+        condition = compile_condition(value.get("condition"), ("edges", index, "condition"))
+        target_port_id = value["to"]["port"]
+        if value.get("mapping") in (None, {}) and value["from"]["port"] != target_port_id:
+            # A bare edge means "carry this output port to that input port". When
+            # the two share a name the identity mapping delivers it, and that is
+            # what this compiled to for years. When they differ, identity hands
+            # the target an object keyed by the *source* port — the input it
+            # actually requires is missing, and the run only discovers it at the
+            # downstream node, as `missing required input ports`. So a bare edge
+            # across differently-named ports compiles to the rename it means.
+            mapping = {
+                "op": "object",
+                "schema_id": source_port["schema_id"],
+                "fields": {
+                    target_port_id: {"op": "ref", "path": f"source.{source_port['id']}"},
+                },
+            }
+        else:
+            mapping = compile_mapping(
+                value.get("mapping"), source_port["schema_id"], ("edges", index, "mapping"),
+            )
+        allowed_references = {
+            f"source.{source_port['id']}",
+            *(f"workflow.inputs.{item['id']}" for item in data.get("inputs", [])),
+        }
+        condition_references = expression_references(condition)
+        invalid = [
+            reference
+            for reference in condition_references + mapping_references(mapping)
+            if not any(reference == allowed or reference.startswith(allowed + ".") for allowed in allowed_references)
+        ]
+        if invalid:
+            raise DiagnosticError(
+                [
+                    Diagnostic(
+                        "DSL_REFERENCE_NOT_FOUND",
+                        f"reference {reference!r} is outside this edge scope",
+                        "compile",
+                        ("edges", index),
+                        hint=(
+                            f"source references on this edge must start with "
+                            f"'source.{source_port['id']}'"
+                        ),
+                    )
+                    for reference in sorted(set(invalid))
+                ]
+            )
+        source_reference = f"source.{source_port['id']}"
+        source_transport = PortTransport(source_port.get("transport", "inline"))
+        opaque_members = [
+            reference for reference in condition_references
+            if source_transport in {
+                PortTransport.ARTIFACT_REF, PortTransport.SECRET_REF,
+            }
+            and reference.startswith(source_reference + ".")
+        ]
+        if opaque_members:
+            raise DiagnosticError(
+                [
+                    Diagnostic(
+                        "DSL_EXPRESSION_INVALID",
+                        f"condition cannot read member {reference!r} from "
+                        f"{source_transport.value} port {source_port['id']!r}",
+                        "compile",
+                        ("edges", index, "condition"),
+                        hint=(
+                            "opaque references carry metadata, not their content; "
+                            "route the Artifact directly or branch on a separate "
+                            "inline status output"
+                        ),
+                    )
+                    for reference in sorted(set(opaque_members))
+                ]
+            )
+        edges.append(
+            IREdge(
+                id=value["id"],
+                source_node=value["from"]["node"],
+                source_port=value["from"]["port"],
+                target_node=value["to"]["node"],
+                target_port=value["to"]["port"],
+                route=value.get("route", "success"),
+                condition=condition,
+                mapping=mapping,
+                priority=value.get("priority", 0),
+                back_edge=value.get("back_edge", False),
+                policy_ref=value.get("policy"),
+            )
+        )
+
+    outgoing_edges = {
+        node.id: tuple(edge.id for edge in edges if edge.source_node == node.id)
+        for node in nodes
+    }
+    incoming_edges = {
+        node.id: tuple(edge.id for edge in edges if edge.target_node == node.id)
+        for node in nodes
+    }
+    indexes = {
+        "node_ordinals": {node.id: index for index, node in enumerate(nodes)},
+        "outgoing_edges": outgoing_edges,
+        "incoming_edges": incoming_edges,
+        "input_ports": {node.id: [port.id for port in node.inputs] for node in nodes},
+        "output_ports": {node.id: [port.id for port in node.outputs] for node in nodes},
+    }
+    metadata = data["metadata"]
+    result = data.get("result")
+    if data["dsl_version"] == "1.3" and result is None:
+        raise DiagnosticError([Diagnostic(
+            "DSL_RESULT_REQUIRED",
+            "DSL 1.3 requires a primary result declaration",
+            "compile",
+            ("result",),
+            hint="reference the node output that represents the Goal result",
+        )])
+    if result is not None:
+        result_node = node_data.get(result["node"])
+        result_port = None if result_node is None else next(
+            (item for item in result_node.get("outputs", []) if item["id"] == result["port"]),
+            None,
+        )
+        if result_port is None:
+            raise DiagnosticError([Diagnostic(
+                "DSL_RESULT_NOT_FOUND",
+                "result must reference a declared node output",
+                "compile",
+                ("result",),
+            )])
+        reachable = {result["node"]}
+        changed = True
+        while changed:
+            changed = False
+            for edge in edges:
+                if (
+                    edge.route == "success"
+                    and edge.source_node in reachable
+                    and edge.target_node not in reachable
+                ):
+                    reachable.add(edge.target_node)
+                    changed = True
+        if not reachable.intersection(data["terminals"]):
+            raise DiagnosticError([Diagnostic(
+                "DSL_RESULT_NOT_TERMINAL",
+                "result output must reach a terminal over a success path",
+                "compile",
+                ("result",),
+            )])
+    ir = WorkflowIR(
+        ir_version=data["dsl_version"] if data["dsl_version"] in {"1.2", "1.3"} else "1.1",
+        workflow_id=f"workflow:{metadata['id']}",
+        name=metadata["name"],
+        description=metadata.get("description", ""),
+        labels=dict(sorted(metadata.get("labels", {}).items())),
+        inputs=tuple(_port(item) for item in sorted(data.get("inputs", []), key=lambda item: item["id"])),
+        outputs=tuple(_port(item) for item in sorted(data.get("outputs", []), key=lambda item: item["id"])),
+        nodes=tuple(nodes),
+        edges=tuple(edges),
+        entry=tuple(sorted(data["entry"])),
+        terminals=tuple(sorted(data["terminals"])),
+        policies=tuple(
+            IRPolicy(item["id"], item["kind"], item["config"])
+            for item in sorted(data.get("policies", []), key=lambda item: item["id"])
+        ),
+        extensions=tuple(
+            _extension(item)
+            for item in sorted(
+                data.get("extensions", []),
+                key=lambda item: (item["extension_id"], item["extension_version"]),
+            )
+        ),
+        indexes=indexes,
+        result=None if result is None else IRResult(result["node"], result["port"]),
+        slug=metadata.get("slug"),
+    )
+    catalog_fingerprint = "sha256:" + hashlib.sha256(
+        canonical_json(
+            {
+                "extensions": extensions.fingerprint,
+                "handlers": handlers.fingerprint,
+                "schemas": schemas.fingerprint,
+            }
+        ).encode()
+    ).hexdigest()
+    return CompiledWorkflow(ir, definition_hash(ir), COMPILER_VERSION, catalog_fingerprint)
+
+
+def compile_source(
+    text: str,
+    handlers: HandlerCatalog,
+    schemas: InMemorySchemaCatalog,
+    *,
+    source_name: str = "<memory>",
+    source_format: str | None = None,
+    extensions: InMemoryExtensionRegistry | None = None,
+) -> CompiledWorkflow:
+    return compile_document(
+        parse_dsl(text, source_name=source_name, source_format=source_format),
+        handlers,
+        schemas,
+        extensions,
+    )
+
+
+def canonical_ir_json(compiled: CompiledWorkflow) -> str:
+    return canonical_json(compiled.ir)

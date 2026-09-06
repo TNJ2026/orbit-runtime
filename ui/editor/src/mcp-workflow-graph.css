@@ -1,0 +1,73 @@
+/* The same palette page.css puts on :root, scoped to this viewer.
+ *
+ * Scoped because the card around it is not this viewer's document: an
+ * unscoped :root here replaced the card's own palette, which is how the
+ * workflow card's accent became #2563eb while every other Orbit card stayed
+ * #7772ff. Scoping also makes the theme the host posts actually win — the
+ * attribute is on this element, so a selector on :root never saw it. */
+.mcp-xyflow-viewer {
+  color-scheme: light dark;
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --ink: #14161a;
+  --muted: #5d6470;
+  --line: #d8dce3;
+  --accent: #2563eb;
+  --ok: #15803d;
+  --bad: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mcp-xyflow-viewer:not([data-theme="light"]) {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --ink: #e8eaee;
+    --muted: #9aa2b1;
+    --line: #2a2f39;
+    --accent: #3b82f6;
+    --ok: #4ade80;
+    --bad: #f87171;
+  }
+}
+
+.mcp-xyflow-viewer[data-theme="dark"] {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --ink: #e8eaee;
+  --muted: #9aa2b1;
+  --line: #2a2f39;
+  --accent: #3b82f6;
+  --ok: #4ade80;
+  --bad: #f87171;
+}
+
+.mcp-xyflow-viewer {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  color: var(--text, CanvasText);
+  background: var(--bg, Canvas);
+}
+
+.mcp-xyflow-viewer .react-flow {
+  width: 100%;
+  height: 100%;
+}
+
+.mcp-xyflow-viewer .react-flow__controls {
+  overflow: hidden;
+  border: 1px solid var(--line, color-mix(in srgb, CanvasText 18%, transparent));
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.mcp-xyflow-viewer .react-flow__controls-button {
+  color: var(--text, CanvasText);
+  background: var(--soft, Canvas);
+  border-bottom-color: var(--line, color-mix(in srgb, CanvasText 18%, transparent));
+}
+
+.mcp-xyflow-viewer .react-flow__controls-button:hover {
+  background: var(--hover, color-mix(in srgb, Canvas 90%, CanvasText 10%));
+}

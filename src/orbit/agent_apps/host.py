@@ -1,0 +1,449 @@
+"""Single-instance lifecycle management for manifest-declared local Agent Apps."""
+
+from __future__ import annotations
+
+from contextlib import contextmanager
+from dataclasses import dataclass, replace
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import time
+from typing import Callable, Iterable, Iterator
+from urllib.error import URLError
+from urllib.parse import urlsplit, urlunsplit
+from urllib.request import Request, urlopen
+
+from ..platform.process import (
+    descendant_pids,
+    detached_process_kwargs,
+    kill_pid_tree,
+    terminate_pid_tree,
+)
+from ..platform.runtime_ownership import DiscoveredRuntime, discover_runtimes
+from .manifest import AgentAppManifest, load_manifest
+
+
+class AgentAppHostError(RuntimeError):
+    pass
+
+
+@dataclass(frozen=True)
+class EnsuredApp:
+    manifest: AgentAppManifest
+    workspace: Path | None
+    state_dir: Path
+    started: bool
+
+
+# How long to leave a departing predecessor before trying again, and the cap
+# it grows to. Short enough that an ordinary restart is not perceptibly slower;
+# doubling so that a command which is simply broken is not relaunched in a hot
+# loop for the whole readiness deadline.
+_RELAUNCH_BACKOFF_SECONDS = 0.2
+_RELAUNCH_BACKOFF_CEILING = 2.0
+
+
+def default_state_root() -> Path:
+    configured = os.environ.get("AGENT_APP_STATE_DIR")
+    if configured:
+        return Path(configured).expanduser()
+    return Path.home() / ".local" / "state" / "agent-apps"
+
+
+def default_workspace() -> Path:
+    """Cross-platform workspace for Agent Apps without project context."""
+
+    configured = os.environ.get("ORBIT_DEFAULT_WORKSPACE")
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return (Path.home() / ".orbit" / "workspaces" / "default").resolve()
+
+
+def _scope_key(manifest: AgentAppManifest, workspace: Path | None) -> str:
+    if manifest.scope == "global":
+        return "global"
+    if workspace is None:
+        raise AgentAppHostError("workspace-scoped app requires a workspace path")
+    return hashlib.sha256(str(workspace).encode("utf-8")).hexdigest()[:16]
+
+
+def _health_check(url: str, timeout: float = 1.0) -> bool:
+    request = Request(url, method="GET")
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            return 200 <= response.status < 400
+    except (OSError, URLError):
+        return False
+
+
+def _process_exists(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except (ProcessLookupError, PermissionError, OSError):
+        return False
+
+
+def _at_runtime(base_url: str, declared_url: str, *, websocket: bool = False) -> str:
+    """Move one declared loopback path onto a discovered Runtime address."""
+
+    base = urlsplit(base_url)
+    declared = urlsplit(declared_url)
+    scheme = base.scheme
+    if websocket:
+        scheme = "wss" if scheme == "https" else "ws"
+    return urlunsplit((scheme, base.netloc, declared.path, "", ""))
+
+
+def _manifest_at_runtime(
+    manifest: AgentAppManifest, runtime: DiscoveredRuntime,
+) -> AgentAppManifest | None:
+    base_url = runtime.base_url
+    if manifest.service.discovery != "orbit-runtime" or base_url is None:
+        return None
+    parsed = urlsplit(base_url)
+    if parsed.scheme not in {"http", "https"} or parsed.hostname not in {
+        "127.0.0.1", "::1", "localhost",
+    }:
+        return None
+    return replace(
+        manifest,
+        service=replace(
+            manifest.service,
+            ready_url=_at_runtime(base_url, manifest.service.ready_url),
+        ),
+        ui_url=_at_runtime(base_url, manifest.ui_url),
+        mcp=(
+            None if manifest.mcp is None else replace(
+                manifest.mcp, url=_at_runtime(base_url, manifest.mcp.url),
+            )
+        ),
+        events=(
+            None if manifest.events is None else replace(
+                manifest.events,
+                url=_at_runtime(base_url, manifest.events.url, websocket=True),
+            )
+        ),
+    )
+@contextmanager
+def _startup_lock(path: Path) -> Iterator[None]:
+    """An advisory, process-wide lock; callers still use health as truth."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a+", encoding="utf-8") as lock_file:
+        if os.name == "nt":
+            import msvcrt
+
+            lock_file.seek(0)
+            lock_file.write("0")
+            lock_file.flush()
+            lock_file.seek(0)
+            msvcrt.locking(lock_file.fileno(), msvcrt.LK_LOCK, 1)
+            try:
+                yield
+            finally:
+                lock_file.seek(0)
+                msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
+class AgentAppHost:
+    """Starts a declared App once per scope and waits for its real ready URL."""
+
+    def __init__(
+        self,
+        *,
+        state_root: Path | str | None = None,
+        health_check: Callable[[str], bool] | None = None,
+        launcher: Callable[[AgentAppManifest, Path, Path | None], subprocess.Popen] | None = None,
+        process_exists: Callable[[int], bool] = _process_exists,
+        runtime_discovery: Callable[[], Iterable[DiscoveredRuntime]] = discover_runtimes,
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        self.state_root = Path(state_root or default_state_root()).expanduser()
+        self.health_check = health_check or _health_check
+        self.launcher = launcher or self._launch
+        self.process_exists = process_exists
+        self.runtime_discovery = runtime_discovery
+        self.clock = clock
+        self.sleep = sleep
+
+    def ensure(self, manifest_path: Path | str, *, workspace: Path | str | None = None) -> EnsuredApp:
+        manifest = load_manifest(manifest_path)
+        if manifest.scope == "global":
+            resolved_workspace = None
+        elif workspace is None:
+            resolved_workspace = default_workspace()
+            resolved_workspace.mkdir(parents=True, exist_ok=True)
+        else:
+            resolved_workspace = (
+                Path(workspace).expanduser().resolve() if workspace is not None else None
+            )
+        scope_key = _scope_key(manifest, resolved_workspace)
+        state_dir = self.state_root / manifest.app_id / scope_key
+        endpoint_key = hashlib.sha256(
+            manifest.service.ready_url.encode("utf-8")
+        ).hexdigest()[:16]
+        with _startup_lock(self.state_root / "_endpoints" / f"{endpoint_key}.lock"):
+            with _startup_lock(state_dir / "lock"):
+                if self.health_check(manifest.service.ready_url):
+                    if not self._owns_ready_endpoint(
+                        state_dir, manifest, resolved_workspace
+                    ):
+                        raise AgentAppHostError(
+                            f"{manifest.service.ready_url} is already served by an "
+                            "unowned or different Agent App scope"
+                        )
+                    return EnsuredApp(
+                        manifest, resolved_workspace, state_dir, started=False
+                    )
+                discovered = self._discover_runtime(manifest, resolved_workspace)
+                if discovered is not None:
+                    return EnsuredApp(
+                        discovered, resolved_workspace, state_dir, started=False
+                    )
+                process = self.launcher(manifest, state_dir, resolved_workspace)
+                self._record_process(
+                    state_dir, manifest, process, resolved_workspace
+                )
+                deadline = self.clock() + manifest.service.timeout_seconds
+                attempts, backoff, last_code = 1, _RELAUNCH_BACKOFF_SECONDS, None
+                while self.clock() < deadline:
+                    if self.health_check(manifest.service.ready_url):
+                        return EnsuredApp(
+                            manifest, resolved_workspace, state_dir, started=True
+                        )
+                    if process.poll() is None:
+                        self.sleep(0.1)
+                        continue
+                    # An exit during startup is not proof of a broken App.
+                    # `ensure` is called to restart something, so the moment it
+                    # runs is exactly the moment a predecessor is letting go:
+                    # still holding the endpoint, or a database it locks, and
+                    # gone a second later. A successor launched into that
+                    # window exits, and failing on it turns an ordinary restart
+                    # into an error the caller has to retry by hand.
+                    #
+                    # Whether the exit was a lost race or a real failure is a
+                    # question only another attempt answers, so the readiness
+                    # deadline decides it rather than the first try. A genuinely
+                    # broken command still fails, having spent the deadline
+                    # saying so — and the message carries the attempts and the
+                    # last exit code so it does not read as a timeout.
+                    last_code = process.returncode
+                    if self.clock() + backoff >= deadline:
+                        break
+                    self.sleep(backoff)
+                    backoff = min(backoff * 2, _RELAUNCH_BACKOFF_CEILING)
+                    if self.health_check(manifest.service.ready_url):
+                        # Whoever we lost to is serving. Launching now would
+                        # start a rival for an endpoint already answering.
+                        continue
+                    process = self.launcher(
+                        manifest, state_dir, resolved_workspace
+                    )
+                    self._record_process(
+                        state_dir, manifest, process, resolved_workspace
+                    )
+                    attempts += 1
+                self._stop_process(process)
+                exited = (
+                    "" if last_code is None
+                    else f", last exit code {last_code}"
+                )
+                raise AgentAppHostError(
+                    f"{manifest.app_id} did not become ready within "
+                    f"{manifest.service.timeout_seconds:g}s "
+                    f"({attempts} attempt(s){exited}); "
+                    f"see {state_dir / 'service.stderr.log'}"
+                )
+
+    def active_workspace(self, manifest_path: Path | str) -> Path | None:
+        """Return the only live managed workspace for an App, if unambiguous."""
+
+        manifest = load_manifest(manifest_path)
+        if manifest.scope == "global":
+            return None
+        candidates: set[Path] = set()
+        if manifest.service.discovery == "orbit-runtime":
+            for runtime in self.runtime_discovery():
+                project_root = runtime.facts.get("project_root")
+                if not isinstance(project_root, str):
+                    continue
+                candidate = Path(project_root).expanduser().resolve()
+                discovered = _manifest_at_runtime(manifest, runtime)
+                if (
+                    candidate.is_dir() and discovered is not None
+                    and self.health_check(discovered.service.ready_url)
+                ):
+                    candidates.add(candidate)
+        for pid_file in (self.state_root / manifest.app_id).glob("*/pid.json"):
+            try:
+                payload = json.loads(pid_file.read_text(encoding="utf-8"))
+                pid = int(payload["pid"])
+                workspace = Path(payload["workspace"]).expanduser().resolve()
+            except (
+                OSError, ValueError, KeyError, TypeError, json.JSONDecodeError,
+            ):
+                continue
+            if (
+                payload.get("app_id") == manifest.app_id
+                and payload.get("ready_url") == manifest.service.ready_url
+                and workspace.is_dir()
+                and self.process_exists(pid)
+            ):
+                candidates.add(workspace)
+        if not candidates:
+            raise AgentAppHostError(
+                f"no active managed workspace found for {manifest.app_id}; "
+                "open the App first or set --workspace"
+            )
+        if len(candidates) > 1:
+            raise AgentAppHostError(
+                f"multiple active workspaces found for {manifest.app_id}; set --workspace"
+            )
+        return next(iter(candidates))
+
+    def _discover_runtime(
+        self, manifest: AgentAppManifest, workspace: Path | None,
+    ) -> AgentAppManifest | None:
+        if manifest.service.discovery != "orbit-runtime" or workspace is None:
+            return None
+        requested = self._workspace_identity(workspace)
+        matches: list[AgentAppManifest] = []
+        for runtime in self.runtime_discovery():
+            try:
+                published = self._workspace_identity(
+                    runtime.facts.get("project_root")
+                )
+            except (OSError, TypeError, ValueError):
+                continue
+            discovered = _manifest_at_runtime(manifest, runtime)
+            if (
+                published == requested and discovered is not None
+                and self.health_check(discovered.service.ready_url)
+            ):
+                matches.append(discovered)
+        if len(matches) > 1:
+            raise AgentAppHostError(
+                f"multiple live Runtimes found for workspace {requested}"
+            )
+        return matches[0] if matches else None
+
+    def _launch(
+        self, manifest: AgentAppManifest, state_dir: Path, workspace: Path | None,
+    ) -> subprocess.Popen:
+        state_dir.mkdir(parents=True, exist_ok=True)
+        environment = {"PATH": os.environ.get("PATH", "")}
+        for name in manifest.service.environment:
+            if name in os.environ:
+                environment[name] = os.environ[name]
+        cwd = workspace if manifest.scope == "workspace" else manifest.service.cwd
+        if cwd is None:
+            cwd = manifest.service.cwd
+        substitutions = {"{manifest_dir}": str(manifest.path.parent)}
+        if workspace is not None:
+            substitutions["{workspace}"] = str(workspace)
+        command = []
+        for argument in manifest.service.command:
+            if "{workspace}" in argument and workspace is None:
+                raise AgentAppHostError("global App command cannot use {workspace}")
+            for marker, value in substitutions.items():
+                argument = argument.replace(marker, value)
+            command.append(argument)
+        stdout = (state_dir / "service.stdout.log").open("ab")
+        stderr = (state_dir / "service.stderr.log").open("ab")
+        try:
+            try:
+                return subprocess.Popen(
+                    command,
+                    cwd=cwd,
+                    env=environment,
+                    stdin=subprocess.DEVNULL,
+                    stdout=stdout,
+                    stderr=stderr,
+                    close_fds=True,
+                    **detached_process_kwargs(),
+                )
+            except OSError as exc:
+                raise AgentAppHostError(
+                    f"cannot start {manifest.app_id}: {exc}"
+                ) from exc
+        finally:
+            stdout.close()
+            stderr.close()
+
+    @staticmethod
+    def _workspace_identity(workspace: Path | str | None) -> str | None:
+        """Canonical identity persisted across callers and process restarts."""
+
+        if workspace is None:
+            return None
+        return str(Path(workspace).expanduser().resolve())
+
+    @staticmethod
+    def _record_process(
+        state_dir: Path,
+        manifest: AgentAppManifest,
+        process: subprocess.Popen,
+        workspace: Path | None,
+    ) -> None:
+        state_dir.mkdir(parents=True, exist_ok=True)
+        (state_dir / "pid.json").write_text(json.dumps({
+            "pid": process.pid,
+            "app_id": manifest.app_id,
+            "ready_url": manifest.service.ready_url,
+            "workspace": AgentAppHost._workspace_identity(workspace),
+        }, sort_keys=True), encoding="utf-8")
+
+    def _owns_ready_endpoint(
+        self,
+        state_dir: Path,
+        manifest: AgentAppManifest,
+        workspace: Path | None,
+    ) -> bool:
+        try:
+            payload = json.loads(
+                (state_dir / "pid.json").read_text(encoding="utf-8")
+            )
+            pid = int(payload["pid"])
+        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+            return False
+        try:
+            recorded_workspace = self._workspace_identity(payload.get("workspace"))
+            requested_workspace = self._workspace_identity(workspace)
+        except (OSError, TypeError, ValueError):
+            return False
+        return (
+            payload.get("app_id") == manifest.app_id
+            and payload.get("ready_url") == manifest.service.ready_url
+            and recorded_workspace == requested_workspace
+            and self.process_exists(pid)
+        )
+
+    @staticmethod
+    def _stop_process(process: subprocess.Popen) -> None:
+        descendants = descendant_pids(process.pid)
+        terminate_pid_tree(process.pid)
+        try:
+            process.wait(timeout=2)
+            return
+        except subprocess.TimeoutExpired:
+            pass
+        kill_pid_tree(process.pid, known_descendants=descendants)
+        try:
+            process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            pass
