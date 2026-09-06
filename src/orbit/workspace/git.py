@@ -15,10 +15,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
+import os
 from pathlib import Path
 import re
 import shutil
 import subprocess
+import tempfile
 import time
 
 
@@ -52,10 +54,14 @@ class WorkspaceLease:
     base_ref: str
 
 
-def _git(root: Path, *args: str, timeout: float = GIT_TIMEOUT_SECONDS):
+def _git(
+    root: Path, *args: str, timeout: float = GIT_TIMEOUT_SECONDS,
+    env: dict[str, str] | None = None,
+):
     return subprocess.run(
         ["git", "-C", str(root), *args],
         capture_output=True, text=True, timeout=timeout, check=False,
+        env=None if env is None else {**os.environ, **env},
     )
 
 
@@ -197,9 +203,8 @@ class GitWorkspaceProvider:
     def project_status_porcelain(self) -> tuple[str, ...]:
         """Porcelain status lines for the source checkout, including untracked files.
 
-        A run worktree starts from HEAD. Refusing a dirty source checkout keeps
-        "full project access" honest: otherwise local edits or untracked input
-        would silently be absent from the Agent's workspace.
+        A dirty checkout is snapshotted before its Run worktree is created, so
+        local edits and untracked inputs are not silently absent there.
         """
 
         try:
@@ -223,9 +228,67 @@ class GitWorkspaceProvider:
 
         return bool(self.project_status_porcelain())
 
+    def snapshot_commit(self, workspace_ref: str) -> str:
+        """Capture the visible checkout in a commit without changing it or its index.
+
+        A linked worktree can only start from a Git object. A temporary index
+        lets Orbit include staged, unstaged and non-ignored untracked files in
+        that object while leaving the operator's working tree and real index
+        byte-for-byte alone.
+        """
+
+        base = self._base_ref()
+        if base is None:
+            raise WorkspaceUnavailable(
+                f"{self.project_root} has no commit to snapshot from"
+            )
+        descriptor, index_name = tempfile.mkstemp(prefix="orbit-index-")
+        os.close(descriptor)
+        Path(index_name).unlink(missing_ok=True)  # read-tree creates the index.
+        snapshot_env = {
+            "GIT_INDEX_FILE": index_name,
+            "GIT_AUTHOR_NAME": "Orbit",
+            "GIT_AUTHOR_EMAIL": "orbit@localhost",
+            "GIT_COMMITTER_NAME": "Orbit",
+            "GIT_COMMITTER_EMAIL": "orbit@localhost",
+        }
+        try:
+            for command in (("read-tree", base), ("add", "-A")):
+                result = _git(self.project_root, *command, env=snapshot_env)
+                if result.returncode != 0:
+                    raise WorkspaceError(
+                        f"could not snapshot source checkout {self.project_root}: "
+                        f"{result.stderr.strip() or result.stdout.strip() or 'git failed'}"
+                    )
+            tree = _git(self.project_root, "write-tree", env=snapshot_env)
+            if tree.returncode != 0 or not tree.stdout.strip():
+                raise WorkspaceError(
+                    f"could not write snapshot tree for {self.project_root}: "
+                    f"{tree.stderr.strip() or 'git write-tree failed'}"
+                )
+            commit = _git(
+                self.project_root, "commit-tree", tree.stdout.strip(),
+                "-p", base, "-m", f"Orbit Run snapshot {workspace_ref}",
+                env=snapshot_env,
+            )
+            if commit.returncode != 0 or not commit.stdout.strip():
+                raise WorkspaceError(
+                    f"could not commit snapshot for {self.project_root}: "
+                    f"{commit.stderr.strip() or 'git commit-tree failed'}"
+                )
+            return commit.stdout.strip()
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise WorkspaceError(
+                f"could not snapshot source checkout {self.project_root}: {exc}"
+            ) from exc
+        finally:
+            Path(index_name).unlink(missing_ok=True)
+
     # -- lifecycle --------------------------------------------------------
 
-    def acquire(self, workspace_ref: str) -> WorkspaceLease:
+    def acquire(
+        self, workspace_ref: str, *, base_ref: str | None = None,
+    ) -> WorkspaceLease:
         """Idempotently provision a worktree for ``workspace_ref``.
 
         Raises :class:`WorkspaceUnavailable` when isolation is impossible, so
@@ -236,7 +299,7 @@ class GitWorkspaceProvider:
             raise WorkspaceUnavailable("git is not installed")
         if not is_git_repo(self.project_root):
             raise WorkspaceUnavailable(f"{self.project_root} is not a git repository")
-        base = self._base_ref()
+        base = base_ref or self._base_ref()
         if base is None:
             raise WorkspaceUnavailable(
                 f"{self.project_root} has no commit to branch a workspace from"

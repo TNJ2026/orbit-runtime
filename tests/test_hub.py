@@ -229,6 +229,20 @@ class ProjectAccessGrantTests(unittest.TestCase):
                 "--agent-project-access", manager._serve_arguments(workspace)
             )
 
+    def test_default_enable_does_not_override_an_explicit_disable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            grants = ProjectAccessGrants(root / "project-access.json")
+            identifier, workspace, manager = self.manager(root, grants)
+            grants.set(identifier, allowed=False)
+            grants.enable_by_default(identifier)
+
+            self.assertEqual("disabled", grants.mode(identifier))
+            self.assertFalse(grants.granted(identifier))
+            self.assertNotIn(
+                "--agent-project-access", manager._serve_arguments(workspace)
+            )
+
     def test_the_grant_survives_a_re_registration(self) -> None:
         """Registering happens on every start; permission must not ride on it.
 
@@ -314,11 +328,14 @@ class ProjectAccessGrantTests(unittest.TestCase):
             # silent revocation.
             again = register()
             revoked = register("--no-agent-project-access")
+            still_revoked = register()
 
-            self.assertFalse(plain["agent_project_access"])
+            self.assertTrue(plain["agent_project_access"])
             self.assertTrue(granted["agent_project_access"])
             self.assertTrue(again["agent_project_access"])
             self.assertFalse(revoked["agent_project_access"])
+            self.assertFalse(still_revoked["agent_project_access"])
+            self.assertEqual("disabled", revoked["agent_project_access_mode"])
             self.assertEqual("read_write", granted["agent_project_access_mode"])
             self.assertEqual(
                 "non_git_direct_read_write_no_rollback",
@@ -476,6 +493,48 @@ class HubHttpTests(unittest.TestCase):
         )
         self.assertTrue(response.headers["mcp-session-id"])
         self.assertEqual([], manager.identifiers)
+
+    def test_workspace_registration_is_persisted_by_the_hub(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace = root / "project"
+            workspace.mkdir()
+            registry = WorkspaceRegistry(root / "hub" / "workspaces.json")
+            grants = ProjectAccessGrants(root / "hub" / "project-access.json")
+            manager = WorkspaceRuntimeManager(
+                registry=registry, grants=grants, runtime_discovery=lambda: (),
+            )
+            with AsgiHarness(create_hub_app(manager)) as client:
+                response = client.request(
+                    "POST", "/internal/v1/workspaces/register",
+                    body={"path": str(workspace), "create": False},
+                )
+
+            payload = response.json()
+            identifier = project_id(workspace)
+            self.assertEqual(200, response.status_code)
+            self.assertEqual(identifier, payload["workspace_id"])
+            self.assertEqual(str(workspace.resolve()), payload["workspace_path"])
+            self.assertTrue(payload["mcp_url"].endswith(f"/workspaces/{identifier}/mcp"))
+            self.assertEqual(workspace.resolve(), registry.resolve(identifier))
+            self.assertTrue(grants.granted(identifier))
+
+    def test_workspace_registration_cannot_create_an_arbitrary_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manager = WorkspaceRuntimeManager(
+                registry=WorkspaceRegistry(root / "hub" / "workspaces.json"),
+                grants=ProjectAccessGrants(root / "hub" / "project-access.json"),
+                runtime_discovery=lambda: (),
+            )
+            with AsgiHarness(create_hub_app(manager)) as client:
+                response = client.request(
+                    "POST", "/internal/v1/workspaces/register",
+                    body={"path": str(root / "missing"), "create": True},
+                )
+
+            self.assertEqual(400, response.status_code)
+            self.assertFalse((root / "missing").exists())
 
     def test_default_and_named_tool_requests_use_the_internal_backend(self) -> None:
         manager = self.Manager()

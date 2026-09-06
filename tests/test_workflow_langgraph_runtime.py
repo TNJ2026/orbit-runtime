@@ -3511,7 +3511,10 @@ class LangGraphWorkflowServiceTests(unittest.TestCase):
                 "deadline_seconds": 60, "min_successful": 1,
             },
         )
-        bounded = IRPolicy("again", "rework", {"max_generations": 3})
+        bounded = IRPolicy(
+            "again", "rework",
+            {"max_generations": 3, "exhaustion": "error_route"},
+        )
         # One branch a person never answers, one that resolves. The join
         # cannot proceed while the person is outstanding, so its deadline is
         # the only thing that moves this run — which is what makes a spent
@@ -3532,14 +3535,15 @@ class LangGraphWorkflowServiceTests(unittest.TestCase):
             join.id, join.kind, join.inputs, join.outputs, join.handler,
             join.config, (deadline.id,), join.extension, join.route_mode,
         )
-        # `route` has one outgoing edge on purpose: which way it goes is not
-        # what this is about, and a second edge would make it a question.
         route = node(
             "route", inputs=("value",), outputs=("value",),
             kind="decision", handler=False,
         )
+        done = node(
+            "done", inputs=("value",), kind="terminal", handler=False,
+        )
         ir = workflow(
-            (fan, left, ready, join, route),
+            (fan, left, ready, join, route, done),
             (
                 edge("fan_left", "fan", "left"),
                 edge("fan_ready", "fan", "ready"),
@@ -3550,8 +3554,9 @@ class LangGraphWorkflowServiceTests(unittest.TestCase):
                     "route_fan", "route", "fan",
                     back_edge=True, policy_ref=bounded.id,
                 ),
+                edge("route_done", "route", "done", route="error"),
             ),
-            entry=("fan",), terminals=("route",), result=("join", "value"),
+            entry=("fan",), terminals=("done",), result=("join", "value"),
             policies=(deadline, bounded),
         )
         registry = LangGraphHandlerRegistry([

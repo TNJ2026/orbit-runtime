@@ -102,16 +102,17 @@ html[data-theme="light"] .console-chunk.stderr { color: var(--text); }
 .simplified-workflow-picker > .button { padding-inline: 20px; white-space: nowrap; }
 #homeGenerateWorkflow { background: var(--control-bg) !important; }
 #homeGenerateWorkflow:hover:not(:disabled) { background: var(--control-raised) !important; }
-.simplified-goal-field { position: relative; }
+.simplified-goal-input { position: relative; width: 100%; }
 .simplified-goal-field textarea {
+  width: 100%; box-sizing: border-box;
   min-height: 168px; resize: none; padding: 16px 16px 52px;
   border: 1px solid var(--line-soft); border-radius: var(--radius-control);
   background: var(--panel-2); font-size: 14px; line-height: 1.6;
 }
-/* The hint moves to the left so the button can have the corner it is thrown
-   at, and it reads as a keyboard shortcut rather than body copy. */
+/* A keyboard hint belongs below the writing surface rather than looking like
+   part of the text already entered there. */
 .simplified-goal-shortcut {
-  position: absolute; left: 16px; bottom: 16px;
+  display: block; margin: 6px 4px 0; color: var(--muted-2); opacity: .58;
   pointer-events: none; font-family: var(--mono); font-size: 11px;
 }
 /* Inside the box it belongs to, one step above the control surface the box
@@ -1173,6 +1174,9 @@ html[data-theme="light"] .history-goal-meta { color: var(--muted); }
 .workflow-card-main:hover { background: transparent; }
 .workflow-card-main strong { min-width: 0; overflow-wrap: anywhere; font-size: 15px; font-weight: 600; line-height: 1.35; transition: color .2s ease; }
 .workflow-card:hover .workflow-card-main strong { color: var(--blue); }
+.workflow-card-description {
+  color: var(--muted-2); font-size: 10px; line-height: 1.45; opacity: .72;
+}
 /* The tile names the workflow; its id belongs on the detail view, which
    prints it in full. Kept for a screen reader and for anything reading the
    card by its accessible name. */

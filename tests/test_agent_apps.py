@@ -10,12 +10,15 @@ import threading
 import unittest
 from unittest import mock
 
-from orbit.__main__ import _runtime_db_path
+from orbit.__main__ import _agent_app, _runtime_db_path
 from orbit.agent_apps import host as host_module
 from orbit.agent_apps.host import AgentAppHost, AgentAppHostError
 from orbit.agent_apps.event_bridge import AgentAppEventBridge, EventInbox
 from orbit.agent_apps.manifest import ManifestError, load_manifest
-from orbit.agent_apps.mcp_proxy import forward_http, serve_proxy
+from orbit.agent_apps.mcp_proxy import (
+    HubUnavailableError, HubWorkspaceRegistrationError, forward_http,
+    register_workspace_with_hub, serve_proxy,
+)
 from orbit.platform.projects import project_db_path
 from orbit.platform.runtime_ownership import DiscoveredRuntime
 
@@ -828,6 +831,40 @@ class McpProxyTransportTests(unittest.TestCase):
         self.assertEqual("ping", endpoint.seen[0]["method"])
         self.assertEqual("application/json", endpoint.headers[0]["content-type"])
 
+    def test_workspace_registration_is_delegated_to_the_hub(self) -> None:
+        expected = {
+            "workspace_id": "workspace-a",
+            "workspace_path": str(self.root.resolve()),
+            "mcp_url": "http://127.0.0.1:8848/workspaces/workspace-a/mcp",
+            "ui_url": "http://127.0.0.1:8848/workspaces/workspace-a/ui/",
+            "events_url": "ws://127.0.0.1:8848/workspaces/workspace-a/events",
+        }
+        endpoint = self._endpoint(
+            lambda _message: (200, json.dumps(expected))
+        )
+
+        registered = register_workspace_with_hub(endpoint.url, self.root)
+
+        self.assertEqual(expected, registered)
+        self.assertEqual(
+            {"path": str(self.root.resolve()), "create": False},
+            endpoint.seen[0],
+        )
+
+    def test_workspace_registration_distinguishes_refusal_from_unavailability(self) -> None:
+        refused = self._endpoint(
+            lambda _message: (400, json.dumps({"error": "not allowed"}))
+        )
+        with self.assertRaises(HubWorkspaceRegistrationError):
+            register_workspace_with_hub(refused.url, self.root)
+
+        unavailable = self._endpoint(lambda _message: (200, "{}"))
+        url = unavailable.url
+        unavailable.close()
+        self.endpoints.remove(unavailable)
+        with self.assertRaises(HubUnavailableError):
+            register_workspace_with_hub(url, self.root)
+
     def test_an_error_orbit_answered_with_is_forwarded_not_swallowed(self) -> None:
         """A 4xx carrying a JSON-RPC error is Orbit's answer, not a transport
         failure. Raising here would replace what Orbit said with what the proxy
@@ -886,6 +923,52 @@ class McpProxyTransportTests(unittest.TestCase):
             forward_http(endpoint.url, {"jsonrpc": "2.0", "id": 8}, timeout=0.25)
         self.assertIn("unavailable", str(caught.exception))
         held.set()
+
+
+class OrbitMcpProxyStartupTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.root = Path(self.temp.name)
+        self.workspace = self.root / "workspace"
+        self.workspace.mkdir()
+        self.manifest = write_manifest(self.root, scope="global", events={
+            "transport": "websocket", "url": "ws://127.0.0.1:9911/events",
+        })
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def test_ready_hub_path_neither_writes_home_nor_uses_the_local_host(self) -> None:
+        registration = {
+            "workspace_id": "workspace-a",
+            "workspace_path": str(self.workspace),
+            "mcp_url": "http://127.0.0.1:8848/workspaces/workspace-a/mcp",
+            "ui_url": "http://127.0.0.1:8848/workspaces/workspace-a/ui/",
+            "events_url": "ws://127.0.0.1:8848/workspaces/workspace-a/events",
+        }
+        args = type("Args", (), {
+            "state_dir": None,
+            "workspace": str(self.workspace),
+            "manifest": str(self.manifest),
+            "agent_app_action": "mcp-proxy",
+        })()
+        with mock.patch(
+            "orbit.agent_apps.mcp_proxy.register_workspace_with_hub",
+            return_value=registration,
+        ), mock.patch(
+            "orbit.agent_apps.mcp_proxy.serve_proxy",
+        ) as serve, mock.patch.object(AgentAppHost, "ensure") as ensure:
+            _agent_app(args)
+
+        ensure.assert_not_called()
+        selected = serve.call_args.args[0]
+        self.assertEqual(registration["mcp_url"], selected.mcp.url)
+        self.assertEqual(registration["ui_url"], selected.ui_url)
+        self.assertEqual(registration["events_url"], selected.events.url)
+        self.assertEqual(
+            self.workspace / ".orbit" / "agent-apps" / "sample-app",
+            serve.call_args.kwargs["state_dir"],
+        )
 
 
 class McpProxyEndToEndTests(unittest.TestCase):

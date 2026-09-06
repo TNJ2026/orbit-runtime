@@ -226,23 +226,33 @@ class ProjectAccessGrants:
         return self._read().get(identifier)
 
     def granted(self, identifier: str) -> bool:
-        return self.mode(identifier) is not None
+        return self.mode(identifier) == "read_write"
 
     def set(self, identifier: str, *, allowed: bool) -> None:
         with self._lock:
             entries = self._read()
-            if allowed:
-                entries[identifier] = "read_write"
-            else:
-                entries.pop(identifier, None)
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            temporary = self.path.with_suffix(f".{os.getpid()}.tmp")
-            temporary.write_text(
-                json.dumps({"project_access": entries}, indent=2, sort_keys=True)
-                + "\n",
-                encoding="utf-8",
-            )
-            temporary.replace(self.path)
+            entries[identifier] = "read_write" if allowed else "disabled"
+            self._save(entries)
+
+    def enable_by_default(self, identifier: str) -> None:
+        """Enable a newly seen Workspace without overriding an explicit choice."""
+
+        with self._lock:
+            entries = self._read()
+            if identifier in entries:
+                return
+            entries[identifier] = "read_write"
+            self._save(entries)
+
+    def _save(self, entries: Mapping[str, str]) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.path.with_suffix(f".{os.getpid()}.tmp")
+        temporary.write_text(
+            json.dumps({"project_access": entries}, indent=2, sort_keys=True)
+            + "\n",
+            encoding="utf-8",
+        )
+        temporary.replace(self.path)
 
     def _read(self) -> dict[str, str]:
         try:
@@ -257,8 +267,9 @@ class ProjectAccessGrants:
             if not isinstance(key, str):
                 continue
             # Old boolean/legacy-read records are not consent to the current
-            # non-git direct-write contract. The operator must re-authorize.
-            if value == "read_write":
+            # non-git direct-write contract. Only current explicit states are
+            # retained; an ordinary registration can then apply today's default.
+            if value in {"read_write", "disabled"}:
                 result[key] = value
         return result
 
@@ -684,6 +695,52 @@ def create_hub_app(
     async def ready(_request: Request) -> Response:
         return JSONResponse({"status": "ready", "service": "orbit-hub"})
 
+    async def register_workspace(request: Request) -> Response:
+        """Persist workspace routing in the process that owns Hub state.
+
+        Agent-App MCP proxies can be sandboxed to their project and therefore
+        cannot safely rewrite ``~/.orbit/hub/workspaces.json`` themselves.
+        The Hub is already the authority for that registry, so the proxy sends
+        only the absolute path across loopback and receives scoped URLs back.
+        """
+
+        try:
+            body = await request.json()
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return JSONResponse({"error": "request body must be JSON"}, status_code=400)
+        if not isinstance(body, Mapping):
+            return JSONResponse({"error": "request body must be an object"}, status_code=400)
+        raw_path = body.get("path")
+        if not isinstance(raw_path, str) or not raw_path.strip():
+            return JSONResponse({"error": "path is required"}, status_code=400)
+        requested = Path(raw_path).expanduser()
+        if not requested.is_absolute():
+            return JSONResponse({"error": "workspace path must be absolute"}, status_code=400)
+        create = body.get("create", False)
+        if not isinstance(create, bool):
+            return JSONResponse({"error": "create must be a boolean"}, status_code=400)
+        if create and requested.resolve() != default_workspace().resolve():
+            return JSONResponse(
+                {"error": "only the configured default workspace may be created"},
+                status_code=400,
+            )
+        try:
+            identifier, workspace = await anyio.to_thread.run_sync(
+                lambda: runtimes.registry.register(requested, create=create)
+            )
+            await anyio.to_thread.run_sync(
+                lambda: runtimes.grants.enable_by_default(identifier)
+            )
+        except HubError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=400)
+        hub_url = str(request.base_url).rstrip("/")
+        return JSONResponse({
+            **workspace_urls(identifier, hub_url),
+            "workspace_path": str(workspace),
+            "agent_project_access": runtimes.grants.granted(identifier),
+            "agent_project_access_mode": runtimes.grants.mode(identifier),
+        })
+
     # The template store takes a machine-wide file lock, and a lock with no
     # timeout is not something to hold the event loop on: a second Hub, an
     # `orbit hub register`, or a home directory on a network mount would park
@@ -992,6 +1049,10 @@ def create_hub_app(
 
     app = Starlette(routes=[
         Route("/health/ready", ready, methods=["GET"]),
+        Route(
+            "/internal/v1/workspaces/register", register_workspace,
+            methods=["POST"],
+        ),
         Route("/api/v1/global/agent-stats", global_agent_stats, methods=["GET"]),
         Route(
             "/internal/v1/background-delegations/{operation}",

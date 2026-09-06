@@ -82,6 +82,23 @@ HARNESS_TOOL_NAMES = frozenset({
 })
 OBJECT_OUTPUT_SCHEMA = {"type": "object"}
 MCP_ARTIFACT_CONTENT_MAX_BYTES = 2 * 1024 * 1024
+
+
+def _ui_tool_meta(resource_uri: str) -> dict[str, Any]:
+    """Advertise one MCP App through both the standard and legacy binding.
+
+    Codex and other current MCP Apps hosts consume ``ui.resourceUri``.  The
+    OpenAI compatibility alias remains useful across hosts and older cached
+    plugin sessions, so every UI-bound tool must publish both values from the
+    same helper rather than allowing them to drift.
+    """
+
+    return {
+        "ui": {"resourceUri": resource_uri},
+        "openai/outputTemplate": resource_uri,
+    }
+
+
 SESSION_RECOVERY_INSTRUCTIONS = (
     "On the first user turn of each conversation, call list_delegations once "
     "with its default arguments. If it returns no delegations, stay silent "
@@ -321,7 +338,7 @@ def build_mcp_dispatcher(
             ),
             "scope": READ_SCOPE,
             "inputSchema": {"type": "object", "properties": {}},
-            "_meta": {"ui": {"resourceUri": ORBIT_DASHBOARD_URI}},
+            "_meta": _ui_tool_meta(ORBIT_DASHBOARD_URI),
         },
         {
             "name": "open_orbit_goals",
@@ -331,7 +348,7 @@ def build_mcp_dispatcher(
             ),
             "scope": READ_SCOPE,
             "inputSchema": {"type": "object", "properties": {}},
-            "_meta": {"ui": {"resourceUri": ORBIT_GOALS_URI}},
+            "_meta": _ui_tool_meta(ORBIT_GOALS_URI),
         },
         # -- discovery ----------------------------------------------------
         # `start_run` needs a workflow_id, and until now nothing over MCP could
@@ -358,7 +375,7 @@ def build_mcp_dispatcher(
                     },
                 },
             },
-            "_meta": {"ui": {"resourceUri": ORBIT_WORKFLOWS_URI}},
+            "_meta": _ui_tool_meta(ORBIT_WORKFLOWS_URI),
         },
         {
             "name": "get_workflow_definition",
@@ -376,7 +393,7 @@ def build_mcp_dispatcher(
             # The definition is a view inside the workflow-list App. Binding
             # the read to that same resource lets the mounted card call it;
             # there is deliberately no separate workflow-detail resource.
-            "_meta": {"ui": {"resourceUri": ORBIT_WORKFLOWS_URI}},
+            "_meta": _ui_tool_meta(ORBIT_WORKFLOWS_URI),
         },
         {
             "name": "inspect_workflows",
@@ -462,7 +479,7 @@ def build_mcp_dispatcher(
                 },
                 "required": ["prompt", "idempotency_key"],
             },
-            "_meta": {"ui": {"resourceUri": ORBIT_AUTHORING_URI}},
+            "_meta": _ui_tool_meta(ORBIT_AUTHORING_URI),
         },
         {
             "name": "modify_workflow",
@@ -746,7 +763,7 @@ def build_mcp_dispatcher(
                     },
                     "required": ["workflow_id", "idempotency_key"],
                 },
-                "_meta": {"ui": {"resourceUri": ORBIT_RUN_URI}},
+                "_meta": _ui_tool_meta(ORBIT_RUN_URI),
             },
             {
                 "name": "resume_run",

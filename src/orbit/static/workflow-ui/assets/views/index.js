@@ -368,16 +368,16 @@ export function createViews(context) {
             }),
           ]),
         ]),
-        // The shortcut and the button live inside the box they act on: the
-        // composer is one object, not a field with a control parked under it.
         el("div", { class: "field simplified-goal-field" }, [
           el("label", { for: "simplifiedGoal", text: i18n.t("newRun.goal") }),
-          goal,
+          el("div", { class: "simplified-goal-input" }, [
+            goal,
+            el("div", { class: "actions simplified-composer-actions" }, [start]),
+          ]),
           el("span", {
-            class: "simplified-goal-shortcut muted",
+            class: "simplified-goal-shortcut",
             text: i18n.t("simplified.start.shortcut"),
           }),
-          el("div", { class: "actions simplified-composer-actions" }, [start]),
         ]),
         chosen && !allowed ? (
           engineRefusalNotice(chosen) || el("div", {
@@ -648,15 +648,6 @@ export function createViews(context) {
       // `resumeActions` below already turns the same array into an Approve
       // or Reject button, built from `interrupt.id` and `.value.node_id`
       // directly, so nothing here required the raw form to be on screen.
-      // An artifact-ref result is `{artifact_id, schema_id, content_type,
-      // checksum, size_bytes}` — an internal handle, not something a person
-      // reads. `appendRunArtifacts` below already draws the same artifact as
-      // a card with a preview and a download link, so the raw reference here
-      // would only be the id restated in JSON.
-      run.result !== null && run.result !== undefined
-        && typeof run.result.artifact_id !== "string" ? el("pre", {
-        class: "code-block", text: JSON.stringify(run.result, null, 2),
-      }) : null,
       run.error ? el("div", { class: "banner error", text: run.error }) : null,
     ]));
     const live = !TERMINAL_LANGGRAPH_STATUSES.has(run.status);
@@ -2070,7 +2061,9 @@ export function createViews(context) {
                 text: i18n.t(`workflows.readiness.${entry.goal_readiness}`),
               }) : null,
             ]),
-            entry.description ? el("span", { class: "muted", text: entry.description }) : null,
+            entry.description ? el("span", {
+              class: "workflow-card-description", text: entry.description,
+            }) : null,
             entry.goal_readiness !== "ready" ? el("span", {
               class: "muted",
               // A definition that cannot be upgraded is normally answered by
@@ -2718,22 +2711,10 @@ export function createViews(context) {
     );
   }
 
-  /* The run's facts as the engine reports them: identity lines, the final
-   * status, and the result document under one code block. */
+  /* The run's durable identity and final status. Raw `run.result` is an engine
+   * transport value; readable outputs belong in step and artifact views. */
   function goalResultCard(run) {
     const lines = [run.workflow_id, run.run_id, "", run.status];
-    // An artifact-ref result is `{artifact_id, schema_id, content_type,
-    // checksum, size_bytes}` — an internal handle, not something a person
-    // reads. `appendRunArtifacts`, called for this same drawer once the
-    // steps card is drawn, already shows the same artifact as a card with a
-    // preview and a download link, so restating the raw reference here would
-    // only be the id said twice, once as an unreadable handle.
-    if (
-      run.result !== null && run.result !== undefined
-      && typeof run.result.artifact_id !== "string"
-    ) {
-      lines.push(JSON.stringify(run.result, null, 2));
-    }
     const actions = runActionButtons(run);
     return el("section", { class: "goal-card goal-result-card" }, [
       goalStatusPill(run.status),

@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 from typing import Any, Callable, Mapping
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 from .error_text import reading
@@ -16,6 +17,14 @@ from .manifest import AgentAppManifest
 INTERNAL_ERROR = -32603
 PARSE_ERROR = -32700
 _NOT_LOCAL = object()
+
+
+class HubUnavailableError(RuntimeError):
+    """The loopback Hub could not be reached at all."""
+
+
+class HubWorkspaceRegistrationError(RuntimeError):
+    """The Hub answered but refused or could not register the workspace."""
 
 
 EVENT_TOOLS = (
@@ -104,6 +113,60 @@ def forward_http(url: str, message: Any, *, timeout: float = 330) -> Any:
         return json.loads(payload)
     except json.JSONDecodeError as exc:
         raise RuntimeError("MCP endpoint returned invalid JSON") from exc
+
+
+def register_workspace_with_hub(
+    mcp_url: str, workspace: Path | str, *, create: bool = False,
+    timeout: float = 5,
+) -> dict[str, Any]:
+    """Ask the Hub that owns the registry to make one workspace routable.
+
+    The stdio proxy commonly runs inside an Agent sandbox.  It may read the
+    selected project but must not need write access to the Hub's user-level
+    registry.  Registration therefore crosses the existing loopback trust
+    boundary and the long-lived Hub performs the durable write.
+    """
+
+    parsed = urlsplit(mcp_url)
+    endpoint = urlunsplit((
+        parsed.scheme, parsed.netloc, "/internal/v1/workspaces/register", "", "",
+    ))
+    resolved = Path(workspace).expanduser().resolve()
+    request = Request(
+        endpoint,
+        data=json.dumps({"path": str(resolved), "create": create}).encode("utf-8"),
+        method="POST",
+        headers={"content-type": "application/json"},
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            payload = response.read()
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace").strip()
+        raise HubWorkspaceRegistrationError(
+            detail or f"Orbit Hub workspace registration returned HTTP {exc.code}"
+        ) from exc
+    except (OSError, URLError) as exc:
+        detail = exc.reason if isinstance(exc, URLError) else exc
+        raise HubUnavailableError(f"Orbit Hub is unavailable: {detail}") from exc
+    try:
+        decoded = json.loads(payload)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise HubWorkspaceRegistrationError(
+            "Orbit Hub workspace registration returned invalid JSON"
+        ) from exc
+    required = ("workspace_id", "workspace_path", "mcp_url", "ui_url", "events_url")
+    if not isinstance(decoded, Mapping) or not all(
+        isinstance(decoded.get(key), str) and decoded.get(key) for key in required
+    ):
+        raise HubWorkspaceRegistrationError(
+            "Orbit Hub workspace registration returned an incomplete response"
+        )
+    if Path(decoded["workspace_path"]).resolve() != resolved:
+        raise HubWorkspaceRegistrationError(
+            "Orbit Hub registered a different workspace than the one requested"
+        )
+    return dict(decoded)
 
 
 def serve_proxy(

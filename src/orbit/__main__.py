@@ -706,40 +706,83 @@ def _agent_app(args) -> None:
 
     from dataclasses import replace
 
-    from .agent_apps.host import AgentAppHost, AgentAppHostError, default_workspace
-    from .agent_apps.manifest import EventSpec, McpSpec
-    from .agent_apps.mcp_proxy import serve_proxy
+    from .agent_apps.host import (
+        AgentAppHost, AgentAppHostError, default_state_root, default_workspace,
+    )
+    from .agent_apps.manifest import EventSpec, McpSpec, load_manifest
+    from .agent_apps.mcp_proxy import (
+        HubUnavailableError, HubWorkspaceRegistrationError,
+        register_workspace_with_hub, serve_proxy,
+    )
     from .hub import WorkspaceRegistry, workspace_urls
+    from .platform.projects import project_state_dir
 
     host = AgentAppHost(state_root=args.state_dir)
     workspace = (
         Path(args.workspace).expanduser().resolve()
         if args.workspace is not None else default_workspace()
     )
-    identifier, _ = WorkspaceRegistry().register(
-        workspace, create=args.workspace is None,
-    )
-    try:
-        ensured = host.ensure(args.manifest)
-    except (AgentAppHostError, ValueError) as exc:
-        raise SystemExit(f"orbit agent-app: {exc}") from None
     if args.agent_app_action == "ensure":
+        identifier, _ = WorkspaceRegistry().register(
+            workspace, create=args.workspace is None,
+        )
+        try:
+            host.ensure(args.manifest)
+        except (AgentAppHostError, ValueError) as exc:
+            raise SystemExit(f"orbit agent-app: {exc}") from None
         print(workspace_urls(identifier)["ui_url"])
         return
-    urls = workspace_urls(identifier)
+
+    try:
+        manifest = load_manifest(args.manifest)
+    except ValueError as exc:
+        raise SystemExit(f"orbit agent-app: {exc}") from None
+    if manifest.mcp is None:
+        raise SystemExit(f"orbit agent-app: {manifest.app_id} does not declare an MCP endpoint")
+    try:
+        registration = register_workspace_with_hub(
+            manifest.mcp.url, workspace, create=args.workspace is None,
+        )
+    except HubUnavailableError:
+        # Non-Codex hosts may use the stdio proxy without separately managing
+        # the manifest-declared service. Preserve that self-starting behavior,
+        # but only after the read-only Hub request proves nothing is listening.
+        try:
+            host.ensure(args.manifest)
+        except (AgentAppHostError, ValueError) as exc:
+            raise SystemExit(f"orbit agent-app: {exc}") from None
+        try:
+            registration = register_workspace_with_hub(
+                manifest.mcp.url, workspace, create=args.workspace is None,
+            )
+        except (HubUnavailableError, HubWorkspaceRegistrationError) as exc:
+            raise SystemExit(f"orbit agent-app mcp-proxy: {exc}") from None
+    except HubWorkspaceRegistrationError as exc:
+        raise SystemExit(f"orbit agent-app mcp-proxy: {exc}") from None
+    identifier = str(registration["workspace_id"])
     selected = replace(
-        ensured.manifest,
-        ui_url=urls["ui_url"],
-        mcp=McpSpec(url=urls["mcp_url"]),
-        events=EventSpec(url=urls["events_url"]),
+        manifest,
+        ui_url=str(registration["ui_url"]),
+        mcp=McpSpec(url=str(registration["mcp_url"])),
+        events=EventSpec(url=str(registration["events_url"])),
     )
+    configured_state = args.state_dir or os.environ.get("AGENT_APP_STATE_DIR")
+    if configured_state:
+        proxy_state = (
+            default_state_root() / manifest.app_id / "global" / "workspaces" / identifier
+        )
+    else:
+        proxy_state = (
+            project_state_dir(Path(registration["workspace_path"]))
+            / "agent-apps" / manifest.app_id
+        )
     try:
         # The Hub process is global, but each proxy session still needs an
         # isolated event inbox so one workspace cannot consume another's
         # Runtime events.
         serve_proxy(
             selected,
-            state_dir=ensured.state_dir / "workspaces" / identifier,
+            state_dir=proxy_state,
         )
     except RuntimeError as exc:
         raise SystemExit(f"orbit agent-app mcp-proxy: {exc}") from None
@@ -960,7 +1003,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--agent-project-access",
         dest="project_access", action="store_true", default=None,
         help=(
-            "Persist read/write project access for this workspace. Git projects "
+            "Explicitly enable read/write project access for this workspace "
+            "(already the default for a newly registered workspace). Git projects "
             "use a disposable Run worktree; non-git projects expose the real "
             "directory with no automatic rollback. Start future Runtimes with "
             "--agent-project-access. Recorded "
@@ -972,7 +1016,10 @@ def build_parser() -> argparse.ArgumentParser:
     hub_register.add_argument(
         "--no-agent-project-access",
         dest="project_access", action="store_false",
-        help="Take that permission back. The next Runtime start is without it.",
+        help=(
+            "Persistently disable project access for this workspace. The next "
+            "Runtime start is without it."
+        ),
     )
     hub_forget = hub_sub.add_parser(
         "forget",
@@ -1172,7 +1219,9 @@ def main() -> None:
             identifier, _ = registry.register(args.workspace)
             registered_workspace = registry.resolve(identifier)
             grants = ProjectAccessGrants()
-            if args.project_access is not None:
+            if args.project_access is None:
+                grants.enable_by_default(identifier)
+            else:
                 grants.set(identifier, allowed=args.project_access)
             # Reported on every registration, not only when it changes: this
             # is the one place the operator sees whether the Workspace they

@@ -177,13 +177,29 @@ class GitProjectAccessTests(unittest.TestCase):
         self.assertEqual(first.resolve(), second.resolve())
         self.assertEqual("shared\n", (second / "from-first.txt").read_text())
 
-    def test_dirty_source_checkout_is_refused(self) -> None:
-        (self.root / "untracked.txt").write_text("not in HEAD\n")
-        with self.assertRaisesRegex(
-            WorkspaceError, "commit or stash.*before starting",
-        ) as caught:
-            self.grant.acquire("run-dirty")
-        self.assertIn("?? untracked.txt", str(caught.exception))
+    def test_dirty_source_checkout_is_snapshotted_without_changing_it(self) -> None:
+        (self.root / "README.md").write_text("unstaged\n")
+        (self.root / "staged.txt").write_text("staged\n")
+        subprocess.run(
+            ("git", "add", "staged.txt"), cwd=self.root,
+            capture_output=True, check=True,
+        )
+        (self.root / "untracked.txt").write_text("untracked\n")
+        status_before = subprocess.run(
+            ("git", "status", "--porcelain"), cwd=self.root,
+            capture_output=True, text=True, check=True,
+        ).stdout
+
+        workspace = self.grant.acquire("run-dirty")
+
+        self.assertEqual("unstaged\n", (workspace / "README.md").read_text())
+        self.assertEqual("staged\n", (workspace / "staged.txt").read_text())
+        self.assertEqual("untracked\n", (workspace / "untracked.txt").read_text())
+        status_after = subprocess.run(
+            ("git", "status", "--porcelain"), cwd=self.root,
+            capture_output=True, text=True, check=True,
+        ).stdout
+        self.assertEqual(status_before, status_after)
 
 
 class AcquireFailureNeverFallsBackTests(unittest.TestCase):

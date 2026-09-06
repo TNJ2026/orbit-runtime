@@ -75,7 +75,7 @@ current run list. Whether it also *draws* anything is the host's decision, not
 Orbit's, so treat the visible surface as a separate question from the call.
 
 The card it offers is an MCP App (the MCP Apps extension, SEP-1865). Orbit
-serves it as the resource `ui://orbit/current-task-v25.html` with mime type
+serves it as the resource `ui://orbit/current-task-v39.html` with mime type
 `text/html;profile=mcp-app`, and binds it to the tool through
 `_meta.ui.resourceUri` — see `src/orbit/web/mcp_app.py`. There is nothing
 host-specific in any of that: a host that implements MCP Apps mounts the card

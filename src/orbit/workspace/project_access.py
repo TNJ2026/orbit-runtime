@@ -28,19 +28,12 @@ class GitWorktreeGrant:
     def acquire(self, ref: str, *, files: Sequence[str] | None = None) -> Path:
         # ``files`` remains accepted because Handler callers use one interface;
         # a Git worktree always exposes the complete committed tree.
-        dirty = self.provider.project_status_porcelain()
-        if dirty:
-            preview = "\n".join(f"  {line}" for line in dirty[:10])
-            remainder = (
-                "" if len(dirty) <= 10
-                else f"\n  ... and {len(dirty) - 10} more"
-            )
-            raise WorkspaceError(
-                f"source checkout {self.provider.project_root} has uncommitted "
-                "or untracked changes; commit or stash them before starting a "
-                f"workflow that needs project access:\n{preview}{remainder}"
-            )
-        return self.provider.acquire(ref).path
+        base_ref = (
+            self.provider.snapshot_commit(ref)
+            if self.provider.project_is_dirty()
+            else None
+        )
+        return self.provider.acquire(ref, base_ref=base_ref).path
 
     def sweep(self, live_refs: Iterable[str]) -> tuple[str, ...]:
         return self.provider.sweep(

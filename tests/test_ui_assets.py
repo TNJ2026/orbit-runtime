@@ -340,6 +340,11 @@ class AccessibilityTests(unittest.TestCase):
         self.assertRegex(css, r"\.simplified-goal-field textarea\s*\{[^}]*min-height:\s*168px")
         self.assertIn(".simplified-workflow-picker { grid-template-columns: 1fr; }", css)
 
+    def test_run_views_do_not_render_the_raw_result_document(self) -> None:
+        app_js = "\n".join(path.read_text(encoding="utf-8") for path in source_files())
+
+        self.assertNotIn("JSON.stringify(run.result", app_js)
+
     def test_workflow_generation_progress_offers_server_authorized_cancel(self) -> None:
         generation_js = (
             ASSETS / "workflow" / "generation-progress.js"

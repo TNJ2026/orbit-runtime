@@ -634,6 +634,58 @@ def _metadata_setter(
     return apply
 
 
+def _ensure_workspace_access(document: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Apply the mandatory project-workspace default to a new definition."""
+
+    if not isinstance(document, dict):
+        return document
+    policies = document.get("policies")
+    if not isinstance(policies, list):
+        policies = []
+        document["policies"] = policies
+    access = next((
+        item for item in policies
+        if isinstance(item, dict) and item.get("kind") == "workspace_access"
+    ), None)
+    if access is None:
+        used = {
+            str(item.get("id")) for item in policies if isinstance(item, dict)
+        }
+        policy_id = "project_access"
+        suffix = 2
+        while policy_id in used:
+            policy_id = f"project_access_{suffix}"
+            suffix += 1
+        access = {"id": policy_id, "kind": "workspace_access", "config": {}}
+        policies.append(access)
+    else:
+        access["config"] = {}
+        policy_id = str(access.get("id", ""))
+    entries = document.get("entry")
+    nodes = document.get("nodes")
+    entry_id = entries[0] if isinstance(entries, list) and len(entries) == 1 else None
+    entry = next((
+        item for item in nodes or []
+        if isinstance(item, dict) and item.get("id") == entry_id
+    ), None)
+    handler = entry.get("handler") if isinstance(entry, dict) else None
+    handler_name = handler.get("name") if isinstance(handler, dict) else None
+    needs_project = (
+        isinstance(handler_name, str) and (
+            handler_name.startswith("agent.")
+            or handler_name in {"app.delegate", "harness.subagent"}
+        )
+    )
+    if isinstance(entry, dict) and policy_id and needs_project:
+        references = entry.get("policies")
+        if not isinstance(references, list):
+            references = []
+            entry["policies"] = references
+        if policy_id not in references:
+            references.append(policy_id)
+    return document
+
+
 class WorkflowAuthoringService:
     def __init__(
         self,
@@ -861,6 +913,11 @@ class WorkflowAuthoringService:
             hard.append(
                 "The generated workflow must be directly runnable from a Run Goal: declare exactly one entry action. For an agent.* handler its single inline object input is named prompt; for app.delegate or harness.subagent it is named task. Route that entry's output to any downstream parallel branches instead of declaring those branches as additional entries."
             )
+            hard.append(
+                "Every newly generated workflow must declare exactly one top-level "
+                "workspace_access policy with config {}, and the entry action "
+                "must reference that policy id in its policies array."
+            )
         if current_source is not None and shape == "patch":
             # The rules that ask for a whole document are not merely unhelpful
             # here, they are the opposite instruction — and they sit in the
@@ -1020,7 +1077,7 @@ class WorkflowAuthoringService:
             "policy_contract": {
                 "top_level_shape": {
                     "policies": [{
-                        "id": "policy_id", "kind": "join|retry|rework|loop|route|completion",
+                        "id": "policy_id", "kind": "join|retry|rework|loop|route|completion|workspace_access",
                         "config": {},
                     }],
                 },
@@ -1042,6 +1099,10 @@ class WorkflowAuthoringService:
                     "edge": {"back_edge": True, "policy": "loop_or_rework_policy_id"},
                     "loop_config": {"max_iterations": "positive integer"},
                     "rework_config": {"max_generations": "positive integer"},
+                },
+                "workspace_access": {
+                    "config": {},
+                    "reference": "the single entry action lists its policy id",
                 },
             },
             # What an answer must look like when operations are being asked
@@ -1294,6 +1355,13 @@ class WorkflowAuthoringService:
             if self._wants_markdown_artifact(instruction):
                 self._check_markdown_artifact(compiled)
 
+        metadata_transform = _metadata_setter(description, workflow_id)
+
+        def generated_defaults(document):
+            if metadata_transform is not None:
+                document = metadata_transform(document)
+            return _ensure_workspace_access(document)
+
         return self._run_funnel(
             lambda feedback: self._prompt(
                 instruction, feedback, preferred_handler, language=language,
@@ -1305,7 +1373,7 @@ class WorkflowAuthoringService:
             # The author's description is authoritative: it overwrites whatever
             # the model put in metadata.description, and an empty one leaves no
             # description rather than the model's guess.
-            document_transform=_metadata_setter(description, workflow_id),
+            document_transform=generated_defaults,
             on_progress=on_progress,
             on_diagnostics=on_diagnostics,
         )
