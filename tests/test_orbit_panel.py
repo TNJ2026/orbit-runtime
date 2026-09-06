@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v44.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v45.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -745,13 +745,13 @@ class DedicatedCardTests(unittest.TestCase):
         self.assertIn("#tabs { align-items: center; flex: none;", ORBIT_DASHBOARD_HTML)
 
     def test_every_card_keeps_its_scrollbar(self) -> None:
-        """A bar that is there before you need it, and stays after.
+        """A bar with a width, and content laid out beside it rather than under.
 
-        The platform default on macOS is an overlay scrollbar: no width,
-        visible only while a finger is moving. A list gave no sign that it
-        continued, and the content shifted sideways the moment the bar
-        arrived. `scrollbar-gutter: stable` buys the column once, for every
-        card, whether or not that card scrolls today.
+        The platform default on macOS is an overlay scrollbar: no width at
+        all, painted over whatever the last 11px of a row happened to be.
+        `scrollbar-width: thin` takes the card off it, so the column the bar
+        occupies comes out of the content box — and `auto` spends it only
+        while there is a bar to put there.
 
         Both mechanisms are written because no engine reads both: current
         Chromium honours the standard properties and ignores the WebKit
@@ -763,7 +763,11 @@ class DedicatedCardTests(unittest.TestCase):
             ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
         ):
             with self.subTest():
-                self.assertIn("scrollbar-gutter:stable;scrollbar-width:thin;", html)
+                self.assertIn("scrollbar-gutter:auto;scrollbar-width:thin;", html)
+                # `thin` is what takes the card off the macOS overlay bar,
+                # which has no width and would be drawn over the last 11px
+                # of every row instead of beside it.
+                self.assertNotIn("scrollbar-gutter:stable", html)
                 self.assertIn(
                     "scrollbar-color:color-mix(in srgb,var(--muted) 40%,transparent)"
                     " transparent}",

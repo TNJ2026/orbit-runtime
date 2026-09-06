@@ -14,14 +14,14 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v44.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v45.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v21.html"
-ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v12.html"
-ORBIT_RUN_URI = "ui://orbit/goal-run-v18.html"
-ORBIT_GOALS_URI = "ui://orbit/goals-v12.html"
+ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v22.html"
+ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v13.html"
+ORBIT_RUN_URI = "ui://orbit/goal-run-v19.html"
+ORBIT_GOALS_URI = "ui://orbit/goals-v13.html"
 
 # The mark the full Orbit UI shows in its own top-left corner — the same
 # geometry as `workflow-ui/index.html`'s `.brand-mark`, not the favicon the
@@ -118,18 +118,24 @@ _CARD_STYLE = r"""
     color:var(--accent);background:transparent;cursor:pointer}.card{max-height:var(--card-height);
     flex:0 1 auto;min-height:0;
     overflow:hidden auto;border:1px solid var(--line);border-radius:12px;
-    scrollbar-gutter:stable;scrollbar-width:thin;
+    scrollbar-gutter:auto;scrollbar-width:thin;
     scrollbar-color:color-mix(in srgb,var(--muted) 40%,transparent) transparent}
-  /* A thin bar that is always there. The platform default on macOS is an
-     overlay one: no width, visible only while a finger is moving, gone a
-     second later — so a list gives no sign that it continues, and the
-     content jumps sideways the moment the bar arrives. `scrollbar-gutter`
-     buys the column once, for every card, whether or not that card scrolls
-     today. The tone is `--muted` at 40%: about 60 levels off the ground in
-     both themes, which is present without being a second border. `--line`
-     is 33 off white and could not be seen at all.
+  /* A thin bar, and the content yields its width — but only while it is
+     there. `scrollbar-width: thin` is what buys that: it takes the card off
+     the macOS overlay scrollbar, which has no width at all and would have
+     been drawn over the last 11px of every row. Measured: a card that
+     scrolls reserves 13px and lays its rows out in 691, one that does not
+     reserves 2 and gets 702 back.
 
-     The two declarations above are the standard properties, which is what
+     `auto` rather than `stable`, so a card with nothing to scroll spends
+     nothing on the possibility. The cost is the 11px step a list takes
+     sideways on the render where it outgrows the card.
+
+     The tone is `--muted` at 40%: about 60 levels off the ground in both
+     themes, present without being a second border. `--line` is 33 off white
+     and could not be seen at all.
+
+     The declarations above are the standard properties, which is what
      current Chromium reads — it ignores the pseudo-elements entirely. The
      block below is the same bar for WebKit hosts, which have only ever had
      them. Neither engine reads both. */

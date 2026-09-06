@@ -326,30 +326,44 @@ class DashboardCardTests(unittest.TestCase):
                     # Full height, and the host scrolls to reach it.
                     self.assertEqual(600, measured["card"])
 
-    def test_the_scrollbar_column_is_there_before_it_is_needed(self) -> None:
-        """Reserved on a view with nothing to scroll, too.
+    def test_a_row_never_runs_past_the_card_s_content_edge(self) -> None:
+        """Whatever the scrollbar takes, the rows end where the content does.
 
-        Otherwise the column appears the moment a list outgrows the card and
-        every row under the pointer shifts 13px to the left.
+        The reserved width itself cannot be checked here: this browser is
+        headless and headless Chromium draws no scrollbar, so it reports a
+        gutter of 0 whether or not one would exist on screen. What it can
+        check is the invariant that matters either way — a row ends at the
+        card's content edge, so it is laid out beside the bar rather than
+        under it. That the width is reserved at all, and only while there is
+        a bar, is measured in a headed browser and pinned as CSS in
+        `test_every_card_keeps_its_scrollbar`.
         """
 
-        page = self.open()
-        gutters = {}
-        for tab in ("#tabWorkflows", "#tabHistory"):
-            page.click(tab)
-            page.wait_for_timeout(200)
-            gutters[tab] = page.eval_on_selector(
-                "#card",
-                "node => ({gutter: node.offsetWidth - node.clientWidth,"
-                " scrolls: node.scrollHeight > node.clientHeight})",
-            )
-        # History is empty here, so it has nothing to scroll — and still
-        # reserves exactly what the tab that does scroll reserves.
-        self.assertFalse(gutters["#tabHistory"]["scrolls"])
-        self.assertGreater(gutters["#tabHistory"]["gutter"], 0)
-        self.assertEqual(
-            gutters["#tabWorkflows"]["gutter"], gutters["#tabHistory"]["gutter"]
-        )
+        GEOMETRY = """(selector) => {
+          const card = document.getElementById('card');
+          const border = parseFloat(getComputedStyle(card).borderRightWidth);
+          const gutter = card.offsetWidth - card.clientWidth - 2 * border;
+          const row = document.querySelector(selector);
+          return {
+            scrolls: card.scrollHeight > card.clientHeight,
+            under: Math.round(row.getBoundingClientRect().right
+              - (card.getBoundingClientRect().right - border - gutter)),
+          };
+        }"""
+
+        runs = [run(f"run:{i}", status="completed", goal=f"目标 {i}",
+                    created_at=at(0), updated_at=at(0)) for i in range(30)]
+        page = self.open(runs=runs, height=720)
+        page.click("#tabHistory")
+        page.wait_for_selector(".historyRow")
+        overflowing = page.evaluate(GEOMETRY, ".historyRow")
+        self.assertTrue(overflowing["scrolls"], "thirty runs should overflow the card")
+        self.assertEqual(0, overflowing["under"])
+
+        page = self.open(height=720)
+        page.click("#tabHistory")
+        page.wait_for_selector(".empty")
+        self.assertFalse(page.evaluate(GEOMETRY, ".empty")["scrolls"])
 
     def test_a_workflow_row_highlights_to_its_own_edge(self) -> None:
         """Including the part of it under 新目标.
