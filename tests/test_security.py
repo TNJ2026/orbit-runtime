@@ -369,13 +369,7 @@ class SubprocessCleanupTests(unittest.TestCase):
 
 
 def _alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True
+    return process_port.process_identity(pid) is not None
 
 
 class NetworkExposureTests(unittest.TestCase):

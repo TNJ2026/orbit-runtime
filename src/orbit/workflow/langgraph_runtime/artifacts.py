@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 import hashlib
 from pathlib import Path
 import sqlite3
-from typing import Any, Mapping
+from typing import Any, Iterator, Mapping
 
 from ..artifacts.local_cas import LocalCASBackend
 from ..data.secrets import assert_no_secret_values
@@ -48,10 +49,15 @@ class LangGraphArtifactStore:
                 "run_id TEXT NOT NULL,PRIMARY KEY(artifact_id,source_artifact_id))"
             )
 
-    def _connect(self):
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         connection = sqlite3.connect(self.database)
         connection.row_factory = sqlite3.Row
-        return connection
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
 
     def access(
         self, *, run_id, node_id, attempt_id, output_ports, inputs,

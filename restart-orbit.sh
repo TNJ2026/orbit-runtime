@@ -133,11 +133,16 @@ for entry in listed if isinstance(listed, list) else []:
 # degraded: it becomes a candidate, never authority, because the command and
 # start time are checked before every signal below.
 for lock_path in sorted(runtime_root.rglob("*.owner.lock")):
-    try:
-        payload = json.loads(lock_path.read_text(encoding="utf-8"))
-        candidates.append((int(payload["pid"]), "Orbit Runtime", "orbit serve"))
-    except (OSError, ValueError, KeyError, TypeError):
-        continue
+    # Windows makes the locked byte unreadable through another handle, so new
+    # Runtimes publish facts beside the lock. The lock fallback keeps stop-only
+    # useful against an older Unix Runtime during a rolling upgrade.
+    for facts_path in (lock_path.with_suffix(".json"), lock_path):
+        try:
+            payload = json.loads(facts_path.read_text(encoding="utf-8"))
+            candidates.append((int(payload["pid"]), "Orbit Runtime", "orbit serve"))
+            break
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
 
 seen: set[int] = set()
 for pid, label, expected in candidates:

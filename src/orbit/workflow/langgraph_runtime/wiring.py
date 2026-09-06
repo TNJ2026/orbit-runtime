@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 import sqlite3
 from threading import Lock
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Iterator
 import uuid
 
 from ..domain.deadlines import MIN_AGENT_DURATION_SECONDS
@@ -173,10 +174,15 @@ class _HandlerAttemptJournal:
                     "ALTER TABLE langgraph_handler_attempts ADD COLUMN execution_owner TEXT"
                 )
 
-    def _connect(self):
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         connection = sqlite3.connect(self.path)
         connection.row_factory = sqlite3.Row
-        return connection
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
 
     @staticmethod
     def _now() -> str:

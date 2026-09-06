@@ -1,11 +1,12 @@
 """Cross-process ownership for one writable Orbit Runtime database.
 
-The lock doubles as the discovery record. A client that wants to talk to a
-Runtime it did not start — a plugin host, an editor, a second terminal —
-needs two facts nobody else can supply truthfully: that a Runtime is alive,
-and where it answers. The owner is the only process entitled to write the
-second, and the lock it already holds is the only honest source of the
-first.
+The lock and its adjacent metadata file form the discovery record. A client
+that wants to talk to a Runtime it did not start — a plugin host, an editor,
+a second terminal — needs two facts nobody else can supply truthfully: that a
+Runtime is alive, and where it answers. They must be separate files because
+Windows byte-range locks prevent other handles from reading the locked byte.
+The owner is the only process entitled to write the metadata, and the lock it
+already holds is the only honest source of liveness.
 """
 
 from __future__ import annotations
@@ -54,12 +55,16 @@ class RuntimeOwnership:
     """Hold an OS lock for as long as one process may drive a Runtime DB.
 
     The kernel releases the lock when the process exits, including crashes.
-    Metadata is diagnostic only; it is never used to steal a live lock.
+    Adjacent metadata is diagnostic only; it is never used to steal a live
+    lock.
     """
 
     def __init__(self, db_path: Path | str) -> None:
         self.db_path = Path(db_path).expanduser().resolve()
         self.lock_path = self.db_path.with_suffix(self.db_path.suffix + ".owner.lock")
+        self.metadata_path = self.db_path.with_suffix(
+            self.db_path.suffix + ".owner.json"
+        )
         self._file: TextIO | None = None
 
     def acquire(self) -> "RuntimeOwnership":
@@ -94,7 +99,11 @@ class RuntimeOwnership:
         # LOCK_UN would also unlock the parent's shared open-file description.
         _register_fork_hook()
         _LIVE_OWNERS.add(self)
-        self._write({})
+        try:
+            self._write({})
+        except Exception:
+            self.release()
+            raise
         return self
 
     def drop_in_forked_child(self) -> None:
@@ -103,14 +112,13 @@ class RuntimeOwnership:
             handle.close()
 
     def _write(self, facts: Mapping[str, object]) -> None:
-        handle = self._file
-        assert handle is not None
-        handle.seek(0)
-        handle.truncate()
-        handle.write(json.dumps({
-            "pid": os.getpid(), "db_path": str(self.db_path), **facts,
-        }, sort_keys=True))
-        handle.flush()
+        assert self._file is not None
+        self.metadata_path.write_text(
+            json.dumps({
+                "pid": os.getpid(), "db_path": str(self.db_path), **facts,
+            }, sort_keys=True),
+            encoding="utf-8",
+        )
 
     def publish(self, **facts: object) -> None:
         """Record where this Runtime answers, for clients that must find it.
@@ -236,7 +244,18 @@ def discover_runtimes(
         if not _owner_is_live(lock_path):
             continue
         try:
-            facts = json.loads(lock_path.read_text(encoding="utf-8"))
+            metadata_path = lock_path.with_suffix(".json")
+            # Older Unix Runtimes wrote their facts into the lock itself.
+            # Keep discovering one during a rolling upgrade; Windows could
+            # never read that format while the mandatory byte lock was held.
+            try:
+                legacy_text = lock_path.read_text(encoding="utf-8")
+            except OSError:
+                legacy_text = ""
+            facts = json.loads(
+                legacy_text if legacy_text.lstrip().startswith("{")
+                else metadata_path.read_text(encoding="utf-8")
+            )
         except (OSError, ValueError):
             continue
         if isinstance(facts, dict):

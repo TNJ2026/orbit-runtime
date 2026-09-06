@@ -324,7 +324,10 @@ class RestartOrbitScriptTests(unittest.TestCase):
             )
             lock = root / "runtime-root" / "projects" / "runtime.db.owner.lock"
             lock.parent.mkdir(parents=True)
-            lock.write_text(json.dumps({"pid": 9101}), encoding="utf-8")
+            lock.touch()
+            lock.with_suffix(".json").write_text(
+                json.dumps({"pid": 9101}), encoding="utf-8"
+            )
 
             result = self.run_dry(environment, root)
 

@@ -99,7 +99,7 @@ flowchart LR
 
     subgraph perproj["~/.orbit/projects/&lt;slug&gt;-&lt;hash&gt;/ · 每项目一份"]
         RDB[("runtime.db<br/>运行状态 + 已发布 Workflow<br/>+ -wal / -shm")]
-        LOCK["runtime.db.owner.lock<br/>runtime.json"]
+        LOCK["runtime.db.owner.lock<br/>runtime.db.owner.json"]
         RUNS[("langgraph-runs.sqlite3")]
         CKPT[("langgraph-checkpoints.sqlite3")]
         ARTD["artifacts/"]
@@ -140,7 +140,8 @@ Runtime，不会为了查统计而启动离线 Workspace。
 但不会因迁移而重新变成可新建 Run 的工作流。模板目录的修改由 OS 文件锁串行化；
 任何读取或 JSON 校验失败都会 fail closed，不会把损坏目录当成空目录覆盖。
 
-**归属与发现:** `runtime.db.owner.lock` 是文件锁,`runtime.json` 记录 `base_url`,
+**归属与发现:** `runtime.db.owner.lock` 是文件锁,相邻的
+`runtime.db.owner.json` 记录 `base_url`,
 外部客户端(如 stdio 代理)靠它找到已经在跑的 Runtime,而不是猜端口。
 
 ## 5. 定义期:从提示词到不可变版本

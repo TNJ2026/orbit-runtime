@@ -15,10 +15,11 @@ all, so its console is the only account of what happened.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 import sqlite3
-from typing import Any
+from typing import Any, Iterator
 
 
 STREAMS = ("stdout", "stderr")
@@ -48,10 +49,15 @@ class AttemptConsole:
             )
             connection.commit()
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         connection = sqlite3.connect(self.path, timeout=30)
         connection.row_factory = sqlite3.Row
-        return connection
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
 
     def append(
         self, *, run_id: str, node_id: str, attempt_id: str, stream: str,

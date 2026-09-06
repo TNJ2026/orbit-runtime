@@ -12,7 +12,7 @@ import sqlite3
 import queue
 import threading
 import time
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any, Callable, Iterator, Mapping, Sequence
 import uuid
 
 from langgraph.checkpoint.sqlite import SqliteSaver
@@ -555,11 +555,16 @@ class LangGraphWorkflowService:
                 " WHERE purpose='retry' AND target_id=''"
             )
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         connection = sqlite3.connect(self.run_db_path)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys=ON")
-        return connection
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
 
     @contextmanager
     def _saver(self, *, create: bool):

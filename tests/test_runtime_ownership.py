@@ -12,6 +12,7 @@ from unittest.mock import patch
 from orbit.platform.runtime_ownership import (
     RuntimeOwnership, RuntimeOwnershipError, discover_runtimes,
 )
+from orbit.platform.process import stop_pid_tree
 
 
 class RuntimeOwnershipTests(unittest.TestCase):
@@ -34,9 +35,10 @@ class RuntimeOwnershipTests(unittest.TestCase):
     def test_lock_metadata_is_diagnostic_and_release_is_idempotent(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             owner = RuntimeOwnership(Path(root) / "runtime.db").acquire()
-            metadata = json.loads(owner.lock_path.read_text(encoding="utf-8"))
+            metadata = json.loads(owner.metadata_path.read_text(encoding="utf-8"))
             self.assertEqual(str(owner.db_path), metadata["db_path"])
             self.assertGreater(metadata["pid"], 0)
+            self.assertNotEqual(owner.lock_path, owner.metadata_path)
             owner.release()
             owner.release()
 
@@ -191,6 +193,26 @@ class DiscoveryTests(unittest.TestCase):
             self.assertTrue(owner.lock_path.exists())
             self.assertEqual((), discover_runtimes(root))
 
+    @unittest.skipIf(os.name == "nt", "legacy metadata was unreadable on Windows")
+    def test_an_older_runtime_record_is_still_discovered_during_upgrade(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            owner = RuntimeOwnership(Path(root) / "runtime.db").acquire()
+            owner.metadata_path.unlink()
+            owner.lock_path.write_text(
+                json.dumps({
+                    "pid": os.getpid(),
+                    "db_path": str(owner.db_path),
+                    "base_url": "http://127.0.0.1:8848",
+                }),
+                encoding="utf-8",
+            )
+            try:
+                found = discover_runtimes(root)
+                self.assertEqual(1, len(found))
+                self.assertEqual("http://127.0.0.1:8848", found[0].base_url)
+            finally:
+                owner.release()
+
     def test_a_runtime_that_has_not_bound_yet_is_found_without_an_endpoint(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             owner = RuntimeOwnership(Path(root) / "runtime.db").acquire()
@@ -236,11 +258,11 @@ class DiscoveryTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeOwnershipError, "without holding"):
                 owner.publish(base_url="http://127.0.0.1:8848")
 
-    def test_a_lock_holding_unreadable_content_is_skipped_not_fatal(self) -> None:
+    def test_a_lock_holding_invalid_record_is_skipped_not_fatal(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             owner = RuntimeOwnership(Path(root) / "runtime.db").acquire()
             try:
-                owner.lock_path.write_text("not json", encoding="utf-8")
+                owner.metadata_path.write_text("not json", encoding="utf-8")
                 self.assertEqual((), discover_runtimes(root))
             finally:
                 owner.release()
@@ -290,30 +312,38 @@ class EphemeralPortTests(unittest.TestCase):
                     "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src"),
                 },
             )
-            self.addCleanup(server.wait)
-            self.addCleanup(server.terminate)
+            try:
+                for _ in range(200):
+                    if server.poll() is not None:
+                        self.fail(f"server exited early:\n{server.stdout.read()}")
+                    found = discover_runtimes(root)
+                    if found and found[0].base_url:
+                        break
+                    time.sleep(0.1)
+                else:
+                    self.fail("no Runtime published an address")
 
-            for _ in range(200):
-                if server.poll() is not None:
-                    self.fail(f"server exited early:\n{server.stdout.read()}")
-                found = discover_runtimes(root)
-                if found and found[0].base_url:
-                    break
-                time.sleep(0.1)
-            else:
-                self.fail("no Runtime published an address")
-
-            runtime = discover_runtimes(root)[0]
-            port = int(str(runtime.base_url).rsplit(":", 1)[1])
-            self.assertNotEqual(0, port, "the record kept the request, not the answer")
-            self.assertGreater(port, 1023)
-            with urllib.request.urlopen(
-                f"{runtime.base_url}/health/ready", timeout=5
-            ) as response:
-                self.assertEqual(200, response.status)
+                runtime = discover_runtimes(root)[0]
+                port = int(str(runtime.base_url).rsplit(":", 1)[1])
+                self.assertNotEqual(0, port, "the record kept the request, not the answer")
+                self.assertGreater(port, 1023)
+                with urllib.request.urlopen(
+                    f"{runtime.base_url}/health/ready", timeout=5
+                ) as response:
+                    self.assertEqual(200, response.status)
+            finally:
+                if server.poll() is None:
+                    stop_pid_tree(server.pid, wait_for=server.wait)
+                else:
+                    server.wait()
+                if server.stdout is not None:
+                    server.stdout.close()
 
 
 class ForkHookTests(unittest.TestCase):
+    @unittest.skipUnless(
+        hasattr(os, "register_at_fork"), "requires register_at_fork"
+    )
     def test_one_fork_handler_serves_every_owner(self) -> None:
         """A fork handler cannot be unregistered, so only one may be installed.
 
