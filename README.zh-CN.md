@@ -15,9 +15,12 @@ Orbit 是面向 Agent App 的本地持久化 LangGraph 工作流 Runtime。Runti
 需要 Python 3.10 或更高版本，以及 [uv](https://docs.astral.sh/uv/)。
 
 ```bash
-uv tool install git+https://github.com/TNJ2026/orbit.git
+uv tool install orbit-runtime      # 或 pipx install orbit-runtime
 uv tool update-shell
 ```
+
+发行包名是 `orbit-runtime`，它安装出来的命令是 `orbit`。两者不同是因为 `orbit` 这个名字
+在本项目之前就已经被 PyPI 占用；`orbit-runtime` 也正是各集成在 npm 上使用的名字。
 
 从源码运行：
 

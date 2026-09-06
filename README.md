@@ -18,9 +18,13 @@ Orbit requires Python 3.10 or newer and
 [uv](https://docs.astral.sh/uv/).
 
 ```bash
-uv tool install git+https://github.com/TNJ2026/orbit.git
+uv tool install orbit-runtime      # or: pipx install orbit-runtime
 uv tool update-shell
 ```
+
+The distribution is `orbit-runtime`; the command it installs is `orbit`. The
+two names differ because `orbit` was taken on PyPI long before this project,
+and it is the name the integrations already publish under on npm.
 
 To work from source:
 

@@ -11,6 +11,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -23,11 +25,13 @@ jobs:
           node-version: 22
 
       - name: Resolve and verify release version
+        id: version
         run: |
           version="${GITHUB_REF_NAME#v}"
           package_version="$(python -c 'import ast; p=ast.parse(open("src/orbit/__init__.py").read()); print(next(n.value.value for n in p.body if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "__version__" for t in n.targets)))')"
           test "$package_version" = "$version"
           echo "ORBIT_RELEASE_VERSION=$version" >> "$GITHUB_ENV"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Install development dependencies
         run: uv sync --extra dev
@@ -62,3 +66,38 @@ jobs:
             --verify-tag \
             --generate-notes \
             --title "Orbit $GITHUB_REF_NAME"
+
+      # Only the wheel and the sdist. By this point `dist/` also holds the npm
+      # tarball and the Marketplace ZIP, and PyPI takes neither.
+      - name: Collect the Python distributions
+        run: |
+          mkdir -p pypi-dist
+          cp dist/*.whl dist/*.tar.gz pypi-dist/
+          ls -l pypi-dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-distributions
+          path: pypi-dist/
+
+  publish-pypi:
+    # Separate job because trusted publishing wants a job whose only power is
+    # to publish: it runs with `id-token: write` and nothing else, and it can
+    # be gated on a GitHub Environment that requires a review.
+    needs: release
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/orbit-runtime
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-distributions
+          path: dist/
+
+      # No API token anywhere: PyPI trusts this repository, workflow and
+      # environment, and mints a short-lived credential for the upload.
+      # Configure it once at https://pypi.org/manage/account/publishing/ .
+      - uses: pypa/gh-action-pypi-publish@release/v1
