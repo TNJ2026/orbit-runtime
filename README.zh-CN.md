@@ -50,154 +50,19 @@ Agent 存在的地方用它们。
 ## 宿主
 
 Orbit 是一个 Runtime，但有好几扇前门。每个宿主接入方式不同、注册的客户端名不同，
-是否绘制 Orbit 的卡片也不同。下面按宿主分节；宿主之后的内容，无论从哪儿接入都一样。
+是否绘制 Orbit 的卡片也不同。**[每个宿主一页。](./docs/hosts/README.zh-CN.md)**
 
 | 宿主 | 怎么接到 Orbit | 注册名 | 是否绘制卡片 |
 | --- | --- | --- | --- |
-| Codex app | 随插件分发的 stdio Proxy → Hub | `codex-app` | 是 |
-| WorkBuddy | 自定义连接器，HTTP 直连 Hub | `orbit`，以及 `workbuddy-third-party:custom-mcp:orbit` | 是 |
-| DeepSeek Harness | 带自有 Gateway 与面板的 Host Profile Bundle | 按 Session 的 `harness:session:*` actor | 自己的面板 |
-| 其他 MCP App | stdio Proxy | 自己的稳定名称 | 取决于宿主 |
+| [Codex app](./docs/hosts/codex-app.zh-CN.md) | 随插件分发的 stdio Proxy → Hub | `codex-app` | 是 |
+| [WorkBuddy](./docs/hosts/workbuddy.zh-CN.md) | 自定义连接器，HTTP 直连 Hub | `orbit`，以及 `workbuddy-third-party:custom-mcp:orbit` | 是 |
+| [DeepSeek Harness](./docs/hosts/deepseek-harness.zh-CN.md) | 带自有 Gateway 与面板的 Host Profile Bundle | 按 Session 的 `harness:session:*` actor | 自己的面板 |
+| [其他 MCP App](./docs/hosts/other-apps.zh-CN.md) | stdio Proxy | 自己的稳定名称 | 取决于宿主 |
 
-客户端名不得遮蔽已发现的 CLI。Runtime 会把已安装的 CLI 发现为 `codex`、`claude`
-等 Agent，所以 App 用其中之一注册会被**直接拒绝**而不是改名——`-app` 后缀就是为此存在的。
+客户端名不得遮蔽已发现的 CLI。Runtime 会把已安装的 CLI 发现为 `codex`、`claude` 等
+Agent，所以 App 用其中之一注册会被**直接拒绝**而不是改名 —— `-app` 后缀就是为此存在的。
 
-### Codex app
-
-从对应的 GitHub Release 下载 `orbit-marketplace-<版本>.zip`，然后执行：
-
-```bash
-unzip orbit-marketplace-<版本>.zip
-codex plugin marketplace add ./orbit-marketplace
-codex plugin add orbit@orbit-local
-```
-
-也可以先添加解压后的 Marketplace 目录，再从 Codex 插件界面安装：
-
-1. 打开 Codex App 的 **Plugins**。
-2. 在 **Orbit Local** 中找到 **Orbit**，点击 **Install**。
-3. 新建一个 Codex 任务，让新安装的 Skill 和 MCP 工具生效。
-4. 打开需要运行工作流的目标项目。
-5. 告诉 Codex：`打开 Orbit`。
-
-插件自带 MCP Proxy，插件宿主会把 `ORBIT_AGENT_APP_WORKSPACE` 设为当前打开的项目。
-Proxy 把这个 workspace 注册到 8848 端口的本地 Hub，并使用它的 workspace 级 MCP
-地址；Hub 为该 workspace 启动或发现一个动态端口的 Runtime。Orbit 必须获得明确的
-项目目录，绝不会把进程碰巧所在的目录当作项目——没有项目的聊天会使用
-`ORBIT_DEFAULT_WORKSPACE`（若已配置），否则用 `~/.orbit/workspaces/default`。
-
-「打开 Orbit」会启动或复用 Runtime，并在对话旁打开原生面板。它**只是展示**：不会把
-本 App 注册为撰写者，也不会开始监听撰写请求。需要的话请明说，Codex 才会调用
-`wait_authoring_request(client="codex-app")`——在 Codex 下，一个挂起的调用旁边的人
-仍可继续工作，且任务活跃期间会自动续听。任务结束后 `codex-app` 离线，Runtime 继续运行。
-
-点击刷新按钮右侧的 **停止 Orbit** 并确认，会结束当前项目的 Runtime、Worker、
-定时器、MCP 端点和事件连接。
-
-### WorkBuddy
-
-没有插件，也没有 Proxy。添加一个自定义连接器，直接指向 Hub 的 HTTP 地址：
-
-```text
-http://127.0.0.1:8848/mcp
-```
-
-不需要凭据：Hub 只在回环地址上，而回环上的调用方本来就是操作者。WorkBuddy 使用
-Streamable HTTP（`accept: application/json, text/event-stream`），以协议
-`2025-11-25` 与 Orbit 的 `2025-06-18` 协商并接受。它还会对该端点发起一个 GET
-以寻找服务端推流；返回的 `405` 是**答案**，不是故障。
-
-**不要在这里用 `orbit mcp`。** 它的 stdio 传输虽然是 WorkBuddy 自家文档描述的形状，
-但它启动的进程要的是运行中的 Hub 或 `orbit serve` 已经持有的项目数据库，会以
-`Runtime database is already owned` 退出，而不是共享。
-
-WorkBuddy 会挂载 Orbit 的卡片，而**每张挂载的卡片都会开自己的 MCP 会话**并调用它需要
-的工具——所以一个对话里挂着六张卡，就是六套这样的调用。有一个工具为此做了特别处理：
-`list_workflows` 把目录画成卡片，正文只回一个计数，所以当「答案是你要自己算出来的」
-而不是「给人看的」时候，请改用 `inspect_workflows` 读目录。
-`get_workflow_definition` 和 `inspect_workflow_definition` 是同样的一对。
-
-### DeepSeek Harness
-
-`integrations/deepseek-harness` 是一个可安装的 Host Profile Bundle。装进目标
-Harness Web Profile 并重启该 Profile：
-
-```bash
-dsh plugin --profile web add /absolute/path/to/orbit/integrations/deepseek-harness
-```
-
-卸载用 `dsh plugin --profile web remove @orbit-runtime/dsh-orbit`。
-
-需要先安装 `orbit`，使可执行文件在 Harness Host 的 `PATH` 上。打开 `/orbit` 时，
-必要则为该 Harness Workspace 启动 Orbit；这样启动的 Runtime 在面板或 Profile 关闭后
-依然存活。Gateway 默认在 `~/.orbit` 下寻找归属记录——如果 Runtime 数据库在别处，
-为该 Profile 设置 `ORBIT_RUNTIME_ROOT`。Orbit CLI 对该数据库持有一把非阻塞的归属锁，
-并在归属记录里公布自己的 Workspace 和 MCP 端点；Harness 从不持有这把锁，也从不制造
-第二个写入者。
-
-| 组件 | 支持范围 |
-| --- | --- |
-| Orbit Runtime | `>=0.4.0 <0.5.0` |
-| Orbit 集成协议 | `orbit-harness/1` |
-| Harness 包 | `>=0.1.1-rc.2 <0.2.0` |
-| React | `^18.2.0` |
-| Node.js | `>=22` |
-
-这个 bundle 在 Harness 外壳浮层里常驻一个面板。它可以折成一个徽标，只说「有没有东西
-在跑」，展开则是 Runtime 自己的四个页面——目标、工作流、历史、Agents。面板可停靠也可
-拆出拖动，并记住你选的哪种。流程图、Artifact 和工作流撰写**不在这里重画**：面板会打开
-Orbit 自己的 UI。
-
-**Run 由对 Agent 说话来启动，不从面板启动。** Agent 拥有一组有界的原生工具——
-`orbit_list_workflows`、`orbit_list_runs`、`orbit_inspect_run`、`orbit_start_run`、
-`orbit_cancel_run`、`orbit_resume_run`——所以「用 CSV 清洗流跑一下今天的导出」就是全部
-接口。模型从不提供端点、actor、幂等键或变更版本号：Host 从工具运行上下文推导 Workspace
-与 Session、自己生成幂等键，并在 cancel 或 resume 前重新读取 `allowed_commands[]`。
-`/orbit-workflows` 会打开外壳自己的选择弹窗，把选中的工作流作为引用 chip 放进草稿。
-
-面板**故意没有启动按钮**。面板自己启动的 Run，是 Agent 一无所知的 Run——事后无法汇报，
-也无法从它接着往下做。
-
-Harness 用 `harness` 这个 MCP 工具 profile 运行 Runtime，它是完整工具面的一个子集。
-Harness **不执行** Orbit 的工作流节点：Agent 发现、CLI 凭据、沙箱、进程清理、重试语义
-和副作用，全部仍归 Runtime 所有。Orbit 只接受来自回环、只在 `/mcp` 上、且只在
-`harness:session:*` 下的 `x-orbit-actor` 头。
-
-### 其他支持 MCP 的 Agent App
-
-通过 Orbit 的 stdio Proxy 连接。根据目标 App 的 MCP 配置格式调整以下示例：
-
-```json
-{
-  "mcpServers": {
-    "orbit": {
-      "command": "bash",
-      "args": ["/absolute/path/to/orbit/start-orbit.sh", "--mcp-proxy"],
-      "env": {
-        "ORBIT_AGENT_APP_WORKSPACE": "/absolute/path/to/project"
-      }
-    }
-  }
-}
-```
-
-Proxy 请求本地 Hub 注册这个绝对 workspace 路径，它自己不写 Hub 注册表。它的事件收件箱
-默认放在该 workspace 的 `.orbit/agent-apps/` 目录下，所以被沙箱限制的 App 只需要对选定
-的 workspace 有写权限。要放到别处，显式设置 `AGENT_APP_STATE_DIR`。
-
-App 必须保持下面的调用处于等待状态，才会被 Orbit 识别为当前在线 Agent：
-
-```text
-wait_authoring_request(client="claude-desktop", timeout_seconds=300)
-```
-
-Orbit 随后显示 `app:claude-desktop`。仅连接 MCP 不会注册在线 App——是这个等待调用让它
-可被寻址。被请求撰写 Workflow 的 App 用 `submit_authoring_response` 提交 DSL，并通过
-`get_authoring_job` 处理编译反馈。
-
-**被列出不等于被选中。** 已连接的 App 名字**故意**排在已发现的 CLI 之下——fork 出来的
-CLI 会真的跑，而一个挂起的提问只是等，可能永远没人答——所以 Runtime 不会把任何 App 设为
-默认撰写者。请在 UI 的 **Written by** 里自己选那个客户端名。
+下面的内容，无论从哪儿接入都一样。
 
 ## 运行目标
 

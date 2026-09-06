@@ -60,184 +60,21 @@ it after the connected Agent has changed.
 
 Orbit is one Runtime with several front doors. Each host reaches it
 differently, registers under its own client name, and differs in whether it
-draws Orbit's cards. Pick your host below; everything after the host sections
-is the same wherever you connect from.
+draws Orbit's cards. **[Each has its own page.](./docs/hosts/README.md)**
 
 | Host | How it reaches Orbit | Registers as | Draws the card |
 | --- | --- | --- | --- |
-| Codex app | bundled plugin, stdio proxy → Hub | `codex-app` | yes |
-| WorkBuddy | custom connector, HTTP straight at the Hub | `orbit`, and `workbuddy-third-party:custom-mcp:orbit` | yes |
-| DeepSeek Harness | Host Profile Bundle with its own Gateway and panel | per-Session `harness:session:*` actor | its own panel |
-| Any other MCP App | stdio proxy | its own stable name | host-dependent |
+| [Codex app](./docs/hosts/codex-app.md) | bundled plugin, stdio proxy → Hub | `codex-app` | yes |
+| [WorkBuddy](./docs/hosts/workbuddy.md) | custom connector, HTTP straight at the Hub | `orbit`, and `workbuddy-third-party:custom-mcp:orbit` | yes |
+| [DeepSeek Harness](./docs/hosts/deepseek-harness.md) | Host Profile Bundle with its own Gateway and panel | per-Session `harness:session:*` actor | its own panel |
+| [Any other MCP App](./docs/hosts/other-apps.md) | stdio proxy | its own stable name | host-dependent |
 
 A client name may not shadow a discovered CLI. The Runtime finds installed
 CLIs as the Agents `codex`, `claude` and others, so an App registering as one
 of those is refused rather than renamed — which is what the `-app` suffix is
 for.
 
-### Codex app
-
-Download `orbit-marketplace-<version>.zip` from the matching GitHub Release,
-then run:
-
-```bash
-unzip orbit-marketplace-<version>.zip
-codex plugin marketplace add ./orbit-marketplace
-codex plugin add orbit@orbit-local
-```
-
-Alternatively, install it from the Codex plugin UI after adding the extracted
-Marketplace directory:
-
-1. Open **Plugins** in the Codex app.
-2. Find **Orbit** under **Orbit Local** and select **Install**.
-3. Start a new Codex task so the installed Skill and MCP tools are loaded.
-4. Open the project that should own the workflow Runtime.
-5. Ask Codex: `Open Orbit`.
-
-The plugin ships the MCP proxy, and the plugin host sets
-`ORBIT_AGENT_APP_WORKSPACE` to the open project. The proxy registers that
-workspace with the loopback Hub on port 8848 and uses its workspace-scoped MCP
-URL; the Hub starts or discovers a dynamic-port Runtime for it. Orbit requires
-an explicit project directory and never uses an incidental process working
-directory — in a projectless chat it uses `ORBIT_DEFAULT_WORKSPACE` when
-configured, otherwise `~/.orbit/workspaces/default`.
-
-Opening Orbit starts or reuses the Runtime and opens the native dashboard
-beside the conversation. It is display-only: it does not register this App as
-a writer and does not begin listening for authoring work. Ask for that
-explicitly, and Codex calls `wait_authoring_request(client="codex-app")` —
-under Codex a pending call sits beside a person who can keep working, and it
-is renewed while the task is active. Ending the task removes `codex-app`; the
-Runtime keeps running.
-
-Select **Stop Orbit** beside the Refresh button and confirm to stop the
-Runtime, workers, timers, MCP endpoint, and event connections for the project.
-
-### WorkBuddy
-
-There is no plugin and no proxy. Add a custom connector pointing straight at
-the Hub over HTTP:
-
-```text
-http://127.0.0.1:8848/mcp
-```
-
-No credentials: the Hub is on loopback, and a loopback caller is already the
-operator. WorkBuddy speaks Streamable HTTP
-(`accept: application/json, text/event-stream`) and negotiates protocol
-`2025-11-25` against Orbit's `2025-06-18`, which it accepts. It also opens a
-GET on the endpoint looking for a server-initiated stream; the `405` it gets
-back is the answer, not a fault.
-
-Do not use `orbit mcp` here. Its stdio transport is the shape WorkBuddy's own
-documentation describes, but the process it starts wants the project database
-a running Hub or `orbit serve` already owns, and exits with
-`Runtime database is already owned` rather than sharing.
-
-WorkBuddy mounts Orbit's cards, and each mounted card opens its own MCP
-session and calls the tools it needs — so a conversation holding six cards is
-making six sets of those calls. One tool accounts for this: `list_workflows`
-draws the catalogue as a card and answers in prose with a count, so read a
-catalogue with `inspect_workflows` instead whenever the answer is yours to
-work out rather than a person's to look at. The same pair exists as
-`get_workflow_definition` and `inspect_workflow_definition`.
-
-### DeepSeek Harness
-
-`integrations/deepseek-harness` is an installable Host Profile Bundle. Install
-it into a Harness Web Profile and restart that Profile:
-
-```bash
-dsh plugin --profile web add /absolute/path/to/orbit/integrations/deepseek-harness
-```
-
-Remove it with `dsh plugin --profile web remove @orbit-runtime/dsh-orbit`.
-
-Install `orbit` so the executable is on the Harness Host's `PATH`. Opening
-`/orbit` starts Orbit for the Harness Workspace when necessary; a Runtime
-started this way stays up after the panel or Profile closes. The Gateway looks
-for ownership records under `~/.orbit` — set `ORBIT_RUNTIME_ROOT` if the
-Runtime database lives elsewhere. The Orbit CLI holds a non-blocking ownership
-lock on that database and publishes its Workspace and MCP endpoint in the
-ownership record; Harness never owns that lock and never creates a second
-writer.
-
-| Component | Supported range |
-| --- | --- |
-| Orbit Runtime | `>=0.4.0 <0.5.0` |
-| Orbit integration protocol | `orbit-harness/1` |
-| Harness packages | `>=0.1.1-rc.2 <0.2.0` |
-| React | `^18.2.0` |
-| Node.js | `>=22` |
-
-The bundle contributes a resident panel to the Harness shell overlay. It folds
-down to a badge saying whether anything is running and opens to the Runtime's
-own four pages — Goal, Workflows, History, Agents. It can be docked or
-detached, and remembers which. Graphs, Artifacts and Workflow authoring are
-not redrawn here: the panel opens Orbit's own UI for those.
-
-Runs are started by asking the Agent, not from the panel. The Agent has a
-bounded native tool surface — `orbit_list_workflows`, `orbit_list_runs`,
-`orbit_inspect_run`, `orbit_start_run`, `orbit_cancel_run`, `orbit_resume_run`
-— so "run the CSV cleaner over today's export" is the whole interface. The
-model never supplies an endpoint, actor, idempotency key or mutation revision:
-the Host derives Workspace and Session from the tool run context, creates
-idempotency keys, and re-reads `allowed_commands[]` before cancel or resume.
-`/orbit-workflows` opens the shell's own picker and drops the chosen Workflow
-into the draft as a reference chip.
-
-The panel has no start button on purpose. A Run the panel started itself would
-be a Run the Agent knows nothing about, and could not report on afterwards or
-take the next step from.
-
-Harness runs this Runtime under the `harness` MCP tool profile, a subset of the
-full surface. It does not execute Orbit workflow nodes: Agent discovery, CLI
-credentials, sandboxing, process cleanup, retry semantics and effects all
-remain the Runtime's. Orbit accepts the `x-orbit-actor` header only from
-loopback, only on `/mcp`, and only under `harness:session:*`.
-
-### Any other MCP-capable Agent App
-
-Connect through Orbit's stdio proxy. Adapt this example to the App's MCP
-configuration format:
-
-```json
-{
-  "mcpServers": {
-    "orbit": {
-      "command": "bash",
-      "args": ["/absolute/path/to/orbit/start-orbit.sh", "--mcp-proxy"],
-      "env": {
-        "ORBIT_AGENT_APP_WORKSPACE": "/absolute/path/to/project"
-      }
-    }
-  }
-}
-```
-
-The proxy asks the loopback Hub to register the absolute workspace path; it
-does not write the Hub registry itself. Its event inbox defaults to the
-workspace's `.orbit/agent-apps/` directory, so a sandboxed App needs write
-access only to the selected workspace. Set `AGENT_APP_STATE_DIR` explicitly to
-keep that inbox elsewhere.
-
-For Orbit to recognize it as the connected Agent, the App must keep this call
-pending:
-
-```text
-wait_authoring_request(client="claude-desktop", timeout_seconds=300)
-```
-
-Orbit then shows `app:claude-desktop`. Connecting MCP alone does not register
-an online App: the pending call is what makes one addressable. An App asked to
-write a Workflow submits the DSL with `submit_authoring_response` and processes
-compiler feedback through `get_authoring_job`.
-
-Being listed is not being selected. Connected App names sit underneath the
-discovered CLIs deliberately — a forked CLI runs, while a parked prompt only
-waits and may never be answered — so the Runtime names no App as its default
-writer. Pick the client name in the UI's **Written by** field.
+Everything below is the same wherever you connect from.
 
 ## Run a goal
 

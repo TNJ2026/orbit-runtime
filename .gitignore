@@ -12,36 +12,16 @@ build/
 # src/orbit/static/workflow-editor/ is committed on purpose — a pip install
 # has no node and cannot produce it — but the tree that builds it is not.
 node_modules/
-docs/orbit-与-loop-engineering.md
 .playwright-cli/
 
-# Working notes under docs/ stay local. The normative migration baseline and
-# the contracts it gates on must be reviewable in Git (see M0 Gate in
-# docs/workflow-runtime-clean-migration-plan.md).
-docs/*
-!docs/workflow-runtime-clean-migration-plan.md
-!docs/agentic-workflow-implementation-plan.md
-!docs/agent-cli-execution-reliability-plan.md
-!docs/agent-app-host-integration-plan.md
-!docs/codex-plugin-integration-plan.md
-!docs/project-file-access-design.md
-!docs/deepseek-harness-integration-plan.md
-!docs/background-agent-worker.md
-!docs/current-app-execution.md
-!agent-app.json
-!.mcp.json
-!.codex-plugin/
-!scripts/start-orbit.sh
-!scripts/start-mcp-proxy.sh
-!skills/
-!docs/migration/
-!docs/adr/
-!docs/ui/
-docs/ui/*
-!docs/ui/agent-workflow-ui-api-contract.md
-!docs/ui/agent-workflow-ui-implementation.md
-!docs/ui/runtime-ui-prototype-delivery-plan.md
-!docs/ui/workflow-editor-implementation-plan.md
+# docs/ is versioned. It used to be the other way round — everything under it
+# ignored, with a growing allowlist of the few files that had to be reviewable
+# — and the cost of that arrangement was that a document only counted once
+# somebody remembered to add a line here. The host guides are the ones people
+# are sent to; they cannot depend on that.
+#
+# Anything genuinely local belongs somewhere that is not the documentation
+# directory.
 
 # Design spec, kept local to the repo but out of version control
 DESIGN.md
