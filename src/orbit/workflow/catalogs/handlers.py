@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields as fields_of
 import hashlib
 import re
 from types import MappingProxyType
-from typing import Iterable, Mapping, Protocol
+from typing import Any, Iterable, Mapping, Protocol
 
 from ..domain.durable_execution import ExecutionSafety
 from ..domain.handlers import ResourceProfile
@@ -78,6 +78,31 @@ class HandlerManifest:
             if not value.strip():
                 raise ValueError("capability and secret names cannot be empty")
 
+    def __reduce__(self):
+        """Carry this manifest to a worker process that cannot fork.
+
+        `__post_init__` freezes `inputs`, `outputs` and `config_schema` into
+        `MappingProxyType`, which pickle refuses — and the registrations are
+        pickled whenever `multiprocessing` uses `spawn` rather than `fork`.
+        That is every Windows Runtime: `--execution-workers` defaults to 1, so
+        `orbit serve` died in `process.start()` before it ever bound a port.
+
+        Rebuilt through the constructor rather than by restoring attributes,
+        so the manifest arriving in the worker is re-frozen and re-validated
+        exactly like one built there — a fingerprint computed on either side
+        of the pipe has to agree, because that is what a published Workflow's
+        binding was resolved against.
+        """
+
+        values = {field.name: getattr(self, field.name) for field in fields_of(self)}
+        values["inputs"] = dict(self.inputs)
+        values["outputs"] = dict(self.outputs)
+        # Nested, and the only field holding arbitrary JSON. `to_primitive` is
+        # deliberately not applied to the whole manifest: it would flatten
+        # `execution_safety` and `resource_profile` into bare strings.
+        values["config_schema"] = to_primitive(self.config_schema)
+        return (_rebuild_manifest, (values,))
+
     @property
     def fingerprint(self) -> str:
         """The contract this Handler promises, without its build number.
@@ -109,6 +134,12 @@ class HandlerManifest:
         """
 
         return "sha256:" + hashlib.sha256(canonical_json(self).encode()).hexdigest()
+
+
+def _rebuild_manifest(values: dict[str, Any]) -> HandlerManifest:
+    """Reconstruct a pickled manifest through its validating constructor."""
+
+    return HandlerManifest(**values)
 
 
 class HandlerCatalog(Protocol):

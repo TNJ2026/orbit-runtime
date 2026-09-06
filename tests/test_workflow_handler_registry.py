@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pickle
 import unittest
 
 from orbit.workflow.catalogs import HandlerManifest, InMemoryHandlerCatalog
@@ -48,6 +49,39 @@ class HandlerRegistryTests(unittest.TestCase):
         self.assertTrue(value.fingerprint.startswith("sha256:"))
         with self.assertRaisesRegex(ValueError, "hard limit"):
             ResourceProfile(0, 0, 0, 86_401, 0, "free")
+
+    def test_manifest_survives_a_pickle_round_trip(self):
+        value = HandlerManifest(
+            "transform.identity", "1.0.0", ("action",),
+            {"source": "schema://object/1.0"},
+            {"result": "schema://object/1.0"},
+            {
+                "type": "object",
+                "properties": {
+                    "options": {
+                        "type": "array",
+                        "default": [{"enabled": True}],
+                    },
+                },
+            },
+            ExecutionSafety.REPLAY_SAFE,
+            ResourceProfile(0, 0, 0, 60, 0, "free"),
+            "schema://object/1.0",
+            capabilities=("transform.write", "transform.read"),
+            required_secrets=("TRANSFORM_TOKEN",),
+            supports_cancel=True,
+            supports_recover=True,
+        )
+
+        restored = pickle.loads(pickle.dumps(value))
+
+        self.assertEqual(value, restored)
+        self.assertEqual(value.fingerprint, restored.fingerprint)
+        self.assertEqual(value.legacy_fingerprint, restored.legacy_fingerprint)
+        with self.assertRaises(TypeError):
+            restored.config_schema["properties"]["options"]["default"][0][
+                "enabled"
+            ] = False
 
     def test_registry_requires_exact_version_and_seal(self):
         registry = ExecutionRegistry()
