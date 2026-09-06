@@ -5,7 +5,8 @@ differently, registers under its own client name, and differs in whether it
 draws Orbit's cards and which tools it can see. Everything outside these
 pages — running a goal, delegating one to the conversation, events, output,
 the CLI — is the same wherever you connect from, and lives in the
-[main README](../../README.md).
+[main README](../../README.md). What the cards themselves are, and which
+tool opens each, is in [the cards](../cards.md).
 
 [简体中文](./README.zh-CN.md) | **English**
 

@@ -74,6 +74,10 @@ CLIs as the Agents `codex`, `claude` and others, so an App registering as one
 of those is refused rather than renamed — which is what the `-app` suffix is
 for.
 
+Orbit also ships five small pages a host can draw beside the conversation
+— **[the cards](./docs/cards.md)** — which tool opens each, and why one
+sometimes looks stale after an upgrade.
+
 Everything below is the same wherever you connect from.
 
 ## Run a goal

@@ -47,6 +47,8 @@ that shows the rule is about Agents rather than tidiness.
 
 ## What mounting the cards costs
 
+Which card each tool opens is in [the cards](../cards.md).
+
 WorkBuddy mounts Orbit's MCP App cards in full: it lists the resources, asks
 for `resources/templates/list`, then reads the one the tool named through
 `_meta.ui.resourceUri` and draws the card. Two things follow.

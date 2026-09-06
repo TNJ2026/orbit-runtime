@@ -51,6 +51,8 @@ Run 的寿命长于对话，所以在每个对话的第一个用户轮次检查�
 
 ## 卡片会不会出现
 
+五张卡分别是什么，见[卡片](../cards.zh-CN.md)。
+
 Orbit 把它的面板作为 MCP App 发布（MCP Apps 扩展，SEP-1865）：资源的 mime type 是
 `text/html;profile=mcp-app`，并通过 `_meta.ui.resourceUri` 绑定到工具上。这里没有任何
 宿主相关的东西 —— 实现了 MCP Apps 的宿主会把卡片挂进沙箱 iframe，没实现的则只显示工具

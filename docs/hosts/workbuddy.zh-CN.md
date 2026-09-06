@@ -39,6 +39,8 @@ WorkBuddy 从连接器设置里自报 `workbuddy-third-party:custom-mcp:orbit`�
 
 ## 挂载卡片的代价
 
+每个工具打开哪张卡，见[卡片](../cards.zh-CN.md)。
+
 WorkBuddy 完整地挂载 Orbit 的 MCP App 卡片：列出资源、请求
 `resources/templates/list`、再读取工具通过 `_meta.ui.resourceUri` 点名的那一个并绘制。
 由此有两个后果。
