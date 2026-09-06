@@ -14,7 +14,7 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v47.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v48.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
@@ -267,6 +267,18 @@ __CARD_STYLE__
       font-size: 12px; }
     .stepName { min-width: 0; overflow: hidden; text-overflow: ellipsis;
       white-space: nowrap; }
+    .resultBlock { padding: 12px 14px; border-top: 1px solid var(--line); }
+    .resultLabel { color: var(--muted); font-size: 11px; font-weight: 650; }
+    /* How it ended, first and in words. A reader asking "did it work" was
+       being answered with whatever the terminal step happened to emit. */
+    .outcome { margin-top: 4px; font-size: 13px; font-weight: 620; }
+    .outcome.good { color: var(--good); } .outcome.bad { color: var(--bad); }
+    .outcome.warn { color: var(--warn); }
+    .resultBlock .result { margin: 8px 0 0; padding: 0; border: 0; font: inherit;
+      font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .resultBlock .result.resultError { color: var(--bad); }
+    .artifact { margin-top: 8px; color: var(--muted); font-size: 12px;
+      overflow-wrap: anywhere; }
     .stepState { color: var(--muted); font-size: 10px; }
     .definition { border-top: 1px solid var(--line); }
     .definitionRow { padding: 10px 14px; border-bottom: 1px solid var(--line); }
@@ -351,6 +363,9 @@ __CARD_STYLE__
       handle: 'Handle in chat', approve: 'Approve', reject: 'Reject', cancel: 'Request cancellation', createWorkflow: 'Create workflow',
       workflows: 'Workflows', workflow: 'Workflow', back: 'Back', noWorkflows: 'No published workflows', noSteps: 'No steps', noAgents: 'No registered Agents', newGoal: 'New goal', modify: 'Modify', addAgent: 'Add Agent',
       history: 'History', agents: 'Agents', goalDetail: 'Goal', noRuns: 'No goals have been run in this project yet.',
+      result: 'Result', resultFailed: 'Why it failed',
+      outcome: { completed: 'Finished', failed: 'Failed', cancelled: 'Cancelled',
+        unknown: 'Outcome unknown — nobody has ruled on it' },
       today: 'Today', yesterday: 'Yesterday', dateUnknown: 'Unknown date',
       durationShort: 'under 1 min', durationMinutes: minutes => `${minutes} min`,
       durationHours: (hours, minutes) => `${hours} h ${minutes} min`,
@@ -378,6 +393,9 @@ __CARD_STYLE__
       handle: '在聊天中处理', approve: '批准', reject: '拒绝', cancel: '请求取消', createWorkflow: '创建工作流',
       workflows: '工作流', workflow: '工作流详情', back: '返回', noWorkflows: '暂无已发布工作流', noSteps: '暂无步骤', noAgents: '暂无已注册 Agent', newGoal: '新目标', modify: '修改', addAgent: '添加 Agent',
       history: '历史记录', agents: 'Agents', goalDetail: '目标详情', noRuns: '当前项目还没有目标执行记录。',
+      result: '结果', resultFailed: '失败原因',
+      outcome: { completed: '已完成', failed: '失败', cancelled: '已取消',
+        unknown: '结果未知 —— 还没有人裁定' },
       today: '今天', yesterday: '昨天', dateUnknown: '未知日期',
       durationShort: '不足 1 分钟', durationMinutes: minutes => `${minutes} 分钟`,
       durationHours: (hours, minutes) => `${hours} 小时 ${minutes} 分钟`,
@@ -556,6 +574,97 @@ __CARD_STYLE__
 
   function runStatusLabel(status) { return t()[status] || t().status[status] || status; }
 
+  /* How a finished run is reported. Lifted from the Harness panel — the same
+     rules, in the same order — because two surfaces answering "how did it go"
+     differently is two answers.
+
+     `{"artifact_id": "langgraph_artifact:2be8…"}` is what a workflow that
+     writes a file returns, and printing it put a 64-character hash where the
+     answer should have been: the one part of the result that means nothing to
+     a reader. It is a door, so it is drawn as one. */
+  const ARTIFACT = /^langgraph_artifact:[A-Za-z0-9]+$/;
+  const READABLE_TYPES = ['text/markdown', 'text/plain'];
+  const READABLE_MAX_BYTES = 2048;
+
+  function stripArtifacts(value, into) {
+    if (typeof value === 'string') {
+      if (!ARTIFACT.test(value)) return value;
+      into.push(value); return undefined;
+    }
+    if (Array.isArray(value)) {
+      const kept = value.map(item => stripArtifacts(item, into)).filter(item => item !== undefined);
+      return kept.length ? kept : undefined;
+    }
+    if (value !== null && typeof value === 'object') {
+      const kept = {};
+      for (const [key, item] of Object.entries(value)) {
+        const left = stripArtifacts(item, into);
+        if (left !== undefined) kept[key] = left;
+      }
+      return Object.keys(kept).length ? kept : undefined;
+    }
+    return value;
+  }
+
+  function resultText(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      const entries = Object.entries(value);
+      if (entries.length === 1 && typeof entries[0][1] === 'string') return entries[0][1];
+    }
+    try { return JSON.stringify(value, null, 2) || ''; } catch (_) { return String(value); }
+  }
+
+  function artifactLabel(id) {
+    const bare = String(id).replace(/^langgraph_artifact:/, '');
+    return bare.length > 12 ? `${bare.slice(0, 12)}…` : bare;
+  }
+
+  function failureMessage(run) {
+    const error = run?.error;
+    return typeof error === 'string' ? error : error?.message || error?.code || '';
+  }
+
+  /* Read here when it is text and small — a workflow that wrote its reply as
+     markdown wrote the reply, and a click to reach it is a click charged for
+     the thing that was asked for. Decided from what Orbit recorded, before
+     any bytes move. A preview that cannot be read is not worth a sentence:
+     the artifact is still there, and still named below. */
+  async function artifactRow(id) {
+    try {
+      const meta = await callTool('read_artifact', {artifact_id: id});
+      const summary = meta.artifact || meta;
+      const type = String(summary.content_type || '').split(';')[0].trim().toLowerCase();
+      const size = Number(summary.size_bytes);
+      if (READABLE_TYPES.includes(type) && size >= 0 && size < READABLE_MAX_BYTES) {
+        const held = await callTool('read_artifact_content', {artifact_id: id});
+        const text = held.encoding === 'base64'
+          ? decodeURIComponent(escape(atob(held.content))) : held.content || '';
+        if (text) return `<pre class="result">${esc(text)}</pre>`;
+      }
+    } catch (_) { /* still an artifact, still named */ }
+    return `<div class="artifact" title="${esc(id)}">${esc(artifactLabel(id))}</div>`;
+  }
+
+  /* Nothing to say until it has stopped: a run still going has no outcome,
+     and an empty block promising one is worse than no block. */
+  async function runOutcome(run) {
+    if (!TERMINAL.has(run.status)) return '';
+    const failure = failureMessage(run);
+    const ids = [];
+    const answer = failure ? '' : resultText(stripArtifacts(run.result, ids));
+    const rows = [];
+    for (const id of ids) rows.push(await artifactRow(id));
+    return `<div class="resultBlock">
+      <div class="resultLabel">${esc(failure ? t().resultFailed : t().result)}</div>
+      <div class="outcome ${cssFor(run.status)}">${esc(t().outcome[run.status] || runStatusLabel(run.status))}</div>
+      ${failure ? `<pre class="result resultError">${esc(failure)}</pre>` : ''}
+      ${rows.join('')}
+      ${answer ? `<pre class="result">${esc(answer)}</pre>` : ''}</div>`;
+  }
+
   /* The goal a person typed is the row's name; the id is what is left when
      there was none. The Workflow is named only while the catalog still has
      it — an id in its place is not what anyone reads a history list for. */
@@ -596,7 +705,7 @@ __CARD_STYLE__
     card.innerHTML = `${rows || `<div class="empty">${esc(t().noAgents)}</div>`}${add}`;
   }
 
-  function renderRun(run,steps) {
+  function renderRun(run,steps,outcome) {
     const waiting = steps.some(step => step.status === 'waiting');
     const live = !TERMINAL.has(run.status); const statusKey = waiting ? 'waiting' : run.status;
     const stepRows = steps.map(step => `<div class="step"><span class="dot ${cssFor(step.status)}"></span>
@@ -612,7 +721,7 @@ __CARD_STYLE__
       <div class="goal">${esc(run.goal || run.workflow_id || run.run_id)}</div>
       <div class="meta">${esc(run.workflow_id || '')} · ${esc(run.run_id)}</div></div>
       ${waiting ? `<div class="notice">${esc(t().waitingNotice)}</div>` : ''}
-      ${stepRows ? `<div class="steps">${stepRows}</div>` : ''}${actions ? `<div class="actions">${actions}</div>` : ''}`;
+      ${stepRows ? `<div class="steps">${stepRows}</div>` : ''}${outcome || ''}${actions ? `<div class="actions">${actions}</div>` : ''}`;
   }
 
   function bindActions() {
@@ -680,7 +789,7 @@ __CARD_STYLE__
       // to the list it left, not by painting a detail of nothing.
       if (!run) return showHistory(runs);
       const steps = list(await callTool('get_run_steps',{run_id:runId}),'steps');
-      renderRun(run,steps); bindActions(); updated.textContent = t().refreshed;
+      renderRun(run,steps,await runOutcome(run)); bindActions(); updated.textContent = t().refreshed;
       poller = setTimeout(() => {
         if (detail?.kind === 'run' && detail.id === runId && document.visibilityState === 'visible') showRun(runId);
       }, TERMINAL.has(run.status) ? 15000 : 2000);

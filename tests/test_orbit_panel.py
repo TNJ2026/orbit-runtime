@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v47.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v48.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -157,6 +157,9 @@ class CurrentTaskCardTests(unittest.TestCase):
             {
                 "list_runs", "list_authoring_jobs", "get_run_steps",
                 "list_workflows", "get_workflow_definition", "list_agents",
+                # A finished run reports what it produced, which means asking
+                # what an artifact is before deciding whether to show it.
+                "read_artifact", "read_artifact_content",
             },
             calls,
         )
@@ -282,7 +285,7 @@ class CurrentTaskCardTests(unittest.TestCase):
         run = ORBIT_DASHBOARD_HTML.split("async function showRun(runId,known) {", 1)[1]
         run = run.split("function refresh()", 1)[0]
         for marker in (
-            "callTool('get_run_steps'", "renderRun(run,steps)",
+            "callTool('get_run_steps'", "renderRun(run,steps,await runOutcome(run))",
             # A run the list no longer carries goes back to the list.
             "if (!run) return showHistory(runs)",
         ):
@@ -359,6 +362,68 @@ class CurrentTaskCardTests(unittest.TestCase):
             "promptHandle", "promptCancel", "promptCreateWorkflow",
         ):
             self.assertIn(prompt, ORBIT_DASHBOARD_HTML)
+
+    def test_a_finished_run_reports_its_outcome_the_way_the_harness_does(self) -> None:
+        """The same rules, in the same order, as the Harness panel.
+
+        Two surfaces answering "how did it go" differently is two answers, so
+        this is the Harness's logic rather than a second attempt at it: the
+        outcome in words first, then the failure, then the artifacts, then
+        whatever text is left once the artifact references are out.
+
+        The rule that matters is the last one. `{"artifact_id":
+        "langgraph_artifact:2be8…"}` is what a workflow that writes a file
+        returns, and printing it put a 64-character hash where the answer
+        should have been — the one part of the result that means nothing to a
+        reader. It is a door, so it is drawn as one.
+        """
+
+        for marker in (
+            "const ARTIFACT = /^langgraph_artifact:[A-Za-z0-9]+$/",
+            "const READABLE_TYPES = ['text/markdown', 'text/plain']",
+            "const READABLE_MAX_BYTES = 2048",
+            "function stripArtifacts(value, into)",
+            "function resultText(value)",
+            "function artifactLabel(id)",
+            "async function runOutcome(run)",
+            "renderRun(run,steps,await runOutcome(run))",
+        ):
+            self.assertIn(marker, ORBIT_DASHBOARD_HTML)
+
+        outcome = ORBIT_DASHBOARD_HTML.split("async function runOutcome(run) {", 1)[1]
+        outcome = outcome.split("function bindActions", 1)[0]
+        # Nothing at all while it is still going.
+        self.assertIn("if (!TERMINAL.has(run.status)) return '';", outcome)
+        # How it ended, in words, before anything the run emitted.
+        self.assertLess(outcome.index("t().outcome[run.status]"), outcome.index("rows.join('')"))
+        self.assertLess(outcome.index("rows.join('')"), outcome.index("${answer ?"))
+
+        for language, finished, failed in (
+            ("en-US", "completed: 'Finished'", "resultFailed: 'Why it failed'"),
+            ("zh-CN", "completed: '已完成'", "resultFailed: '失败原因'"),
+        ):
+            with self.subTest(language=language):
+                self.assertIn(finished, ORBIT_DASHBOARD_HTML)
+                self.assertIn(failed, ORBIT_DASHBOARD_HTML)
+
+    def test_the_outcome_rules_are_the_ones_the_harness_uses(self) -> None:
+        """Read out of the Harness's own source, not copied by eye."""
+
+        core = Path(__file__).resolve().parents[1].joinpath(
+            "integration-core/src/orbit-model.ts"
+        ).read_text(encoding="utf-8")
+        export = Path(__file__).resolve().parents[1].joinpath(
+            "integration-core/src/artifact-export.ts"
+        ).read_text(encoding="utf-8")
+        self.assertIn("/^langgraph_artifact:[A-Za-z0-9]+$/", core)
+        self.assertIn("bare.length > 12", core)
+        self.assertIn("['text/markdown', 'text/plain']", export)
+        self.assertIn("READABLE_MAX_BYTES = 2048", export)
+        # And the card carries the same four.
+        self.assertIn("/^langgraph_artifact:[A-Za-z0-9]+$/", ORBIT_DASHBOARD_HTML)
+        self.assertIn("bare.length > 12", ORBIT_DASHBOARD_HTML)
+        self.assertIn("['text/markdown', 'text/plain']", ORBIT_DASHBOARD_HTML)
+        self.assertIn("READABLE_MAX_BYTES = 2048", ORBIT_DASHBOARD_HTML)
 
     def test_a_run_offers_only_what_can_still_be_done_to_it(self) -> None:
         """Two ways out of the card is not something to do with a run.

@@ -59,13 +59,16 @@ def at(days_ago: float, hour: int = 9, minute: int = 30) -> str:
     ).isoformat()
 
 
+ARTIFACT = "langgraph_artifact:2be8a856459b5af310c70e9f7fe8119da6a1aaabab190f74354151edcbcda694"
+
+
 def run(run_id, *, status, goal, workflow_id="workflow:draft",
-        created_at, updated_at, interrupts=()):
+        created_at, updated_at, interrupts=(), result=None, error=None):
     return {
         "run_id": run_id, "status": status, "goal": goal,
         "workflow_id": workflow_id, "created_at": created_at,
         "updated_at": updated_at, "artifact_count": 0,
-        "interrupts": list(interrupts),
+        "interrupts": list(interrupts), "result": result, "error": error,
     }
 
 
@@ -83,7 +86,8 @@ class DashboardCardTests(unittest.TestCase):
         cls.browser.close()
         cls.playwright.stop()
 
-    def open(self, *, runs=(), jobs=(), locale="zh-CN", steps=(), height=None):
+    def open(self, *, runs=(), jobs=(), locale="zh-CN", steps=(), height=None,
+             artifact=None, content=""):
         """The card, with a host that answers exactly the tools it may call.
 
         `now` is fixed by the fixtures rather than the clock: the day headings
@@ -102,6 +106,8 @@ class DashboardCardTests(unittest.TestCase):
             "list_authoring_jobs": {"jobs": list(jobs)},
             "list_agents": {"agents": AGENTS},
             "get_run_steps": {"steps": list(steps)},
+            "read_artifact": {"artifact": dict(artifact or {})},
+            "read_artifact_content": {"encoding": "utf-8", "content": content},
             "get_workflow_definition": {
                 "workflow_id": "workflow:draft", "name": "起草 · 人工审核",
                 "latest_version": 3, "description": "Draft, review, rework",
@@ -430,6 +436,63 @@ class DashboardCardTests(unittest.TestCase):
                 ".historyRow .pill", "nodes => nodes.map(node => node.textContent)"
             ),
         )
+
+    def test_a_finished_run_says_how_it_went(self) -> None:
+        """Every result shape this Runtime produces, read the Harness's way.
+
+        The outcome in words leads, because a reader asking "did it work" was
+        being answered with whatever the terminal step emitted — for a run
+        that wrote a file, a 64-character hash.
+        """
+
+        cases = [
+            ("a small markdown file is the answer, so it is shown",
+             {"artifact_id": ARTIFACT}, None,
+             {"content_type": "text/markdown", "size_bytes": 120},
+             ["Finished", "# The answer"], ["2be8a856"]),
+            ("a large file is a door, so it is named",
+             {"artifact_id": ARTIFACT}, None,
+             {"content_type": "application/pdf", "size_bytes": 900000},
+             ["Finished", "2be8a856459b…"], ["# The answer"]),
+            ("a single string field is the string",
+             {"text": "It found three problems."}, None, None,
+             ["Finished", "It found three problems."], ["{"]),
+            ("anything else is its JSON",
+             {"decision": "approve", "value": None}, None, None,
+             ["Finished", '"decision": "approve"'], []),
+            ("a failure names why",
+             None, "RuntimeError: workspace access could not be provisioned", None,
+             ["Why it failed", "Failed", "workspace access"], ["Result"]),
+        ]
+        for label, result, error, artifact, expected, absent in cases:
+            with self.subTest(case=label):
+                runs = [run("run:a", status="failed" if error else "completed",
+                            goal="翻译这段内容", created_at=at(0), updated_at=at(0),
+                            result=result, error=error)]
+                page = self.open(runs=runs, locale="en-US", artifact=artifact,
+                                 content="# The answer",
+                                 steps=[{"node_id": "a", "label": "Step",
+                                         "status": "succeeded"}])
+                page.click("#tabHistory")
+                page.click(".historyRow")
+                page.wait_for_selector(".resultBlock")
+                text = page.text_content(".resultBlock")
+                for wanted in expected:
+                    self.assertIn(wanted, text)
+                for unwanted in absent:
+                    self.assertNotIn(unwanted, text)
+
+    def test_a_running_run_is_promised_no_outcome(self) -> None:
+        """An empty block promising one is worse than no block."""
+
+        runs = [run("run:live", status="interrupted", goal="起草说明文档",
+                    created_at=at(0), updated_at=at(0),
+                    interrupts=[APPROVAL_INTERRUPT])]
+        page = self.open(runs=runs, steps=[
+            {"node_id": "review", "label": "审核", "status": "waiting"},
+        ])
+        page.wait_for_selector(".steps")
+        self.assertEqual(0, page.eval_on_selector_all("#card .resultBlock", "n => n.length"))
 
     def test_a_finished_run_is_offered_no_actions_at_all(self) -> None:
         """Not an empty action row either — the row is not drawn."""
