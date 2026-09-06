@@ -14,7 +14,7 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v50.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v51.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
@@ -280,6 +280,10 @@ __CARD_STYLE__
       font-size: 12px; }
     .stepName { min-width: 0; overflow: hidden; text-overflow: ellipsis;
       white-space: nowrap; }
+    /* One goal per card. Orbit runs one at a time per actor, so a second is
+       a rarity rather than a list — a rule between them is enough. */
+    .goalCard { border-bottom: 1px solid var(--line); }
+    .goalCard:last-child { border-bottom: 0; }
     .resultBlock { padding: 12px 14px; border-top: 1px solid var(--line); }
     .resultLabel { color: var(--muted); font-size: 11px; font-weight: 650; }
     /* How it ended, first and in words. A reader asking "did it work" was
@@ -343,6 +347,7 @@ __CARD_STYLE__
   <header>__ORBIT_LOGO__<div class="heading"><h1>Orbit</h1>
     <div id="updated"></div></div><button id="refresh" class="icon" type="button" aria-label="Refresh">↻</button></header>
   <nav id="tabs" class="tabs" role="tablist">
+    <button class="tab" id="tabGoal" type="button" role="tab" data-tab="goal" aria-selected="false"></button>
     <button class="tab" id="tabWorkflows" type="button" role="tab" data-tab="workflows" aria-selected="false"></button>
     <button class="tab" id="tabHistory" type="button" role="tab" data-tab="history" aria-selected="false"></button>
     <button class="tab" id="tabAgents" type="button" role="tab" data-tab="agents" aria-selected="false"></button>
@@ -375,6 +380,7 @@ __CARD_STYLE__
       waitingNotice: 'A workflow step is waiting for your response.',
       handle: 'Handle in chat', approve: 'Approve', reject: 'Reject', cancel: 'Request cancellation', createWorkflow: 'Create workflow',
       workflows: 'Workflows', workflow: 'Workflow', back: 'Back', noWorkflows: 'No published workflows', noSteps: 'No steps', noAgents: 'No registered Agents', newGoal: 'New goal', modify: 'Modify', addAgent: 'Add Agent',
+      goal: 'Goal', emptyGoal: 'Nothing is running here.',
       history: 'History', agents: 'Agents', goalDetail: 'Goal', noRuns: 'No goals have been run in this project yet.',
       result: 'Result', resultFailed: 'Why it failed',
       outcome: { completed: 'Finished', failed: 'Failed', cancelled: 'Cancelled',
@@ -405,6 +411,7 @@ __CARD_STYLE__
       waitingNotice: '有一个工作流步骤正在等待你的回复。',
       handle: '在聊天中处理', approve: '批准', reject: '拒绝', cancel: '请求取消', createWorkflow: '创建工作流',
       workflows: '工作流', workflow: '工作流详情', back: '返回', noWorkflows: '暂无已发布工作流', noSteps: '暂无步骤', noAgents: '暂无已注册 Agent', newGoal: '新目标', modify: '修改', addAgent: '添加 Agent',
+      goal: '目标', emptyGoal: '这里没有正在执行的目标。',
       history: '历史记录', agents: 'Agents', goalDetail: '目标详情', noRuns: '当前项目还没有目标执行记录。',
       result: '结果', resultFailed: '失败原因',
       outcome: { completed: '已完成', failed: '失败', cancelled: '已取消',
@@ -661,6 +668,20 @@ __CARD_STYLE__
     return `<div class="artifact" title="${esc(id)}">${esc(artifactLabel(id))}</div>`;
   }
 
+  /* What the Goal page draws: everything still moving, or the one that moved
+     last when nothing is. The Harness's rule, for the Harness's reason — a
+     goal reaching its end is the moment its result matters most, and dropping
+     it from the page right then answers "what happened" with an empty page.
+     So a finished goal holds the page, with its steps and its outcome, until
+     the next one starts and takes it. */
+  function goalRuns(runs) {
+    const live = runs.filter(run => !TERMINAL.has(run.status));
+    if (live.length) return live;
+    const latest = runs.reduce((best, run) =>
+      best === undefined || updatedAt(run) > updatedAt(best) ? run : best, undefined);
+    return latest === undefined ? [] : [latest];
+  }
+
   /* Nothing to say until it has stopped: a run still going has no outcome,
      and an empty block promising one is worse than no block. */
   async function runOutcome(run) {
@@ -718,9 +739,14 @@ __CARD_STYLE__
     card.innerHTML = `${rows || `<div class="empty">${esc(t().noAgents)}</div>`}${add}`;
   }
 
-  function renderRun(run,steps,outcome) {
-    const waiting = steps.some(step => step.status === 'waiting');
-    const live = !TERMINAL.has(run.status); const statusKey = waiting ? 'waiting' : run.status;
+  function runSection(run,steps,outcome) {
+    // A finished run is not waiting on anybody, whatever its last steps say.
+    // The step read stops when the run does, so a run cancelled while a
+    // person was being asked keeps a `waiting` step for ever — and offered
+    // to hand that person the question again.
+    const live = !TERMINAL.has(run.status);
+    const waiting = live && steps.some(step => step.status === 'waiting');
+    const statusKey = waiting ? 'waiting' : run.status;
     const stepRows = steps.map(step => `<div class="step"><span class="dot ${cssFor(step.status)}"></span>
       <span class="stepName">${esc(step.label || step.node_id)}</span><span class="stepState">${esc(t().status[step.status] || step.status)}</span></div>`).join('');
     // Only what can still be done to this run. A finished one offers
@@ -729,12 +755,16 @@ __CARD_STYLE__
     const actions = waiting && approvals ? approvals
       : waiting ? action(t().handle,t().promptHandle(run),'edit',true)
       : live ? action(t().cancel,t().promptCancel(run.run_id),'direct') : '';
-    card.innerHTML = `${viewHead(t().goalDetail,'history')}<div class="summary"><div class="statusLine"><span class="dot ${cssFor(statusKey)}"></span>
+    return `<div class="summary"><div class="statusLine"><span class="dot ${cssFor(statusKey)}"></span>
       <span class="status">${esc(runStatusLabel(statusKey))}</span></div>
       <div class="goal">${esc(run.goal || run.workflow_id || run.run_id)}</div>
       <div class="meta">${esc(run.workflow_id || '')} · ${esc(run.run_id)}</div></div>
       ${waiting ? `<div class="notice">${esc(t().waitingNotice)}</div>` : ''}
       ${stepRows ? `<div class="steps">${stepRows}</div>` : ''}${outcome || ''}${actions ? `<div class="actions">${actions}</div>` : ''}`;
+  }
+
+  function renderRun(run,steps,outcome) {
+    card.innerHTML = `${viewHead(t().goalDetail,'history')}${runSection(run,steps,outcome)}`;
   }
 
   function bindActions() {
@@ -772,6 +802,29 @@ __CARD_STYLE__
     paintTabs(); refreshButton.disabled = true;
     try { const result = await callTool('get_workflow_definition',{workflow_id:workflowId}); renderWorkflowDetail(result); bindActions(); updated.textContent = t().refreshed; }
     catch (_) { card.innerHTML = `${viewHead(t().workflow,'workflows')}<div class="error">${esc(t().error)}</div>`; bindActions(); }
+    finally { refreshButton.disabled = false; }
+  }
+
+  async function showGoal(known) {
+    enter('goal');
+    try {
+      const runs = known || list(await callTool('list_runs',{limit:HISTORY_LIMIT}),'runs');
+      const showing = goalRuns(runs);
+      if (!showing.length) { card.innerHTML = `<div class="empty">${esc(t().emptyGoal)}</div>`; }
+      else {
+        const drawn = [];
+        for (const run of showing) {
+          const steps = list(await callTool('get_run_steps',{run_id:run.run_id}),'steps');
+          drawn.push(`<section class="goalCard">${runSection(run,steps,await runOutcome(run))}</section>`);
+        }
+        card.innerHTML = drawn.join('');
+      }
+      bindActions(); updated.textContent = t().refreshed;
+      poller = setTimeout(() => {
+        if (currentTab === 'goal' && !detail && document.visibilityState === 'visible') showGoal();
+      }, showing.some(run => !TERMINAL.has(run.status)) ? 2000 : 15000);
+    }
+    catch (_) { card.innerHTML = `<div class="error">${esc(t().error)}</div>`; bindActions(); }
     finally { refreshButton.disabled = false; }
   }
 
@@ -814,6 +867,7 @@ __CARD_STYLE__
   function refresh() {
     if (detail?.kind === 'workflow') return showWorkflowDetail(detail.id);
     if (detail?.kind === 'run') return showRun(detail.id);
+    if (currentTab === 'goal') return showGoal();
     if (currentTab === 'history') return showHistory();
     if (currentTab === 'agents') return showAgents();
     return showWorkflows();
@@ -826,20 +880,14 @@ __CARD_STYLE__
     finally { refreshButton.disabled = false; }
   }
 
-  /* Which tab the card opens on is the one question this navigation has to
-     answer for itself. A run that is still going — or waiting on a person —
-     is the reason the card was opened, so History leads and the run is
-     already open inside it. With nothing running, the useful first screen is
-     the one that starts something. */
+  /* The card opens on Goal, and there is nothing left for this to decide.
+     It used to pick between History-with-the-run-open, History, and
+     Workflows, reaching for "the run that is the reason the card was
+     opened" — which is exactly what the Goal page draws, and now draws
+     whether or not anything is running. */
   async function start() {
     paintTabs();
-    let runs = null;
-    try { runs = list(await callTool('list_runs',{limit:HISTORY_LIMIT}),'runs'); }
-    catch (_) { return showHistory(); }
-    const active = runs.find(run => !TERMINAL.has(run.status));
-    if (active) return showRun(active.run_id,runs);
-    if (runs.some(run => isRecent(run))) return showHistory(runs);
-    return showWorkflows();
+    return showGoal();
   }
 
   bridge = mcpBridge();
@@ -849,7 +897,8 @@ __CARD_STYLE__
   tabBar.querySelectorAll('[data-tab]').forEach(button => button.addEventListener('click',() => {
     if (currentTab === button.dataset.tab && !detail) return;
     detail = null;
-    if (button.dataset.tab === 'history') showHistory();
+    if (button.dataset.tab === 'goal') showGoal();
+    else if (button.dataset.tab === 'history') showHistory();
     else if (button.dataset.tab === 'agents') showAgents();
     else showWorkflows();
   }));

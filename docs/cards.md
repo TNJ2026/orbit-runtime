@@ -32,13 +32,17 @@ is `start_run`. Opening Orbit itself is `open_orbit_dashboard`.
 
 ![The Orbit dashboard card, on its History tab](./images/cards/dashboard.png)
 
-**Orbit dashboard.** Three tabs — Workflows, History, Agents — with **Create
-workflow** at the end of the tab row. History is this project's own goal runs,
-grouped by day, and opening one shows its steps and offers what can still be
-done to it: approve or reject while it waits, cancel while it runs, nothing
-once it is over. The card opens on History with the active run already open
-when there is one, because a goal that needs an answer is the reason to open
-Orbit; otherwise it opens on Workflows, the screen that starts something.
+**Orbit dashboard.** Four tabs — Goal, Workflows, History, Agents — with
+**Create workflow** at the end of the tab row.
+
+Goal is what the card opens on: everything still running, or the goal that ran
+last when nothing is, with its steps, whatever it still offers to do, and its
+outcome. A goal reaching its end is the moment its result matters most, so a
+finished one holds the page until the next one starts rather than vanishing
+into an empty screen. With nothing ever run, the page says so.
+
+History is the same project's goal runs, all of them, grouped by day; opening
+one shows the same thing the Goal page shows for a single run.
 
 ![The Orbit workflows card](./images/cards/workflows.png)
 

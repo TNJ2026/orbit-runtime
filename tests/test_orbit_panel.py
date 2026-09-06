@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v50.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v51.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -309,30 +309,65 @@ class CurrentTaskCardTests(unittest.TestCase):
         ):
             self.assertIn(marker, ORBIT_RUN_HTML)
 
-    def test_stale_tasks_do_not_decide_which_tab_opens(self) -> None:
-        """What the card opens on, and what it does not reopen.
+    def test_the_card_opens_on_the_goal_and_decides_nothing_else(self) -> None:
+        """There is nothing left for the opening to choose between.
 
-        A run still going — or waiting on a person — is the reason the card
-        was opened, so History leads and that run is already open in it. A
-        run that merely finished recently leaves History selected without
-        opening anything. Older than that decides nothing, and the first
-        screen is the one that starts something.
+        It used to pick among History-with-the-run-open, History, and
+        Workflows, reaching for "the run that is the reason the card was
+        opened". That is exactly what the Goal page draws, and it draws it
+        whether or not anything is running — so opening is one call.
         """
 
         start = ORBIT_DASHBOARD_HTML.split("async function start() {", 1)[1]
         start = start.split("bridge = mcpBridge()", 1)[0]
-        for marker in (
-            "const active = runs.find(run => !TERMINAL.has(run.status))",
-            "if (active) return showRun(active.run_id,runs)",
-            "if (runs.some(run => isRecent(run))) return showHistory(runs)",
-            "return showWorkflows()",
-        ):
-            self.assertIn(marker, start)
-        self.assertIn("RECENT_TASK_MS = 5 * 60 * 60 * 1000", ORBIT_DASHBOARD_HTML)
+        self.assertIn("return showGoal();", start)
+        for gone in ("showRun(active.run_id", "isRecent(run)", "showWorkflows()"):
+            self.assertNotIn(gone, start)
         self.assertNotIn("promptStart", ORBIT_DASHBOARD_HTML)
+
+    def test_the_goal_page_keeps_a_finished_goal_until_the_next_one(self) -> None:
+        """The Harness's rule, for the Harness's reason.
+
+        A goal reaching its end is the moment its result matters most, and
+        dropping it from the page right then answers "what happened" with an
+        empty page — the reader watches the steps go green and is left
+        looking at "nothing is running here".
+        """
+
+        rule = ORBIT_DASHBOARD_HTML.split("function goalRuns(runs) {", 1)[1]
+        rule = rule.split("\n  }", 1)[0]
+        self.assertIn("const live = runs.filter(run => !TERMINAL.has(run.status));", rule)
+        self.assertIn("if (live.length) return live;", rule)
+        self.assertIn("updatedAt(run) > updatedAt(best)", rule)
+        self.assertIn("return latest === undefined ? [] : [latest];", rule)
+
+        # And it is the rule `integration-core` states, not a second one.
+        core = Path(__file__).resolve().parents[1].joinpath(
+            "integration-core/src/run-progress.ts"
+        ).read_text(encoding="utf-8")
+        self.assertIn("const live = rows.filter(row => row.live)", core)
+        self.assertIn("if (live.length) return live", core)
+        self.assertIn("return latest === undefined ? [] : [latest]", core)
+
+    def test_a_finished_run_is_not_waiting_on_anybody(self) -> None:
+        """The step read stops when the run does.
+
+        A run cancelled while a person was being asked keeps a `waiting` step
+        for ever, and reading the step alone offered to hand that person the
+        question again.
+        """
+
+        section = ORBIT_DASHBOARD_HTML.split("function runSection(run,steps,outcome) {", 1)[1]
+        section = section.split("function renderRun", 1)[0]
+        self.assertIn("const live = !TERMINAL.has(run.status);", section)
+        self.assertIn(
+            "const waiting = live && steps.some(step => step.status === 'waiting');", section,
+        )
 
     def test_create_workflow_sits_beside_the_tabs_not_among_them(self) -> None:
         tabs = ORBIT_DASHBOARD_HTML.split('<nav id="tabs"', 1)[1].split("</nav>", 1)[0]
+        # Goal first: it is what the card opens on.
+        self.assertLess(tabs.index('data-tab="goal"'), tabs.index('data-tab="workflows"'))
         self.assertLess(tabs.index('data-tab="workflows"'), tabs.index('data-tab="history"'))
         self.assertLess(tabs.index('data-tab="history"'), tabs.index('data-tab="agents"'))
         # Last in the row, and not a tab: it creates rather than navigates.

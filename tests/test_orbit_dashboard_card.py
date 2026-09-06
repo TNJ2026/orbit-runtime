@@ -149,9 +149,9 @@ class DashboardCardTests(unittest.TestCase):
 
     # -- the navigation itself --------------------------------------------
 
-    def test_three_tabs_and_a_create_button_at_the_end(self) -> None:
+    def test_four_tabs_and_a_create_button_at_the_end(self) -> None:
         page = self.open()
-        self.assertEqual(["工作流", "历史记录", "Agents"], self.tabs(page))
+        self.assertEqual(["目标", "工作流", "历史记录", "Agents"], self.tabs(page))
         self.assertEqual("创建工作流", page.text_content("#createWorkflow"))
         # The create button is the last thing in the row, past the tabs.
         self.assertEqual(
@@ -165,10 +165,10 @@ class DashboardCardTests(unittest.TestCase):
             ),
         )
 
-    def test_it_opens_on_workflows_when_nothing_has_run(self) -> None:
+    def test_it_opens_on_the_goal_page_with_nothing_to_show(self) -> None:
         page = self.open()
-        self.assertEqual("workflows", self.selected(page))
-        self.assertIn("起草 · 人工审核", page.text_content("#card"))
+        self.assertEqual("goal", self.selected(page))
+        self.assertEqual("这里没有正在执行的目标。", page.text_content(".empty"))
 
     def test_adding_an_agent_is_offered_under_the_list(self) -> None:
         """After the Agents already registered, not above them."""
@@ -380,6 +380,7 @@ class DashboardCardTests(unittest.TestCase):
         """
 
         page = self.open()
+        page.click("#tabWorkflows")
         page.wait_for_selector(".rowItem .row")
         page.hover(".rowItem:nth-child(2) .row")
         page.wait_for_timeout(150)
@@ -400,6 +401,55 @@ class DashboardCardTests(unittest.TestCase):
         self.assertEqual(0, measured["gap"])
         self.assertTrue(measured["reaches_button"])
         self.assertNotIn(measured["painted"], ("rgba(0, 0, 0, 0)", "transparent"))
+
+    def test_the_goal_page_holds_the_last_goal_until_the_next_one(self) -> None:
+        """Everything live, or the one that moved last when nothing is.
+
+        Dropping a goal from this page the moment it finishes answers "what
+        happened" with an empty page, right when its result matters most.
+        """
+
+        page = self.open(runs=[
+            run("run:new", status="completed", goal="The most recent",
+                created_at=at(0), updated_at=at(0), result={"text": "Three problems."}),
+            run("run:old", status="completed", goal="An older one",
+                created_at=at(2), updated_at=at(2), result={"text": "old"}),
+        ], steps=[{"node_id": "a", "label": "Draft", "status": "succeeded"}], locale="en-US")
+        page.wait_for_selector(".goalCard")
+        self.assertEqual(
+            ["The most recent"],
+            page.eval_on_selector_all(".goalCard .goal", "ns => ns.map(n => n.textContent)"),
+        )
+        # Its outcome is on the page too, not just its steps.
+        self.assertIn("Three problems.", page.text_content(".resultBlock"))
+
+        # Anything still moving takes the page back, and takes all of it.
+        page = self.open(runs=[
+            run("run:live", status="running", goal="Still going",
+                created_at=at(0), updated_at=at(0)),
+            run("run:done", status="completed", goal="Finished earlier",
+                created_at=at(1), updated_at=at(1), result={"text": "done"}),
+        ], steps=[{"node_id": "a", "label": "Draft", "status": "running"}], locale="en-US")
+        page.wait_for_selector(".goalCard")
+        self.assertEqual(
+            ["Still going"],
+            page.eval_on_selector_all(".goalCard .goal", "ns => ns.map(n => n.textContent)"),
+        )
+
+    def test_a_settled_run_offers_nothing_to_answer(self) -> None:
+        """Its last step can still say `waiting`; the run is not."""
+
+        page = self.open(runs=[
+            run("run:cancelled", status="cancelled", goal="Abandoned mid-review",
+                created_at=at(0), updated_at=at(0)),
+        ], steps=[
+            {"node_id": "a", "label": "Draft", "status": "succeeded"},
+            {"node_id": "b", "label": "Review", "status": "waiting"},
+        ], locale="en-US")
+        page.wait_for_selector(".goalCard")
+        self.assertEqual("Cancelled", page.text_content(".goalCard .status"))
+        self.assertEqual(0, page.eval_on_selector_all("#card .action", "n => n.length"))
+        self.assertEqual(0, page.eval_on_selector_all("#card .notice", "n => n.length"))
 
     # -- history ----------------------------------------------------------
 
@@ -563,7 +613,7 @@ class DashboardCardTests(unittest.TestCase):
         ]
         page = self.open(runs=runs, steps=steps)
         page.wait_for_selector(".notice")
-        self.assertEqual("history", self.selected(page))
+        self.assertEqual("goal", self.selected(page))
         self.assertIn("起草说明文档", page.text_content(".goal"))
         self.assertEqual(
             ["批准", "拒绝"],
@@ -576,6 +626,7 @@ class DashboardCardTests(unittest.TestCase):
         page = self.open(jobs=[{
             "job_id": "job:1", "status": "running", "prompt": "写一个审批工作流",
         }])
+        page.click("#tabWorkflows")
         page.wait_for_selector(".authoringStrip")
         self.assertEqual("workflows", self.selected(page))
         self.assertIn("正在生成工作流", page.text_content(".authoringStrip"))
@@ -583,7 +634,7 @@ class DashboardCardTests(unittest.TestCase):
 
     def test_it_reads_english_from_the_host_locale(self) -> None:
         page = self.open(locale="en-US")
-        self.assertEqual(["Workflows", "History", "Agents"], self.tabs(page))
+        self.assertEqual(["Goal", "Workflows", "History", "Agents"], self.tabs(page))
         self.assertEqual("Create workflow", page.text_content("#createWorkflow"))
 
 
