@@ -30,6 +30,8 @@ is `start_run`. Opening Orbit itself is `open_orbit_dashboard`.
 
 ## What each one is
 
+![The Orbit dashboard card, on its History tab](./images/cards/dashboard.png)
+
 **Orbit dashboard.** Three tabs — Workflows, History, Agents — with **Create
 workflow** at the end of the tab row. History is this project's own goal runs,
 grouped by day, and opening one shows its steps and offers what can still be
@@ -38,18 +40,31 @@ once it is over. The card opens on History with the active run already open
 when there is one, because a goal that needs an answer is the reason to open
 Orbit; otherwise it opens on Workflows, the screen that starts something.
 
+![The Orbit workflows card](./images/cards/workflows.png)
+
 **Orbit workflows.** The published catalogue, with **New goal** on each row.
 Selecting a row switches the same card to that workflow's detail — the graph,
 the definition list, and **New goal**, **Modify**, **Delete** — rather than
 opening a second card.
 
+![The workflow generation card](./images/cards/workflow-generation.png)
+
 **Orbit workflow generation.** One authoring job: queued, generating,
 generated or failed, with the requirement it was given.
+
+![The goal execution card](./images/cards/goal-execution.png)
 
 **Orbit goal execution.** One run: its steps, whether a person is needed, and
 its result.
 
+![The goals card](./images/cards/goals.png)
+
 **Orbit goals.** Recent runs and their current status, as a list.
+
+Only the dashboard follows the host's locale. The other four carry Chinese
+action labels whatever language the conversation is in, which is why 新目标
+appears on the workflows card above — the screenshot is what the card shows,
+not a mistake in taking it.
 
 ## Cards are views, not authority
 
@@ -70,3 +85,20 @@ already fetched the old URI will keep rendering the previous document.
 The consequence for a user is small but real: **after upgrading Orbit, start a
 new conversation.** A session that has already mounted a card keeps the copy
 it fetched.
+
+## Regenerating these images
+
+```bash
+.venv/bin/python scripts/screenshot-cards.py
+```
+
+The screenshots are driven by fixture data in that script rather than by a
+running Runtime, for two reasons: a picture of a real catalogue carries
+whatever its operator was working on into the repository, and a picture of
+live data differs every time it is taken, so the diff of a regenerated image
+would say nothing about whether the card changed. The clock is pinned too, so
+"just now" and "Today" mean the same thing on every machine.
+
+Each shot is refitted to what its card actually holds before it is taken —
+capped where the card caps, so a list longer than the card is still shown as
+the scrolling list it is.
