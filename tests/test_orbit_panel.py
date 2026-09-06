@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v45.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v46.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -42,6 +42,60 @@ class CurrentTaskCardTests(unittest.TestCase):
             },
             {item["uri"] for item in ORBIT_MCP_APP_RESOURCES},
         )
+
+    def test_every_card_speaks_both_languages(self) -> None:
+        """Four of the five used to be Chinese whatever the conversation was.
+
+        Only the dashboard carried a dictionary; the rest had their labels,
+        their empty states and the prompts they send written in one language
+        as literals — so an English conversation was offered 新目标 and asked
+        its Agent to 使用工作流「…」执行. The locale now lives in the shared
+        bridge, taken from the host when it sends one and guessed from the
+        browser until then, and each card reads it through `strings()`.
+        """
+
+        for html in (
+            ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML,
+            ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
+        ):
+            with self.subTest():
+                self.assertIn("'en-US'", html)
+                self.assertIn("'zh-CN'", html)
+
+        # One locale, declared once per surface, fed by the host.
+        for html in (ORBIT_WORKFLOWS_HTML, ORBIT_AUTHORING_HTML,
+                     ORBIT_RUN_HTML, ORBIT_GOALS_HTML):
+            with self.subTest():
+                self.assertIn("function strings(table){return()=>table[locale]", html)
+                self.assertIn("applyLocale(context.locale||context.language)", html)
+                # Repaint when it changes, or the card keeps the old language.
+                self.assertIn("onHostContext(()=>refresh())", html)
+
+        # The prompt editor reads the same variable rather than sniffing the
+        # document, which would ignore a host that told us its language.
+        for html in (ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML):
+            with self.subTest():
+                self.assertIn("function promptEditorLabels(){return locale==='zh-CN'?", html)
+                self.assertNotIn("document.documentElement.lang||navigator.language", html)
+
+    def test_the_prompts_a_card_sends_are_localised_too(self) -> None:
+        """A card's buttons are read by a person; its prompts by an Agent.
+
+        Both were Chinese. Translating only what is visible would leave an
+        English conversation being asked, in Chinese, to run a workflow.
+        """
+
+        # The two files are written in different styles; what matters is that
+        # each has an English form of the prompt it sends.
+        self.assertIn("promptGoal: (name,id) => `Run the workflow", ORBIT_DASHBOARD_HTML)
+        self.assertIn("promptGoal:(n,i)=>`Run the workflow", ORBIT_WORKFLOWS_HTML)
+        self.assertIn("promptModify: (name,id) => `Modify the workflow", ORBIT_DASHBOARD_HTML)
+        self.assertIn("promptModify:(n,i)=>`Modify the workflow", ORBIT_WORKFLOWS_HTML)
+        self.assertIn("promptOpen:id=>`Show Orbit goal run", ORBIT_GOALS_HTML)
+        # And the Chinese half is still there, unchanged.
+        self.assertIn("我确认删除工作流", ORBIT_WORKFLOWS_HTML)
+        self.assertIn("使用工作流「", ORBIT_WORKFLOWS_HTML)
+        self.assertIn("使用工作流「", ORBIT_DASHBOARD_HTML)
 
     def test_every_card_wears_the_mark_the_full_ui_wears(self) -> None:
         """The UI's own mark, not the favicon that stands in for it.
@@ -143,7 +197,7 @@ class CurrentTaskCardTests(unittest.TestCase):
     def test_embedded_workflow_list_offers_new_goal_directly(self) -> None:
         for marker in (
             'class="rowItem"', "rowAction", "t().newGoal",
-            "使用工作流「${name}」（${workflow.workflow_id}）执行：",
+            "t().promptGoal(name,workflow.workflow_id)",
         ):
             self.assertIn(marker, ORBIT_DASHBOARD_HTML)
 
@@ -482,7 +536,7 @@ class DedicatedCardTests(unittest.TestCase):
             'class="action primary rowAction"', 'data-goal-id="${esc(w.workflow_id)}"',
             'data-goal-name="${esc(w.name||w.workflow_id)}"',
             "event.stopPropagation()",
-            "使用工作流「${b.dataset.goalName}」（${b.dataset.goalId}）执行：",
+            "t().promptGoal(b.dataset.goalName,b.dataset.goalId)",
         ):
             self.assertIn(marker, ORBIT_WORKFLOWS_HTML)
         # Nothing left that repaints it away from the shared button.
@@ -532,11 +586,11 @@ class DedicatedCardTests(unittest.TestCase):
         for label in ("新目标", "修改", "删除"):
             self.assertIn(label, ORBIT_WORKFLOWS_HTML)
         self.assertIn(
-            'data-prompt="使用工作流「${esc(w.name||w.workflow_id)}」（${esc(w.workflow_id)}）执行："',
+            'data-prompt="${esc(t().promptGoal(w.name||w.workflow_id,w.workflow_id))}"',
             ORBIT_WORKFLOWS_HTML,
         )
         self.assertIn(
-            'data-prompt="按照下面的要求修改工作流「${esc(w.name||w.workflow_id)}」（${esc(w.workflow_id)}）："',
+            'data-prompt="${esc(t().promptModify(w.name||w.workflow_id,w.workflow_id))}"',
             ORBIT_WORKFLOWS_HTML,
         )
         self.assertNotIn("callTool('start_run'", ORBIT_WORKFLOWS_HTML)
@@ -665,7 +719,9 @@ class DedicatedCardTests(unittest.TestCase):
         self.assertNotIn("list_authoring_jobs", ORBIT_RUN_HTML)
 
     def test_run_card_labels_its_result(self) -> None:
-        self.assertIn('<h2 class="resultTitle">执行结果</h2>', ORBIT_RUN_HTML)
+        self.assertIn('<h2 class="resultTitle">${esc(t().result)}</h2>', ORBIT_RUN_HTML)
+        self.assertIn("result:'Result'", ORBIT_RUN_HTML)
+        self.assertIn("result:'执行结果'", ORBIT_RUN_HTML)
         self.assertIn(".resultTitle{margin:0 0 6px", ORBIT_RUN_HTML)
 
     def test_run_card_clamps_the_goal_and_has_no_progress_bar(self) -> None:

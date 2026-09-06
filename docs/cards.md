@@ -61,10 +61,10 @@ its result.
 
 **Orbit goals.** Recent runs and their current status, as a list.
 
-Only the dashboard follows the host's locale. The other four carry Chinese
-action labels whatever language the conversation is in, which is why 新目标
-appears on the workflows card above — the screenshot is what the card shows,
-not a mistake in taking it.
+Every card follows the host's locale — its labels, its empty states and the
+prompts it sends back. The host's own language wins when it sends one, and the
+browser's is the guess until it does; a card repaints when the host changes
+it mid-session.
 
 ## Cards are views, not authority
 

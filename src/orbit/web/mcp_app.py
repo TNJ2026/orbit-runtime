@@ -14,14 +14,14 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v45.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v46.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v22.html"
-ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v13.html"
-ORBIT_RUN_URI = "ui://orbit/goal-run-v19.html"
-ORBIT_GOALS_URI = "ui://orbit/goals-v13.html"
+ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v23.html"
+ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v14.html"
+ORBIT_RUN_URI = "ui://orbit/goal-run-v20.html"
+ORBIT_GOALS_URI = "ui://orbit/goals-v14.html"
 
 # The mark the full Orbit UI shows in its own top-left corner — the same
 # geometry as `workflow-ui/index.html`'s `.brand-mark`, not the favicon the
@@ -57,8 +57,10 @@ _PROMPT_EDITOR_STYLE = r"""
 """
 
 _PROMPT_EDITOR_SCRIPT = r"""
-function promptEditorLabels(){const language=String(document.documentElement.lang||navigator.language||'').toLowerCase();
- return language.startsWith('zh')?{title:'编辑提示词',cancel:'取消',send:'发送'}:{title:'Edit prompt',cancel:'Cancel',send:'Send'}}
+/* `locale` is declared by whichever surface includes this: the shared card
+   bridge, or the dashboard's own script. Sniffing the document again here
+   would ignore a host that told us its language. */
+function promptEditorLabels(){return locale==='zh-CN'?{title:'编辑提示词',cancel:'取消',send:'发送'}:{title:'Edit prompt',cancel:'Cancel',send:'Send'}}
 function ensurePromptEditor(){let dialog=document.getElementById('promptEditorDialog');if(dialog)return dialog;const labels=promptEditorLabels();
  dialog=document.createElement('dialog');dialog.id='promptEditorDialog';dialog.className='promptEditorDialog';dialog.setAttribute('aria-labelledby','promptEditorTitle');
  dialog.innerHTML=`<div class="promptEditorBody"><h2 id="promptEditorTitle" class="promptEditorTitle">${esc(labels.title)}</h2><textarea id="promptEditorInput" class="promptEditorInput"></textarea></div><div class="promptEditorActions"><button id="cancelPromptEditor" class="action" type="button">${esc(labels.cancel)}</button><button id="sendPromptEditor" class="action primary" type="button">${esc(labels.send)}</button></div>`;
@@ -342,7 +344,10 @@ __CARD_STYLE__
         + `Before resuming, inspect the run again and use its current interrupt_id, revision, allowed_commands, and output_ports. `
         + `Submit the declared output port object with decision="${decision}" and value=null; do not invent top-level fields.`,
       promptCancel: id => `Cancel Orbit run ${id}.`,
-      promptCreateWorkflow: 'Create an Orbit workflow from the following requirements:', promptAddAgent: '给Orbit添加Agent cli：',
+      promptCreateWorkflow: 'Create an Orbit workflow from the following requirements:',
+      promptAddAgent: 'Add an Agent CLI to Orbit: ',
+      promptGoal: (name,id) => `Run the workflow "${name}" (${id}) with this goal: `,
+      promptModify: (name,id) => `Modify the workflow "${name}" (${id}) as follows: `,
     },
     'zh-CN': {
       running: '运行中', waiting: '需要你的处理', interrupted: '需要你的处理',
@@ -366,7 +371,10 @@ __CARD_STYLE__
         + `恢复前请重新检查运行，并使用当前的 interrupt_id、revision、allowed_commands 和 output_ports。`
         + `按已声明的输出端口提交 decision="${decision}"、value=null 的对象，不要自创顶层字段。`,
       promptCancel: id => `取消 Orbit 运行 ${id}。`,
-      promptCreateWorkflow: '按照下面的要求创建 Orbit 工作流：', promptAddAgent: '给Orbit添加Agent cli：',
+      promptCreateWorkflow: '按照下面的要求创建 Orbit 工作流：',
+      promptAddAgent: '给Orbit添加Agent cli：',
+      promptGoal: (name,id) => `使用工作流「${name}」（${id}）执行：`,
+      promptModify: (name,id) => `按照下面的要求修改工作流「${name}」（${id}）：`,
     },
   };
   const t = () => S[locale] || S['en-US'];
@@ -479,7 +487,7 @@ __CARD_STYLE__
     const rows = workflows.map(workflow => { const name = workflow.name || workflow.workflow_id; return `<div class="rowItem"><button class="row" type="button" data-workflow-id="${esc(workflow.workflow_id)}">
       <div class="name">${esc(name)}</div>
       <div class="desc">${esc(workflow.description || `${workflow.node_count || 0} steps · v${workflow.latest_version || ''}`)}</div></button>
-      ${action(t().newGoal,`使用工作流「${name}」（${workflow.workflow_id}）执行：`,'edit',true).replace('class="action primary"','class="action primary rowAction"')}</div>`; }).join('');
+      ${action(t().newGoal,t().promptGoal(name,workflow.workflow_id),'edit',true).replace('class="action primary"','class="action primary rowAction"')}</div>`; }).join('');
     card.innerHTML = `${authoringStrip(job)}${rows || `<div class="empty">${esc(t().noWorkflows)}</div>`}`;
   }
 
@@ -491,7 +499,7 @@ __CARD_STYLE__
     card.innerHTML = `${viewHead(t().workflow,'workflows')}<div class="summary"><div class="name">${esc(name)}</div>
       <div class="desc">${esc(workflow.description || '')}</div><div class="meta">${esc(workflow.workflow_id)} · v${esc(workflow.latest_version || '')}</div></div>
       <div class="definition">${rows || `<div class="empty">${esc(t().noSteps)}</div>`}</div>
-      <div class="actions">${action(t().newGoal,`使用工作流「${name}」（${workflow.workflow_id}）执行：`,'edit',true)}${action(t().modify,`按照下面的要求修改工作流「${name}」（${workflow.workflow_id}）：`,'edit')}</div>`;
+      <div class="actions">${action(t().newGoal,t().promptGoal(name,workflow.workflow_id),'edit',true)}${action(t().modify,t().promptModify(name,workflow.workflow_id),'edit')}</div>`;
   }
 
   function dayKey(value) {
@@ -713,10 +721,17 @@ __CARD_STYLE__
 
 _CARD_BRIDGE = r"""
 const PROTOCOL='2026-01-26'; let bridge=null,ready=null,lastToolResult=null,hostTheme=null;const toolResultListeners=[],hostContextListeners=[];
+/* Which language this card speaks. The host's own is the answer when it sends
+   one; the browser's is the guess until it does. `strings()` turns a table
+   into an accessor so a card reads `t().label` and never the variable. */
+let locale=navigator.language?.toLowerCase().startsWith('zh')?'zh-CN':'en-US';
+function applyLocale(value){if(!value)return;locale=String(value).toLowerCase().startsWith('zh')?'zh-CN':'en-US'}
+function strings(table){return()=>table[locale]||table['en-US']}
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const payload=v=>v?.structuredContent||v?.data||v||{};
 function publishToolResult(value){lastToolResult=payload(value);toolResultListeners.forEach(fn=>fn(lastToolResult))}
-function applyHostContext(context={}){const theme=context.theme||context.colorScheme;if(theme==='light'||theme==='dark'){hostTheme=theme;document.documentElement.style.colorScheme=theme}hostContextListeners.forEach(fn=>fn(context))}
+function applyHostContext(context={}){const theme=context.theme||context.colorScheme;if(theme==='light'||theme==='dark'){hostTheme=theme;document.documentElement.style.colorScheme=theme}
+ applyLocale(context.locale||context.language);hostContextListeners.forEach(fn=>fn(context))}
 function currentTheme(){return hostTheme||((window.openai?.theme==='light'||window.openai?.theme==='dark')?window.openai.theme:null)}
 function onHostContext(fn){hostContextListeners.push(fn)}
 function mcpBridge(){if(window.parent===window)return null;const pending=new Map();let id=0;
@@ -816,6 +831,24 @@ _WORKFLOW_LIST_STYLE = r"""
 
 ORBIT_WORKFLOWS_HTML = _card("Orbit · Workflows", r"""
 const card=document.getElementById('card');let current=null;
+const t=strings({'en-US':{
+ newGoal:'New goal',modify:'Modify',remove:'Delete',cancel:'Cancel',confirm:'Delete workflow',
+ confirmTitle:'Delete this workflow?',detail:'Workflow',views:'Workflow detail views',
+ back:'Back to the workflow list',graph:'Graph',definition:'Definition',handler:'Handler: ',
+ noPrompt:'No prompt',noWorkflows:'No workflows',noGraph:'No graph',noDefinitions:'No definitions',
+ refusal:'The engine cannot run this definition',
+ promptGoal:(n,i)=>`Run the workflow "${n}" (${i}) with this goal: `,
+ promptModify:(n,i)=>`Modify the workflow "${n}" (${i}) as follows: `,
+ promptDelete:(n,i)=>`I confirm deleting workflow ${i} ("${n}"). Re-read its latest version, then delete it with the authorized delete_workflow tool and a fresh idempotency key.`},
+'zh-CN':{
+ newGoal:'新目标',modify:'修改',remove:'删除',cancel:'取消',confirm:'确认删除',
+ confirmTitle:'确认删除工作流？',detail:'工作流详情',views:'工作流详情视图',
+ back:'返回工作流列表',graph:'流程图',definition:'定义列表',handler:'处理器：',
+ noPrompt:'无提示词',noWorkflows:'暂无工作流',noGraph:'暂无流程图',noDefinitions:'暂无定义',
+ refusal:'引擎无法运行这份定义',
+ promptGoal:(n,i)=>`使用工作流「${n}」（${i}）执行：`,
+ promptModify:(n,i)=>`按照下面的要求修改工作流「${n}」（${i}）：`,
+ promptDelete:(n,i)=>`我确认删除工作流${i}（${n}）。请重新读取其最新版本，并使用授权的 delete_workflow 工具和新的幂等键执行删除。`}});
 /* Whether this Runtime can run it, which is not what `goal_readiness` says.
    Readiness is about binding a goal to the inputs; this is about the
    definition compiling against the Handlers and capabilities the Runtime was
@@ -828,8 +861,9 @@ function runnable(w){const answer=w?.langgraph_compatibility;return !answer||ans
 /* The Runtime's own sentence — which node, which capability — passed through
    rather than translated: inventing wording here would drop the specifics
    that make it actionable. */
-function refusalMarkup(w){if(runnable(w))return '';const answer=w.langgraph_compatibility||{};const detail=answer.detail||answer.reason||'';return `<div class="refusal">引擎无法运行这份定义${detail?`：${esc(detail)}`:'。'}</div>`}
-function graphMarkup(graph){return graph?.nodes?.length?'<div class="workflowGraphMount" data-workflow-graph aria-label="Workflow graph"></div>':'<div class="empty">No graph</div>'}
+function refusalMarkup(w){if(runnable(w))return '';const answer=w.langgraph_compatibility||{};const detail=answer.detail||answer.reason||'';
+ return `<div class="refusal">${esc(t().refusal)}${detail?`${locale==='zh-CN'?'：':': '}${esc(detail)}`:'。'}</div>`}
+function graphMarkup(graph){return graph?.nodes?.length?'<div class="workflowGraphMount" data-workflow-graph aria-label="Workflow graph"></div>':`<div class="empty">${esc(t().noGraph)}</div>`}
 function mountGraph(graph){const element=card.querySelector('[data-workflow-graph]');if(element&&globalThis.OrbitWorkflowGraph?.mount)globalThis.OrbitWorkflowGraph.mount(element,graph,currentTheme())}
 function bindTabs(){const tabs=[...card.querySelectorAll('[role="tab"]')];
  function select(tab){tabs.forEach(item=>{const selected=item===tab;item.setAttribute('aria-selected',String(selected));item.tabIndex=selected?0:-1;const panel=document.getElementById(item.getAttribute('aria-controls'));if(panel)panel.hidden=!selected});if(tab.id==='workflowGraphTab')window.dispatchEvent(new Event('resize'))}
@@ -837,48 +871,54 @@ function bindTabs(){const tabs=[...card.querySelectorAll('[role="tab"]')];
 function bindDefinitionItems(){card.querySelectorAll('.definitionItemToggle').forEach(button=>{button.onclick=()=>{const details=button.nextElementSibling;const expanded=button.getAttribute('aria-expanded')!=='true';button.setAttribute('aria-expanded',String(expanded));if(details)details.hidden=!expanded}})}
 function bindDeleteConfirmation(w){const dialog=document.getElementById('deleteWorkflowDialog'),open=document.getElementById('openDeleteWorkflowDialog'),cancel=document.getElementById('cancelDeleteWorkflow'),confirm=document.getElementById('confirmDeleteWorkflow');
  if(!dialog||!open||!cancel||!confirm)return;open.onclick=()=>dialog.showModal();cancel.onclick=()=>dialog.close();
- dialog.onclick=event=>{if(event.target===dialog)dialog.close()};confirm.onclick=()=>{dialog.close();send(`我确认删除工作流${w.workflow_id}（${w.name||w.workflow_id}）。请重新读取其最新版本，并使用授权的 delete_workflow 工具和新的幂等键执行删除。`)}}
+ dialog.onclick=event=>{if(event.target===dialog)dialog.close()};confirm.onclick=()=>{dialog.close();send(t().promptDelete(w.name||w.workflow_id,w.workflow_id))}}
 function drawList(rows){current=null;
  card.className='card workflowList';
  card.innerHTML=rows.length?rows.map(w=>`<div class="rowItem"><button class="row" type="button" data-open-id="${esc(w.workflow_id)}"><div class="name">${esc(w.name)}</div>
- <div class="desc">${esc(w.description||`${w.node_count||0} steps · v${w.latest_version||''}`)}</div>${refusalMarkup(w)}</button>${runnable(w)?`<button class="action primary rowAction" type="button" data-goal-id="${esc(w.workflow_id)}" data-goal-name="${esc(w.name||w.workflow_id)}">新目标</button>`:''}</div>`).join(''):'<div class="empty">No workflows</div>';
+ <div class="desc">${esc(w.description||`${w.node_count||0} steps · v${w.latest_version||''}`)}</div>${refusalMarkup(w)}</button>${runnable(w)?`<button class="action primary rowAction" type="button" data-goal-id="${esc(w.workflow_id)}" data-goal-name="${esc(w.name||w.workflow_id)}">${esc(t().newGoal)}</button>`:''}</div>`).join(''):`<div class="empty">${esc(t().noWorkflows)}</div>`;
  card.querySelectorAll('[data-open-id]').forEach(b=>b.onclick=()=>openDetail(b.dataset.openId));
- card.querySelectorAll('[data-goal-id]').forEach(b=>b.onclick=event=>{event.stopPropagation();dispatchPromptValue(`使用工作流「${b.dataset.goalName}」（${b.dataset.goalId}）执行：`) });
+ card.querySelectorAll('[data-goal-id]').forEach(b=>b.onclick=event=>{event.stopPropagation();dispatchPromptValue(t().promptGoal(b.dataset.goalName,b.dataset.goalId)) });
 }
 function drawDetail(w){
  card.className='card workflowDetail';
- const nodes=w.nodes||w.definition?.nodes||[];const rows=nodes.map(n=>`<div class="definitionItem"><button class="step definitionItemToggle" type="button" aria-expanded="false"><span class="dot"></span><span>${esc(n.label||n.node_id||n.id)}</span><span class="meta">${esc(n.kind)}</span></button><div class="definitionDetails" hidden><div>处理器：${esc(n.handler||'—')}</div><pre>${esc(n.prompt||'无提示词')}</pre></div></div>`).join('');
- card.innerHTML=`<div class="viewHead"><button id="workflowBack" class="back" type="button" aria-label="返回工作流列表">‹</button><span class="viewTitle">工作流详情</span></div><div class="summary"><div class="name">${esc(w.name)}</div><div class="desc">${esc(w.description||'')}</div>
+ const nodes=w.nodes||w.definition?.nodes||[];const rows=nodes.map(n=>`<div class="definitionItem"><button class="step definitionItemToggle" type="button" aria-expanded="false"><span class="dot"></span><span>${esc(n.label||n.node_id||n.id)}</span><span class="meta">${esc(n.kind)}</span></button><div class="definitionDetails" hidden><div>${esc(t().handler)}${esc(n.handler||'—')}</div><pre>${esc(n.prompt||t().noPrompt)}</pre></div></div>`).join('');
+ card.innerHTML=`<div class="viewHead"><button id="workflowBack" class="back" type="button" aria-label="${esc(t().back)}">‹</button><span class="viewTitle">${esc(t().detail)}</span></div><div class="summary"><div class="name">${esc(w.name)}</div><div class="desc">${esc(w.description||'')}</div>
  <div class="meta">${esc(w.workflow_id)} · v${esc(w.latest_version)}</div></div>
- <div class="tabs" role="tablist" aria-label="工作流详情视图"><button id="workflowGraphTab" class="tab" type="button" role="tab" aria-selected="true" aria-controls="workflowGraphPanel">流程图</button><button id="workflowDefinitionTab" class="tab" type="button" role="tab" aria-selected="false" aria-controls="workflowDefinitionPanel" tabindex="-1">定义列表</button></div>
+ <div class="tabs" role="tablist" aria-label="${esc(t().views)}"><button id="workflowGraphTab" class="tab" type="button" role="tab" aria-selected="true" aria-controls="workflowGraphPanel">${esc(t().graph)}</button><button id="workflowDefinitionTab" class="tab" type="button" role="tab" aria-selected="false" aria-controls="workflowDefinitionPanel" tabindex="-1">${esc(t().definition)}</button></div>
  <div id="workflowGraphPanel" class="detailPanel" role="tabpanel" aria-labelledby="workflowGraphTab">${graphMarkup(w.graph)}</div>
- <div id="workflowDefinitionPanel" class="detailPanel definition" role="tabpanel" aria-labelledby="workflowDefinitionTab" hidden>${rows?`<div class="steps">${rows}</div>`:'<div class="empty">No definitions</div>'}</div>
+ <div id="workflowDefinitionPanel" class="detailPanel definition" role="tabpanel" aria-labelledby="workflowDefinitionTab" hidden>${rows?`<div class="steps">${rows}</div>`:`<div class="empty">${esc(t().noDefinitions)}</div>`}</div>
  ${refusalMarkup(w)}
- <div class="actions">${runnable(w)?`<button class="action primary" data-prompt="使用工作流「${esc(w.name||w.workflow_id)}」（${esc(w.workflow_id)}）执行：" data-prompt-mode="edit">新目标</button>`:''}
- <button class="action" data-prompt="按照下面的要求修改工作流「${esc(w.name||w.workflow_id)}」（${esc(w.workflow_id)}）：" data-prompt-mode="edit">修改</button>
- <button id="openDeleteWorkflowDialog" class="action danger" type="button">删除</button></div>
- <dialog id="deleteWorkflowDialog" class="confirmDialog" aria-labelledby="deleteWorkflowTitle"><div class="confirmBody"><h2 id="deleteWorkflowTitle" class="confirmTitle">确认删除工作流？</h2><p class="confirmText">${esc(w.name||w.workflow_id)}<br>${esc(w.workflow_id)}</p></div><div class="confirmActions"><button id="cancelDeleteWorkflow" class="action" type="button">取消</button><button id="confirmDeleteWorkflow" class="action danger" type="button">确认删除</button></div></dialog>`;document.getElementById('workflowBack').onclick=showList;bind();bindTabs();bindDefinitionItems();bindDeleteConfirmation(w);mountGraph(w.graph)}
+ <div class="actions">${runnable(w)?`<button class="action primary" data-prompt="${esc(t().promptGoal(w.name||w.workflow_id,w.workflow_id))}" data-prompt-mode="edit">${esc(t().newGoal)}</button>`:''}
+ <button class="action" data-prompt="${esc(t().promptModify(w.name||w.workflow_id,w.workflow_id))}" data-prompt-mode="edit">${esc(t().modify)}</button>
+ <button id="openDeleteWorkflowDialog" class="action danger" type="button">${esc(t().remove)}</button></div>
+ <dialog id="deleteWorkflowDialog" class="confirmDialog" aria-labelledby="deleteWorkflowTitle"><div class="confirmBody"><h2 id="deleteWorkflowTitle" class="confirmTitle">${esc(t().confirmTitle)}</h2><p class="confirmText">${esc(w.name||w.workflow_id)}<br>${esc(w.workflow_id)}</p></div><div class="confirmActions"><button id="cancelDeleteWorkflow" class="action" type="button">${esc(t().cancel)}</button><button id="confirmDeleteWorkflow" class="action danger" type="button">${esc(t().confirm)}</button></div></dialog>`;document.getElementById('workflowBack').onclick=showList;bind();bindTabs();bindDefinitionItems();bindDeleteConfirmation(w);mountGraph(w.graph)}
 async function showList(){try{const data=await callTool('list_workflows',{});drawList(Array.isArray(data.workflows)?data.workflows:[])}catch(e){card.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
 async function openDetail(workflowId){try{current=await callTool('get_workflow_definition',{workflow_id:workflowId});drawDetail(current)}catch(e){card.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
 async function refresh(){if(current?.workflow_id)await openDetail(current.workflow_id);else await showList()}
-document.getElementById('refresh').onclick=refresh;onHostContext(()=>mountGraph(current?.graph));onToolResult(value=>{if(Array.isArray(value?.workflows))drawList(value.workflows);else if(value?.workflow_id){current=value;drawDetail(current)}});refresh();
+document.getElementById('refresh').onclick=refresh;onHostContext(()=>refresh());onToolResult(value=>{if(Array.isArray(value?.workflows))drawList(value.workflows);else if(value?.workflow_id){current=value;drawDetail(current)}});refresh();
 """, extra_style=_WORKFLOW_LIST_STYLE + _WORKFLOW_DETAIL_STYLE, extra_script=_XYFLOW_SCRIPT)
 
 ORBIT_AUTHORING_HTML = _card("Orbit · Workflow generation", r"""
 const card=document.getElementById('card');let job=initial(),timer=null;
+const t=strings({'en-US':{preparing:'Preparing',title:'Workflow generation',generated:'Generated',
+ prepare:'Prepare request',generate:'Generate and validate',publish:'Publish workflow',
+ status:{queued:'Queued',running:'Generating',done:'Generated',failed:'Failed',cancelled:'Cancelled'}},
+'zh-CN':{preparing:'准备中',title:'工作流生成',generated:'已生成',
+ prepare:'准备请求',generate:'生成并校验',publish:'发布工作流',
+ status:{queued:'排队中',running:'生成中',done:'已生成',failed:'失败',cancelled:'已取消'}}});
 const terminal=new Set(['done','failed','cancelled']);
 function css(s){return s==='running'||s==='queued'?'live':s==='done'?'good':s==='failed'||s==='cancelled'?'bad':''}
-function draw(j){const result=j.result||{};card.innerHTML=`<div class="summary"><div class="statusLine"><span class="dot ${css(j.status)}"></span><span>${esc(j.status||'Preparing')}</span></div>
- <div class="goal">${esc(j.prompt||'Workflow generation')}</div><div class="meta">${esc(j.job_id||'')}</div></div>
- <div class="steps"><div class="step"><span class="dot ${j.status==='queued'?'live':'good'}"></span><span>Prepare request</span><span></span></div>
- <div class="step"><span class="dot ${j.status==='running'?'live':j.status==='queued'?'':'good'}"></span><span>Generate and validate</span><span>${esc(j.attempts||'')}</span></div>
- <div class="step"><span class="dot ${j.status==='done'?'good':j.status==='failed'?'bad':''}"></span><span>Publish workflow</span><span></span></div></div>
- ${result.workflow_id?`<div class="result"><strong>${esc(result.name||'Generated')}</strong>\n${esc(result.workflow_id)}</div>`:''}
+function draw(j){const result=j.result||{};card.innerHTML=`<div class="summary"><div class="statusLine"><span class="dot ${css(j.status)}"></span><span>${esc(t().status[j.status]||j.status||t().preparing)}</span></div>
+ <div class="goal">${esc(j.prompt||t().title)}</div><div class="meta">${esc(j.job_id||'')}</div></div>
+ <div class="steps"><div class="step"><span class="dot ${j.status==='queued'?'live':'good'}"></span><span>${esc(t().prepare)}</span><span></span></div>
+ <div class="step"><span class="dot ${j.status==='running'?'live':j.status==='queued'?'':'good'}"></span><span>${esc(t().generate)}</span><span>${esc(j.attempts||'')}</span></div>
+ <div class="step"><span class="dot ${j.status==='done'?'good':j.status==='failed'?'bad':''}"></span><span>${esc(t().publish)}</span><span></span></div></div>
+ ${result.workflow_id?`<div class="result"><strong>${esc(result.name||t().generated)}</strong>\n${esc(result.workflow_id)}</div>`:''}
  ${j.error?`<div class="result">${esc(j.error.message||j.error.code)}</div>`:''}`}
 async function refresh(){try{if(!job?.job_id){const data=await callTool('list_authoring_jobs',{limit:1});job=data.jobs?.[0]||{}}
  else job=await callTool('get_authoring_job',{job_id:job.job_id});draw(job);clearTimeout(timer);if(!terminal.has(job.status))timer=setTimeout(refresh,2000)}
  catch(e){card.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
-document.getElementById('refresh').onclick=refresh;onToolResult(value=>{if(value?.job_id){job=value;refresh()}});refresh();
+document.getElementById('refresh').onclick=refresh;onToolResult(value=>{if(value?.job_id){job=value;refresh()}});onHostContext(()=>refresh());refresh();
 """)
 
 _RUN_STYLE = r"""
@@ -891,18 +931,26 @@ _RUN_STYLE = r"""
 
 ORBIT_RUN_HTML = _card("Orbit · Goal execution", r"""
 const card=document.getElementById('card');card.className='card goalRun';let run=initial(),timer=null,firstPaint=true;const terminal=new Set(['completed','failed','cancelled','unknown']);
+const t=strings({'en-US':{preparing:'Preparing',goal:'Goal',result:'Result',
+ status:{queued:'Queued',running:'Running',waiting:'Needs your input',interrupted:'Needs your input',
+  completed:'Completed',failed:'Failed',cancelled:'Cancelled',unknown:'Needs review',
+  succeeded:'Done',answered:'Answered',not_reached:'Pending'}},
+'zh-CN':{preparing:'准备中',goal:'目标',result:'执行结果',
+ status:{queued:'排队中',running:'运行中',waiting:'需要你的处理',interrupted:'需要你的处理',
+  completed:'已完成',failed:'失败',cancelled:'已取消',unknown:'需要检查',
+  succeeded:'完成',answered:'已回答',not_reached:'未开始'}}});
 function css(s){return s==='running'||s==='queued'?'live':s==='waiting'?'warn':s==='completed'||s==='succeeded'||s==='answered'?'good':s==='failed'||s==='cancelled'?'bad':''}
 function failureMessage(value){const error=value?.error;return typeof error==='string'?error:error?.message||error?.code||''}
 async function resultText(r){const id=r.result?.artifact_id;if(!id)return '';try{const a=await callTool('read_artifact_content',{artifact_id:id,max_bytes:262144});return a.encoding==='base64'?decodeURIComponent(escape(atob(a.content))):a.content||''}catch(_){return ''}}
 async function draw(r,steps){
- const rows=steps.map(s=>`<div class="step"><span class="dot ${css(s.status)}"></span><span>${esc(s.label||s.node_id)}</span><span class="meta">${esc(s.status)}</span></div>`).join('');
- const output=terminal.has(r.status)?await resultText(r):'';card.innerHTML=`<div class="summary"><div class="statusLine"><span class="dot ${css(r.status)}"></span><span>${esc(r.status||'Preparing')}</span></div>
- <div class="goal">${esc(r.goal||r.workflow_id||'Goal')}</div><div class="meta">${esc(r.run_id||'')}</div></div>
- ${rows?`<div class="steps">${rows}</div>`:''}${output?`<div class="result"><h2 class="resultTitle">执行结果</h2><div>${esc(output)}</div></div>`:''}`}
+ const rows=steps.map(s=>`<div class="step"><span class="dot ${css(s.status)}"></span><span>${esc(s.label||s.node_id)}</span><span class="meta">${esc(t().status[s.status]||s.status)}</span></div>`).join('');
+ const output=terminal.has(r.status)?await resultText(r):'';card.innerHTML=`<div class="summary"><div class="statusLine"><span class="dot ${css(r.status)}"></span><span>${esc(t().status[r.status]||r.status||t().preparing)}</span></div>
+ <div class="goal">${esc(r.goal||r.workflow_id||t().goal)}</div><div class="meta">${esc(r.run_id||'')}</div></div>
+ ${rows?`<div class="steps">${rows}</div>`:''}${output?`<div class="result"><h2 class="resultTitle">${esc(t().result)}</h2><div>${esc(output)}</div></div>`:''}`}
 async function refresh(){try{const failure=failureMessage(run);if(failure){clearTimeout(timer);card.innerHTML=`<div class="error">${esc(failure)}</div>`;return}if(firstPaint&&run?.run_id&&run.status==='failed'){firstPaint=false;await draw({...run,status:'running'},[]);clearTimeout(timer);timer=setTimeout(refresh,2000);return}firstPaint=false;if(!run?.run_id){const data=await callTool('list_runs',{limit:1});run=data.runs?.[0]||{}}
  else run=await callTool('inspect_run',{run_id:run.run_id});const data=run.run_id?await callTool('get_run_steps',{run_id:run.run_id}):{steps:[]};await draw(run,data.steps||[]);
  clearTimeout(timer);if(run.run_id&&!terminal.has(run.status))timer=setTimeout(refresh,2000)}catch(e){card.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
-document.getElementById('refresh').onclick=refresh;onToolResult(value=>{if(value?.run_id||failureMessage(value)){run=value;firstPaint=true;refresh()}});refresh();
+document.getElementById('refresh').onclick=refresh;onToolResult(value=>{if(value?.run_id||failureMessage(value)){run=value;firstPaint=true;refresh()}});onHostContext(()=>refresh());refresh();
 """, extra_style=_RUN_STYLE)
 
 _GOALS_STYLE = r"""
@@ -922,11 +970,19 @@ _GOALS_STYLE = r"""
 ORBIT_GOALS_HTML = _card("Orbit · Goals", r"""
 const card=document.getElementById('card');let timer=null;
 const live=new Set(['running','queued','waiting','interrupted']);
+const t=strings({'en-US':{goal:'Goal',empty:'No goals yet',
+ status:{queued:'Queued',running:'Running',waiting:'Needs your input',interrupted:'Needs your input',
+  completed:'Completed',failed:'Failed',cancelled:'Cancelled',unknown:'Needs review'},
+ promptOpen:id=>`Show Orbit goal run ${id} using the goal execution card.`},
+'zh-CN':{goal:'目标',empty:'暂无目标运行',
+ status:{queued:'排队中',running:'运行中',waiting:'需要你的处理',interrupted:'需要你的处理',
+  completed:'已完成',failed:'失败',cancelled:'已取消',unknown:'需要检查'},
+ promptOpen:id=>`查看 Orbit 目标运行 ${id}，使用目标执行卡片展示详情。`}});
 function css(s){return s==='running'||s==='queued'?'live':s==='waiting'||s==='interrupted'?'warn':s==='completed'?'good':s==='failed'||s==='cancelled'||s==='unknown'?'bad':''}
-function draw(rows){card.innerHTML=rows.length?rows.map(r=>`<button class="goalRow" type="button" data-run-id="${esc(r.run_id)}"><span class="goalTop"><span class="dot ${css(r.status)}"></span><span class="goalTitle">${esc(r.goal||r.workflow_id||'Goal')}</span><span class="goalStatus">${esc(r.status||'')}</span></span><span class="goalMeta">${esc(r.workflow_id||'')} · ${esc(r.updated_at||'')}</span></button>`).join(''):'<div class="empty">No goals yet</div>';
- card.querySelectorAll('[data-run-id]').forEach(button=>button.onclick=()=>send(`查看 Orbit 目标运行 ${button.dataset.runId}，使用目标执行卡片展示详情。`))}
+function draw(rows){card.innerHTML=rows.length?rows.map(r=>`<button class="goalRow" type="button" data-run-id="${esc(r.run_id)}"><span class="goalTop"><span class="dot ${css(r.status)}"></span><span class="goalTitle">${esc(r.goal||r.workflow_id||t().goal)}</span><span class="goalStatus">${esc(t().status[r.status]||r.status||'')}</span></span><span class="goalMeta">${esc(r.workflow_id||'')} · ${esc(r.updated_at||'')}</span></button>`).join(''):`<div class="empty">${esc(t().empty)}</div>`;
+ card.querySelectorAll('[data-run-id]').forEach(button=>button.onclick=()=>send(t().promptOpen(button.dataset.runId)))}
 async function refresh(){try{const data=await callTool('list_runs',{limit:100});const rows=Array.isArray(data.runs)?data.runs:[];draw(rows);clearTimeout(timer);timer=setTimeout(refresh,rows.some(r=>live.has(r.status))?2000:15000)}catch(e){card.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
-document.getElementById('refresh').onclick=refresh;document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh()});onToolResult(value=>{if(Array.isArray(value?.runs))draw(value.runs)});refresh();
+document.getElementById('refresh').onclick=refresh;document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh()});onToolResult(value=>{if(Array.isArray(value?.runs))draw(value.runs)});onHostContext(()=>refresh());refresh();
 """, extra_style=_GOALS_STYLE)
 
 ORBIT_MCP_APP_RESOURCES = (
