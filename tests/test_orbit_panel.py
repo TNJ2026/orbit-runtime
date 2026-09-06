@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v46.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v47.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -441,12 +441,17 @@ class CurrentTaskCardTests(unittest.TestCase):
                 self.assertIn(".action.primary{color:var(--accent)}", html)
                 # Destructive stays a warning rather than joining them.
                 self.assertIn(".action.danger{color:var(--bad)}", html)
-                # The frame has a border and a radius and no fill of its
-                # own; read from the rule rather than from what follows it,
-                # so adding a property to `.card` cannot quietly pass.
-                rule = html.split(".card{", 1)[1].split("}", 1)[0]
-                self.assertIn("border:1px solid var(--line)", rule)
-                self.assertNotIn("background:", rule)
+                # The frame is drawn by `.cardFrame::after`, not by the
+                # element that scrolls — that is what puts the scrollbar
+                # outside it. Read from the rules rather than from what
+                # follows them, so an added property cannot quietly pass.
+                frame = html.split(".cardFrame::after{", 1)[1].split("}", 1)[0]
+                self.assertIn("border:1px solid var(--line)", frame)
+                self.assertIn("border-radius:12px", frame)
+                self.assertNotIn("background:", frame)
+                scroller = html.split("\n  .card{", 1)[1].split("}", 1)[0]
+                self.assertNotIn("border:", scroller)
+                self.assertNotIn("background:", scroller)
                 back = html.split(".back{", 1)[1].split("}", 1)[0]
                 self.assertIn("border:0", back)
                 self.assertIn("color:var(--accent)", back)
@@ -639,10 +644,7 @@ class DedicatedCardTests(unittest.TestCase):
         self.assertNotIn('.tab[aria-selected="true"]{color:var(--text);background:', ORBIT_WORKFLOWS_HTML)
 
     def test_workflow_list_and_detail_share_a_stable_card_height(self) -> None:
-        self.assertIn(
-            "#card.workflowList, #card.workflowDetail { height: var(--card-height); }",
-            ORBIT_WORKFLOWS_HTML,
-        )
+        self.assertIn("#cardFrame { height: var(--card-height); }", ORBIT_WORKFLOWS_HTML)
         self.assertNotIn("--workflow-card-height", ORBIT_WORKFLOWS_HTML)
         self.assertIn("card.className='card workflowList'", ORBIT_WORKFLOWS_HTML)
         self.assertIn("card.className='card workflowDetail'", ORBIT_WORKFLOWS_HTML)
@@ -661,7 +663,7 @@ class DedicatedCardTests(unittest.TestCase):
         """
 
         self.assertIn(
-            "#card { height: var(--card-height); margin-top: 12px; }",
+            "#cardFrame { height: var(--card-height); margin-top: 12px; }",
             ORBIT_DASHBOARD_HTML,
         )
         for absent in ("min-height: var(--dashboard", "max-height: var(--dashboard"):
@@ -760,11 +762,12 @@ class DedicatedCardTests(unittest.TestCase):
         ):
             with self.subTest():
                 self.assertEqual(1, html.count("--card-height:600px"))
-                rule = html.split(".card{", 1)[1].split("}", 1)[0]
-                self.assertIn("max-height:var(--card-height)", rule)
-                self.assertIn("overflow:hidden auto", rule)
-                # It may shrink to fit the frame; it never grows to fill it.
-                self.assertIn("flex:0 1 auto;min-height:0", rule)
+                # Sizing belongs to the frame; scrolling to the card inside it.
+                frame = html.split(".cardFrame{", 1)[1].split("}", 1)[0]
+                self.assertIn("max-height:var(--card-height)", frame)
+                self.assertIn("flex:0 1 auto;min-height:0", frame)
+                scroller = html.split("\n  .card{", 1)[1].split("}", 1)[0]
+                self.assertIn("overflow:hidden auto", scroller)
                 # No card carries a ceiling of its own any more.
                 for private in ("--workflow-card-height", "--goal-run-card-max-height",
                                 "--dashboard-card-height", "--dashboard-card-min-height"):
@@ -799,6 +802,38 @@ class DedicatedCardTests(unittest.TestCase):
                 # The chrome is not what gets squeezed.
                 self.assertIn("margin-bottom:14px;flex:none}", html)
         self.assertIn("#tabs { align-items: center; flex: none;", ORBIT_DASHBOARD_HTML)
+
+    def test_the_frame_ends_where_the_content_does(self) -> None:
+        """The scrollbar sits beside the rounded outline, not inside it.
+
+        A scrollbar cannot be placed outside the element that scrolls, so the
+        frame and the scroller are two layers: `.cardFrame` carries the size
+        and draws the border, `.card` fills it and keeps its bar at its own
+        right edge, and the frame is inset by however much width that bar is
+        taking. CSS cannot ask for that width, so the one place that can
+        measures it — a ResizeObserver on the scroller, since the bar
+        appearing is the content box losing those pixels.
+        """
+
+        for html in (
+            ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML,
+            ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
+        ):
+            with self.subTest():
+                self.assertIn(
+                    ".cardFrame::after{position:absolute;inset:0 var(--scrollbar,0px) 0 0;",
+                    html,
+                )
+                self.assertIn("function trackScrollbar()", html)
+                self.assertIn("new ResizeObserver(set).observe(card)", html)
+                self.assertIn(
+                    "frame.style.setProperty('--scrollbar',"
+                    "(card.offsetWidth-card.clientWidth)+'px')",
+                    html,
+                )
+                # And it is actually called, or the frame never learns.
+                self.assertIn("trackScrollbar();", html)
+                self.assertIn('id="cardFrame"', html.replace('\\"', '"'))
 
     def test_every_card_keeps_its_scrollbar(self) -> None:
         """A bar with a width, and content laid out beside it rather than under.

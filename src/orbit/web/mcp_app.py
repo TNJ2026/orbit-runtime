@@ -14,14 +14,14 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v46.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v47.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v23.html"
-ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v14.html"
-ORBIT_RUN_URI = "ui://orbit/goal-run-v20.html"
-ORBIT_GOALS_URI = "ui://orbit/goals-v14.html"
+ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v24.html"
+ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v15.html"
+ORBIT_RUN_URI = "ui://orbit/goal-run-v21.html"
+ORBIT_GOALS_URI = "ui://orbit/goals-v15.html"
 
 # The mark the full Orbit UI shows in its own top-left corner — the same
 # geometry as `workflow-ui/index.html`'s `.brand-mark`, not the favicon the
@@ -60,6 +60,15 @@ _PROMPT_EDITOR_SCRIPT = r"""
 /* `locale` is declared by whichever surface includes this: the shared card
    bridge, or the dashboard's own script. Sniffing the document again here
    would ignore a host that told us its language. */
+/* CSS cannot ask whether a scrollbar is currently taking width, so the one
+   place that knows measures it and publishes it. A ResizeObserver on the
+   scroller is exactly the right trigger: the bar appearing is the content box
+   losing those pixels. */
+function trackScrollbar(){const card=document.getElementById('card');
+ const frame=document.getElementById('cardFrame');if(!card||!frame)return;
+ const set=()=>frame.style.setProperty('--scrollbar',(card.offsetWidth-card.clientWidth)+'px');
+ new ResizeObserver(set).observe(card);set()}
+
 function promptEditorLabels(){return locale==='zh-CN'?{title:'编辑提示词',cancel:'取消',send:'发送'}:{title:'Edit prompt',cancel:'Cancel',send:'Send'}}
 function ensurePromptEditor(){let dialog=document.getElementById('promptEditorDialog');if(dialog)return dialog;const labels=promptEditorLabels();
  dialog=document.createElement('dialog');dialog.id='promptEditorDialog';dialog.className='promptEditorDialog';dialog.setAttribute('aria-labelledby','promptEditorTitle');
@@ -117,9 +126,20 @@ _CARD_STYLE = r"""
   .mark .satellite{fill:light-dark(#b45309,#ffb786)}
   h1{margin:0;flex:1;font-size:14px}
   button{font:inherit}.icon{width:32px;height:32px;border:0;border-radius:8px;
-    color:var(--accent);background:transparent;cursor:pointer}.card{max-height:var(--card-height);
-    flex:0 1 auto;min-height:0;
-    overflow:hidden auto;border:1px solid var(--line);border-radius:12px;
+    color:var(--accent);background:transparent;cursor:pointer}
+  /* Two layers, because a scrollbar cannot be put outside the element that
+     scrolls. `.cardFrame` carries the size and draws the border; `.card`
+     fills it, scrolls, and keeps its bar at its own right edge. The frame is
+     inset by exactly the width that bar is taking — measured, since CSS has
+     no way to ask — so the rounded outline ends where the content does and
+     the bar sits beside it rather than inside it. With nothing to scroll the
+     inset is 0 and this is one bordered box again. */
+  .cardFrame{position:relative;max-height:var(--card-height);flex:0 1 auto;min-height:0;
+    display:flex}
+  .cardFrame::after{position:absolute;inset:0 var(--scrollbar,0px) 0 0;
+    border:1px solid var(--line);border-radius:12px;pointer-events:none;content:""}
+  .card{flex:1 1 auto;min-width:0;
+    overflow:hidden auto;border-radius:12px;
     scrollbar-gutter:auto;scrollbar-width:thin;
     scrollbar-color:color-mix(in srgb,var(--muted) 40%,transparent) transparent}
   /* A thin bar, and the content yields its width — but only while it is
@@ -236,7 +256,7 @@ __CARD_STYLE__
        either, so the list scrolls inside the frame. Named, like the workflow
        card's own height, so the knob a host may need to reach is not buried
        in a rule — `--card-height`, shared with every other card. */
-    #card { height: var(--card-height); margin-top: 12px; }
+    #cardFrame { height: var(--card-height); margin-top: 12px; }
     /* A goal can be a paragraph; three lines is enough to recognise one. */
     .goal { display: -webkit-box; -webkit-line-clamp: 3;
       -webkit-box-orient: vertical; overflow: hidden; }
@@ -303,7 +323,7 @@ __CARD_STYLE__
     <button class="tab" id="tabAgents" type="button" role="tab" data-tab="agents" aria-selected="false"></button>
     <button class="action primary" id="createWorkflow" type="button" data-prompt-mode="edit"></button>
   </nav>
-  <section id="card" class="card" aria-live="polite"><div class="empty">Connecting…</div></section>
+  <div id="cardFrame" class="cardFrame"><section id="card" class="card" aria-live="polite"><div class="empty">Connecting…</div></section></div>
 </main>
 <script>
   const PROTOCOL = '2026-01-26';
@@ -701,6 +721,7 @@ __CARD_STYLE__
   }
 
   bridge = mcpBridge();
+  trackScrollbar();
   refreshButton.addEventListener('click',refresh);
   createButton.addEventListener('click',() => dispatchPrompt(createButton));
   tabBar.querySelectorAll('[data-tab]').forEach(button => button.addEventListener('click',() => {
@@ -755,7 +776,7 @@ window.addEventListener('openai:set_globals',event=>{const globals=event.detail?
  if(Object.prototype.hasOwnProperty.call(globals,'toolOutput'))publishToolResult(globals.toolOutput);
  else if(Object.prototype.hasOwnProperty.call(globals,'toolResponse'))publishToolResult(globals.toolResponse);
  if(Object.prototype.hasOwnProperty.call(globals,'theme'))applyHostContext({theme:globals.theme})});
-bridge=mcpBridge();
+bridge=mcpBridge();trackScrollbar();
 """
 
 
@@ -813,11 +834,11 @@ def _card(
     return f"""<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
 <meta name=\"orbit-surface\" content=\"mcp-app\"><style>{_CARD_STYLE}{extra_style}</style></head><body><main>
 <header>{ORBIT_LOGO_MARK}<h1>{title}</h1><button id=\"refresh\" class=\"icon\" type=\"button\">↻</button></header>
-<section id=\"card\" class=\"card\"><div class=\"empty\">Connecting…</div></section></main><script>{_CARD_BRIDGE}{extra_script}{body}</script></body></html>"""
+<div id=\"cardFrame\" class=\"cardFrame\"><section id=\"card\" class=\"card\"><div class=\"empty\">Connecting…</div></section></div></main><script>{_CARD_BRIDGE}{extra_script}{body}</script></body></html>"""
 
 
 _WORKFLOW_LIST_STYLE = r"""
-#card.workflowList, #card.workflowDetail { height: var(--card-height); }
+#cardFrame { height: var(--card-height); }
 #card.workflowDetail { display: flex; min-height: 0; flex-direction: column; }
 #card.workflowDetail .detailPanel { flex: 1 1 auto; height: auto; min-height: 0; }
 /* Why there is no 新目标 on this one. Small print, wrapping, and in the row
