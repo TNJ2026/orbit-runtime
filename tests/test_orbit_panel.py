@@ -30,7 +30,7 @@ ORBIT_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://orbit/current-task-v48.html", ORBIT_DASHBOARD_URI)
+        self.assertEqual("ui://orbit/current-task-v49.html", ORBIT_DASHBOARD_URI)
         self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -541,9 +541,15 @@ class CurrentTaskCardTests(unittest.TestCase):
         for html in (ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML):
             with self.subTest():
                 self.assertIn(
-                    ".back{display:flex;align-items:center;justify-content:center;", html,
+                    ".back{display:flex;align-items:center;justify-content:flex-end;", html,
                 )
-                self.assertIn("cursor:pointer;font-size:24px;line-height:1}", html)
+                self.assertIn("font-size:24px;line-height:1}", html)
+                # Placement measured rather than eyeballed: the glyph goes to
+                # the right of its button and is lifted off the bottom, so the
+                # ink lines up with the title's and the gap reads as the gap.
+                # The button keeps the 30x30 a finger needs.
+                self.assertIn("width:30px;height:30px;padding:0 2px 6px 0;", html)
+                self.assertIn(".viewHead{display:flex;align-items:center;gap:4px;", html)
                 self.assertIn("‹</button>", html)
                 self.assertNotIn("←</button>", html)
         # And it is still one rule, not one per card.

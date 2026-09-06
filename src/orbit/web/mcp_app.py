@@ -14,11 +14,11 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v48.html"
+ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v49.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v24.html"
+ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v25.html"
 ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v15.html"
 ORBIT_RUN_URI = "ui://orbit/goal-run-v21.html"
 ORBIT_GOALS_URI = "ui://orbit/goals-v15.html"
@@ -215,15 +215,22 @@ _CARD_STYLE = r"""
   .action.primary{color:var(--accent)}.action.danger{color:var(--bad)}
   /* One head for a view inside a card, and one way back out of it. Both
      cards that have a detail view drew these separately. */
-  .viewHead{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .viewHead{display:flex;align-items:center;gap:4px;padding:10px 12px;border-bottom:1px solid var(--line)}
   /* One way back, on every card that has a second level. The glyph is the
-     workflow card's chevron rather than the dashboard's arrow, and it is
-     given a size of its own: at the inherited 14px it was a mark small
-     enough to be read as punctuation. Centred by flex, because a glyph's
-     own box is not centred in a 30px button. */
-  .back{display:flex;align-items:center;justify-content:center;
-    width:30px;height:30px;border:0;border-radius:8px;color:var(--accent);
-    background:transparent;cursor:pointer;font-size:24px;line-height:1}
+     workflow card's chevron rather than the dashboard's arrow, at a size of
+     its own: at the inherited 14px it read as punctuation.
+
+     Its placement is measured rather than eyeballed. `align-items:center`
+     lines up the two *boxes*, and the boxes were already centred — but a
+     chevron's ink is not centred in its own box, so it sat 2.8px below the
+     title's. And the declared 8px gap read as 20.5, because the glyph is
+     narrow and the rest of its button is air. So the glyph sits at the right
+     of its button and is lifted off the bottom, while the button keeps the
+     30x30 a finger needs: 8.5px of gap, 0.2px of drift. */
+  .back{display:flex;align-items:center;justify-content:flex-end;
+    width:30px;height:30px;padding:0 2px 6px 0;border:0;border-radius:8px;
+    color:var(--accent);background:transparent;cursor:pointer;
+    font-size:24px;line-height:1}
   .viewTitle{min-width:0;flex:1;font-size:12px;font-weight:650}
   @keyframes pulse{50%{opacity:.35}} @media(prefers-reduced-motion:reduce){.dot.live{animation:none}}
 """ + _PROMPT_EDITOR_STYLE
