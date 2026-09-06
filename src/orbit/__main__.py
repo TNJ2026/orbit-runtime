@@ -545,6 +545,14 @@ def _serve(args) -> None:
         ownership.release()
         raise
     port = listener.getsockname()[1]
+    # Listening, not merely bound, before anything below says where to connect.
+    # `bind_socket` binds; `listen` happens inside `Server.run` — and a bound
+    # socket that is not listening refuses connections outright. So a client
+    # that read the record and connected at once could be refused by a Runtime
+    # that was starting perfectly well. The backlog holds those connections
+    # until the server's loop reaches them; asyncio calls `listen` again with
+    # its own backlog, which is allowed.
+    listener.listen()
 
     upsert_project(
         project_root=project_root, db_path=db_path,

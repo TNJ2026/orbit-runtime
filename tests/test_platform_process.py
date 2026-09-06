@@ -8,6 +8,7 @@ orbit.server or orbit.store.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 import os
 import subprocess
 import sys
@@ -389,13 +390,37 @@ class ProcessIdentityTests(unittest.TestCase):
         token = process.process_identity(finished.pid)
         self.assertTrue(token is None or token.startswith(("proc:", "ps:")))
 
+    @staticmethod
+    @contextmanager
+    def no_procfs():
+        """A host without `/proc`, on a host that may well have one.
+
+        Both tests below name procfs and removed only `ps`. On Linux
+        `process_identity` reads `/proc/<pid>/stat` first and answers from it,
+        so the patched `ps` was never reached and the assertion failed; on
+        macOS they passed because macOS has no procfs to read, not because
+        the code under test had been exercised.
+        """
+
+        class Missing:
+            def __init__(self, *_: object) -> None: pass
+            def read_text(self, *_: object, **__: object) -> str:
+                raise FileNotFoundError
+
+        with patch.object(process, "Path", Missing):
+            yield
+
     def test_a_host_with_no_ps_and_no_procfs_says_it_does_not_know(self) -> None:
-        with patch.object(process.subprocess, "run", side_effect=FileNotFoundError):
+        with self.no_procfs(), patch.object(
+            process.subprocess, "run", side_effect=FileNotFoundError,
+        ):
             self.assertIsNone(process.process_identity(os.getpid()))
 
     def test_a_refusing_ps_says_it_does_not_know(self) -> None:
         empty = subprocess.CompletedProcess([], returncode=1, stdout="", stderr="")
-        with patch.object(process.subprocess, "run", return_value=empty):
+        with self.no_procfs(), patch.object(
+            process.subprocess, "run", return_value=empty,
+        ):
             self.assertIsNone(process.process_identity(os.getpid()))
 
 
