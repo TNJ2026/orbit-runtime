@@ -1,13 +1,32 @@
 """Read-only landing page for the machine's running workspace Runtimes."""
 
 from html import escape
+from pathlib import Path
 from urllib.parse import urlsplit
+
+
+def _display_path(path: str) -> str:
+    """A workspace path, with the user's home directory abridged to `~`.
+
+    Reading `~/.orbit/...` as `/Users/name/.orbit/...` tells the operator
+    nothing the abridged form doesn't, and a long home path eats the column.
+    The separator is checked rather than assumed, by comparing against a
+    normalized home and trusting the user's own home to be absolute.
+    """
+
+    home = str(Path.home())
+    if path == home:
+        return "~"
+    for separator in ("/", "\\"):
+        if path.startswith(home + separator):
+            return "~" + path[len(home):]
+    return path
 
 
 def render_hub_ui(runtimes: list[dict[str, str]]) -> str:
     rows = []
     for runtime in runtimes:
-        path = escape(runtime['path'])
+        path = escape(_display_path(runtime['path']))
         url = escape(runtime['url'], quote=True)
         port = urlsplit(runtime['url']).port
         rows.append(f'<tr><td><code>{path}</code></td><td><span class="status">运行中</span></td>'
