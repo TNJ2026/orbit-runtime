@@ -82,13 +82,20 @@ flowchart TB
 
 ## 4. 进程、端口与状态
 
-一次 `orbit serve` 就是一个进程,绑定一个项目根目录:
+`orbit serve` 是统一入口：先复用或启动全机唯一的 Hub，再注册当前项目，并由 Hub
+启动内部 Runtime 进程。用户不再直接启动单 Workspace Runtime：
 
 ```mermaid
 flowchart LR
-    subgraph proc["orbit serve --project-root PATH"]
-        UV["uvicorn + Starlette"]
+    CLI["orbit serve --project-root PATH"] --> HUB
+    subgraph proc["全机 Hub"]
+        HUB["127.0.0.1:8848<br/>稳定路由 + UI + MCP"]
+    end
+    HUB --> CHILD
+    subgraph runtime["Hub 管理的内部 Runtime"]
+        CHILD["动态端口<br/>绑定一个项目根目录"]
         LOOPS["后台循环<br/>langgraph-timer<br/>revision-1<br/>revision-recovery"]
+        CHILD --> LOOPS
     end
 
     subgraph hostwide["~/.orbit/ · 全机共享"]
@@ -106,15 +113,15 @@ flowchart LR
         WSD["agent-workspaces/"]
     end
 
-    proc --> RDB
-    proc --> RUNS
-    proc --> CKPT
-    proc --> ARTD
-    proc --> WSD
-    proc --> LOCK
-    proc --> TEMPLATES
-    proc --> CACHE
-    proc --> IDX
+    CHILD --> RDB
+    CHILD --> RUNS
+    CHILD --> CKPT
+    CHILD --> ARTD
+    CHILD --> WSD
+    CHILD --> LOCK
+    HUB --> TEMPLATES
+    CHILD --> CACHE
+    CHILD --> IDX
 ```
 
 **持久化边界:**

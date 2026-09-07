@@ -167,8 +167,8 @@ class WorkspaceRegistryTests(unittest.TestCase):
 class ProjectAccessGrantTests(unittest.TestCase):
     """The one route an operator's consent has into a Hub-started Runtime.
 
-    `orbit serve --agent-project-access` decides whether a `workspace_access`
-    policy can be satisfied at all, and the Hub writes the whole argv of every
+    The persisted Hub grant decides whether a `workspace_access` policy can be
+    satisfied at all, and the Hub writes the whole argv of every
     Runtime it launches. Until this, the switch was unreachable through the
     ordinary way of starting Orbit, and a workflow declaring the policy was
     refused on a Runtime that could never have been started to allow it.
@@ -192,6 +192,7 @@ class ProjectAccessGrantTests(unittest.TestCase):
             arguments = manager._serve_arguments(workspace)
 
             self.assertNotIn("--agent-project-access", arguments)
+            self.assertIn("_runtime", arguments)
             self.assertIn("--project-root", arguments)
 
     def test_a_granted_workspace_carries_the_switch_into_its_runtime(self) -> None:

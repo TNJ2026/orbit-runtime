@@ -7,7 +7,8 @@ from pathlib import Path
 import sqlite3
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
+from urllib.request import Request
 
 from orbit.__main__ import main
 from orbit.workflow.artifacts import LocalCASBackend
@@ -108,6 +109,122 @@ class WorkflowCliTests(unittest.TestCase):
         self.assertFalse(payload["valid"])
         self.assertTrue(payload["diagnostics"])
 
+    def test_serve_reuses_the_hub_and_readies_the_workspace(self) -> None:
+        workspace = Path(self.temp_dir.name)
+        registration = {
+            "ui_url": "http://127.0.0.1:8848/workspaces/example/ui/",
+        }
+        with (
+            patch("orbit.__main__._runtime_db_path") as gate,
+            patch("orbit.__main__._running_hub", return_value=True),
+            patch(
+                "orbit.__main__._register_running_hub",
+                return_value=registration,
+            ) as register,
+        ):
+            output = self.run_cli("serve", "--project-root", str(workspace))
+
+        gate.assert_called_once_with(
+            None, acknowledged=False, project_root=workspace.resolve(),
+        )
+        register.assert_called_once_with(
+            "http://127.0.0.1:8848", workspace.resolve(),
+        )
+        self.assertIn("Hub already running", output)
+        self.assertIn(registration["ui_url"], output)
+
+    def test_an_old_hub_child_launch_is_translated_to_the_internal_runtime(self) -> None:
+        with (
+            patch.dict("os.environ", {"ORBIT_HUB_CHILD": "1"}),
+            patch("sys.argv", ["orbit", "serve", "--port", "0"]),
+            patch("orbit.__main__._serve_runtime") as serve_runtime,
+        ):
+            main()
+
+        self.assertEqual("_runtime", serve_runtime.call_args.args[0].command)
+        self.assertEqual(0, serve_runtime.call_args.args[0].port)
+
+    def test_existing_hub_registration_uses_its_internal_route_then_starts_ui(self) -> None:
+        from orbit.__main__ import _register_running_hub
+
+        registration = {
+            "ui_url": "http://127.0.0.1:8848/workspaces/example/ui/",
+        }
+        opened: list[str] = []
+
+        class Response:
+            status = 200
+
+            def __init__(self, body: bytes):
+                self.body = body
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_exc):
+                return None
+
+            def read(self, _size: int | None = None) -> bytes:
+                return self.body
+
+        def open_url(target, **_kwargs):
+            url = target.full_url if isinstance(target, Request) else str(target)
+            opened.append(url)
+            if isinstance(target, Request):
+                return Response(json.dumps(registration).encode("utf-8"))
+            return Response(b"<")
+
+        with patch("orbit.__main__.urlopen", side_effect=open_url):
+            result = _register_running_hub(
+                "http://127.0.0.1:8848", Path(self.temp_dir.name),
+            )
+
+        self.assertEqual(registration, result)
+        self.assertEqual(
+            [
+                "http://127.0.0.1:8848/internal/v1/workspaces/register",
+                registration["ui_url"],
+            ],
+            opened,
+        )
+
+    def test_new_hub_listens_before_it_starts_the_workspace_runtime(self) -> None:
+        workspace = Path(self.temp_dir.name).resolve()
+        events: list[str] = []
+        registry = Mock()
+        registry.register.return_value = ("example", workspace)
+        grants = Mock()
+        manager = Mock()
+        manager.ensure.side_effect = lambda _identifier: events.append("runtime")
+        listener = Mock()
+        listener.getsockname.return_value = ("127.0.0.1", 18848)
+        listener.listen.side_effect = lambda: events.append("listen")
+        server = Mock()
+        server.run.side_effect = lambda **_kwargs: events.append("serve")
+        config = Mock()
+        config.bind_socket.return_value = listener
+
+        with (
+            patch("orbit.__main__._runtime_db_path"),
+            patch("orbit.__main__._running_hub", return_value=False),
+            patch("orbit.hub.WorkspaceRegistry", return_value=registry),
+            patch("orbit.hub.ProjectAccessGrants", return_value=grants),
+            patch("orbit.hub.WorkspaceRuntimeManager", return_value=manager),
+            patch("orbit.hub.create_hub_app", return_value=Mock()),
+            patch("orbit.__main__.uvicorn.Config", return_value=config),
+            patch("orbit.__main__.uvicorn.Server", return_value=server),
+            patch("orbit.global_control.WorkflowTemplateStore", return_value=Mock()),
+        ):
+            output = self.run_cli(
+                "serve", "--project-root", str(workspace), "--port", "0",
+            )
+
+        self.assertEqual(["listen", "runtime", "serve"], events)
+        grants.enable_by_default.assert_called_once_with("example")
+        manager.ensure.assert_called_once_with("example")
+        self.assertIn("http://127.0.0.1:18848", output)
+        listener.close.assert_called_once_with()
+
     def test_serve_wires_the_configured_artifact_store(self) -> None:
         artifact_root = Path(self.temp_dir.name) / "custom-artifacts"
         with (
@@ -116,7 +233,7 @@ class WorkflowCliTests(unittest.TestCase):
             patch("orbit.__main__.uvicorn.Server"),
         ):
             output = self.run_cli(
-                "serve", "--port", "0", "--db", str(self.db),
+                "_runtime", "--port", "0", "--db", str(self.db),
                 "--artifact-root", str(artifact_root),
                 "--no-agent-discovery",
             )
@@ -135,7 +252,7 @@ class WorkflowCliTests(unittest.TestCase):
             patch("orbit.__main__.uvicorn.Server"),
         ):
             self.run_cli(
-                "serve", "--port", "0", "--db", str(self.db), "--no-agent-discovery",
+                "_runtime", "--port", "0", "--db", str(self.db), "--no-agent-discovery",
             )
 
         backend = create_app.call_args.kwargs["artifact_backend"]
@@ -148,7 +265,7 @@ class WorkflowCliTests(unittest.TestCase):
             patch("orbit.__main__.uvicorn.Server"),
         ):
             self.run_cli(
-                "serve", "--port", "0", "--db", str(self.db), "--no-agent-discovery",
+                "_runtime", "--port", "0", "--db", str(self.db), "--no-agent-discovery",
             )
 
         self.assertEqual(
@@ -174,7 +291,7 @@ class WorkflowCliTests(unittest.TestCase):
             SystemExit, "cannot initialize Artifact store"
         ):
             self.run_cli(
-                "serve", "--port", "0", "--db", str(self.db),
+                "_runtime", "--port", "0", "--db", str(self.db),
                 "--artifact-root", str(invalid_root),
                 "--no-agent-discovery",
             )
@@ -188,7 +305,7 @@ class WorkflowCliTests(unittest.TestCase):
 
         with self.assertRaisesRegex(SystemExit, "legacy engine tables"):
             self.run_cli(
-                "serve", "--port", "0", "--db", str(self.db),
+                "_runtime", "--port", "0", "--db", str(self.db),
                 "--artifact-root", str(artifact_root),
                 "--no-agent-discovery",
             )
@@ -353,7 +470,7 @@ class WorkflowInventoryCliTests(unittest.TestCase):
             patch("orbit.__main__.uvicorn.Server"),
         ):
             output = self.run_cli(
-                "serve", "--port", "0", "--db", str(self.db), "--no-agent-discovery",
+                "_runtime", "--port", "0", "--db", str(self.db), "--no-agent-discovery",
             )
 
         self.assertIn("goal readiness:", output)
@@ -373,7 +490,7 @@ class WorkflowInventoryCliTests(unittest.TestCase):
             ),
         ):
             output = self.run_cli(
-                "serve", "--port", "0", "--db", str(self.db),
+                "_runtime", "--port", "0", "--db", str(self.db),
                 "--no-agent-discovery",
             )
 
@@ -435,7 +552,7 @@ class WorkflowLibraryResolutionTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             expected = str(public_workflow_db_path())
-            for command in (("serve",), ("mcp",), ("workflow", "inventory")):
+            for command in (("_runtime",), ("mcp",), ("workflow", "inventory")):
                 with self.subTest(command=command):
                     self.assertEqual(
                         expected, self.resolved(*command, project_root=directory),
@@ -444,12 +561,12 @@ class WorkflowLibraryResolutionTests(unittest.TestCase):
     def test_different_workspaces_share_one_workflow_catalog(self) -> None:
         with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
             self.assertEqual(
-                self.resolved("serve", project_root=first),
-                self.resolved("serve", project_root=second),
+                self.resolved("_runtime", project_root=first),
+                self.resolved("_runtime", project_root=second),
             )
 
     def test_no_command_takes_a_mode_that_would_split_them_again(self) -> None:
-        for command in (("serve",), ("mcp",), ("workflow", "inventory")):
+        for command in (("serve",), ("_runtime",), ("mcp",), ("workflow", "inventory")):
             with self.subTest(command=command):
                 self.assertFalse(hasattr(self.parse(*command), "ui_mode"))
 
@@ -480,7 +597,7 @@ class WorkflowLibraryResolutionTests(unittest.TestCase):
     def test_an_explicit_database_is_self_contained_in_every_command(self) -> None:
         """No sibling file that only one command knows the name of."""
 
-        for command in (("serve",), ("mcp",), ("workflow", "inventory")):
+        for command in (("_runtime",), ("mcp",), ("workflow", "inventory")):
             with self.subTest(command=command):
                 self.assertEqual(
                     "/tmp/named.db",

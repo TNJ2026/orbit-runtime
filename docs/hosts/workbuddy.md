@@ -101,7 +101,7 @@ back is the answer, not a fault.
 
 Do not use `orbit mcp` here. Its stdio transport is the shape WorkBuddy's own
 documentation describes, but the process it starts wants the project database
-a running Hub or `orbit serve` already owns, and exits with
+the Hub-managed Runtime already owns, and exits with
 `Runtime database is already owned` rather than sharing.
 
 ### Upgrade or remove

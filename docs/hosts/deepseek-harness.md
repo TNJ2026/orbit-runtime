@@ -242,8 +242,8 @@ runtime codecs reject malformed core DTOs before they reach the Client — a
 malformed Run, Step, Output or Artifact payload fails at the Gateway boundary
 rather than flowing through TypeScript assertions. When an MCP transport
 fails, the cached endpoint is discarded and the next Bridge poll or tool call
-reruns discovery, so `orbit serve` can restart on a new port without
-restarting Harness.
+reruns discovery, so a Hub restart or a new dynamic Workspace Runtime port does
+not require restarting Harness.
 
 Maintainers can verify install, Host/Web startup, HTTP readiness and clean
 removal in an isolated temporary Profile with `npm run smoke:profile`. Set

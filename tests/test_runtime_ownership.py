@@ -317,7 +317,7 @@ class EphemeralPortTests(unittest.TestCase):
             home.mkdir()
             server = subprocess.Popen(
                 [
-                    sys.executable, "-m", "orbit", "serve", "--port", "0",
+                    sys.executable, "-m", "orbit", "_runtime", "--port", "0",
                     "--db", str(Path(root) / "runtime.db"),
                     "--project-root", str(Path(root)),
                     "--no-agent-discovery",

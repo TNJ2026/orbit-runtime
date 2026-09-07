@@ -91,7 +91,7 @@ Streamable HTTP（`accept: application/json, text/event-stream`），以协议
 以寻找服务端推流；返回的 `405` 是**答案**，不是故障。
 
 **不要在这里用 `orbit mcp`。** 它的 stdio 传输虽然是 WorkBuddy 自家文档描述的形状，
-但它启动的进程要的是运行中的 Hub 或 `orbit serve` 已经持有的项目数据库，会以
+但它启动的进程要的是 Hub 所管理的 Runtime 已经持有的项目数据库，会以
 `Runtime database is already owned` 退出，而不是共享。
 
 ### 升级或移除

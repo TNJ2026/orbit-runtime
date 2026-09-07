@@ -204,7 +204,7 @@ worker id 由集成推导，而不是由模型提供。参见
 Gateway 在启动时就拒绝不兼容的 Orbit 集成协议；运行时编解码器在 DTO 到达 Client 之前就
 拒绝畸形的核心 DTO —— 畸形的 Run、Step、Output 或 Artifact 载荷会在 Gateway 边界失败，
 而不是一路穿过 TypeScript 断言。MCP 传输失败时，缓存的端点会被丢弃，下一次 Bridge 轮询或
-工具调用会重新发现，于是 `orbit serve` 可以换个端口重启而不必重启 Harness。
+工具调用会重新发现，因此 Hub 重启或工作区 Runtime 更换动态端口时无需重启 Harness。
 
 维护者可以用 `npm run smoke:profile` 在一个隔离的临时 Profile 里验证安装、Host/Web 启动、
 HTTP 就绪和干净卸载。启动器在 `PATH` 上不叫 `dsh` 时设置 `DSH_BIN`；要测试确切的发布产物，

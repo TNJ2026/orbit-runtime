@@ -10,6 +10,8 @@ import signal
 import sqlite3
 import subprocess
 import sys
+from urllib.error import HTTPError, URLError
+from urllib.request import Request as UrlRequest, urlopen
 
 import uvicorn
 
@@ -370,8 +372,108 @@ def _structured_agents(values) -> dict[str, str] | None:
     return agents
 
 
+def _hub_health_url(host: str, port: int) -> str:
+    reachable = "127.0.0.1" if host in ("0.0.0.0", "::", "") else host
+    return f"http://{reachable}:{port}"
+
+
+def _running_hub(base_url: str) -> bool:
+    """Return whether ``base_url`` is an Orbit Hub, not merely an open port."""
+
+    try:
+        with urlopen(f"{base_url}/health/ready", timeout=0.5) as response:
+            payload = json.loads(response.read())
+    except (HTTPError, URLError, OSError, ValueError, json.JSONDecodeError):
+        return False
+    return (
+        response.status == 200
+        and isinstance(payload, dict)
+        and payload.get("service") == "orbit-hub"
+    )
+
+
+def _register_running_hub(base_url: str, project_root: Path) -> dict:
+    """Register and start one Workspace through an already-running Hub."""
+
+    request = UrlRequest(
+        f"{base_url}/internal/v1/workspaces/register",
+        data=json.dumps({"path": str(project_root)}).encode("utf-8"),
+        method="POST",
+        headers={"content-type": "application/json", "accept": "application/json"},
+    )
+    try:
+        with urlopen(request, timeout=5) as response:
+            registration = json.loads(response.read())
+    except (HTTPError, URLError, OSError, ValueError, json.JSONDecodeError) as exc:
+        raise SystemExit(f"orbit serve: cannot register workspace with Hub: {exc}") from None
+    if not isinstance(registration, dict) or not registration.get("ui_url"):
+        raise SystemExit("orbit serve: Hub returned an invalid workspace registration")
+
+    # A routed request is the Hub's public start signal for a Workspace Runtime.
+    try:
+        with urlopen(str(registration["ui_url"]), timeout=65) as response:
+            response.read(1)
+    except (HTTPError, URLError, OSError, ValueError) as exc:
+        raise SystemExit(f"orbit serve: workspace Runtime did not become ready: {exc}") from None
+    return registration
+
+
 def _serve(args) -> None:
-    """Start the new Runtime composition root."""
+    """Ensure the Hub is running and make the current Workspace ready."""
+
+    from .global_control import WorkflowTemplateStore
+    from .hub import (
+        ProjectAccessGrants, WorkspaceRegistry, WorkspaceRuntimeManager,
+        create_hub_app, workspace_urls,
+    )
+
+    project_root = resolve_project_root(args.project_root)
+    # Fail at the entry point instead of letting the Hub wait a full Runtime
+    # readiness timeout for a child that the cutover gate refused to start.
+    _runtime_db_path(
+        None,
+        acknowledged=args.acknowledge_discard_legacy_data,
+        project_root=project_root,
+    )
+
+    base_url = _hub_health_url(args.host, args.port)
+    if _running_hub(base_url):
+        registration = _register_running_hub(base_url, project_root)
+        print(
+            f"orbit Hub already running at {base_url}; "
+            f"workspace ready at {registration['ui_url']}",
+            flush=True,
+        )
+        return
+
+    registry = WorkspaceRegistry()
+    identifier, _ = registry.register(project_root)
+    grants = ProjectAccessGrants()
+    grants.enable_by_default(identifier)
+    manager = WorkspaceRuntimeManager(registry=registry, grants=grants)
+    app = create_hub_app(
+        manager=manager, template_store=WorkflowTemplateStore(),
+    )
+
+    # Bind/listen before launching the Runtime. This establishes the Hub as the
+    # stable owner of the public address first; queued connections are accepted
+    # when uvicorn enters its loop after the Workspace becomes ready.
+    config = uvicorn.Config(app, host=args.host, port=args.port, log_level="info")
+    listener = config.bind_socket()
+    listener.listen()
+    base_url = _hub_health_url(args.host, listener.getsockname()[1])
+    urls = workspace_urls(identifier, base_url)
+    print(f"orbit Hub listening on {base_url}", flush=True)
+    try:
+        manager.ensure(identifier)
+        print(f"orbit workspace ready at {urls['ui_url']}", flush=True)
+        uvicorn.Server(config).run(sockets=[listener])
+    finally:
+        listener.close()
+
+
+def _serve_runtime(args) -> None:
+    """Start one Hub-owned Runtime process (internal command)."""
 
     from .web.app import create_app
     from .web.builtin_handlers import BUILTIN_SCHEMAS, builtin_handlers
@@ -808,11 +910,33 @@ def build_parser() -> argparse.ArgumentParser:
         "--version", action="version", version=f"orbit {__version__}",
         help="Show the orbit version and exit",
     )
-    sub = parser.add_subparsers(dest="command", required=True)
-
-    serve_cmd = sub.add_parser(
-        "serve", help="Start the Runtime: API, UI and background loops"
+    sub = parser.add_subparsers(
+        dest="command", required=True,
+        metavar="{serve,mcp,runtimes,agent-worker,hub,agent-app,run,workflow}",
     )
+
+    serve_entry = sub.add_parser(
+        "serve", help="Start or reuse the Hub and ready the current workspace"
+    )
+    serve_entry.add_argument("--host", default="127.0.0.1", help="Hub bind address (default: 127.0.0.1)")
+    serve_entry.add_argument("--port", type=int, default=8848, help="Hub port (default: 8848)")
+    serve_entry.add_argument(
+        "--project-root", default=None,
+        help="Workspace to register and start (default: current directory)",
+    )
+    serve_entry.add_argument(
+        ACKNOWLEDGE_FLAG,
+        action="store_true",
+        help=(
+            "Acknowledge, once, that pre-migration data from the legacy engine "
+            "is abandoned. orbit never opens, imports or deletes those files."
+        ),
+    )
+
+    # Hub subprocess protocol. This is intentionally not a supported
+    # standalone user mode; only WorkspaceRuntimeManager constructs it.
+    serve_cmd = sub.add_parser("_runtime", help=argparse.SUPPRESS)
+    sub._choices_actions.pop()  # argparse has no public hidden-subcommand API
     serve_cmd.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)")
     serve_cmd.add_argument(
         "--port", type=int, default=8848,
@@ -1177,7 +1301,18 @@ def _runtimes(args) -> None:
 
 
 def main() -> None:
-    args = build_parser().parse_args()
+    argv = sys.argv[1:]
+    # Upgrade bridge for a Hub process that was started before this version.
+    # Older managers launch `orbit serve` but already mark the process as a Hub
+    # child. Translate that private protocol before argparse sees the public
+    # `serve` surface; interactive callers never receive the old Runtime mode.
+    if (
+        os.environ.get("ORBIT_HUB_CHILD") == "1"
+        and argv
+        and argv[0] == "serve"
+    ):
+        argv = ["_runtime", *argv[1:]]
+    args = build_parser().parse_args(argv)
 
     if args.command == "workflow":
         _workflow_command(args)
@@ -1189,6 +1324,10 @@ def main() -> None:
 
     if args.command == "serve":
         _serve(args)
+        return
+
+    if args.command == "_runtime":
+        _serve_runtime(args)
         return
 
     if args.command == "mcp":

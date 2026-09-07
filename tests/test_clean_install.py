@@ -137,7 +137,7 @@ class CleanInstallTests(unittest.TestCase):
         database = self.dir / "serve.db"
         server = subprocess.Popen(
             [
-                str(self.orbit), "serve", "--port", str(port),
+                str(self.orbit), "_runtime", "--port", str(port),
                 "--db", str(database), "--no-agent-discovery",
             ],
             cwd=str(self.dir), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,

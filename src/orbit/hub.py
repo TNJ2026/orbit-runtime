@@ -201,7 +201,7 @@ class WorkspaceRegistry:
 class ProjectAccessGrants:
     """Which Workspaces an operator has agreed to hand real project files.
 
-    `orbit serve --agent-project-access` is the switch that decides this, and
+    The Hub-owned Runtime command's `--agent-project-access` switch decides this, and
     a Runtime the Hub starts is never typed by anybody: `_serve_arguments`
     writes its whole argv. So a workflow node declaring a `workspace_access`
     policy was refused on every Runtime the Hub had ever launched — the
@@ -409,7 +409,7 @@ class WorkspaceRuntimeManager:
         """
 
         arguments = [
-            sys.executable, "-m", "orbit", "serve", "--host", "127.0.0.1",
+            sys.executable, "-m", "orbit", "_runtime", "--host", "127.0.0.1",
             "--port", "0", "--project-root", str(workspace),
         ]
         grant_mode = self.grants.mode(project_id(workspace))

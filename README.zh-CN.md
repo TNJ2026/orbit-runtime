@@ -6,9 +6,9 @@
 
 **简体中文** | [English](./README.md)
 
-Orbit 是面向 Agent App 的本地持久化 LangGraph 工作流 Runtime。Runtime、API、Web UI、
-持久化定时器、工作流编写和 MCP 接入都运行在同一个进程中。项目数据保存在
-`~/.orbit/projects/`。
+Orbit 是面向 Agent App 的本地持久化 LangGraph 工作流 Runtime。固定地址的 Hub 将 API、
+Web UI、工作流编写和 MCP 流量路由到每个 Workspace 各自的受管 Runtime 进程。项目数据
+保存在 `~/.orbit/projects/`。
 
 目前可以从 **Codex app**、**WorkBuddy**、**DeepSeek Harness** 面板，以及任何其他
 支持 MCP 的 App 接入——各走各的前门，面对的是同一个 Runtime。Agent 步骤通常 fork
@@ -153,8 +153,8 @@ scope。它是控制台而非日志：按尝试和流分别限量、写在所有
 
 ```bash
 orbit serve
-orbit serve --agent-project-access        # 允许 workspace_access 节点读到项目
-orbit serve --mcp-tool-profile harness    # Harness bundle 用的那个工具子集
+orbit serve --project-root /absolute/path/to/project
+orbit hub register /absolute/path/to/project --no-agent-project-access
 orbit --version
 orbit runtimes --json                     # 哪些 Runtime 在跑、在哪
 orbit mcp
@@ -165,7 +165,8 @@ orbit workflow validate <file> --catalog <catalog.json>
 orbit workflow publish <file> --catalog <catalog.json> --expected-version <n>
 ```
 
-`orbit serve` 默认只绑定 `127.0.0.1`。多 Workspace 时，Agent CLI、Workflow 源码模板
+`orbit serve` 是统一入口：它会复用或启动绑定在 `127.0.0.1:8848` 的 Hub、注册当前
+Workspace，并等待 Hub 管理的 Runtime 就绪。它不再提供独立 Runtime 模式。多 Workspace 时，Agent CLI、Workflow 源码模板
 和已发布 Workflow 全局共享；运行历史、人工任务、Artifact 及其他执行状态仍按 Workspace
 隔离。Hub 还持有可复用的 Workflow 源码模板，并聚合在线 Workspace Runtime 的 Agent 统计。
 

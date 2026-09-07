@@ -103,12 +103,17 @@ class HelpTests(unittest.TestCase):
                 self.assertEqual(0, result.returncode, result.stderr)
                 self.assertTrue(result.stdout.strip())
 
-    def test_runtime_commands_advertise_mcp_tool_profiles(self) -> None:
-        for command in ("serve", "mcp"):
-            with self.subTest(command=command):
-                result = cli(command, "--help")
-                self.assertEqual(0, result.returncode, result.stderr)
-                self.assertIn("--mcp-tool-profile {full,harness}", result.stdout)
+    def test_stdio_runtime_advertises_mcp_tool_profiles(self) -> None:
+        result = cli("mcp", "--help")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("--mcp-tool-profile {full,harness}", result.stdout)
+
+    def test_serve_only_exposes_hub_orchestration_options(self) -> None:
+        result = cli("serve", "--help")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("--project-root", result.stdout)
+        self.assertNotIn("--mcp-tool-profile", result.stdout)
+        self.assertNotIn("--db", result.stdout)
 
     def test_version_prints_and_exits(self) -> None:
         result = cli("--version")

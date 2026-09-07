@@ -6,9 +6,9 @@
 
 [简体中文](./README.zh-CN.md) | **English**
 
-Orbit is a local, durable LangGraph workflow Runtime for Agent Apps. It combines
-the Runtime, API, Web UI, durable timers, workflow authoring, and MCP integration
-in one process. Project data is stored under `~/.orbit/projects/`.
+Orbit is a local, durable LangGraph workflow Runtime for Agent Apps. A stable
+Hub routes API, Web UI, workflow authoring, and MCP traffic to one managed
+Runtime process per Workspace. Project data is stored under `~/.orbit/projects/`.
 
 It is reached today from the **Codex app**, from **WorkBuddy**, from the
 **DeepSeek Harness** panel, and from any other MCP-capable App — each through
@@ -189,8 +189,8 @@ stream, written outside every transaction, and never something a replay reads.
 
 ```bash
 orbit serve
-orbit serve --agent-project-access        # let workspace_access nodes reach the project
-orbit serve --mcp-tool-profile harness    # the subset the Harness bundle uses
+orbit serve --project-root /absolute/path/to/project
+orbit hub register /absolute/path/to/project --no-agent-project-access
 orbit --version
 orbit runtimes --json                     # which Runtimes are up, and where
 orbit mcp
@@ -201,7 +201,9 @@ orbit workflow validate <file> --catalog <catalog.json>
 orbit workflow publish <file> --catalog <catalog.json> --expected-version <n>
 ```
 
-`orbit serve` binds to `127.0.0.1` by default. Runtime state and Artifacts are
+`orbit serve` is the unified entry point: it reuses or starts the Hub on
+`127.0.0.1:8848`, registers the current Workspace, and waits for the Hub-managed
+Runtime to become ready. It no longer exposes a standalone Runtime mode. Runtime state and Artifacts are
 project-scoped; published Workflow definitions are host-wide and visible from
 every Workspace. The Hub also owns reusable Workflow source templates and
 aggregates Agent statistics from live Workspace Runtimes.
