@@ -2,6 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+# Workspace Runtimes deliberately run from the target project. Keep the Orbit
+# checkout they may patch explicit rather than letting that cwd stand in for it.
+export ORBIT_SOURCE_ROOT="$ROOT_DIR"
 
 if [ -n "${ORBIT_CLI:-}" ]; then
   [ -x "$ORBIT_CLI" ] || { echo "ORBIT_CLI is not executable: $ORBIT_CLI" >&2; exit 127; }

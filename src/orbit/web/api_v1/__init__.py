@@ -65,6 +65,7 @@ def build_api_v1(
     langgraph_service=None,
     mcp_sessions=None,
     agent_fallback=None,
+    agent_proposal_root: Path | str | None = None,
 ) -> list[Route]:
     """Routes for `/api/v1`, ready to mount on the composition root.
 
@@ -99,6 +100,7 @@ def build_api_v1(
         langgraph_service=langgraph_service,
         mcp_sessions=mcp_sessions,
         agent_fallback=agent_fallback,
+        agent_proposal_root=agent_proposal_root,
     )
     # Both modes get the same surface. `workflow_ui_mode` selects how many
     # Agents an author chooses between, not which features exist: a Runtime

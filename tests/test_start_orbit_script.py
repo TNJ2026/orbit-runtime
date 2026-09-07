@@ -117,10 +117,12 @@ class StartOrbitScriptTests(unittest.TestCase):
             capture = root / "arguments.txt"
             fake_orbit = root / "orbit"
             fake_orbit.write_text(
-                "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$ORBIT_TEST_CAPTURE\"\n",
+                "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$ORBIT_TEST_CAPTURE\"\n"
+                "printf '%s\\n' \"$ORBIT_SOURCE_ROOT\" > \"$ORBIT_TEST_ROOT_CAPTURE\"\n",
                 encoding="utf-8",
             )
             fake_orbit.chmod(0o755)
+            root_capture = root / "source-root.txt"
 
             result = subprocess.run(
                 ["bash", str(SCRIPT), "--hub-service"], cwd=ROOT,
@@ -128,12 +130,14 @@ class StartOrbitScriptTests(unittest.TestCase):
                     **os.environ,
                     "ORBIT_CLI": str(fake_orbit),
                     "ORBIT_TEST_CAPTURE": str(capture),
+                    "ORBIT_TEST_ROOT_CAPTURE": str(root_capture),
                 },
                 text=True, capture_output=True, check=False,
             )
 
             self.assertEqual(0, result.returncode, result.stderr)
             self.assertEqual(["hub", "serve"], capture.read_text().splitlines())
+            self.assertEqual(str(ROOT), root_capture.read_text().strip())
 
 
 if __name__ == "__main__":

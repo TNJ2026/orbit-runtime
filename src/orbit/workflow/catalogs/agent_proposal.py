@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import difflib
+import os
 from pathlib import Path
 from typing import Callable, Sequence
 import shutil
@@ -35,6 +36,37 @@ _REVIEWED_SET_END = (
     "            },\n            {(spec.name, spec.executable) for spec in TRUSTED_AGENT_CLIS},"
 )
 _PERMISSIONS_END = "            },\n            settings,\n        )"
+
+
+def source_checkout_root(configured: Path | str | None = None) -> Path | None:
+    """Return the Orbit checkout that may receive a generated proposal patch.
+
+    A Workspace Runtime runs with the user's project as its cwd.  That project
+    is the *target* of workflows, never the checkout containing Orbit's trusted
+    Agent allowlist.  Repository launchers therefore name their own checkout
+    through ``ORBIT_SOURCE_ROOT``; editable development installs can derive the
+    same root from this module.  A wheel installation has neither and must not
+    pretend that its site-packages directory is an editable source tree.
+    """
+
+    explicit = configured
+    if explicit is None:
+        explicit = os.environ.get("ORBIT_SOURCE_ROOT")
+    candidates = (
+        (Path(explicit).expanduser(),)
+        if explicit
+        else (Path(__file__).resolve().parents[4],)
+    )
+    required = (DISCOVERY_FILE, DISCOVERY_TESTS)
+    for candidate in candidates:
+        try:
+            root = candidate.resolve()
+        except OSError:
+            continue
+        if all((root / relative).is_file() for relative in required):
+            return root
+    return None
+
 
 # Invocation profiles that were already exercised against the named CLI.
 # Unknown CLIs remain detection-only until somebody reviews their invocation.

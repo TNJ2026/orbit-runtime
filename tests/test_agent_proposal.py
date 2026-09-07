@@ -8,16 +8,26 @@ can become is a patch somebody reads.
 from __future__ import annotations
 
 from pathlib import Path
+import os
+import shutil
 import subprocess
 import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
+from unittest import mock
 
 from orbit.workflow.catalogs.agent_discovery import (
     TRUSTED_AGENT_CLIS, AgentCliSpec, AgentInvocation, probe_executable,
 )
-from orbit.workflow.catalogs.agent_proposal import apply_patch, propose, render_patch
+from orbit.workflow.catalogs.agent_proposal import (
+    DISCOVERY_FILE,
+    DISCOVERY_TESTS,
+    apply_patch,
+    propose,
+    render_patch,
+    source_checkout_root,
+)
 from orbit.web.api_v1.agent_proposals import _explicit_cli_names, _mentioned_names
 
 
@@ -151,7 +161,12 @@ class PatchTests(unittest.TestCase):
             )
             for relative in (
                 "src/orbit/workflow/catalogs/agent_discovery.py",
+                "src/orbit/workflow/catalogs/agent_proposal.py",
                 "src/orbit/web/app.py",
+                "src/orbit/web/api_v1/__init__.py",
+                "src/orbit/web/api_v1/agent_proposals.py",
+                "src/orbit/web/api_v1/context.py",
+                "src/orbit/web/api_v1/ops.py",
                 "src/orbit/web/mcp.py",
                 "src/orbit/web/builtin_handlers.py",
                 "src/orbit/workflow/handlers/agent.py",
@@ -217,6 +232,15 @@ class PatchTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "anchor"):
                 render_patch(self.sample(), root=fake)
 
+    def test_an_explicit_workspace_is_not_mistaken_for_the_source_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertIsNone(source_checkout_root(tmp))
+
+    def test_the_development_checkout_is_detected_without_configuration(self) -> None:
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ORBIT_SOURCE_ROOT", None)
+            self.assertEqual(ROOT, source_checkout_root())
+
 
 if __name__ == "__main__":
     unittest.main()
@@ -225,7 +249,7 @@ if __name__ == "__main__":
 class EndpointTests(unittest.TestCase):
     """`/api/v1/agent-proposals` over HTTP, including who may reach it."""
 
-    def build(self, *, authoring=True):
+    def build(self, *, authoring=True, proposal_root=ROOT):
         from orbit.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
         from orbit.web.app import create_app
         from test_web_composition import SCHEMAS
@@ -242,6 +266,7 @@ class EndpointTests(unittest.TestCase):
             # Discovery is what wires an authoring service, and without one the
             # command is not offered at all — which is its own assertion below.
             discover_agents=authoring,
+            agent_proposal_root=proposal_root,
             langgraph_state_directory=Path(temp.name) / "langgraph",
         )
 
@@ -263,6 +288,16 @@ class EndpointTests(unittest.TestCase):
         with AsgiHarness(self.build(authoring=False)) as client:
             data = client.get("/api/v1/handler-catalog", actor="reader").json()["data"]
             self.assertEqual([], data["allowed_commands"])
+
+    def test_the_command_is_hidden_without_an_editable_source_checkout(self) -> None:
+        from test_web_composition import AsgiHarness
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with AsgiHarness(self.build(proposal_root=tmp)) as client:
+                data = client.get(
+                    "/api/v1/handler-catalog", actor="writer",
+                ).json()["data"]
+                self.assertEqual([], data["allowed_commands"])
 
     def test_named_candidates_come_back_judged(self) -> None:
         from test_web_composition import AsgiHarness
@@ -296,6 +331,49 @@ class EndpointTests(unittest.TestCase):
                 {"refused"}, {item["verdict"] for item in data["proposals"]},
             )
             self.assertEqual("", data["patch"])
+
+    def test_apply_targets_the_orbit_checkout_not_the_runtime_workspace(self) -> None:
+        from test_web_composition import AsgiHarness
+
+        sample = propose(
+            ["aider"], specs=(), which=which_for({"aider"}),
+            runner=version_runner("aider 0.86.1"),
+        )
+        original = (ROOT / DISCOVERY_FILE).read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as tmp:
+            checkout = Path(tmp) / "orbit-checkout"
+            workspace = Path(tmp) / "user-workspace"
+            workspace.mkdir()
+            for relative in (DISCOVERY_FILE, DISCOVERY_TESTS):
+                target = checkout / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(ROOT / relative, target)
+
+            previous_cwd = Path.cwd()
+            try:
+                os.chdir(workspace)
+                with mock.patch(
+                    "orbit.workflow.catalogs.agent_proposal.propose",
+                    return_value=sample,
+                ):
+                    with AsgiHarness(self.build(proposal_root=checkout)) as client:
+                        response = client.post(
+                            "/api/v1/agent-proposals", actor="writer", key="apply-1",
+                            body={"names": ["aider"], "apply": True},
+                        )
+            finally:
+                os.chdir(previous_cwd)
+
+            self.assertEqual(200, response.status_code, response.text)
+            self.assertTrue(response.json()["data"]["applied"])
+            self.assertFalse((workspace / "src").exists())
+            self.assertIn(
+                'AgentCliSpec("aider", "aider")',
+                (checkout / DISCOVERY_FILE).read_text(encoding="utf-8"),
+            )
+            self.assertEqual(
+                original, (ROOT / DISCOVERY_FILE).read_text(encoding="utf-8"),
+            )
 
     def test_a_request_naming_neither_is_refused(self) -> None:
         from test_web_composition import AsgiHarness

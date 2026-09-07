@@ -16,7 +16,6 @@ the same fact — and this file must not be where they get confused.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import re
 from threading import Lock, Thread
 from typing import Any, Mapping
@@ -52,10 +51,19 @@ def build_routes(ctx) -> list[Route]:
         from ...workflow.catalogs.agent_proposal import apply_patch, propose, render_patch
 
         proposals = propose(candidates)
-        patch = render_patch(proposals)
+        additions = [item for item in proposals if item.proposable]
+        if additions and ctx.agent_proposal_root is None:
+            raise ValueError(
+                "Orbit source checkout is unavailable; start Orbit through "
+                "the repository's start-orbit.sh before applying an Agent CLI proposal"
+            )
+        patch = (
+            render_patch(proposals, root=ctx.agent_proposal_root)
+            if additions else ""
+        )
         applied = False
         if apply and patch:
-            apply_patch(patch, root=Path.cwd())
+            apply_patch(patch, root=ctx.agent_proposal_root)
             applied = True
         return {
             "asked_agent": asked, "agent_output": agent_output,

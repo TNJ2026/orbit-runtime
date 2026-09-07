@@ -490,6 +490,7 @@ def create_app(
     serve_mcp: bool = True,
     workspace_path: Path | str | None = None,
     agent_project_access: bool = False,
+    agent_proposal_root: Path | str | None = None,
 ) -> Starlette:
     """Build the Runtime application.
 
@@ -1104,6 +1105,7 @@ def create_app(
             langgraph_service=langgraph_service,
             mcp_sessions=mcp_sessions,
             agent_fallback=agent_rebind,
+            agent_proposal_root=agent_proposal_root,
         ),
         # The MCP surface is a second protocol over the same application
         # services and the same identity, not a second implementation.

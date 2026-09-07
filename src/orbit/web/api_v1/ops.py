@@ -30,7 +30,11 @@ def _proposal_commands(ctx, actor) -> list[dict]:
     execution, so who may reach it is the server's answer to give.
     """
 
-    if ctx.authoring_service is None or not ctx.guard.allows(actor, WRITE_SCOPE):
+    if (
+        ctx.authoring_service is None
+        or ctx.agent_proposal_root is None
+        or not ctx.guard.allows(actor, WRITE_SCOPE)
+    ):
         return []
     return [{
         "command": "agent.proposal.probe",
