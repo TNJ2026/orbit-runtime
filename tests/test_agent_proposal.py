@@ -81,11 +81,25 @@ class ProposalTests(unittest.TestCase):
     def test_cli_name_is_extracted_from_chinese_prompt_without_model_authority(self) -> None:
         self.assertEqual(["kimi"], _explicit_cli_names("请给 Orbit 添加 Kimi CLI"))
 
-    def test_only_names_adjacent_to_cli_are_extracted(self) -> None:
+    def test_short_natural_requests_are_extracted_without_cli_keyword(self) -> None:
+        cases = {
+            "添加pi": ["pi"],
+            "添加 pi": ["pi"],
+            "安装 aider": ["aider"],
+            "add aider": ["aider"],
+        }
+        for prompt, expected in cases.items():
+            with self.subTest(prompt=prompt):
+                self.assertEqual(expected, _explicit_cli_names(prompt))
+
+    def test_writer_mentions_and_negated_names_are_not_extracted(self) -> None:
         self.assertEqual(
             ["kimi"],
             _explicit_cli_names("用 claude 帮我添加 kimi CLI，不要添加 pi"),
         )
+
+    def test_a_request_without_an_add_command_has_no_candidate(self) -> None:
+        self.assertEqual([], _explicit_cli_names("请帮我处理这个问题"))
 
     def test_only_cli_names_explicitly_present_in_the_prompt_survive(self) -> None:
         self.assertEqual(

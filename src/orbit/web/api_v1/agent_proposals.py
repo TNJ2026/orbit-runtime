@@ -35,6 +35,8 @@ _ASK = """Handle the user's request to add an Agent CLI to Orbit. Report your
 work clearly in plain text: identify only the CLI explicitly requested, explain
 the executable name you resolved from the request, and state what Orbit should
 check before registering it. Do not recommend, mention, or add alternatives.
+The executable name is already present verbatim in the request. Do not use
+tools, inspect the filesystem, or modify anything; return the report directly.
 Keep the report focused, but do not reduce it to a JSON array. This report is
 shown verbatim to the user as the Agent's stdout.
 
@@ -215,13 +217,23 @@ def _mentioned_names(prompt: str, candidates: list[str]) -> list[str]:
 
 
 def _explicit_cli_names(prompt: str) -> list[str]:
-    """Names written immediately before or after ``CLI`` in the prompt."""
+    """CLI names the person explicitly asked Orbit to add.
+
+    ``CLI`` is useful disambiguation but should not be a password: short UI
+    requests such as ``添加pi`` and ``add aider`` carry the same explicit scope.
+    The command verb remains required so an Agent mentioned only as the writer,
+    or in a refusal, cannot silently become a proposal.
+    """
 
     lowered = prompt.casefold()
     name = r"[a-z][a-z0-9_-]{0,31}"
     patterns = (
         rf"(?<![a-z0-9_-])({name})\s+(?:agent\s+)?cli(?![a-z0-9_-])",
         rf"(?<![a-z0-9_-])cli\s+({name})(?![a-z0-9_-])",
+        rf"(?<!不)(?<!别)(?<!不要)(?:添加|安装|接入|注册)\s*"
+        rf"(?:agent\s+cli\s+)?({name})(?![a-z0-9_-])",
+        rf"(?<!not\s)(?<!don't\s)(?:add|install|register)\s+"
+        rf"(?:the\s+)?(?:agent\s+cli\s+)?({name})(?![a-z0-9_-])",
     )
     found: list[str] = []
     for pattern in patterns:

@@ -2318,14 +2318,16 @@ export function createViews(context) {
       stage,
     ]);
 
-    const outputBlock = (output) => {
+    const outputBlock = (output, waiting = true) => {
       const hasOutput = typeof output === "string" && output.length > 0;
       return el("div", {
-        class: `agent-finder-output ${hasOutput ? "has-output" : "waiting"}`,
+        class: `agent-finder-output ${hasOutput ? "has-output" : waiting ? "waiting" : "empty"}`,
         "aria-live": "polite",
       }, [el("pre", {
         class: "mono",
-        text: hasOutput ? output : i18n.t("agents.find.outputWaiting"),
+        text: hasOutput ? output : i18n.t(
+          waiting ? "agents.find.outputWaiting" : "agents.find.outputEmpty",
+        ),
       })]);
     };
     const renderFailure = (message, output = "") => {
@@ -2347,7 +2349,7 @@ export function createViews(context) {
         agent: item.executable, version: item.version || "—",
       })).join("\n");
       stage.replaceChildren(
-        outputBlock(data.agent_output),
+        outputBlock(data.agent_output, false),
         el("h4", { class: "agent-finder-status-title", text: i18n.t("agents.find.success") }),
         el("div", { class: "banner success agent-finder-success-detail", text: detail }),
         el("div", { class: "actions agent-finder-actions" }, [el("button", {
