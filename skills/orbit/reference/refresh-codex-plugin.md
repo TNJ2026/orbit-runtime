@@ -57,7 +57,7 @@ Stop here. Tell the user that preparation is complete and ask them to:
 
 1. fully quit Codex, not merely close its window;
 2. reopen Codex; and
-3. start a new task before testing the Orbit dashboard or another Orbit card.
+3. start a new task before testing the Orbit workspace or another Orbit card.
 
 Do not claim that restarting only Orbit or opening another card reloads the
 plugin. Codex loads installed plugin metadata and skills at application/task

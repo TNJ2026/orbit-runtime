@@ -61,7 +61,7 @@ is not. An `unknown` delegation is never executed again. See
 
 What the five cards are is in [the cards](../cards.md).
 
-Orbit publishes its dashboard as an MCP App (the MCP Apps extension,
+Orbit publishes its workspace card as an MCP App (the MCP Apps extension,
 SEP-1865): the resource carries the mime type `text/html;profile=mcp-app` and
 is bound to the tool through `_meta.ui.resourceUri`. There is nothing
 host-specific in that — a host implementing MCP Apps mounts the card in a

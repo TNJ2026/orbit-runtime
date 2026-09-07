@@ -21,7 +21,6 @@
       "types": "./lib/types.d.ts",
       "default": "./lib/types.js"
     },
-    "./src/*": "./src/*",
     "./package.json": "./package.json",
     "./client": {
       "types": "./lib/client.d.ts",
@@ -32,9 +31,13 @@
     "CHANGELOG.md",
     "README.md",
     "cordis.patch.yml",
-    "lib/**/*.d.ts",
-    "lib/**/*.js",
-    "lib/**/*.map"
+    "lib/index.d.ts",
+    "lib/index.js",
+    "lib/types.d.ts",
+    "lib/types.js",
+    "lib/client.d.ts",
+    "lib/client.js",
+    "lib/client.js.map"
   ],
   "dsh": {
     "bundle": {
@@ -82,10 +85,9 @@
     "build": "tsc && tsdown",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.client.json",
     "test": "npm run build && node --test tests/*.test.mjs",
+    "verify:package": "node scripts/verify-package.mjs",
+    "prepack": "npm run build && npm run verify:package",
     "smoke:profile": "npm run build && node tests/profile-smoke.mjs",
     "smoke:profile:matrix": "npm run build && node tests/profile-smoke-matrix.mjs"
-  },
-  "dependencies": {
-    "@orbit-runtime/integration-core": "file:../../integration-core"
   }
 }

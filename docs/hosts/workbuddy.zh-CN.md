@@ -133,7 +133,7 @@ WorkBuddy 完整地挂载 Orbit 的 MCP App 卡片：列出资源、请求
 `resources/templates/list`、再读取工具通过 `_meta.ui.resourceUri` 点名的那一个并绘制。
 由此有两个后果。
 
-**每张卡自己取数据。** 挂载的卡片会开自己的 MCP 会话并调用它需要的工具 —— dashboard 卡片
+**每张卡自己取数据。** 挂载的卡片会开自己的 MCP 会话并调用它需要的工具 —— workspace 卡片
 会轮询 `list_runs` 和 `list_authoring_jobs` —— 所以一个对话里挂着六张卡，就是六套这样的
 调用；一个「每个条目挂一张卡」的工具会把整个记录塞满。
 

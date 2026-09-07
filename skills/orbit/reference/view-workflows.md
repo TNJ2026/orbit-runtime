@@ -37,6 +37,6 @@ equivalents.
    and a fresh idempotency key. If that tool is unavailable, say so; do not
    construct a mutation URL.
 
-Do not call `open_orbit_dashboard` for a workflow-list request: the dashboard
+Do not call `open_orbit_dashboard` for a workflow-list request: the workspace card
 is the default for opening Orbit, while `list_workflows` is the dedicated list
 card.

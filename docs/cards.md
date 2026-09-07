@@ -17,22 +17,23 @@ so treat the visible surface as a separate question from the call.
 
 | Call this | and this card appears | showing |
 | --- | --- | --- |
-| `open_orbit_dashboard` | Orbit dashboard | the workspace: workflows, history, agents |
+| `open_orbit_dashboard` | Orbit workspace | goals, workflows, history, and agents |
 | `list_workflows` | Orbit workflows | the published catalogue |
 | `get_workflow_definition` | Orbit workflows | the same card, opened on one workflow |
 | `generate_workflow` | Orbit workflow generation | one authoring job's progress and result |
 | `start_run` | Orbit goal execution | that run's steps, attention state and result |
 | `open_orbit_goals` | Orbit goals | recent goal runs and their status |
 
-Pick the card from the intent rather than opening the dashboard first: a
+Pick the card from the intent rather than opening the workspace card first: a
 request to see the workflows is `list_workflows`, and a request to run a goal
-is `start_run`. Opening Orbit itself is `open_orbit_dashboard`.
+is `start_run`. Opening Orbit itself is `open_orbit_dashboard`; the legacy tool
+name remains stable for existing clients.
 
 ## What each one is
 
-![The Orbit dashboard card, on its History tab](./images/cards/dashboard.png)
+![The Orbit workspace card, on its History tab](./images/cards/dashboard.png)
 
-**Orbit dashboard.** Four tabs — Goal, Workflows, History, Agents — with
+**Orbit workspace.** Four tabs — Goal, Workflows, History, Agents — with
 **Create workflow** at the end of the tab row.
 
 Goal is what the card opens on: everything still running, or the goal that ran

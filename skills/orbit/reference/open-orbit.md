@@ -10,7 +10,7 @@ call may be held open.
    fallback.
 2. Call `open_orbit_dashboard`. The MCP proxy selects the resolved workspace
    through the Hub, which starts or discovers its Runtime, and opens the
-   default current-task dashboard.
+   default Orbit workspace card.
    Keep this default for requests to open Orbit itself. Workflow-list requests
    use [view-workflows.md](view-workflows.md) and call `list_workflows` instead.
 3. Put the UI where the user can see it, the way [hosts.md](hosts.md)
@@ -24,7 +24,7 @@ because the user opened Orbit. Register or listen only when the user explicitly
 asks this App to receive workflow-authoring requests from the Orbit UI; then
 follow [authoring-with-current-app.md](authoring-with-current-app.md).
 
-Tell the user where Orbit opened and what the dashboard shows. Mention an
+Tell the user where Orbit opened and what the workspace card shows. Mention an
 authoring client name only if registration was separately requested and
 actually completed.
 

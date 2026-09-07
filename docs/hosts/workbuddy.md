@@ -150,7 +150,7 @@ for `resources/templates/list`, then reads the one the tool named through
 `_meta.ui.resourceUri` and draws the card. Two things follow.
 
 Each card fetches its own data. A mounted card opens its own MCP session and
-calls the tools it needs — the dashboard card polls `list_runs` and
+calls the tools it needs — the workspace card polls `list_runs` and
 `list_authoring_jobs` — so a conversation holding six cards is making six sets
 of those calls, and a tool that mounts a card per item will fill the
 transcript.

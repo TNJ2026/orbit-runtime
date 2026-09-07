@@ -23,6 +23,18 @@ const PLATFORM_MODULES = [
 const PRELOADED = ['@deepseek-ai/dsh-client-runtime/client']
 const CLIENT_EXTERNALS: readonly string[] = [...PLATFORM_MODULES, ...PRELOADED]
 
+/**
+ * Resolve the shared integration layer from source so this package can inline
+ * it without depending on an unpublished workspace package.
+ */
+const ORBIT_CORE_ENTRY = fileURLToPath(
+  new URL('../../integration-core/src/index.ts', import.meta.url),
+)
+const ORBIT_CORE_TYPES = fileURLToPath(
+  new URL('../../integration-core/src/types.ts', import.meta.url),
+)
+const ORBIT_CORE_ALIAS = { '@orbit-runtime/integration-core': ORBIT_CORE_ENTRY }
+
 /** Wire/type layers a client bundle may inline (no shared runtime identity). */
 const INLINE_SAFE = /^@deepseek-ai\/dsh-(session|tools|brand)(\/|$)/
 
@@ -34,9 +46,55 @@ const PLUGIN_ID: string = JSON.parse(
   readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
 ).name
 
-export default defineConfig({
+export default defineConfig([{
+  name: `${PLUGIN_ID}/server`,
+  entry: { index: 'src/index.ts' },
+  tsconfig: 'tsconfig.bundle.json',
+  outDir: 'lib',
+  format: 'esm',
+  platform: 'node',
+  target: 'node22',
+  fixedExtension: false,
+  dts: true,
+  sourcemap: false,
+  clean: false,
+  codeSplitting: false,
+  alias: ORBIT_CORE_ALIAS,
+  deps: {
+    // Host and Node dependencies stay external; integration-core resolves to
+    // local source through the alias above and is therefore bundled.
+    neverBundle: true,
+    alwaysBundle: /^@orbit-runtime\/integration-core$/,
+    dts: {
+      neverBundle: true,
+      alwaysBundle: /^@orbit-runtime\/integration-core$/,
+    },
+  },
+}, {
+  name: `${PLUGIN_ID}/types`,
+  entry: { types: ORBIT_CORE_TYPES },
+  tsconfig: 'tsconfig.bundle.json',
+  outDir: 'lib',
+  format: 'esm',
+  platform: 'node',
+  target: 'node22',
+  fixedExtension: false,
+  dts: true,
+  sourcemap: false,
+  clean: false,
+  codeSplitting: false,
+  deps: {
+    neverBundle: true,
+    alwaysBundle: /^@orbit-runtime\/integration-core$/,
+    dts: {
+      neverBundle: true,
+      alwaysBundle: /^@orbit-runtime\/integration-core$/,
+    },
+  },
+}, {
   name: `${PLUGIN_ID}/client`,
   entry: { client: 'src/client/index.tsx' },
+  tsconfig: 'tsconfig.client.json',
   outDir: 'lib',
   format: 'cjs',
   platform: 'browser',
@@ -44,6 +102,7 @@ export default defineConfig({
   dts: false,
   sourcemap: true,
   clean: false,
+  alias: ORBIT_CORE_ALIAS,
   deps: {
     neverBundle: (id: string) => CLIENT_EXTERNALS.includes(id),
     alwaysBundle: (id: string) => !CLIENT_EXTERNALS.includes(id),
@@ -113,4 +172,4 @@ export default defineConfig({
     footer: 'return module.exports; } });',
     intro: 'var module = { exports: {} }; var exports = module.exports;',
   },
-})
+}])

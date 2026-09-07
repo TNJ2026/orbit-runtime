@@ -1178,7 +1178,7 @@ document.getElementById('refresh').onclick=refresh;document.addEventListener('vi
 """, extra_style=_GOALS_STYLE)
 
 ORBIT_MCP_APP_RESOURCES = (
-    {"uri": ORBIT_DASHBOARD_URI, "name": "Orbit dashboard", "description": "Current Orbit task, steps, and attention state.", "html": ORBIT_DASHBOARD_HTML, "prefers_border": False},
+    {"uri": ORBIT_DASHBOARD_URI, "name": "Orbit workspace", "description": "Orbit goals, workflows, history, agents, and attention state.", "html": ORBIT_DASHBOARD_HTML, "prefers_border": False},
     {"uri": ORBIT_WORKFLOWS_URI, "name": "Orbit workflows", "description": "Published workflow list.", "html": ORBIT_WORKFLOWS_HTML, "prefers_border": False},
     {"uri": ORBIT_AUTHORING_URI, "name": "Orbit workflow generation", "description": "Workflow generation progress and result.", "html": ORBIT_AUTHORING_HTML, "prefers_border": False},
     {"uri": ORBIT_RUN_URI, "name": "Orbit goal execution", "description": "Goal execution progress and result.", "html": ORBIT_RUN_HTML, "prefers_border": False},

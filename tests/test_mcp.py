@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import unittest
 
 from orbit.web.mcp import HARNESS_TOOL_NAMES, McpSessionRegistry
-from orbit.web.mcp_app import ORBIT_WORKFLOWS_URI
+from orbit.web.mcp_app import ORBIT_DASHBOARD_URI, ORBIT_WORKFLOWS_URI
 from tests.test_api_v1 import ApiTestCase
 from tests.test_web_composition import AsgiHarness
 
@@ -71,7 +71,7 @@ class HandshakeTests(ApiTestCase):
             self.assertIn("first user turn", body["result"]["instructions"])
             self.assertIn("list_delegations", body["result"]["instructions"])
 
-    def test_dashboard_resource_is_discoverable_and_readable(self) -> None:
+    def test_workspace_resource_is_discoverable_and_readable(self) -> None:
         with AsgiHarness(self.app) as client:
             listed = rpc(client, "resources/list", actor="reader").json()
             resources = listed["result"]["resources"]
@@ -83,6 +83,12 @@ class HandshakeTests(ApiTestCase):
                 },
                 {resource["uri"] for resource in resources},
             )
+            workspace = next(
+                resource for resource in resources
+                if resource["uri"] == ORBIT_DASHBOARD_URI
+            )
+            self.assertEqual("Orbit workspace", workspace["name"])
+            self.assertIn("goals, workflows, history, agents", workspace["description"])
             for resource in resources:
                 self.assertEqual("text/html;profile=mcp-app", resource["mimeType"])
                 read = rpc(

@@ -121,7 +121,7 @@ registering the Marketplace:
 2. Reopen Codex and start a new task so the installed Skill and MCP tools load.
 3. Open the project that should own the workflow Runtime.
 4. Ask Codex: `Open Orbit`.
-5. Confirm that the Orbit dashboard opens beside the conversation.
+5. Confirm that the Orbit workspace opens beside the conversation.
 
 The first start may take longer because `uv` must create the plugin's virtual
 environment and install its locked Python dependencies.
@@ -175,7 +175,7 @@ an explicit project directory and never uses an incidental process working
 directory — in a projectless chat it uses `ORBIT_DEFAULT_WORKSPACE` when
 configured, otherwise `~/.orbit/workspaces/default`.
 
-Opening Orbit starts or reuses the Runtime and opens the native dashboard
+Opening Orbit starts or reuses the Runtime and opens the native workspace card
 beside the conversation. It is display-only: it does not register this App as
 a writer and does not begin listening for authoring work. Ask for that
 explicitly, and Codex calls `wait_authoring_request(client="codex-app")` —

@@ -103,7 +103,7 @@ being real rather than theoretical.
 
 The card fetches its own data. Each mounted card opens its own MCP session and
 calls the tools it needs — the workflows card calls `list_workflows`, the
-dashboard card polls `list_runs` and `list_authoring_jobs` every fifteen
+workspace card polls `list_runs` and `list_authoring_jobs` every fifteen
 seconds — so a conversation holding six cards is making six sets of those
 calls. A tool that mounts a card per item will fill the transcript with them.
 

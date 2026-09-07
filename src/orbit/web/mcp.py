@@ -332,9 +332,8 @@ def build_mcp_dispatcher(
         {
             "name": "open_orbit_dashboard",
             "description": (
-                "Open Orbit's compact current-task card beside the conversation. "
-                "It shows live progress and attention state; use the full UI for "
-                "catalogs, history, logs, and workflow management."
+                "Open Orbit's workspace card beside the conversation. It provides "
+                "goals, workflows, history, agents, live progress, and attention state."
             ),
             "scope": READ_SCOPE,
             "inputSchema": {"type": "object", "properties": {}},

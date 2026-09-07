@@ -15,21 +15,22 @@ SEP-1865）：每一张都作为 MCP 资源发布、mime type 为 `text/html;pro
 
 | 调用这个 | 就出现这张卡 | 显示 |
 | --- | --- | --- |
-| `open_orbit_dashboard` | Orbit dashboard | 整个工作区：工作流、历史记录、Agents |
+| `open_orbit_dashboard` | Orbit workspace | 目标、工作流、历史记录和 Agents |
 | `list_workflows` | Orbit workflows | 已发布的目录 |
 | `get_workflow_definition` | Orbit workflows | 同一张卡，直接停在某个工作流上 |
 | `generate_workflow` | Orbit workflow generation | 某个撰写任务的进度与结果 |
 | `start_run` | Orbit goal execution | 该次 run 的步骤、是否需要人、以及结果 |
 | `open_orbit_goals` | Orbit goals | 最近的目标运行及其状态 |
 
-**按意图选卡，不要先开 dashboard**：要看工作流就是 `list_workflows`，要跑目标就是
-`start_run`；「打开 Orbit」本身才是 `open_orbit_dashboard`。
+**按意图选卡，不要先开 workspace 卡片**：要看工作流就是 `list_workflows`，要跑目标就是
+`start_run`；「打开 Orbit」本身才是 `open_orbit_dashboard`。这个历史工具名会继续保留，
+避免破坏已有客户端。
 
 ## 每张卡是什么
 
-![Orbit dashboard 卡片，停在历史记录 tab](./images/cards/dashboard.png)
+![Orbit workspace 卡片，停在历史记录 tab](./images/cards/dashboard.png)
 
-**Orbit dashboard。** 四个 tab —— 目标、工作流、历史记录、Agents —— 行尾是**创建工作流**。
+**Orbit workspace。** 四个 tab —— 目标、工作流、历史记录、Agents —— 行尾是**创建工作流**。
 
 **目标**是卡片打开时落到的那一页：正在跑的全部，或者都不在跑时最近跑过的那一个，
 带上它的步骤、还能对它做的事、以及它的结果。一个目标跑完的那一刻，正是它的结果最要紧

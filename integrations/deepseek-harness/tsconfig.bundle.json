@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "paths": {
+      "@orbit-runtime/integration-core": [
+        "../../integration-core/src/index.ts"
+      ]
+    }
+  }
+}
