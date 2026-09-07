@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import socket
 import tempfile
 import unittest
 from pathlib import Path
@@ -55,6 +56,29 @@ class ExecutionWorkerTests(unittest.TestCase):
 
             self.assertEqual({"answer": 42}, output)
             self.assertNotEqual(os.getpid(), worker.pid)
+            self.assertTrue(worker.alive)
+
+    def test_a_non_protocol_connection_does_not_kill_the_worker(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            registry, worker = start_execution_worker(
+                builtin_handlers(), state_directory=Path(temporary),
+            )
+            self.addCleanup(worker.stop)
+
+            with socket.create_connection(worker.address) as connection:
+                connection.sendall(
+                    b"GET /health/ready HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n"
+                )
+
+            handler = registry._entries["transform"]  # noqa: SLF001
+            output = handler.invoke(
+                {"answer": 42}, {"operation": "identity"},
+                LangGraphExecutionContext(
+                    "workflow:test", "transform", "langgraph_run:test",
+                    "langgraph_attempt:test:transform:malformed-peer",
+                ),
+            )
+            self.assertEqual({"answer": 42}, output)
             self.assertTrue(worker.alive)
 
     def test_worker_loss_is_reported_as_an_unknown_external_result(self) -> None:

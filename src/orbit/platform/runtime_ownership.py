@@ -90,6 +90,16 @@ class RuntimeOwnership:
             raise RuntimeOwnershipError(
                 f"Runtime database is already owned: {self.db_path}"
             ) from exc
+        if os.name != "nt":
+            # Unix releases leave the inode behind, and releases before the
+            # split metadata file stored JSON in this lock itself. Once this
+            # process owns the lock, retire that legacy record so discovery
+            # reads the adjacent owner.json written below instead of a dead
+            # predecessor's endpoint. Never truncate before acquiring: an old
+            # Runtime may still be using the contents as its live record.
+            handle.seek(0)
+            handle.truncate()
+            handle.flush()
         self._file = handle
         # Execution workers use multiprocessing's `fork` start method on Unix.
         # A flock belongs to the inherited open-file description, so if a

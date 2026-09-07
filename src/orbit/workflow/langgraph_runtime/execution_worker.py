@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import multiprocessing
+from multiprocessing import AuthenticationError
 from multiprocessing.connection import Client, Listener
 import os
 from pathlib import Path
@@ -102,7 +103,17 @@ def _serve_worker(
 
     try:
         while not stopping.is_set():
-            connection = listener.accept()
+            try:
+                connection = listener.accept()
+            except (AuthenticationError, EOFError, OSError):
+                # This listener is loopback-only and authenticated, but a
+                # stale Runtime endpoint or a local port scanner can still
+                # connect and speak something else. Authentication happens
+                # inside accept(), before there is a Connection to hand to
+                # answer(); reject that one peer without killing the worker.
+                if stopping.is_set():
+                    break
+                continue
             threading.Thread(target=answer, args=(connection,), daemon=True).start()
     finally:
         listener.close()

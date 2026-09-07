@@ -213,6 +213,30 @@ class DiscoveryTests(unittest.TestCase):
             finally:
                 owner.release()
 
+    @unittest.skipIf(os.name == "nt", "legacy metadata was unreadable on Windows")
+    def test_a_new_owner_retires_a_predecessors_legacy_endpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            owner = RuntimeOwnership(Path(root) / "runtime.db")
+            owner.lock_path.parent.mkdir(parents=True, exist_ok=True)
+            owner.lock_path.write_text(
+                json.dumps({
+                    "pid": 1234,
+                    "db_path": str(owner.db_path),
+                    "base_url": "http://127.0.0.1:57221",
+                }),
+                encoding="utf-8",
+            )
+
+            owner.acquire()
+            owner.publish(base_url="http://127.0.0.1:58132")
+            try:
+                found, = discover_runtimes(root)
+                self.assertEqual("http://127.0.0.1:58132", found.base_url)
+                self.assertEqual(os.getpid(), found.pid)
+                self.assertEqual("", owner.lock_path.read_text(encoding="utf-8"))
+            finally:
+                owner.release()
+
     def test_a_runtime_that_has_not_bound_yet_is_found_without_an_endpoint(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             owner = RuntimeOwnership(Path(root) / "runtime.db").acquire()
