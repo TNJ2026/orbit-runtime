@@ -1,6 +1,6 @@
 /** What can be run here, kept ready for the model to be told without asking.
  *
- * The Agent has `orbit_list_workflows`, but a tool it must call first cannot
+ * The Agent has `promptaflow_list_workflows`, but a tool it must call first cannot
  * help with the turn where someone says "clean this up" — by then the model has
  * already had to decide whether PromptaFlow is even relevant. Naming the Workflows in
  * the prompt turns that decision into a reading.
@@ -93,8 +93,8 @@ export class WorkflowCatalog {
     return [
       `PromptaFlow Workflows ready in ${canonicalPath}:`,
       ...shown,
-      ...(omitted > 0 ? [`- …and ${String(omitted)} more; call orbit_list_workflows for the rest.`] : []),
-      'Start one with orbit_start_run. Progress appears in the PromptaFlow panel.',
+      ...(omitted > 0 ? [`- …and ${String(omitted)} more; call promptaflow_list_workflows for the rest.`] : []),
+      'Start one with promptaflow_start_run. Progress appears in the PromptaFlow panel.',
     ].join('\n')
   }
 }

@@ -179,62 +179,14 @@ class LegacyRemovalGuard(unittest.TestCase):
             with self.subTest(name):
                 self.assertFalse((TESTS / name).exists())
 
-    def test_production_code_never_opens_a_legacy_database(self) -> None:
-        """The restricted-path sentinel rule.
-
-        `messages.db` and `.dev_loop` may appear only in the one function that
-        stats them for the upgrade prompt. Anywhere else — and especially near
-        an open() or a database connection — they would mean the runtime had
-        started reading abandoned state again.
-        """
-
-        sentinel = SRC / "platform" / "projects.py"
+    def test_production_code_never_mentions_legacy_database_paths(self) -> None:
         offenders: list[str] = []
         for path in SRC.rglob("*.py"):
-            if path == sentinel:
-                continue
             text = path.read_text(encoding="utf-8")
             for literal in ("messages.db", ".dev_loop"):
                 if literal in text:
                     offenders.append(f"{path.relative_to(ROOT)}: {literal}")
-        self.assertEqual(
-            [], offenders,
-            "legacy paths must stay inside legacy_database_candidates()",
-        )
-
-    def test_the_sentinel_only_stats_legacy_paths(self) -> None:
-        """It may ask whether the file exists. It may not open it.
-
-        Scoped to the legacy functions rather than the whole module: the
-        project index legitimately opens its own lock file, and a
-        module-wide ban would only teach people to route around the guard.
-        """
-
-        sentinel = SRC / "platform" / "projects.py"
-        tree = ast.parse(sentinel.read_text(encoding="utf-8"), filename=str(sentinel))
-        legacy_functions = {
-            "legacy_database_candidates", "legacy_engine_db_path",
-            "legacy_database_warning", "warn_about_legacy_database",
-        }
-        forbidden = {
-            "open", "connect", "connect_workflow_database", "copy", "copyfile",
-            "read_text", "read_bytes", "unlink", "rename",
-        }
-        offenders: list[str] = []
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.FunctionDef) or node.name not in legacy_functions:
-                continue
-            for call in ast.walk(node):
-                if not isinstance(call, ast.Call):
-                    continue
-                name = (
-                    call.func.id if isinstance(call.func, ast.Name)
-                    else call.func.attr if isinstance(call.func, ast.Attribute)
-                    else None
-                )
-                if name in forbidden:
-                    offenders.append(f"{node.name} calls {name}")
-        self.assertEqual([], offenders, "the legacy sentinel must only stat")
+        self.assertEqual([], offenders)
 
     def test_the_cli_advertises_no_retired_command(self) -> None:
         """A help snapshot, not a string search: `run` and `runner` differ."""

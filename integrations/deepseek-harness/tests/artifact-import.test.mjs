@@ -3,7 +3,7 @@ import test from 'node:test'
 
 import { artifactImageInput } from '../lib/artifact-import.js'
 
-test('converts a bounded Orbit image Artifact into a Harness Attachment input', () => {
+test('converts a bounded PromptaFlow image Artifact into a Harness Attachment input', () => {
   const result = artifactImageInput({
     artifact: { artifact_id: 'artifact:1', run_id: 'run:1', content_type: 'image/png', name: 'chart.png' },
     encoding: 'base64', content: Buffer.from('png-bytes').toString('base64'),

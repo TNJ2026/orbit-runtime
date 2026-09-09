@@ -19,7 +19,7 @@ test('a ready Workflow is named with the input it needs', () => {
   catalog.remember('/w', [workflow()])
   const text = catalog.render('/w')
   assert.match(text, /workflow:clean@2 — 清洗 CSV \(input: prompt\)/)
-  assert.match(text, /orbit_start_run/)
+  assert.match(text, /promptaflow_start_run/)
 })
 
 test('a Workflow that cannot start a goal is not offered as one', () => {
@@ -32,7 +32,7 @@ test('the panel is still shown the Workflow the model is not offered', () => {
   // The two readers want different halves of one read. Naming an unrunnable
   // Workflow to the model is an offer it cannot take; hiding it from the panel
   // hides the one entry a person has to go and fix, and leaves them reading a
-  // catalog that quietly disagrees with Orbit's own.
+  // catalog that quietly disagrees with PromptaFlow's own.
   const catalog = new WorkflowCatalog()
   catalog.remember('/w', [
     workflow({ goal_readiness: 'needs_upgrade' }),
@@ -61,7 +61,7 @@ test('a long catalog stops and says how to see the rest', () => {
     workflow({ workflow_id: `workflow:w${String(i)}` })))
   const text = catalog.render('/w')
   assert.equal(text.match(/^- workflow:w/gm).length, CATALOG_LIMIT)
-  assert.match(text, /and 3 more; call orbit_list_workflows/)
+  assert.match(text, /and 3 more; call promptaflow_list_workflows/)
 })
 
 test('an entry goes stale rather than being told forever', () => {

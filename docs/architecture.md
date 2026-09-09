@@ -36,7 +36,7 @@ flowchart TB
     subgraph clients["调用方"]
         UI["浏览器 UI<br/>/ui/ · /viewer/"]
         HOST["Agent 宿主<br/>Codex · Claude Code · DeepSeek-Harness"]
-        CLI["orbit CLI"]
+        CLI["promptaflow CLI"]
     end
 
     subgraph edge["接口层 · src/promptaflow/web"]
@@ -411,18 +411,18 @@ flowchart TB
 
 **`integration-core`** 的归属规则是**机械可判定**的,不靠品味:
 *一个模块属于这里,当且仅当它不 import 任何宿主 SDK、不碰 DOM。*
-12 个模块:`gateway` `codecs` `types` `error-text` `orbit-model` `run-progress`
+12 个模块:`gateway` `codecs` `types` `error-text` `promptaflow-model` `run-progress`
 `workflow-catalog` `authoring-claim` `authoring-progress` `artifact-export` `session-bridge` `commands`。
 
 其中 `error-text.ts` 的分工值得一提:**词汇表在 core,措辞在宿主**。
-`ORBIT_ERROR_KEYS` 是「能出什么错」的集合;而「重新打开面板以启动」这句话
+`PROMPTAFLOW_ERROR_KEYS` 是「能出什么错」的集合;而「重新打开面板以启动」这句话
 不是一个后台进程说得出口的,所以措辞留给宿主。
 
 **`promptaflow agent-app mcp-proxy`** 是 Python 侧的等价物:把 HTTP JSON-RPC 的 MCP 端点
 用换行分隔的 JSON-RPC 抬到 stdio 上,顺带注入三个事件工具
 (`wait_app_event` / `list_app_events` / `ack_app_event`)。
 它由 `agent-app.json` 清单驱动:`service.command` 说怎么起、`ready_url` 说怎么算就绪、
-`discovery: "promptaflow"` 说怎么找到已经在跑的那一个（旧值 `orbit-runtime` 仍兼容）。
+`discovery: "promptaflow"` 说怎么找到已经在跑的那一个。
 
 工作区注册由常驻 Hub 独占写入。代理把绝对路径发给 Hub 的内部环回端点，拿回
 workspace-scoped MCP/UI/events URL；它不直接改 `~/.promptaflow/hub/workspaces.json`。

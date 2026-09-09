@@ -1,8 +1,8 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol'
-import { OrbitGateway, OrbitSessionBridge, WorkflowCatalog, advertisedAt, artifactFilename, commandTool, goalRuns, isLive, readableAsText, sessionCanBridge, type OrbitCursorStore, type OrbitRunCommand } from '@promptaflow/integration-core'
-import type { AgentSummary, ArtifactContent, ArtifactSummary, AuthoringJob, AuthoringOutputPage, AuthoringSummary, EdgeSummary, ImportedArtifact, IntegrationDiagnostics, OrbitCommandRequest, OutputPage, RunDto, RunGraph, RuntimeSummary, StepSummary, WorkflowNode, WorkflowSummary, WorkspaceRef } from '@promptaflow/integration-core'
-import { OrbitToolBridge } from './orbit-tools.js'
+import { PromptaFlowGateway, PromptaFlowSessionBridge, WorkflowCatalog, advertisedAt, artifactFilename, commandTool, goalRuns, isLive, readableAsText, sessionCanBridge, type PromptaFlowCursorStore, type PromptaFlowRunCommand } from '@promptaflow/integration-core'
+import type { AgentSummary, ArtifactContent, ArtifactSummary, AuthoringJob, AuthoringOutputPage, AuthoringSummary, EdgeSummary, ImportedArtifact, IntegrationDiagnostics, PromptaFlowCommandRequest, OutputPage, RunDto, RunGraph, RuntimeSummary, StepSummary, WorkflowNode, WorkflowSummary, WorkspaceRef } from '@promptaflow/integration-core'
+import { PromptaFlowToolBridge } from './promptaflow-tools.js'
 import type { Session, SessionStore } from '@deepseek-ai/dsh-session'
 import type { WorkspaceRegistry } from '@deepseek-ai/dsh-workspace'
 import type { AttachmentStore } from '@deepseek-ai/dsh-attachment'
@@ -15,11 +15,11 @@ import { createUserMessage, type UserMessage } from '@deepseek-ai/dsh-llm'
 import { artifactImageInput } from './artifact-import.js'
 import {
   CLAIM_RETRY_MS, CLAIM_WAIT_SECONDS, answerFrom, authoringClientForSession,
-  claimOnce, isUnknownToolError,
+  claimOnce,
   type ClaimedRequest,
 } from '@promptaflow/integration-core'
 
-declare module '@deepseek-ai/cordis' { interface Context { promptaflow: OrbitRemoteService } }
+declare module '@deepseek-ai/cordis' { interface Context { promptaflow: PromptaFlowRemoteService } }
 
 /** The slice of the Agent registry this Host uses to drive one Session. */
 interface AgentLookup {
@@ -43,7 +43,7 @@ interface WorkflowGraph {
  *  stops expecting it to. */
 const AUTHORING_TURN_MS = 240_000
 
-interface OrbitWebServer {
+interface PromptaFlowWebServer {
   register(route: { kind: 'exact'; path: string; handler: (req: IncomingMessage, res: ServerResponse) => void | Promise<void> }): () => void
 }
 
@@ -71,9 +71,9 @@ interface TrackedAuthoring {
   catalogRefreshed?: boolean
 }
 
-export class OrbitRemoteService extends TypertRemoteService {
+export class PromptaFlowRemoteService extends TypertRemoteService {
   static inject = ['sessions', 'workspaceRegistry', 'tools', 'attachments', 'systemPrompt', 'agents']
-  private readonly gateway = new OrbitGateway()
+  private readonly gateway = new PromptaFlowGateway()
   private readonly agents: AgentLookup | undefined
   private readonly catalog = new WorkflowCatalog()
   /** Authoring jobs started from this Harness, per Workspace.
@@ -110,7 +110,7 @@ export class OrbitRemoteService extends TypertRemoteService {
     // about how it was composed, and finding that out at the instant a
     // Workflow needs writing is finding out in the worst place.
     this.agents = ctx.get('agents') as unknown as AgentLookup | undefined
-    new OrbitToolBridge(ctx, this.gateway, (workspace, sessionId, job) => {
+    new PromptaFlowToolBridge(ctx, this.gateway, (workspace, sessionId, job) => {
       this.watchAuthoring(workspace, sessionId, job)
     }).register()
     this.registerWebApi(ctx)
@@ -123,7 +123,7 @@ export class OrbitRemoteService extends TypertRemoteService {
       this.bridges.clear()
       for (const controller of this.authoringWaiters.values()) controller.abort()
       this.authoringWaiters.clear()
-    }, 'orbit: stop Session Bridges')
+    }, 'promptaflow: stop Session Bridges')
   }
 
   /**
@@ -141,7 +141,7 @@ export class OrbitRemoteService extends TypertRemoteService {
     } | undefined
     if (!systemPrompt) return
     ctx.effect(() => systemPrompt.context({
-      name: 'orbit-workflows',
+      name: 'promptaflow-workflows',
       // After the tool guidance it belongs with: this says which Workflows the
       // tools above can be pointed at.
       order: 190,
@@ -167,8 +167,8 @@ export class OrbitRemoteService extends TypertRemoteService {
         let recovery = ''
         if (!this.recoveryPromptedSessions.has(sessionId)) {
           this.recoveryPromptedSessions.add(sessionId)
-          recovery = '[ORBIT SESSION RECOVERY]\nOn this Session\'s first user turn, call '
-          + 'orbit_list_delegations once. If the returned list is empty, do not '
+          recovery = '[PROMPTAFLOW SESSION RECOVERY]\nOn this Session\'s first user turn, call '
+          + 'promptaflow_list_delegations once. If the returned list is empty, do not '
           + 'mention recovery. If it contains work, tell the user what is resumable '
           + 'and ask whether to continue or reconcile it. Never execute an unknown '
           + 'delegation again.'
@@ -177,7 +177,7 @@ export class OrbitRemoteService extends TypertRemoteService {
         return [recovery, this.catalog.render(workspace.canonicalPath)]
           .filter(Boolean).join('\n\n')
       },
-    }), 'orbit: runnable Workflows in the model context')
+    }), 'promptaflow: runnable Workflows in the model context')
   }
 
   /**
@@ -274,7 +274,7 @@ export class OrbitRemoteService extends TypertRemoteService {
     let registered = false
     const mount = () => {
       if (registered) return
-      const webServer = (ctx.get('webServer') ?? ctx.get('httpServer')) as OrbitWebServer | undefined
+      const webServer = (ctx.get('webServer') ?? ctx.get('httpServer')) as PromptaFlowWebServer | undefined
       if (!webServer) return
       registered = true
       /**
@@ -293,7 +293,7 @@ export class OrbitRemoteService extends TypertRemoteService {
        * what it was given, exactly as it would have from PromptaFlow's own URL.
        */
       ctx.effect(() => webServer.register({
-        kind: 'exact', path: '/plugins/dsh-orbit/artifact',
+        kind: 'exact', path: '/plugins/dsh-promptaflow/artifact',
         handler: async (req, res) => {
           const send = (status: number, body: string) => {
             res.writeHead(status, {
@@ -334,9 +334,9 @@ export class OrbitRemoteService extends TypertRemoteService {
             send(404, String(error))
           }
         },
-      }), 'orbit: Artifact bytes for a browser link')
+      }), 'promptaflow: Artifact bytes for a browser link')
       ctx.effect(() => webServer.register({
-        kind: 'exact', path: '/plugins/dsh-orbit/api',
+        kind: 'exact', path: '/plugins/dsh-promptaflow/api',
         handler: async (req, res) => {
           if (req.method !== 'POST') { res.writeHead(405, { allow: 'POST' }); res.end(); return }
           const controller = new AbortController()
@@ -362,7 +362,7 @@ export class OrbitRemoteService extends TypertRemoteService {
             res.end(JSON.stringify({ error: String(error) }))
           }
         },
-      }), 'orbit: browser Host API')
+      }), 'promptaflow: browser Host API')
     }
     mount()
     ctx.on('internal/service', name => { if (name === 'webServer' || name === 'httpServer') mount() })
@@ -397,7 +397,7 @@ export class OrbitRemoteService extends TypertRemoteService {
       case 'listArtifacts': return await this.listArtifacts(args[0] as WorkspaceRef, String(args[1]), args[2] === undefined ? undefined : String(args[2]), signal)
       case 'getArtifactContent': return await this.getArtifactContent(args[0] as WorkspaceRef, String(args[1]), String(args[2]), signal)
       case 'importArtifact': return await this.importArtifact(args[0] as WorkspaceRef, String(args[1]), String(args[2]), signal)
-      case 'executeCommand': return await this.executeCommand(args[0] as OrbitCommandRequest, signal)
+      case 'executeCommand': return await this.executeCommand(args[0] as PromptaFlowCommandRequest, signal)
       case 'reconcileDelegation': return await this.reconcileDelegation(args[0] as WorkspaceRef, String(args[1]), String(args[2]), String(args[3]), args[4] as 'confirmed_succeeded' | 'confirmed_failed', String(args[5]), signal)
       default: throw new Error(`Unknown PromptaFlow client action: ${action}`)
     }
@@ -532,8 +532,8 @@ export class OrbitRemoteService extends TypertRemoteService {
    * is registered here whether or not anything else happens.
    *
    * This is all that happens at Session start now. It used to also run
-   * `OrbitSessionBridge`, which recorded each Run into the Session log as
-   * `orbit/run-started` / `-checkpoint` / `-ended`; see `stopSessionBridge`
+   * `PromptaFlowSessionBridge`, which recorded each Run into the Session log as
+   * `promptaflow/run-started` / `-checkpoint` / `-ended`; see `stopSessionBridge`
    * and the note on why that stopped.
    */
   private async bindSessionWorkspace(ctx: Context, session: Session, cwd: string): Promise<void> {
@@ -657,12 +657,12 @@ export class OrbitRemoteService extends TypertRemoteService {
    * Drive the Session Bridge for one Session, writing each Run into its log.
    *
    * NOT called at Session start, and must not be until the Harness can accept
-   * the events it writes. `orbit/run-*` are not in the Harness's own event
+   * the events it writes. `promptaflow/run-*` are not in the Harness's own event
    * vocabulary, and `Session.append` offers no way to set the envelope's
    * `ignorable` marker — the one thing that lets a reader skip a type it does
    * not know. So every Session this ran in became unreadable on reload:
    *
-   *   session "…" contains event type "orbit/run-started" (seq 964) unknown to
+   *   session "…" contains event type "promptaflow/run-started" (seq 964) unknown to
    *   this harness and not marked ignorable; refusing to interpret the log
    *
    * Kept rather than deleted because nothing here is wrong except where the
@@ -672,12 +672,12 @@ export class OrbitRemoteService extends TypertRemoteService {
    * vocabulary can be extended, calling this from `bindSessionWorkspace`
    * restores the account of what ran.
    */
-  async bridgeSession(workspace: WorkspaceRef, session: Session, cursor: OrbitCursorStore, signal: AbortSignal, knownRuns: Iterable<string> = []): Promise<void> {
-    const bridge = new OrbitSessionBridge(this.gateway, cursor)
+  async bridgeSession(workspace: WorkspaceRef, session: Session, cursor: PromptaFlowCursorStore, signal: AbortSignal, knownRuns: Iterable<string> = []): Promise<void> {
+    const bridge = new PromptaFlowSessionBridge(this.gateway, cursor)
     await bridge.run(workspace, String(session.id), {
       append: async event => {
-        // The event carries its own type; naming each one again here is what
-        // let the two spellings drift apart during the rename.
+        // The event carries its own type, so the bridge does not duplicate
+        // the protocol's event-name mapping here.
         const { type, ...data } = event
         session.append(type, data)
         await this.hostSessions.flush(session)
@@ -762,20 +762,7 @@ export class OrbitRemoteService extends TypertRemoteService {
       const listed = await this.gateway.call(scope, sessionId, 'list_agents', {}) as {
         agents: AgentSummary[]
       }
-      // A Runtime already alive during a Harness upgrade may still expose the
-      // older identity-only MCP shape. PromptaFlow's HTTP Agent page has always held
-      // these totals, so merge that same projection instead of silently
-      // rendering a missing value as zero until somebody restarts Runtime.
-      const needsAttemptCounts = listed.agents.some(
-        agent => agent.attempt_count === undefined || agent.failed_count === undefined,
-      )
-      const attemptCounts = needsAttemptCounts
-        ? await this.gateway.handlerAttemptCounts(scope, sessionId)
-        : undefined
-      const agents = listed.agents.map(agent => ({
-        ...agent,
-        ...(attemptCounts?.get(agent.name) ?? {}),
-      }))
+      const agents = listed.agents
       const workflows = this.catalog.list(scope.canonicalPath)
       const retired = await this.retiredWorkflowNames(
         scope, sessionId, result.runs, workflows, force,
@@ -975,7 +962,7 @@ export class OrbitRemoteService extends TypertRemoteService {
   @Remote('runCommand')
   async runCommand(
     sessionId: string, runId: string,
-    command: OrbitRunCommand,
+    command: PromptaFlowRunCommand,
     expectedRevision: number, value: unknown, interruptId: string | undefined,
     signal: AbortSignal,
   ): Promise<RunDto> {
@@ -1127,15 +1114,7 @@ export class OrbitRemoteService extends TypertRemoteService {
     scope: WorkspaceRef, sessionId: string,
   ): Promise<string> {
     const client = authoringClientForSession(sessionId)
-    try {
-      await this.gateway.call(scope, sessionId, 'register_authoring_client', { client })
-    } catch (error) {
-      // Runtimes from before the presence-only registration tool still learn
-      // this route from the Session's standing wait_authoring_request call.
-      // Ignore only that one protocol-version miss; authorization, transport
-      // and every other registration failure remain actionable errors.
-      if (!isUnknownToolError(error, 'register_authoring_client')) throw error
-    }
+    await this.gateway.call(scope, sessionId, 'register_authoring_client', { client })
     return client
   }
 
@@ -1325,7 +1304,7 @@ export class OrbitRemoteService extends TypertRemoteService {
   }
 
   @Remote('executeCommand')
-  async executeCommand(request: OrbitCommandRequest, signal: AbortSignal): Promise<RunDto> {
+  async executeCommand(request: PromptaFlowCommandRequest, signal: AbortSignal): Promise<RunDto> {
     signal.throwIfAborted()
     const scope = await this.verified(request.workspace, request.sessionId)
     const release = await this.gateway.acquire(scope)
@@ -1343,4 +1322,4 @@ export class OrbitRemoteService extends TypertRemoteService {
   }
 }
 
-export default OrbitRemoteService
+export default PromptaFlowRemoteService

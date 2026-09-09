@@ -81,7 +81,7 @@ interface AuthoringOutputPage {
   chunks: AuthoringOutputChunk[];
   has_more: boolean;
 }
-interface OrbitCommandRequest {
+interface PromptaFlowCommandRequest {
   workspace: WorkspaceRef;
   sessionId: string;
   runId: string;
@@ -129,8 +129,8 @@ interface AgentSummary {
   name: string;
   version: string;
   node_kinds: string[];
-  attempt_count?: number;
-  failed_count?: number;
+  attempt_count: number;
+  failed_count: number;
 }
 interface RunGraph {
   [key: string]: unknown;
@@ -219,7 +219,7 @@ interface RuntimeEventPage {
   events: RuntimeEventHint[];
   next_position: number;
 }
-interface OrbitRunStarted {
+interface PromptaFlowRunStarted {
   type: 'promptaflow/run-started';
   sourcePosition: number;
   runId: string;
@@ -231,7 +231,7 @@ interface OrbitRunStarted {
   status: string;
   createdAt: string;
 }
-interface OrbitRunCheckpoint {
+interface PromptaFlowRunCheckpoint {
   type: 'promptaflow/run-checkpoint';
   sourcePosition: number;
   runId: string;
@@ -242,7 +242,7 @@ interface OrbitRunCheckpoint {
   artifactCount: number;
   updatedAt: string;
 }
-interface OrbitRunEnded {
+interface PromptaFlowRunEnded {
   type: 'promptaflow/run-ended';
   sourcePosition: number;
   runId: string;
@@ -253,14 +253,7 @@ interface OrbitRunEnded {
   artifactCount: number;
   updatedAt: string;
 }
-type OrbitSessionEvent = OrbitRunStarted | OrbitRunCheckpoint | OrbitRunEnded;
-/**
- * Event types this bridge recognises when it reads a Session back.
- *
- * A Session log written before the rename is durable data in the user's own
- * store: the `orbit/` spellings are never written again, and must never stop
- * being read, or a resumed Session loses every Run it already knew about.
- */
+type PromptaFlowSessionEvent = PromptaFlowRunStarted | PromptaFlowRunCheckpoint | PromptaFlowRunEnded;
 declare const RUN_EVENT_TYPES: readonly string[];
 //#endregion
-export { AgentSummary, ArtifactContent, ArtifactSummary, AuthoringJob, AuthoringOutputChunk, AuthoringOutputPage, AuthoringSummary, EdgeSummary, GenerateAndRunOptions, GenerateAndRunResult, ImportedArtifact, IntegrationDiagnostics, OrbitCommandRequest, OrbitRunCheckpoint, OrbitRunEnded, OrbitRunStarted, OrbitSessionEvent, OutputChunk, OutputPage, RUN_EVENT_TYPES, RunDto, RunGraph, RuntimeEventHint, RuntimeEventPage, RuntimeSummary, StepSummary, WorkflowNode, WorkflowSummary, WorkspaceRef };
+export { AgentSummary, ArtifactContent, ArtifactSummary, AuthoringJob, AuthoringOutputChunk, AuthoringOutputPage, AuthoringSummary, EdgeSummary, GenerateAndRunOptions, GenerateAndRunResult, ImportedArtifact, IntegrationDiagnostics, OutputChunk, OutputPage, PromptaFlowCommandRequest, PromptaFlowRunCheckpoint, PromptaFlowRunEnded, PromptaFlowRunStarted, PromptaFlowSessionEvent, RUN_EVENT_TYPES, RunDto, RunGraph, RuntimeEventHint, RuntimeEventPage, RuntimeSummary, StepSummary, WorkflowNode, WorkflowSummary, WorkspaceRef };

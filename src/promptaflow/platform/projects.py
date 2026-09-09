@@ -1,12 +1,4 @@
-"""Project discovery, runtime database paths and the local project index.
-
-This module is deliberately free of engine imports: it answers "which project
-am I in and where does its database live", nothing else.  The legacy engine's
-`.dev_loop` state directory and `messages.db` database are *not* supported
-here.  They survive only as the sentinel in :func:`legacy_database_candidates`,
-which exists so `orbit` can warn once that a pre-migration file is being
-abandoned — the paths are stat'ed, never opened.
-"""
+"""Project discovery, runtime database paths and the local project index."""
 
 from __future__ import annotations
 
@@ -17,16 +9,14 @@ import json
 import os
 from pathlib import Path
 import re
-from typing import Any, Callable
+from typing import Any
 from urllib.error import URLError
 from urllib.request import urlopen
 from ..paths import DIR_NAME, home_root
 from ..paths import project_state_dir as _resolve_state_dir
 
 
-# The new Runtime keeps one database per project.  The name is deliberately
-# different from the legacy `messages.db`: a file called messages.db always
-# belongs to the old engine, so the two can never be confused.
+# Each project has one Runtime database under the PromptaFlow state root.
 RUNTIME_DB_NAME = "runtime.db"
 
 STATE_DIR_NAME = DIR_NAME
@@ -51,7 +41,7 @@ def retired_workflow_library_path() -> Path:
 
     There were two libraries, one per authoring product, deliberately never
     seeded from each other. With one product there is one library — but
-    `orbit serve` defaulted to the single-Agent one, so on a default install
+    `promptaflow serve` defaulted to the single-Agent one, so on a default install
     this file is where everything a person published actually is. It is read
     once, merged forward, and then only ever read again to find nothing new.
     """
@@ -79,10 +69,7 @@ def resolve_project_root(project_dir: Path | str | None = None) -> Path:
 
 
 def project_state_dir(project_root: Path | str) -> Path:
-    """Per-project state directory: `.promptaflow`, or an existing `.orbit`.
-
-    Never moved — see :mod:`promptaflow.paths` for why a directory inside the
-    user's own repository is read under both names rather than renamed."""
+    """Return the canonical per-project ``.promptaflow`` state directory."""
 
     return _resolve_state_dir(project_root)
 
@@ -119,90 +106,6 @@ def project_db_path(
     """Default runtime database path for a project."""
 
     return project_db_dir(project_dir, base_dir) / RUNTIME_DB_NAME
-
-
-# --- legacy sentinel -------------------------------------------------------
-#
-# The two literals below are the only place in production code allowed to name
-# the legacy layout.  Everything here treats them as *paths to stat*, never as
-# databases to open: the migration abandons their contents on purpose.
-
-def legacy_database_candidates(
-    project_dir: Path | str | None = None,
-    base_dir: Path | str | None = None,
-) -> tuple[Path, ...]:
-    """Pre-migration database locations for this project, if any exist.
-
-    Only `Path.exists()` is consulted.  Callers must not open, copy, import or
-    hand these paths to a database driver.
-    """
-
-    project_path = resolve_project_root(project_dir)
-    root = Path(base_dir or DEFAULT_STATE_ROOT).expanduser()
-    slug = project_slug(project_path)
-    digest = project_id(project_path)
-
-    candidates = [
-        root / f"{slug}-{digest}" / "messages.db",
-        Path.home() / ".dev_loop" / "projects" / f"{slug}-{digest}" / "messages.db",
-    ]
-    return tuple(path for path in candidates if path.exists())
-
-
-def legacy_engine_db_path(
-    project_dir: Path | str | None = None,
-    base_dir: Path | str | None = None,
-) -> Path:
-    """Database the *legacy* commands write to during the transition.
-
-    `orbit serve` runs the new Runtime against `runtime.db`, which refuses to
-    start on a file containing legacy tables. Keeping the legacy engine on its
-    own filename means running `orbit up` cannot poison the new database. Both
-    this function and the legacy commands disappear in M6.
-    """
-
-    return project_db_dir(project_dir, base_dir) / "messages.db"
-
-
-def legacy_database_warning(paths: tuple[Path, ...]) -> str | None:
-    """One-shot message for abandoned pre-migration data.
-
-    Deliberately offers no import, copy or compatibility path: the migration
-    drops legacy content, and a half-supported import would resurrect the very
-    dual-state problem the cutover removes.
-    """
-
-    if not paths:
-        return None
-    listed = "\n".join(f"  {path}" for path in paths)
-    return (
-        "Found a pre-migration database from the legacy engine:\n"
-        f"{listed}\n"
-        "It is NOT used and NOT imported. It may hold both legacy engine data "
-        "and Runtime data written before the cutover; all of it is abandoned. "
-        f"This project now uses {RUNTIME_DB_NAME}. Delete the file above once "
-        "you no longer need it for reference."
-    )
-
-
-def warn_about_legacy_database(
-    project_dir: Path | str | None = None,
-    base_dir: Path | str | None = None,
-    emit: Callable[[str], None] | None = None,
-) -> bool:
-    """Warn once if a legacy database exists. Returns True when it warned."""
-
-    message = legacy_database_warning(legacy_database_candidates(project_dir, base_dir))
-    if message is None:
-        return False
-    (emit or _default_emit)(message)
-    return True
-
-
-def _default_emit(message: str) -> None:
-    import sys
-
-    print(message, file=sys.stderr)
 
 
 # --- project index ---------------------------------------------------------

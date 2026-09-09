@@ -1,34 +1,22 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { OrbitSessionBridge, bridgeWithRetry, restoredBridgeState, sessionCanBridge } from '../lib/session-bridge.js'
+import { PromptaFlowSessionBridge, bridgeWithRetry, restoredBridgeState, sessionCanBridge } from '../lib/session-bridge.js'
 
 const run = {
   run_id: 'run:1', goal: 'goal', workflow_id: 'wf', workflow_version: 1,
   revision: 2, status: 'running', artifact_count: 0, created_at: 'created', updated_at: 'updated',
 }
 
-test('a Session log written under either name restores the same state', () => {
-  const state = restoredBridgeState([
-    { type: 'orbit/run-started', data: { sourcePosition: 3, runId: 'run:legacy' } },
-    { type: 'promptaflow/run-checkpoint', data: { sourcePosition: 8, runId: 'run:current' } },
-  ])
-  assert.equal(state.position, 8)
-  assert.deepEqual([...state.knownRuns].sort(), ['run:current', 'run:legacy'])
-})
-
-// The fixture below deliberately keeps the pre-rename spelling: it is what
-// every Session log written before this release actually contains, and it
-// must keep restoring for as long as those logs exist.
-test('restores cursor and known Runs only from durable Orbit events', () => {
+test('restores cursor and known Runs only from durable PromptaFlow events', () => {
   const state = restoredBridgeState([
     { type: 'user/message', data: { sourcePosition: 999, runId: 'foreign' } },
-    { type: 'orbit/run-started', data: { sourcePosition: 3, runId: 'run:1' } },
-    { type: 'orbit/run-checkpoint', data: { sourcePosition: 8, runId: 'run:1' } },
-    { type: 'orbit/run-ended', data: { sourcePosition: 6, runId: 'run:2' } },
-    { type: 'orbit/run-ended', data: null },
-    { type: 'orbit/run-ended', data: { sourcePosition: -1, runId: 'corrupt' } },
-    { type: 'orbit/run-ended', data: { sourcePosition: 12 } },
+    { type: 'promptaflow/run-started', data: { sourcePosition: 3, runId: 'run:1' } },
+    { type: 'promptaflow/run-checkpoint', data: { sourcePosition: 8, runId: 'run:1' } },
+    { type: 'promptaflow/run-ended', data: { sourcePosition: 6, runId: 'run:2' } },
+    { type: 'promptaflow/run-ended', data: null },
+    { type: 'promptaflow/run-ended', data: { sourcePosition: -1, runId: 'corrupt' } },
+    { type: 'promptaflow/run-ended', data: { sourcePosition: 12 } },
   ])
   assert.equal(state.position, 8)
   assert.deepEqual([...state.knownRuns], ['run:1', 'run:2'])
@@ -36,7 +24,7 @@ test('restores cursor and known Runs only from durable Orbit events', () => {
 
 test('bridge releases its Runtime reference when cursor recovery fails', async () => {
   let released = false
-  const bridge = new OrbitSessionBridge({
+  const bridge = new PromptaFlowSessionBridge({
     async acquire() { return async () => { released = true } },
   }, { load: () => { throw new Error('corrupt cursor') }, save: () => {} }, 1)
   await assert.rejects(
@@ -64,7 +52,7 @@ test('bridge emits one start plus checkpoint, saves cursor and releases on abort
     },
     async run() { return run },
   }
-  const bridge = new OrbitSessionBridge(gateway, {
+  const bridge = new PromptaFlowSessionBridge(gateway, {
     load: () => undefined,
     save: (_workspace, _session, position) => { saved.push(position); controller.abort() },
   }, 1)
@@ -85,7 +73,7 @@ test('known Run suppresses duplicate start and terminal events publish immediate
     },
     async run() { return { ...run, status: 'completed' } },
   }
-  const bridge = new OrbitSessionBridge(gateway, { load: () => 4, save: () => { controller.abort() } }, 1)
+  const bridge = new PromptaFlowSessionBridge(gateway, { load: () => 4, save: () => { controller.abort() } }, 1)
   await bridge.run({ id: 'w', canonicalPath: '/workspace' }, 's', { append: event => { appended.push(event) } }, controller.signal, ['run:1'])
   assert.deepEqual(appended.map(event => event.type), ['promptaflow/run-ended'])
 })
@@ -104,7 +92,7 @@ test('a retry re-reads the Session, so an announced Run is not announced twice',
       attempts++
       seen.push([...knownRuns])
       if (attempts === 1) {
-        events.push({ type: 'orbit/run-started', data: { sourcePosition: 4, runId: 'run:1' } })
+        events.push({ type: 'promptaflow/run-started', data: { sourcePosition: 4, runId: 'run:1' } })
         throw new Error('transport lost')
       }
     },

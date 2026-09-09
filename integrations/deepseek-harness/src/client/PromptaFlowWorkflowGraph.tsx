@@ -4,7 +4,7 @@ import {
   type Edge, type Node, type NodeProps,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import styles from './OrbitPanel.module.css'
+import styles from './PromptaFlowPanel.module.css'
 
 export interface WorkflowGraphNode {
   node_id: string
@@ -50,7 +50,7 @@ const WorkflowGraphNodeCard = memo(function WorkflowGraphNodeCard({ data }: Node
 
 const nodeTypes = { workflow: WorkflowGraphNodeCard }
 
-export function OrbitWorkflowGraph({ graph }: { graph: WorkflowGraph }) {
+export function PromptaFlowWorkflowGraph({ graph }: { graph: WorkflowGraph }) {
   const model = useMemo(() => {
     const positions = new Map(
       (graph.layout?.positions ?? []).map(item => [item.node_id, item] as const),

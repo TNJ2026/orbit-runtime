@@ -74,7 +74,7 @@ test('resizing stays between the bounds a person can still use', () => {
  * Put away is a third state, not a deeper fold.
  *
  * `collapsed` is the panel folded to its mark and still watching; `dismissed`
- * is a person done with Orbit here. The close button reaches the second after
+ * is a person done with PromptaFlow here. The close button reaches the second after
  * stopping the Runtime, because a mark still sitting there would be an offer
  * to reopen a page about a service that is no longer running.
  */

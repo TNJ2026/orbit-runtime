@@ -23,9 +23,6 @@ uv tool install promptaflow      # 或 pipx install promptaflow
 uv tool update-shell
 ```
 
-发行包名是 `orbit-runtime`，它安装出来的命令是 `promptaflow`。两者不同是因为 `promptaflow` 这个名字
-在本项目之前就已经被 PyPI 占用；`orbit-runtime` 也正是各集成在 npm 上使用的名字。
-
 从源码运行：
 
 ```bash
@@ -81,7 +78,7 @@ PromptaFlow 是一个 Runtime，但有好几扇前门。每个宿主接入方式
 | 宿主 | 怎么接到 PromptaFlow | 注册名 | 是否绘制卡片 |
 | --- | --- | --- | --- |
 | [Codex app](./docs/hosts/codex-app.zh-CN.md) | 随插件分发的 stdio Proxy → Hub | `codex-app` | 是 |
-| [WorkBuddy](./docs/hosts/workbuddy.zh-CN.md) | 自定义连接器，HTTP 直连 Hub | `promptaflow`，以及 `workbuddy-third-party:custom-mcp:orbit` | 是 |
+| [WorkBuddy](./docs/hosts/workbuddy.zh-CN.md) | 自定义连接器，HTTP 直连 Hub | `promptaflow`，以及 `workbuddy-third-party:custom-mcp:promptaflow` | 是 |
 | [DeepSeek Harness](./docs/hosts/deepseek-harness.zh-CN.md) | 带自有 Gateway 与面板的 Host Profile Bundle | 按 Session 的 `harness:session:*` actor | 自己的面板 |
 | [其他 MCP App](./docs/hosts/other-apps.zh-CN.md) | stdio Proxy | 自己的稳定名称 | 取决于宿主 |
 

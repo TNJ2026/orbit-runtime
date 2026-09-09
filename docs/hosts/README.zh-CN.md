@@ -11,7 +11,7 @@ PromptaFlow 是一个 Runtime，但有好几扇前门。每个宿主接入方式
 | 宿主 | 怎么接到 PromptaFlow | 注册名 | 是否绘制卡片 |
 | --- | --- | --- | --- |
 | [Codex app](./codex-app.zh-CN.md) | 随插件分发的 stdio Proxy → Hub | `codex-app` | 是 |
-| [WorkBuddy](./workbuddy.zh-CN.md) | 自定义连接器，HTTP 直连 Hub | `orbit`，以及 `workbuddy-third-party:custom-mcp:orbit` | 是 |
+| [WorkBuddy](./workbuddy.zh-CN.md) | 自定义连接器，HTTP 直连 Hub | `promptaflow`，以及 `workbuddy-third-party:custom-mcp:promptaflow` | 是 |
 | [DeepSeek Harness](./deepseek-harness.zh-CN.md) | 带自有 Gateway 与面板的 Host Profile Bundle | 按 Session 的 `harness:session:*` actor | 自己的面板 |
 | [其他 MCP App](./other-apps.zh-CN.md) | stdio Proxy | 自己的稳定名称 | 取决于宿主 |
 

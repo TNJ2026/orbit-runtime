@@ -2364,7 +2364,7 @@
       "replacement_hint": "Replacement: package manifest test asserting new UI assets + new CLI"
     },
     {
-      "test_id": "tests/test_packaging.py::PackagingTests::test_gitignore_excludes_orbit_state_dirs",
+      "test_id": "tests/test_packaging.py::PackagingTests::test_gitignore_excludes_promptaflow_state_dirs",
       "file": "tests/test_packaging.py",
       "class": "PackagingTests",
       "disposition": "rewrite",

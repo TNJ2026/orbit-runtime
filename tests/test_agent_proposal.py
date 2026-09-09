@@ -236,6 +236,7 @@ class PatchTests(unittest.TestCase):
                 "src/promptaflow/web/api_v1/context.py",
                 "src/promptaflow/web/api_v1/ops.py",
                 "src/promptaflow/web/mcp.py",
+                "src/promptaflow/web/mcp_app.py",
                 "src/promptaflow/web/builtin_handlers.py",
                 "src/promptaflow/workflow/handlers/agent.py",
                 "src/promptaflow/workspace/__init__.py",
@@ -268,7 +269,7 @@ class PatchTests(unittest.TestCase):
                         if name in os.environ
                     },
                     "HOME": str(work), "USERPROFILE": str(work),
-                    "USER": "orbit-test", "LOGNAME": "orbit-test",
+                    "USER": "promptaflow-test", "LOGNAME": "promptaflow-test",
                     "PYTHONPATH": str(work / "src"),
                 },
             )
@@ -341,7 +342,7 @@ class PatchTests(unittest.TestCase):
 
     def test_the_development_checkout_is_detected_without_configuration(self) -> None:
         with mock.patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("ORBIT_SOURCE_ROOT", None)
+            os.environ.pop("PROMPTAFLOW_SOURCE_ROOT", None)
             self.assertEqual(ROOT, source_checkout_root())
 
 
@@ -444,7 +445,7 @@ class EndpointTests(unittest.TestCase):
         )
         original = (ROOT / DISCOVERY_FILE).read_text(encoding="utf-8")
         with tempfile.TemporaryDirectory() as tmp:
-            checkout = Path(tmp) / "orbit-checkout"
+            checkout = Path(tmp) / "promptaflow-checkout"
             workspace = Path(tmp) / "user-workspace"
             workspace.mkdir()
             for relative in (DISCOVERY_FILE, DISCOVERY_TESTS):

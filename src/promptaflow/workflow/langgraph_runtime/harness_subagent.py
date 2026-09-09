@@ -948,7 +948,7 @@ class AppDelegationHandler(HarnessSubagentHandler):
             "delegation_id": delegation_id, "actor": str(request.actor),
             "input": inputs, "config": request.config,
             "workspace": self._workspace_descriptor(request),
-            "protocol": {"name": "orbit-app-delegation", "version": "1"},
+            "protocol": {"name": "promptaflow-app-delegation", "version": "1"},
             "execution": {
                 "attempt_id": str(request.attempt_id),
                 "idempotency_key": str(request.idempotency_key),

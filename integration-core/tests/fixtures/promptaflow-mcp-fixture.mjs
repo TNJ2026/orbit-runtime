@@ -18,7 +18,7 @@ if (args[0] === 'hub' && args[1] === 'register') {
   if (await readFile(join(projectRoot, 'refuse-to-start'), 'utf8').catch(() => '') !== '') {
     process.stderr.write('Traceback (most recent call last):\n')
     // Names its own Workspace, so a test can tell whose reason it read.
-    process.stderr.write(`RuntimeError: the database is from a newer Orbit at ${projectRoot}\n`)
+    process.stderr.write(`RuntimeError: the database is from a newer PromptaFlow at ${projectRoot}\n`)
     process.exit(3)
   }
   const server = createServer((request, response) => {
@@ -28,7 +28,7 @@ if (args[0] === 'hub' && args[1] === 'register') {
       const message = JSON.parse(body)
       const result = message.method === 'initialize'
         ? { protocolVersion: '2025-06-18', capabilities: {} }
-        : { structuredContent: { integration_protocol: 'orbit-harness/1' } }
+        : { structuredContent: { integration_protocol: 'promptaflow-harness/1' } }
       response.writeHead(200, { 'content-type': 'application/json' })
       response.end(JSON.stringify({ jsonrpc: '2.0', id: message.id, result }))
     })

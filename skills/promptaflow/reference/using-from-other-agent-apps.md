@@ -10,7 +10,7 @@ the field names to the App's MCP configuration format:
 ```json
 {
   "mcpServers": {
-    "orbit": {
+    "promptaflow": {
       "command": "bash",
       "args": ["/absolute/path/to/promptaflow/start-promptaflow.sh", "--mcp-proxy"],
       "env": {
@@ -25,6 +25,9 @@ Use the PromptaFlow source or installed plugin directory that actually contains 
 script. The workspace selects a workspace-scoped Hub URL; the Hub starts or
 discovers that project's dynamic-port Runtime and data directory.
 Restart or reconnect the App's MCP session after changing its configuration.
+WorkBuddy may expose this connector as either `promptaflow` or
+`workbuddy-third-party:custom-mcp:promptaflow`; use the exact registered name
+that its Agent selector reports.
 When the App cannot supply a project path, omit the environment entry. PromptaFlow
 then creates and uses `PROMPTAFLOW_DEFAULT_WORKSPACE` when configured, otherwise
 `~/.promptaflow/workspaces/default`.

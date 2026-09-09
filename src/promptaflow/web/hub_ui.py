@@ -8,7 +8,7 @@ from urllib.parse import urlsplit
 def _display_path(path: str) -> str:
     """A workspace path, with the user's home directory abridged to `~`.
 
-    Reading `~/.orbit/...` as `/Users/name/.orbit/...` tells the operator
+    Reading `~/.promptaflow/...` as `/Users/name/.promptaflow/...` tells the operator
     nothing the abridged form doesn't, and a long home path eats the column.
     The separator is checked rather than assumed, by comparing against a
     normalized home and trusting the user's own home to be absolute.

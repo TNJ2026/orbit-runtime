@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import unittest
 
 from promptaflow.web.mcp import HARNESS_TOOL_NAMES, McpSessionRegistry
-from promptaflow.web.mcp_app import ORBIT_DASHBOARD_URI, ORBIT_WORKFLOWS_URI
+from promptaflow.web.mcp_app import PROMPTAFLOW_DASHBOARD_URI, PROMPTAFLOW_WORKFLOWS_URI
 from tests.test_api_v1 import ApiTestCase
 from tests.test_web_composition import AsgiHarness
 
@@ -85,7 +85,7 @@ class HandshakeTests(ApiTestCase):
             )
             workspace = next(
                 resource for resource in resources
-                if resource["uri"] == ORBIT_DASHBOARD_URI
+                if resource["uri"] == PROMPTAFLOW_DASHBOARD_URI
             )
             self.assertEqual("PromptaFlow workspace", workspace["name"])
             self.assertIn("goals, workflows, history, agents", workspace["description"])
@@ -126,7 +126,7 @@ class HandshakeTests(ApiTestCase):
             }
             carded = (declared["list_workflows"].get("_meta") or {}).get("ui")
             plain = (declared["inspect_workflows"].get("_meta") or {}).get("ui")
-            self.assertEqual(ORBIT_WORKFLOWS_URI, carded["resourceUri"])
+            self.assertEqual(PROMPTAFLOW_WORKFLOWS_URI, carded["resourceUri"])
             self.assertIsNone(plain)
 
             # Each points a reader at the other, because a description is the
@@ -410,8 +410,8 @@ class DiscoveryTests(ApiTestCase):
             payload = payload_of(tool(
                 client, "get_capabilities", {}, actor="reader",
             ))
-        self.assertEqual("orbit-harness/1", payload["integration_protocol"])
-        self.assertIn("orbit-app-delegation/1", payload["integration_protocols"])
+        self.assertEqual("promptaflow-harness/2", payload["integration_protocol"])
+        self.assertIn("promptaflow-app-delegation/1", payload["integration_protocols"])
         self.assertEqual("full", payload["tool_profile"])
         self.assertIn("langgraph_run/1", payload["event_schemas"])
 
@@ -488,17 +488,15 @@ class ToolCallTests(ApiTestCase):
         payload = payload_of(result)
         self.assertEqual([], payload["runs"])
 
-    def test_dashboard_tools_keep_their_pre_rename_call_aliases(self) -> None:
-        """A cached pre-upgrade tool catalogue remains callable after upgrade."""
-
+    def test_promptaflow_card_tools_are_advertised_and_callable(self) -> None:
         with AsgiHarness(self.app) as client:
             listed = rpc(client, "tools/list", actor="reader").json()["result"]["tools"]
             names = {item["name"] for item in listed}
-            dashboard = tool(client, "open_orbit_dashboard", {}, actor="reader")
-            goals = tool(client, "open_orbit_goals", {}, actor="reader")
+            dashboard = tool(client, "open_promptaflow_dashboard", {}, actor="reader")
+            goals = tool(client, "open_promptaflow_goals", {}, actor="reader")
 
-        self.assertNotIn("open_orbit_dashboard", names)
-        self.assertNotIn("open_orbit_goals", names)
+        self.assertIn("open_promptaflow_dashboard", names)
+        self.assertIn("open_promptaflow_goals", names)
         self.assertEqual([], payload_of(dashboard)["runs"])
         self.assertEqual([], payload_of(goals)["runs"])
 
@@ -1400,7 +1398,7 @@ class StdioTransportTests(ApiTestCase):
         responses = self.run_stdio(
             '{"jsonrpc":"2.0","id":1,"method":"tools/call",'
             '"params":{"name":"list_runs","arguments":{},"_meta":'
-            '{"orbit/actor":"reader"}}}',
+            '{"promptaflow/actor":"reader"}}}',
             actor="writer", actor_prefix="reader",
         )
         self.assertNotIn("error", responses[0])
@@ -1409,7 +1407,7 @@ class StdioTransportTests(ApiTestCase):
         responses = self.run_stdio(
             '{"jsonrpc":"2.0","id":1,"method":"tools/call",'
             '"params":{"name":"list_runs","arguments":{},"_meta":'
-            '{"orbit/actor":"local"}}}',
+            '{"promptaflow/actor":"local"}}}',
             actor_prefix="harness:session:",
         )
         self.assertEqual(-32001, responses[0]["error"]["code"])

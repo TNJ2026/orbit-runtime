@@ -1,6 +1,6 @@
 """Identity for a locally served, single-operator Runtime.
 
-`orbit serve` binds to loopback and serves one person: the one at the keyboard.
+`promptaflow serve` binds to loopback and serves one person: the one at the keyboard.
 That person is `local`, and they hold every scope. This module exists so that
 assumption is stated in one reviewable place instead of being spread through
 the adapters as "no authenticator means trusted".
@@ -28,14 +28,10 @@ LOCAL_SCOPES: tuple[str, ...] = (
 )
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 SCOPED_ACTOR_HEADER = "x-promptaflow-actor"
-# The Gateway is a pinned bundle and the Runtime is installed separately, so a
-# client built before the rename reaches a Runtime built after it as a matter
-# of course during an upgrade. Read both; only ever send the current one.
-LEGACY_SCOPED_ACTOR_HEADER = "x-orbit-actor"
 # Where a Session-scoped actor may arrive. `/mcp` is the MCP transport served
 # directly; `/internal/v1/agent-tools` is the same tool backend reached through
 # the Hub, which forwards the header it was handed. They are one surface with
-# two doors, and `orbit serve` under a Hub mounts only the second — so naming
+# two doors, and `promptaflow serve` under a Hub mounts only the second — so naming
 # just `/mcp` here meant the header was never read at all. Nothing else is on
 # this list: the browser UI and `/api/v1` are the one loopback operator.
 SCOPED_ACTOR_PATHS = frozenset({"/mcp", "/internal/v1/agent-tools"})
@@ -64,8 +60,6 @@ def loopback_scoped_mcp_authenticator(
     if actor is None or request.url.path not in SCOPED_ACTOR_PATHS:
         return actor
     candidate = request.headers.get(SCOPED_ACTOR_HEADER)
-    if candidate is None:
-        candidate = request.headers.get(LEGACY_SCOPED_ACTOR_HEADER)
     if candidate is None:
         return actor
     if (

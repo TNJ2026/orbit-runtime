@@ -9,10 +9,10 @@ import { isLive } from './run-progress.js';
 export { isLive };
 export { goalRuns, progressOf, type RunProgress } from './run-progress.js';
 /** Cadence while a Run is moving. */
-export declare const ORBIT_POLL_MS = 2000;
+export declare const PROMPTAFLOW_POLL_MS = 2000;
 /** Cadence while nothing is. A resident panel costs nothing when idle. */
-export declare const ORBIT_IDLE_MS = 15000;
-export interface OrbitRunRow {
+export declare const PROMPTAFLOW_IDLE_MS = 15000;
+export interface PromptaFlowRunRow {
     readonly runId: string;
     readonly goal: string;
     readonly workflow: string;
@@ -74,7 +74,7 @@ export declare function toInterrupts(items: readonly unknown[] | undefined): Run
  * string across the back edge as the next attempt's brief.
  */
 export declare function approvalValue(interrupt: RunInterrupt, decision: 'approve' | 'reject', reason?: string): Record<string, unknown>;
-export declare function toRow(run: RunDto, workflowName?: string): OrbitRunRow;
+export declare function toRow(run: RunDto, workflowName?: string): PromptaFlowRunRow;
 /**
  * What a Run was asked to work on, as something a person can read.
  *
@@ -136,16 +136,16 @@ export declare function artifactHref(sessionId: string, artifactId: string): str
 /** The short name an Artifact is offered under: its id without the kind. */
 export declare function artifactLabel(artifactId: string): string;
 /** How soon to ask again, given what the last answer contained. */
-export declare function nextInterval(rows: readonly OrbitRunRow[]): number;
+export declare function nextInterval(rows: readonly PromptaFlowRunRow[]): number;
 /** Newest first, with anything still running ahead of anything finished.
  *
  * A resident panel is read at a glance, and the glance is almost always about
  * what is happening now — so recency alone would bury a running Run under a
  * pile of Runs that already have their answer.
  */
-export declare function orderRows(rows: readonly OrbitRunRow[]): OrbitRunRow[];
+export declare function orderRows(rows: readonly PromptaFlowRunRow[]): PromptaFlowRunRow[];
 /** A one-line count for the collapsed badge. */
-export declare function summarise(rows: readonly OrbitRunRow[]): {
+export declare function summarise(rows: readonly PromptaFlowRunRow[]): {
     live: number;
     total: number;
 };
@@ -158,7 +158,7 @@ export declare function summarise(rows: readonly OrbitRunRow[]): {
 export declare function dotState(status: string): 'done' | 'warning' | 'ongoing' | 'error';
 /** A step card uses a still dot: history records outcomes, not activity. */
 export declare function stepDotState(status: string): 'success' | 'error' | 'skipped' | 'warning' | 'ongoing';
-export interface OrbitStepRow {
+export interface PromptaFlowStepRow {
     readonly nodeId: string;
     readonly label: string;
     readonly status: string;
@@ -166,7 +166,7 @@ export interface OrbitStepRow {
     readonly needsPerson: boolean;
     readonly delegationId?: string;
 }
-export declare function toStepRow(step: StepSummary): OrbitStepRow;
+export declare function toStepRow(step: StepSummary): PromptaFlowStepRow;
 /** Join an output page into displayable text, oldest chunk first. */
 export declare function outputText(chunks: readonly OutputChunk[]): string;
 /** Merge a new page into what is already shown without duplicating a chunk. */
@@ -178,5 +178,5 @@ export declare function mergeChunks(previous: readonly OutputChunk[], next: read
  * fails, and one offered at a stale revision is worse — it succeeds against a
  * Run the reader was not looking at.
  */
-export declare function commandRevision(row: OrbitRunRow, command: string): number | undefined;
-//# sourceMappingURL=orbit-model.d.ts.map
+export declare function commandRevision(row: PromptaFlowRunRow, command: string): number | undefined;
+//# sourceMappingURL=promptaflow-model.d.ts.map

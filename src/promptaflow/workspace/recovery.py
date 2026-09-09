@@ -41,7 +41,7 @@ from .git import GIT_TIMEOUT_SECONDS, WorkspaceError, _git, is_git_repo
 
 # Objects a recovery point needs must survive `git gc`, so they hang off a
 # ref of PromptaFlow's own rather than being written and orphaned.
-RECOVERY_REF_PREFIX = "refs/orbit/recovery"
+RECOVERY_REF_PREFIX = "refs/promptaflow/recovery"
 # Room the object store is left after a recovery point is written. A baseline
 # that fills the disk has taken the project down to save it.
 DEFAULT_MIN_FREE_BYTES = 1 * 1024**3
@@ -318,7 +318,7 @@ def _restore_target(root: Path, relative: str) -> Path:
 def _restore_bytes(root: Path, relative: str, data: bytes, mode: str) -> None:
     target = _restore_target(root, relative)
     target.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary = tempfile.mkstemp(prefix=".orbit-restore-", dir=target.parent)
+    descriptor, temporary = tempfile.mkstemp(prefix=".promptaflow-restore-", dir=target.parent)
     try:
         with os.fdopen(descriptor, "wb") as stream:
             if mode != "120000":
@@ -364,7 +364,7 @@ class GitRecoveryPoints(_RecoveryHistory):
 
     def _history_path(self, run_id: str) -> Path:
         directory = _checked(
-            _run_git(self.project_root, "rev-parse", "--git-path", "orbit-recovery"),
+            _run_git(self.project_root, "rev-parse", "--git-path", "promptaflow-recovery"),
             "locating recovery metadata",
         )
         return self.project_root / directory / (self.ref_for(run_id).rsplit("/", 1)[-1] + ".json")
@@ -404,7 +404,7 @@ class GitRecoveryPoints(_RecoveryHistory):
         self._check_space()
         head = self._head()
         with tempfile.TemporaryDirectory() as scratch:
-            index = Path(scratch) / "orbit-recovery-index"
+            index = Path(scratch) / "promptaflow-recovery-index"
             # `add -A` against an index of our own: untracked files come in,
             # ignored files stay out, and the user's staged state is not
             # disturbed by any of it.
@@ -456,7 +456,7 @@ class GitRecoveryPoints(_RecoveryHistory):
         worse than none, because it was counted on.
         """
 
-        args = ["commit-tree", tree, "-m", f"orbit recovery point for {run_id}"]
+        args = ["commit-tree", tree, "-m", f"promptaflow recovery point for {run_id}"]
         if head is not None:
             args.extend(["-p", head])
         if index_tree is not None:
@@ -544,7 +544,7 @@ class GitRecoveryPoints(_RecoveryHistory):
         """Paths present now that the baseline does not carry."""
 
         with tempfile.TemporaryDirectory() as scratch:
-            index = Path(scratch) / "orbit-compare-index"
+            index = Path(scratch) / "promptaflow-compare-index"
             _checked(
                 _run_git(self.project_root, "add", "-A", index=index),
                 "staging the working tree for comparison",
@@ -638,7 +638,7 @@ class GitRecoveryPoints(_RecoveryHistory):
         if point.worktree_tree is None:
             raise RecoveryPointError("recovery point carries no baseline tree")
         with tempfile.TemporaryDirectory() as scratch:
-            index = Path(scratch) / "orbit-summary-index"
+            index = Path(scratch) / "promptaflow-summary-index"
             _checked(
                 _run_git(self.project_root, "add", "-A", index=index),
                 "staging the working tree for a change summary",

@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 
-import { ORBIT_ERROR_KEYS, panelError } from '../lib/error-text.js'
+import { PROMPTAFLOW_ERROR_KEYS, panelError } from '../lib/error-text.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
@@ -15,17 +15,17 @@ const reading = value => panelError(value).key
 
 test('a Runtime that is not there is named as that, before anything else', () => {
   assert.equal(
-    reading('Error: No independent Orbit Runtime is serving Workspace /Users/x/p'),
+    reading('Error: No independent PromptaFlow Runtime is serving Workspace /Users/x/p'),
     'errNoRuntime',
     'a stopped Runtime also fails as transport; the specific reading wins',
   )
-  assert.equal(reading('Orbit Runtime auto-start failed with code 1 for Workspace /x'), 'errStartFailed')
+  assert.equal(reading('PromptaFlow Runtime auto-start failed with code 1 for Workspace /x'), 'errStartFailed')
 })
 
 test('a Runtime that is there but silent reads differently from one that is gone', () => {
-  assert.equal(reading('Error: Orbit MCP tools/call timed out'), 'errTimeout')
-  assert.equal(reading('Orbit MCP transport failed: fetch failed'), 'errUnreachable')
-  assert.equal(reading('Orbit MCP HTTP 502'), 'errUnreachable')
+  assert.equal(reading('Error: PromptaFlow MCP tools/call timed out'), 'errTimeout')
+  assert.equal(reading('PromptaFlow MCP transport failed: fetch failed'), 'errUnreachable')
+  assert.equal(reading('PromptaFlow MCP HTTP 502'), 'errUnreachable')
 })
 
 test('the failure that started all this reads as a stale list, not as a missing version', () => {
@@ -46,28 +46,26 @@ test('a slot somebody else holds says who to wait for', () => {
 })
 
 test('a run that moved under the reader is not a run that vanished', () => {
-  assert.equal(reading('Orbit no longer offers langgraph_run.cancel at revision 7'), 'errRunMoved')
-  assert.equal(reading('Orbit no longer advertises langgraph_run.resume for Run r'), 'errRunMoved')
+  assert.equal(reading('PromptaFlow no longer offers langgraph_run.cancel at revision 7'), 'errRunMoved')
+  assert.equal(reading('PromptaFlow no longer advertises langgraph_run.resume for Run r'), 'errRunMoved')
   assert.equal(reading('LangGraph run not found: langgraph_run:abc'), 'errRunGone')
 })
 
 test('a refusal is not a failure', () => {
-  assert.equal(reading('only a Runtime operator may stop Orbit'), 'errNotAllowed')
+  assert.equal(reading('only a Runtime operator may stop PromptaFlow'), 'errNotAllowed')
   assert.equal(reading('valid actor credentials are required'), 'errNotAllowed')
-  assert.equal(reading('Orbit refused to stop: HTTP 403'), 'errNotAllowed')
+  assert.equal(reading('PromptaFlow refused to stop: HTTP 403'), 'errNotAllowed')
 })
 
-test('a Harness with no writer says so rather than blaming Orbit', () => {
+test('a Harness with no writer says so rather than blaming PromptaFlow', () => {
   assert.equal(reading('no live Agent for Session session-abc'), 'errNoAgent')
   assert.equal(reading('this Harness exposes no Agent registry'), 'errNoAgent')
 })
 
-test('protocol failures from either side of the product rename remain readable', () => {
-  for (const product of ['PromptaFlow', 'Orbit']) {
-    assert.equal(reading(`invalid ${product} DTO at run`), 'errProtocol')
-    assert.equal(reading(`${product} workflow generation failed`), 'errProtocol')
-    assert.equal(reading(`Unknown ${product} client action`), 'errProtocol')
-  }
+test('PromptaFlow protocol failures remain readable', () => {
+  assert.equal(reading('invalid PromptaFlow DTO at run'), 'errProtocol')
+  assert.equal(reading('PromptaFlow workflow generation failed'), 'errProtocol')
+  assert.equal(reading('Unknown PromptaFlow client action'), 'errProtocol')
 })
 
 test('an unrecognised failure is not dressed up as a known one', () => {
@@ -90,7 +88,7 @@ test('the original text is always kept, whatever shape it arrived in', () => {
 /**
  * The vocabulary is the core's, the wording is the host's.
  *
- * `ORBIT_ERROR_KEYS` is what a host must be able to say. It used to be derived
+ * `PROMPTAFLOW_ERROR_KEYS` is what a host must be able to say. It used to be derived
  * from one host's dictionary — `keyof typeof en` — which made the set of
  * things that can go wrong a property of the panel's copy. It is not: it is
  * decided by the table below, and a second host has to answer for the same
@@ -105,7 +103,7 @@ test('the vocabulary and the readings describe the same failures', async () => {
     .map(([, key]) => key))
   assert.ok(readings.size >= 20, `expected the readings, found ${String(readings.size)}`)
 
-  const declared = new Set(ORBIT_ERROR_KEYS)
+  const declared = new Set(PROMPTAFLOW_ERROR_KEYS)
   // Everything the table can produce is declared, or a host cannot know to
   // write a sentence for it and the reader gets a key.
   for (const key of readings) assert.ok(declared.has(key), `${key} is not declared`)

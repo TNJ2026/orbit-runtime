@@ -90,8 +90,7 @@ above.
 Opening `/promptaflow` starts PromptaFlow for the Harness Workspace when necessary; a
 Runtime started this way stays up after the panel or Profile closes. The
 Gateway looks for ownership records under `~/.promptaflow` — set
-`PROMPTAFLOW_RUNTIME_ROOT` for the Profile if the Runtime database lives elsewhere
-(`ORBIT_RUNTIME_ROOT` remains a compatibility alias).
+`PROMPTAFLOW_RUNTIME_ROOT` for the Profile if the Runtime database lives elsewhere.
 The PromptaFlow CLI holds a non-blocking ownership lock on that database and
 publishes its Workspace and MCP endpoint in the ownership record; Harness
 never owns that lock and never creates a second writer.
@@ -127,7 +126,7 @@ or delete an independent PromptaFlow Runtime.
 | Component | Supported range |
 | --- | --- |
 | PromptaFlow Runtime | `>=0.4.0 <0.5.0` |
-| PromptaFlow integration protocol | `orbit-harness/1` |
+| PromptaFlow integration protocol | `promptaflow-harness/2` |
 | Harness packages | `>=0.1.1-rc.2 <0.2.0` (alpha prereleases are not supported) |
 | React | `^18.2.0` |
 | Node.js | `>=22` |
@@ -139,8 +138,8 @@ detached, and remembers which. Graphs, Artifacts and Workflow authoring are
 not redrawn here: the panel opens PromptaFlow's own UI for those.
 
 Runs are started by asking the Agent, not from the panel. The Agent has a
-bounded native tool surface — `orbit_list_workflows`, `orbit_list_runs`,
-`orbit_inspect_run`, `orbit_start_run`, `orbit_cancel_run`, `orbit_resume_run`
+bounded native tool surface — `promptaflow_list_workflows`, `promptaflow_list_runs`,
+`promptaflow_inspect_run`, `promptaflow_start_run`, `promptaflow_cancel_run`, `promptaflow_resume_run`
 — so "run the CSV cleaner over today's export" is the whole interface. The
 model never supplies an endpoint, actor, idempotency key or mutation revision:
 the Host derives Workspace and Session from the tool run context, creates
@@ -205,7 +204,7 @@ is down leaves the last answer standing rather than emptying the context.
 
 ## The Host API
 
-`/plugins/dsh-orbit/api` on the Harness origin offers Run inspection, Steps,
+`/plugins/dsh-promptaflow/api` on the Harness origin offers Run inspection, Steps,
 Graph, Edges, cursor-based output, bounded Artifact content and Attachment
 import. Every call carries a Workspace and the Host trusts none of them: each
 is checked against the Session it claims to belong to, or against the
@@ -226,7 +225,7 @@ credentials.
 
 The Host attaches one Bridge to every live root Session with a `cwd`,
 including Sessions restored during startup. The Bridge derives its cursor and
-known Run ids from durable `orbit/run-*` Session events, so a Host restart
+known Run ids from durable `promptaflow/run-*` Session events, so a Host restart
 resumes without a second cursor database. Session disposal aborts the poller,
 and a temporarily unavailable Runtime is retried without blocking the Session
 lifecycle.

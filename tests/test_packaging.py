@@ -14,7 +14,7 @@ from pathlib import Path
 import unittest
 
 
-ORBIT = resources.files("promptaflow")
+PROMPTAFLOW = resources.files("promptaflow")
 REMOVED_MODULES = ("server", "store", "project_index")
 REMOVED_ASSETS = (
     "static/ui.html",
@@ -25,7 +25,7 @@ REMOVED_ASSETS = (
 
 class PackageContentTests(unittest.TestCase):
     def test_the_modular_ui_ships(self) -> None:
-        root = ORBIT.joinpath("static/workflow-ui")
+        root = PROMPTAFLOW.joinpath("static/workflow-ui")
         index = root.joinpath("index.html").read_text(encoding="utf-8")
         self.assertIn("PromptaFlow Runtime", index)
         self.assertIn('src="assets/app.js"', index)
@@ -40,10 +40,10 @@ class PackageContentTests(unittest.TestCase):
                 self.assertTrue(root.joinpath("assets", asset).is_file())
 
     def test_the_mcp_xyflow_bundle_ships_offline(self) -> None:
-        root = ORBIT.joinpath("static/mcp-app")
+        root = PROMPTAFLOW.joinpath("static/mcp-app")
         script = root.joinpath("workflow-detail.js").read_text(encoding="utf-8")
         style = root.joinpath("workflow-detail.css").read_text(encoding="utf-8")
-        self.assertIn("OrbitWorkflowGraph", script)
+        self.assertIn("PromptaFlowWorkflowGraph", script)
         self.assertIn("react-flow__controls", style)
         self.assertFalse(root.joinpath("workflow-detail.js.map").is_file())
         self.assertNotIn("process.env.NODE_ENV", script)
@@ -65,13 +65,13 @@ class PackageContentTests(unittest.TestCase):
             "--ink: #14161a;--muted: #5d6470;--line: #d8dce3;--accent: #2563eb"
         )
         body = "body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5"
-        card = ORBIT.joinpath("static/mcp-app/workflow-detail.css").read_text(encoding="utf-8")
+        card = PROMPTAFLOW.joinpath("static/mcp-app/workflow-detail.css").read_text(encoding="utf-8")
         self.assertIn(".mcp-xyflow-viewer{" + palette, card)
         self.assertNotIn(":root{" + palette, card)
         self.assertNotIn(body, card)
 
         # The editor is a page and still paints like one.
-        page = ORBIT.joinpath(
+        page = PROMPTAFLOW.joinpath(
             "static/workflow-editor/assets/index.css"
         ).read_text(encoding="utf-8")
         self.assertIn(":root{" + palette, page)
@@ -100,7 +100,7 @@ class PackageContentTests(unittest.TestCase):
     def test_the_runtime_packages_are_importable(self) -> None:
         for module in (
             "promptaflow.web.app", "promptaflow.web.api_v1", "promptaflow.web.mcp",
-            "promptaflow.platform.cutover", "promptaflow.workflow.langgraph_runtime",
+            "promptaflow.platform.projects", "promptaflow.workflow.langgraph_runtime",
             "promptaflow.hub", "promptaflow.workflow.langgraph_runtime.execution_worker",
         ):
             with self.subTest(module=module):
@@ -113,28 +113,28 @@ class LegacyRemovalTests(unittest.TestCase):
     def test_the_legacy_modules_are_gone(self) -> None:
         for name in REMOVED_MODULES:
             with self.subTest(module=name):
-                self.assertFalse(ORBIT.joinpath(f"{name}.py").is_file())
+                self.assertFalse(PROMPTAFLOW.joinpath(f"{name}.py").is_file())
                 with self.assertRaises(ImportError):
-                    __import__(f"orbit.{name}")
+                    __import__(f"promptaflow.{name}")
 
     def test_the_legacy_assets_are_gone(self) -> None:
         for asset in REMOVED_ASSETS:
             with self.subTest(asset=asset):
-                self.assertFalse(ORBIT.joinpath(asset).is_file())
+                self.assertFalse(PROMPTAFLOW.joinpath(asset).is_file())
 
     def test_platform_metadata_does_not_ship_as_an_asset(self) -> None:
-        for path in Path(str(ORBIT)).rglob("*"):
+        for path in Path(str(PROMPTAFLOW)).rglob("*"):
             self.assertNotIn(path.name, {".DS_Store", "Thumbs.db"})
 
     def test_no_legacy_config_template_ships(self) -> None:
         """`workflow.json` was the legacy engine's config; nothing writes it."""
 
-        for path in Path(str(ORBIT)).rglob("workflow.json"):
+        for path in Path(str(PROMPTAFLOW)).rglob("workflow.json"):
             self.fail(f"legacy workflow config shipped: {path}")
 
     def test_the_state_dirs_stay_out_of_git(self) -> None:
         lines = Path(".gitignore").read_text(encoding="utf-8").splitlines()
-        self.assertIn(".orbit/", lines)
+        self.assertIn(".promptaflow/", lines)
         self.assertIn(".dev_loop/", lines)
 
 

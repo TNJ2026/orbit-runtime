@@ -14,14 +14,9 @@
  * marker, and must not be able to move the ladder.
  */
 const SENTINEL = '\x1epromptaflow-progress:';
-// The Runtime and this bundle upgrade separately, so a Runtime that predates
-// the rename is still emitting the old marker at a moment when the panel is
-// showing its progress. Reading both is the difference between a live ladder
-// and one that silently never moves.
-const SENTINELS = [SENTINEL, '\x1eorbit-progress:'];
 /** The sentinel this chunk carries, if it carries one. */
 function sentinelOf(text) {
-    return SENTINELS.find(candidate => text.startsWith(candidate));
+    return text.startsWith(SENTINEL) ? SENTINEL : undefined;
 }
 /** The three things authoring does. Repairing is not among them — see below. */
 export const AUTHORING_STAGES = ['generating', 'validating', 'publishing'];

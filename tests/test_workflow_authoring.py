@@ -300,7 +300,7 @@ class AuthoringServiceTests(unittest.TestCase):
 
         self.assertIn("agent_outcome", prompt)
         # The half that makes the answer readable.
-        self.assertIn("ORBIT_TASK_OK", prompt)
+        self.assertIn("PROMPTAFLOW_TASK_OK", prompt)
         self.assertIn("do not print it", prompt)
         # The half that reads it, guarded the way an open result must be.
         self.assertIn("source.<port>.text", prompt)

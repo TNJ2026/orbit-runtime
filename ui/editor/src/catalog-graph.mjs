@@ -7,7 +7,7 @@
  * viewer reads the compiled `graph` instead: every published version has one,
  * and it is the same projection the catalog list is drawn from.
  *
- * Positions come from the server. `orbit.workflow.api.graph_layout` exists so
+ * Positions come from the server. `promptaflow.workflow.api.graph_layout` exists so
  * that every picture of one definition places a node in the same spot, and a
  * viewer that laid the graph out for itself would be a second opinion about
  * where things go. Only the pixel spacing is decided here, and it is the
@@ -101,10 +101,10 @@ export function viewerGraph(
  * read the graph anyway, so a second request would only be a second answer
  * that could differ from the one being described.
  */
-export const VIEWER_READY = "orbit-viewer-ready";
-export const VIEWER_GRAPH = "orbit-viewer-graph";
-export const VIEWER_THEME = "orbit-viewer-theme";
-export const VIEWER_NODE_CLICK = "orbit-viewer-node-click";
+export const VIEWER_READY = "promptaflow-viewer-ready";
+export const VIEWER_GRAPH = "promptaflow-viewer-graph";
+export const VIEWER_THEME = "promptaflow-viewer-theme";
+export const VIEWER_NODE_CLICK = "promptaflow-viewer-node-click";
 
 /** The graph in a message, or `null` if this was not one.
  *

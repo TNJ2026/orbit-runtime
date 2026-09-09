@@ -12,7 +12,7 @@ PromptaFlow lists a connected App under the name it registers. Use:
 | --- | --- |
 | Codex | `codex-app` |
 | Claude Code | `claude-app` |
-| WorkBuddy | `orbit`, or `workbuddy-third-party:custom-mcp:orbit` — it registers under both |
+| WorkBuddy | `promptaflow`, or `workbuddy-third-party:custom-mcp:promptaflow` — it registers under both |
 | Another MCP-capable App | its own stable name — see [using-from-other-agent-apps.md](using-from-other-agent-apps.md) |
 
 The `-app` suffix is not decoration. A Runtime discovers installed CLIs as the
@@ -21,8 +21,8 @@ an installed Agent: registering as one is refused outright rather than
 renamed. Two Apps connected at once need two distinct names.
 
 WorkBuddy is the exception that shows the rule is about Agents and not about
-tidiness: it announces `workbuddy-third-party:custom-mcp:orbit` from the
-connector settings and plain `orbit` once the connector is loaded into an
+tidiness: it announces `workbuddy-third-party:custom-mcp:promptaflow` from the
+connector settings and plain `promptaflow` once the connector is loaded into an
 agent, so the same App appears under two names depending on which of its own
 paths made the call. Neither shadows a discovered CLI, so neither is refused.
 

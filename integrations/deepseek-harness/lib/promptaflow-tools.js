@@ -10,7 +10,7 @@ function args(value) {
         throw new Error('PromptaFlow tool arguments must be an object');
     return value;
 }
-export class OrbitToolBridge {
+export class PromptaFlowToolBridge {
     ctx;
     gateway;
     watch;
@@ -29,14 +29,14 @@ export class OrbitToolBridge {
     }
     definitions() {
         return [
-            this.definition('orbit_list_workflows', 'List published PromptaFlow workflows available in this Session Workspace.', object({ ready_only: { type: 'boolean' } }), 'list_workflows', true),
-            this.definition('orbit_list_runs', 'List PromptaFlow workflow runs owned by this Harness Session.', object({ status: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: 200 } }), 'list_runs', true),
-            this.definition('orbit_list_delegations', 'Check once on the first turn of this Session for resumable PromptaFlow Agent work. Stay silent when the returned list is empty.', object({
+            this.definition('promptaflow_list_workflows', 'List published PromptaFlow workflows available in this Session Workspace.', object({ ready_only: { type: 'boolean' } }), 'list_workflows', true),
+            this.definition('promptaflow_list_runs', 'List PromptaFlow workflow runs owned by this Harness Session.', object({ status: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: 200 } }), 'list_runs', true),
+            this.definition('promptaflow_list_delegations', 'Check once on the first turn of this Session for resumable PromptaFlow Agent work. Stay silent when the returned list is empty.', object({
                 statuses: { type: 'array', items: { type: 'string' }, maxItems: 6 },
                 limit: { type: 'integer', minimum: 1, maximum: 200 },
             }), 'list_delegations', true),
             {
-                name: 'orbit_claim_delegation',
+                name: 'promptaflow_claim_delegation',
                 description: 'Claim the next queued PromptaFlow Agent step for this Harness Session.',
                 parameters: object({ lease_seconds: { type: 'integer', minimum: 5, maximum: 300 } }),
                 output: JSON_OUTPUT, timeoutMs: 60_000,
@@ -49,7 +49,7 @@ export class OrbitToolBridge {
                 },
             },
             {
-                name: 'orbit_renew_delegation',
+                name: 'promptaflow_renew_delegation',
                 description: 'Renew an PromptaFlow Agent-step lease held by this Harness Session.',
                 parameters: object({
                     delegation_id: { type: 'string' },
@@ -65,7 +65,7 @@ export class OrbitToolBridge {
                 },
             },
             {
-                name: 'orbit_complete_delegation',
+                name: 'promptaflow_complete_delegation',
                 description: 'Return exactly one result object or error for an PromptaFlow Agent step.',
                 parameters: object({
                     delegation_id: { type: 'string' }, result: { type: 'object' },
@@ -78,15 +78,15 @@ export class OrbitToolBridge {
                     });
                 },
             },
-            this.definition('orbit_reconcile_delegation', 'Submit a user-verified outcome for unknown PromptaFlow Agent work; never execute unknown work again.', object({
+            this.definition('promptaflow_reconcile_delegation', 'Submit a user-verified outcome for unknown PromptaFlow Agent work; never execute unknown work again.', object({
                 delegation_id: { type: 'string' },
                 outcome: { type: 'string', enum: ['confirmed_succeeded', 'confirmed_failed'] },
                 note: { type: 'string' }, result: { type: 'object' }, error: { type: 'string' },
                 idempotency_key: { type: 'string' },
             }, ['delegation_id', 'outcome', 'idempotency_key']), 'reconcile_delegation', false),
-            this.definition('orbit_inspect_run', 'Inspect one PromptaFlow Run, including status, revision, interrupts and allowed commands.', object({ run_id: { type: 'string' } }, ['run_id']), 'inspect_run', true),
+            this.definition('promptaflow_inspect_run', 'Inspect one PromptaFlow Run, including status, revision, interrupts and allowed commands.', object({ run_id: { type: 'string' } }, ['run_id']), 'inspect_run', true),
             {
-                name: 'orbit_start_run',
+                name: 'promptaflow_start_run',
                 description: 'Start a published PromptaFlow workflow in the current Workspace. Returns immediately so progress appears in the PromptaFlow Run Card.',
                 parameters: object({
                     workflow_id: { type: 'string' }, workflow_version: { type: 'integer' },
@@ -100,9 +100,9 @@ export class OrbitToolBridge {
                 },
             },
             {
-                name: 'orbit_generate_workflow',
+                name: 'promptaflow_generate_workflow',
                 description: 'Draft a new PromptaFlow workflow from a description and publish it if the compiler accepts it. '
-                    + 'Returns a job immediately — authoring takes a while — so poll orbit_get_authoring_job '
+                    + 'Returns a job immediately — authoring takes a while — so poll promptaflow_get_authoring_job '
                     + 'with the job_id until its status leaves queued/running. Nothing is published until the '
                     + 'compiler accepts the draft, so a failed job has changed nothing. Progress also appears '
                     + 'in the PromptaFlow panel.',
@@ -124,10 +124,10 @@ export class OrbitToolBridge {
                     return job;
                 },
             },
-            this.definition('orbit_get_authoring_job', 'Check an PromptaFlow authoring job started by orbit_generate_workflow. Status queued or running '
+            this.definition('promptaflow_get_authoring_job', 'Check an PromptaFlow authoring job started by promptaflow_generate_workflow. Status queued or running '
                 + 'means it is still going; done carries the published workflow, failed carries why.', object({ job_id: { type: 'string' } }, ['job_id']), 'get_authoring_job', true),
             {
-                name: 'orbit_cancel_run',
+                name: 'promptaflow_cancel_run',
                 description: 'Cancel an PromptaFlow Run if its latest server-advertised commands allow cancellation.',
                 parameters: object({ run_id: { type: 'string' } }, ['run_id']), output: JSON_OUTPUT, timeoutMs: 60_000,
                 execute: async (value, exec) => {
@@ -136,7 +136,7 @@ export class OrbitToolBridge {
                 },
             },
             {
-                name: 'orbit_resume_run',
+                name: 'promptaflow_resume_run',
                 description: 'Resume an interrupted PromptaFlow Run using its latest server-advertised revision.',
                 parameters: object({ run_id: { type: 'string' }, value: {}, interrupt_id: { type: 'string' } }, ['run_id']),
                 output: JSON_OUTPUT, timeoutMs: 60_000,

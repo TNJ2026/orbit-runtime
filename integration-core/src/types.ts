@@ -24,10 +24,10 @@ export interface AuthoringSummary {
 }
 export interface AuthoringOutputChunk { chunk_id: number; stream: 'stdout' | 'stderr'; text: string; created_at: string }
 export interface AuthoringOutputPage { chunks: AuthoringOutputChunk[]; has_more: boolean }
-export interface OrbitCommandRequest { workspace: WorkspaceRef; sessionId: string; runId: string; command: 'langgraph_run.cancel' | 'langgraph_run.resume'; expectedVersion: number; idempotencyKey: string; value?: unknown; interruptId?: string }
+export interface PromptaFlowCommandRequest { workspace: WorkspaceRef; sessionId: string; runId: string; command: 'langgraph_run.cancel' | 'langgraph_run.resume'; expectedVersion: number; idempotencyKey: string; value?: unknown; interruptId?: string }
 export type RunDto = Record<string, unknown> & { run_id: string; goal: string; inputs?: Record<string, unknown>; workflow_id: string; workflow_version: number; status: string; revision: number; artifact_count: number; result?: unknown; error?: string | null; created_at: string; updated_at: string; interrupts: unknown[]; allowed_commands: Array<{ command: string; expected_version: number }> }
 export interface StepSummary { node_id: string; status: string; has_output?: boolean; resolution?: { kind: 'reconciliation_required'; delegation_id?: string }; reconciliation?: { outcome: 'confirmed_succeeded' | 'confirmed_failed'; note: string; created_at: string }; [key: string]: unknown }
-export interface AgentSummary { name: string; version: string; node_kinds: string[]; attempt_count?: number; failed_count?: number }
+export interface AgentSummary { name: string; version: string; node_kinds: string[]; attempt_count: number; failed_count: number }
 export interface RunGraph { [key: string]: unknown }
 export interface EdgeSummary { edge_id: string; source_node: string; target_node: string; status: string; [key: string]: unknown }
 export interface OutputChunk { chunk_id: number; node_id: string; attempt_id: string; stream: 'stdout' | 'stderr'; text: string; created_at: string }
@@ -38,18 +38,10 @@ export interface IntegrationDiagnostics { generated_at: string; workspace_id: st
 export interface ArtifactContent { artifact: ArtifactSummary; encoding: 'base64'; content: string }
 export interface RuntimeEventHint { position: number; run_id: string; event_type: string; revision: number; occurred_at: string; node_id?: string; attempt_id?: string }
 export interface RuntimeEventPage { events: RuntimeEventHint[]; next_position: number }
-export interface OrbitRunStarted { type: 'promptaflow/run-started'; sourcePosition: number; runId: string; workspaceId: string; goal: string; workflowId: string; workflowVersion: number; revision: number; status: string; createdAt: string }
-export interface OrbitRunCheckpoint { type: 'promptaflow/run-checkpoint'; sourcePosition: number; runId: string; revision: number; status: string; currentSteps: StepSummary[]; stepCounts: Record<string, number>; artifactCount: number; updatedAt: string }
-export interface OrbitRunEnded { type: 'promptaflow/run-ended'; sourcePosition: number; runId: string; revision: number; status: string; resultSummary?: string; errorSummary?: string; artifactCount: number; updatedAt: string }
-export type OrbitSessionEvent = OrbitRunStarted | OrbitRunCheckpoint | OrbitRunEnded
-/**
- * Event types this bridge recognises when it reads a Session back.
- *
- * A Session log written before the rename is durable data in the user's own
- * store: the `orbit/` spellings are never written again, and must never stop
- * being read, or a resumed Session loses every Run it already knew about.
- */
+export interface PromptaFlowRunStarted { type: 'promptaflow/run-started'; sourcePosition: number; runId: string; workspaceId: string; goal: string; workflowId: string; workflowVersion: number; revision: number; status: string; createdAt: string }
+export interface PromptaFlowRunCheckpoint { type: 'promptaflow/run-checkpoint'; sourcePosition: number; runId: string; revision: number; status: string; currentSteps: StepSummary[]; stepCounts: Record<string, number>; artifactCount: number; updatedAt: string }
+export interface PromptaFlowRunEnded { type: 'promptaflow/run-ended'; sourcePosition: number; runId: string; revision: number; status: string; resultSummary?: string; errorSummary?: string; artifactCount: number; updatedAt: string }
+export type PromptaFlowSessionEvent = PromptaFlowRunStarted | PromptaFlowRunCheckpoint | PromptaFlowRunEnded
 export const RUN_EVENT_TYPES: readonly string[] = [
   'promptaflow/run-started', 'promptaflow/run-checkpoint', 'promptaflow/run-ended',
-  'orbit/run-started', 'orbit/run-checkpoint', 'orbit/run-ended',
 ]

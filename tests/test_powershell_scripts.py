@@ -36,22 +36,22 @@ class PowerShellScriptTests(unittest.TestCase):
         )
 
     @staticmethod
-    def fake_orbit(root: Path) -> tuple[Path, Path]:
+    def fake_promptaflow(root: Path) -> tuple[Path, Path]:
         capture = root / "arguments.jsonl"
-        script = root / "fake-orbit.ps1"
+        script = root / "fake-promptaflow.ps1"
         script.write_text(
             "param([Parameter(ValueFromRemainingArguments=$true)]"
             "[string[]]$Items)\n"
             "if ($Items.Count -ge 2 -and $Items[0] -eq 'runtimes') {\n"
-            "  if ($env:ORBIT_TEST_RUNTIME_JSON) {\n"
-            "    Write-Output $env:ORBIT_TEST_RUNTIME_JSON\n"
+            "  if ($env:PROMPTAFLOW_TEST_RUNTIME_JSON) {\n"
+            "    Write-Output $env:PROMPTAFLOW_TEST_RUNTIME_JSON\n"
             "  } else {\n"
             "    Write-Output '[]'\n"
             "  }\n"
             "  exit 0\n"
             "}\n"
             "$Items | ConvertTo-Json -Compress | "
-            "Add-Content -LiteralPath $env:ORBIT_TEST_CAPTURE -Encoding UTF8\n"
+            "Add-Content -LiteralPath $env:PROMPTAFLOW_TEST_CAPTURE -Encoding UTF8\n"
             "if ($Items.Count -ge 2 -and $Items[0] -eq 'hub' "
             "-and $Items[1] -eq 'register') {\n"
             "  Write-Output '{\"ui_url\":\"http://127.0.0.1:8848/"
@@ -65,12 +65,12 @@ class PowerShellScriptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary) / "workspace"
             workspace.mkdir()
-            fake, capture = self.fake_orbit(Path(temporary))
+            fake, capture = self.fake_promptaflow(Path(temporary))
             environment = {
                 **os.environ,
                 "PROMPTAFLOW_CLI": str(fake),
-                "ORBIT_TEST_CAPTURE": str(capture),
-                "ORBIT_TEST_RUNTIME_JSON": json.dumps([{
+                "PROMPTAFLOW_TEST_CAPTURE": str(capture),
+                "PROMPTAFLOW_TEST_RUNTIME_JSON": json.dumps([{
                     "project_root": str(workspace.resolve()),
                     "base_url": "http://127.0.0.1:51234",
                 }]),
@@ -105,11 +105,11 @@ class PowerShellScriptTests(unittest.TestCase):
 
     def test_start_rejects_a_missing_workspace(self):
         with tempfile.TemporaryDirectory() as temporary:
-            fake, capture = self.fake_orbit(Path(temporary))
+            fake, capture = self.fake_promptaflow(Path(temporary))
             environment = {
                 **os.environ,
                 "PROMPTAFLOW_CLI": str(fake),
-                "ORBIT_TEST_CAPTURE": str(capture),
+                "PROMPTAFLOW_TEST_CAPTURE": str(capture),
             }
 
             result = self.run_script(
@@ -123,11 +123,11 @@ class PowerShellScriptTests(unittest.TestCase):
 
     def test_internal_hub_mode_uses_the_same_promptaflow_executable(self):
         with tempfile.TemporaryDirectory() as temporary:
-            fake, capture = self.fake_orbit(Path(temporary))
+            fake, capture = self.fake_promptaflow(Path(temporary))
             environment = {
                 **os.environ,
                 "PROMPTAFLOW_CLI": str(fake),
-                "ORBIT_TEST_CAPTURE": str(capture),
+                "PROMPTAFLOW_TEST_CAPTURE": str(capture),
             }
 
             result = self.run_script(
@@ -145,7 +145,7 @@ class PowerShellScriptTests(unittest.TestCase):
     def test_restart_dry_run_with_empty_state_changes_nothing(self):
         with tempfile.TemporaryDirectory() as temporary:
             isolated = Path(temporary)
-            fake, capture = self.fake_orbit(isolated)
+            fake, capture = self.fake_promptaflow(isolated)
             (isolated / "restart-promptaflow.ps1").write_text(
                 (ROOT / "restart-promptaflow.ps1").read_text(encoding="utf-8"),
                 encoding="utf-8",
@@ -166,9 +166,9 @@ class PowerShellScriptTests(unittest.TestCase):
             environment = {
                 **os.environ,
                 "PROMPTAFLOW_CLI": str(fake),
-                "ORBIT_TEST_CAPTURE": str(capture),
+                "PROMPTAFLOW_TEST_CAPTURE": str(capture),
                 "AGENT_APP_STATE_DIR": str(state),
-                "ORBIT_RUNTIME_ROOT": str(runtime),
+                "PROMPTAFLOW_RUNTIME_ROOT": str(runtime),
             }
 
             result = self.run_script(
@@ -237,18 +237,18 @@ class PowerShellScriptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture = root / "encoding.json"
-            fake = root / "fake-orbit.ps1"
+            fake = root / "fake-promptaflow.ps1"
             fake.write_text(
                 "@{ PYTHONUTF8 = $env:PYTHONUTF8; "
                 "PYTHONIOENCODING = $env:PYTHONIOENCODING } | "
                 "ConvertTo-Json -Compress | "
-                "Set-Content -LiteralPath $env:ORBIT_TEST_CAPTURE -Encoding UTF8\n",
+                "Set-Content -LiteralPath $env:PROMPTAFLOW_TEST_CAPTURE -Encoding UTF8\n",
                 encoding="utf-8",
             )
             environment = {
                 **os.environ,
                 "PROMPTAFLOW_CLI": str(fake),
-                "ORBIT_TEST_CAPTURE": str(capture),
+                "PROMPTAFLOW_TEST_CAPTURE": str(capture),
                 "PYTHONUTF8": "0",
                 "PYTHONIOENCODING": "cp936",
             }

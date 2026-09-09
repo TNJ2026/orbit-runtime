@@ -617,7 +617,7 @@ class HarnessSubagentHandlerTests(unittest.TestCase):
             self.assertIsNotNone(claimed)
             self.assertEqual("current-app", claimed["request"]["config"]["provider"])
             self.assertEqual(
-                {"name": "orbit-app-delegation", "version": "1"},
+                {"name": "promptaflow-app-delegation", "version": "1"},
                 claimed["request"]["protocol"],
             )
             self.assertEqual(

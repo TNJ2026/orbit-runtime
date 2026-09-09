@@ -33,10 +33,25 @@ window.__ModuleLoader__.load({
 		let react_jsx_runtime = require("react/jsx-runtime");
 		require("react-dom");
 		//#region ../../integration-core/lib/authoring-progress.js
-		const SENTINELS = ["promptaflow-progress:", "orbit-progress:"];
+		/** How far a Workflow being written has got, read from what it printed.
+		*
+		* Authoring has stages the way a Run has steps — it drafts, it compiles what
+		* came back, it goes round again when the compiler refuses, and it publishes —
+		* and the Runtime has always said so: `AuthoringJobService` writes a marker
+		* into the job's console at each turn. Nothing read them. The panel matched
+		* them only to drop them, so a job that spent a minute on its second attempt
+		* showed one unchanging line, and the one question a person watching has —
+		* *is it stuck or is it working* — had no answer on the page.
+		*
+		* A marker is a whole chunk whose text is the sentinel followed by JSON, so
+		* this reads chunks rather than scanning text: an Agent that prints the
+		* sentinel itself is printing inside a chunk of its own output, not writing a
+		* marker, and must not be able to move the ladder.
+		*/
+		const SENTINEL = "promptaflow-progress:";
 		/** The sentinel this chunk carries, if it carries one. */
 		function sentinelOf(text) {
-			return SENTINELS.find((candidate) => text.startsWith(candidate));
+			return text.startsWith(SENTINEL) ? SENTINEL : void 0;
 		}
 		/** The three things authoring does. Repairing is not among them — see below. */
 		const AUTHORING_STAGES = [
@@ -118,14 +133,14 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region ../../integration-core/lib/error-text.js
 		const READINGS = [
-			[/Hub workspace registration returned invalid JSON|(PromptaFlow|Orbit) command failed/i, "errDiscoveryFailed"],
+			[/Hub workspace registration returned invalid JSON|PromptaFlow command failed/i, "errDiscoveryFailed"],
 			[/Hub auto-start requires a loopback HTTP URL/i, "errRuntimeAddress"],
-			[/No independent (PromptaFlow|Orbit) Runtime is serving/i, "errNoRuntime"],
+			[/No independent PromptaFlow Runtime is serving/i, "errNoRuntime"],
 			[/auto-start (failed|timed out)/i, "errStartFailed"],
 			[/Runtime discovery (failed|returned invalid JSON|must return an array)/i, "errDiscoveryFailed"],
-			[/Multiple (PromptaFlow|Orbit) Runtimes claim/i, "errRuntimeConflict"],
+			[/Multiple PromptaFlow Runtimes claim/i, "errRuntimeConflict"],
 			[/not reachable over HTTP MCP|published no HTTP address|did not publish a browser address/i, "errRuntimeAddress"],
-			[/incompatible (PromptaFlow|Orbit) integration protocol/i, "errVersionMismatch"],
+			[/incompatible PromptaFlow integration protocol/i, "errVersionMismatch"],
 			[/only a Runtime operator|valid actor credentials|HTTP 40[13]/i, "errNotAllowed"],
 			[/refused to stop/i, "errStopRefused"],
 			[/timed out/i, "errTimeout"],
@@ -228,7 +243,7 @@ window.__ModuleLoader__.load({
 			return latest === void 0 ? [] : [latest];
 		}
 		//#endregion
-		//#region ../../integration-core/lib/orbit-model.js
+		//#region ../../integration-core/lib/promptaflow-model.js
 		/** What the panel shows, and how often it asks.
 		*
 		* Separated from the view because the interesting decisions here are not
@@ -236,9 +251,9 @@ window.__ModuleLoader__.load({
 		* how to stop asking when none is. React only renders the answer.
 		*/
 		/** Cadence while a Run is moving. */
-		const ORBIT_POLL_MS = 2e3;
+		const PROMPTAFLOW_POLL_MS = 2e3;
 		/** Cadence while nothing is. A resident panel costs nothing when idle. */
-		const ORBIT_IDLE_MS = 15e3;
+		const PROMPTAFLOW_IDLE_MS = 15e3;
 		/** Read the interrupts a Run advertises, keeping only the ones answerable here.
 		*
 		* An interrupt with no output port is a question this panel cannot form an
@@ -419,7 +434,7 @@ window.__ModuleLoader__.load({
 		*/
 		function artifactHref(sessionId, artifactId) {
 			if (!sessionId || !artifactId) return "";
-			return `/plugins/dsh-orbit/artifact?${new URLSearchParams({
+			return `/plugins/dsh-promptaflow/artifact?${new URLSearchParams({
 				session: sessionId,
 				id: artifactId
 			}).toString()}`;
@@ -431,7 +446,7 @@ window.__ModuleLoader__.load({
 		}
 		/** How soon to ask again, given what the last answer contained. */
 		function nextInterval(rows) {
-			return rows.some((row) => row.live) ? ORBIT_POLL_MS : ORBIT_IDLE_MS;
+			return rows.some((row) => row.live) ? PROMPTAFLOW_POLL_MS : PROMPTAFLOW_IDLE_MS;
 		}
 		/** Newest first, with anything still running ahead of anything finished.
 		*
@@ -503,9 +518,9 @@ window.__ModuleLoader__.load({
 			return row.commands.find((item) => item.command === command)?.expected_version;
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/cxd/develop/orbit/integrations/deepseek-harness/src/client/OrbitPanel.module.css.mjs
-		const css$1 = ".JeOz9W_panel,.JeOz9W_panel *,.JeOz9W_panel :before,.JeOz9W_panel :after{box-sizing:border-box}.JeOz9W_panel{border:1px solid var(--dsw-alias-border-l4,#80808033);background:var(--dsw-alias-bg-layer-1,Canvas);color:var(--dsw-alias-label-primary);pointer-events:auto;border-radius:12px;flex-direction:column;display:flex;position:absolute;overflow:hidden;box-shadow:0 12px 40px #0000002e}.JeOz9W_bar{border-bottom:1px solid var(--dsw-alias-border-l2,#8080801f);background:var(--dsw-alias-bg-module-platform,#80808014);cursor:grab;user-select:none;align-items:center;gap:8px;padding:8px 10px 8px 12px;display:flex}.JeOz9W_bar:active{cursor:grabbing}.JeOz9W_title{font-size:13px;font-weight:600}.JeOz9W_count{color:var(--dsw-alias-label-tertiary);flex:1;font-size:12px}.JeOz9W_body{flex:1;min-height:0;overflow-y:auto}.JeOz9W_row{border-bottom:1px solid var(--dsw-alias-border-l2,#8080801f);grid-template-columns:8px 1fr auto;align-items:start;gap:8px;padding:10px 12px;display:grid}.JeOz9W_row:last-child{border-bottom:0}.JeOz9W_dot{border-radius:50%;width:8px;height:8px;margin-top:5px}.JeOz9W_live{background:var(--dsw-alias-state-business-primary,#679efe)}.JeOz9W_done{background:var(--dsw-alias-state-success-primary,#22c55e)}.JeOz9W_failed{background:var(--dsw-alias-state-error-primary,#f25a5a)}.JeOz9W_unknown{background:var(--dsw-alias-state-warn-primary,#f59e0b)}.JeOz9W_goal{-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:13px;line-height:1.4;display:-webkit-box;overflow:hidden}.JeOz9W_meta{color:var(--dsw-alias-label-tertiary);font-size:11px}.JeOz9W_status{color:var(--dsw-alias-label-secondary,GrayText);white-space:nowrap;margin-left:8px;font-size:11px}.JeOz9W_empty,.JeOz9W_error{color:var(--dsw-alias-label-tertiary);text-align:center;padding:20px 14px;font-size:12px}.JeOz9W_error{color:var(--dsw-alias-state-error-primary);text-align:left}.JeOz9W_connecting{color:var(--dsw-alias-label-secondary,GrayText);justify-content:center;align-items:center;gap:9px;padding:24px 14px;font-size:12px;display:flex}.JeOz9W_connectSpinner{border:2px solid var(--dsw-alias-border-l3,#80808029);border-top-color:var(--dsw-alias-state-business-primary,Highlight);border-radius:50%;width:14px;height:14px;animation:.7s linear infinite JeOz9W_orbit-spin}.JeOz9W_badge{border:1px solid var(--dsw-alias-border-l4,#80808033);background:var(--dsw-alias-bg-layer-1,Canvas);width:42px;height:42px;color:var(--dsw-alias-label-secondary);cursor:pointer;pointer-events:auto;border-radius:999px;place-items:center;margin-top:-21px;padding:0;display:grid;position:absolute;top:50%;right:18px;box-shadow:0 6px 20px #00000024}.JeOz9W_badge:hover{transform:translateY(-1px)}.JeOz9W_orbitMark{width:30px;height:30px}.JeOz9W_orbitBackground{fill:var(--dsw-alias-label-primary)}.JeOz9W_orbitRing{fill:none;stroke:var(--dsw-alias-bg-layer-1,Canvas);stroke-width:6px}.JeOz9W_orbitSatellite{fill:var(--dsw-alias-state-business-primary,Highlight)}.JeOz9W_resize{cursor:nwse-resize;width:14px;height:14px;position:absolute;inset:auto 0 0 auto}.JeOz9W_stepDisclosure{width:100%;min-width:0}.JeOz9W_stepRow{width:100%;min-width:0;height:32px;color:inherit;text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:8px;padding:4px 12px 4px 22px;font-size:12px;display:flex}.JeOz9W_stepRow:disabled{cursor:default}.JeOz9W_stepTitle{text-overflow:ellipsis;white-space:nowrap;flex:auto;min-width:0;overflow:hidden}.JeOz9W_stepChevron{color:var(--dsw-alias-label-tertiary,GrayText);flex:none;transition:transform .12s}.JeOz9W_stepChevronOpen{transform:rotate(180deg)}.JeOz9W_stepContent{padding:0 12px 4px 38px}.JeOz9W_stepDot{border-radius:50%;flex:none;width:8px;height:8px;display:block}.JeOz9W_stepDot_success{background:var(--dsw-alias-state-success-primary,#22c55e)}.JeOz9W_stepDot_error{background:var(--dsw-alias-state-error-primary,#f25a5a)}.JeOz9W_stepDot_skipped{background:var(--dsw-alias-label-tertiary,#adb2b8)}.JeOz9W_stepDot_warning{background:var(--dsw-alias-state-warn-primary,#f59e0b)}.JeOz9W_stepDot_ongoing{background:var(--dsw-alias-state-business-primary,#679efe)}.JeOz9W_attention{border-left:2px solid var(--dsw-alias-state-warn-primary,#f59e0b);color:var(--dsw-alias-label-secondary);margin:4px 0;padding:6px 8px;font-size:11px}.JeOz9W_actions{flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 8px;display:flex}.JeOz9W_runActions{justify-content:center;padding:0 12px}.JeOz9W_actions input{border:1px solid var(--dsw-alias-border-l3,#80808029);background:var(--dsw-alias-bg-layer-1,Canvas);min-width:0;color:var(--dsw-alias-label-primary);border-radius:6px;flex:140px;padding:4px 8px;font-size:11px}.JeOz9W_iconButton{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:0;border-radius:4px;justify-content:center;align-items:center;padding:2px;display:inline-flex}.JeOz9W_iconButton:hover{color:var(--dsw-alias-label-primary)}.JeOz9W_iconButton:disabled{cursor:default}.JeOz9W_iconButton:disabled svg{animation:.7s linear infinite JeOz9W_orbit-spin}@keyframes JeOz9W_orbit-spin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.JeOz9W_iconButton:disabled svg,.JeOz9W_connectSpinner{opacity:.45;animation:none}}.JeOz9W_stopButton:hover{color:var(--dsw-alias-state-error-primary,LinkText)}.JeOz9W_confirmBar{border-bottom:1px solid var(--dsw-alias-border-l2,#8080801f);background:var(--dsw-alias-bg-module-platform,#80808014);gap:8px;padding:10px 12px;display:grid}.JeOz9W_confirmText{color:var(--dsw-alias-label-secondary,GrayText);font-size:12px;line-height:1.5}.JeOz9W_confirmBar input{border:1px solid var(--dsw-alias-border-l3,#80808029);background:var(--dsw-alias-bg-layer-1,Canvas);color:var(--dsw-alias-label-primary);border-radius:6px;min-width:0;padding:4px 8px;font-size:11px}.JeOz9W_confirmActions{justify-content:flex-end;gap:8px;display:flex}.JeOz9W_confirmCancel,.JeOz9W_confirmGo{font:inherit;cursor:pointer;border-radius:6px;padding:4px 10px;font-size:12px}.JeOz9W_confirmCancel{border:1px solid var(--dsw-alias-border-l3,#80808029);background:var(--dsw-alias-bg-layer-1,Canvas);color:var(--dsw-alias-label-primary)}.JeOz9W_confirmGo{background:var(--dsw-alias-state-error-primary,Highlight);color:var(--dsw-alias-label-primary-foreground,#fff);border:0}.JeOz9W_confirmGo:disabled{opacity:.6;cursor:default}.JeOz9W_catalogRow{justify-content:space-between;align-items:baseline;gap:8px;padding:4px 0 4px 12px;display:flex}.JeOz9W_catalogRow>*{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.JeOz9W_catalogRow>span{flex:auto}.JeOz9W_catalogRow>code{flex:0 auto}.JeOz9W_tabs{border-bottom:1px solid var(--dsw-alias-border-l2,#8080801f);background:var(--dsw-alias-bg-module-platform,#80808014);flex:none;gap:2px;padding:6px 8px 0;display:flex}.JeOz9W_tab{color:var(--dsw-alias-label-tertiary,GrayText);cursor:pointer;background:0 0;border:0;border-bottom:2px solid #0000;flex:1 1 0;padding:6px 4px 8px;font-size:12px}.JeOz9W_tab:hover{color:var(--dsw-alias-label-primary,CanvasText)}.JeOz9W_tabActive{color:var(--dsw-alias-label-primary,CanvasText);border-bottom-color:var(--dsw-alias-state-business-primary,Highlight);font-weight:600}.JeOz9W_agentsGrid{gap:10px;padding:10px 12px;display:grid}.JeOz9W_agentCard{border:1px solid var(--dsw-alias-border-l3,#80808029);background:var(--dsw-alias-bg-layer-1,Canvas);border-radius:8px;gap:11px;padding:12px;transition:border-color .12s,background-color .12s;display:grid}.JeOz9W_agentCard:hover{border-color:var(--dsw-alias-state-business-primary,Highlight);background:var(--dsw-alias-bg-module-platform,#80808014)}.JeOz9W_agentHead{align-items:flex-start;gap:10px;display:flex}.JeOz9W_avatar{letter-spacing:.5px;text-transform:uppercase;border-radius:7px;flex:none;place-items:center;width:36px;height:36px;font-size:10px;font-weight:700;display:grid}.JeOz9W_agentIdentity{gap:2px;min-width:0;display:grid}.JeOz9W_agentName{color:var(--dsw-alias-label-primary,CanvasText);text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:600;overflow:hidden}.JeOz9W_agentVersion{color:var(--dsw-alias-label-tertiary,GrayText);font-family:ui-monospace,monospace;font-size:11px}.JeOz9W_agentStat{border-top:1px solid var(--dsw-alias-border-l2,#8080801f);justify-content:space-between;align-items:center;padding-top:9px;display:flex}.JeOz9W_agentStatLabel{color:var(--dsw-alias-label-tertiary,GrayText);font-size:11px}.JeOz9W_agentStatPill{background:var(--dsw-alias-bg-module-platform,#80808014);color:var(--dsw-alias-label-secondary,GrayText);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:600}.JeOz9W_agentStatError{background:var(--dsw-alias-state-error-secondary,#f25a5a1f);color:var(--dsw-alias-state-error-primary,LinkText)}.JeOz9W_flowRow{align-items:center;min-height:68px;padding:0 12px;transition:background-color .12s;display:flex}.JeOz9W_flowRow:has(.JeOz9W_flowButton:hover){background:var(--dsw-alias-bg-module-platform,#80808014)}.JeOz9W_flowName{font-size:12.5px;font-weight:600;line-height:1.45}.JeOz9W_listRow{width:100%;color:inherit;text-align:left;cursor:pointer;background:0 0;border:0;align-items:flex-start;gap:0;padding:9px 12px;display:flex}.JeOz9W_listRow:hover{background:var(--dsw-alias-bg-module-platform,#80808014)}.JeOz9W_listRow,.JeOz9W_flowRow,.JeOz9W_defnRow{position:relative}.JeOz9W_listRow:after,.JeOz9W_flowRow:after,.JeOz9W_defnRow:after{content:\"\";background:var(--dsw-alias-border-l2,#8080801f);height:1px;position:absolute;bottom:0;left:12px;right:12px}.JeOz9W_defnRow:after{left:0}.JeOz9W_listRow:last-child:after,.JeOz9W_flowRow:last-child:after,.JeOz9W_defnRow:last-child:after{display:none}.JeOz9W_listDot{flex:none;margin-top:4px}.JeOz9W_listMain{flex:auto;grid-template-columns:minmax(0,1fr);gap:1px;min-width:0;display:grid}.JeOz9W_listGoal{-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:12.5px;line-height:1.4;display:-webkit-box;overflow:hidden}.JeOz9W_listPrompt{-webkit-line-clamp:2;color:var(--dsw-alias-label-tertiary);overflow-wrap:anywhere;white-space:normal;-webkit-box-orient:vertical;font-size:11px;line-height:1.45;display:-webkit-box;overflow:hidden}.JeOz9W_back{width:fit-content;color:var(--dsw-alias-state-business-primary,Highlight);cursor:pointer;background:0 0;border:0;border-radius:10px;align-self:flex-start;align-items:center;gap:5px;margin:6px;padding:6px 10px;font-size:14px;font-weight:500;transition:background-color .12s;display:flex}.JeOz9W_backArrow{font-size:16px;line-height:1}.JeOz9W_back:hover{background:var(--dsw-alias-bg-module-platform,#80808014)}.JeOz9W_back:hover .JeOz9W_backLabel{text-decoration:none}.JeOz9W_goalTitle{text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;font-weight:600;line-height:1.4;overflow:hidden}.JeOz9W_goalPromptCard{background:var(--dsw-alias-bg-module-platform,#80808014);border-radius:6px;min-width:0;max-width:100%;margin:3px 0 0;padding:6px 8px}.JeOz9W_goalPrompt{min-width:0;max-width:100%;color:var(--dsw-alias-label-secondary,GrayText);white-space:pre-wrap;overflow-wrap:anywhere;-webkit-box-orient:vertical;margin:0;font-family:inherit;font-size:11.5px;line-height:1.5;display:-webkit-box;overflow:hidden}.JeOz9W_goalPrompt[data-open]{display:block}.JeOz9W_goalPromptToggle{color:var(--dsw-alias-state-business-primary,Highlight);font:inherit;cursor:pointer;background:0 0;border:0;border-radius:6px;align-items:center;gap:3px;margin-top:4px;padding:0;font-size:11px;display:flex}.JeOz9W_goalPromptToggle:hover{text-decoration:underline}.JeOz9W_goalPromptChevronOpen{transform:rotate(180deg)}.JeOz9W_authoringStages{--orbit-step-line:26px;padding:2px 0 6px}.JeOz9W_authoringStages .JeOz9W_stepDisclosure{position:relative}.JeOz9W_authoringStages .JeOz9W_stepDisclosure:before{content:\"\";top:0;bottom:0;left:var(--orbit-step-line);background:var(--dsw-alias-label-tertiary,#808080b3);width:1px;margin-left:-.5px;position:absolute}.JeOz9W_authoringStages .JeOz9W_stepDisclosure:first-child:before{top:16px}.JeOz9W_authoringStages .JeOz9W_stepDisclosure:last-child:before{bottom:calc(100% - 16px)}.JeOz9W_authoringStages .JeOz9W_stepDot{z-index:1;position:relative}.JeOz9W_authoringStages .JeOz9W_stepRow{cursor:default}.JeOz9W_resultBlock{gap:3px;padding:4px 12px 8px 22px;display:grid}.JeOz9W_resultLabel{color:var(--dsw-alias-label-tertiary,GrayText);letter-spacing:.02em;font-size:10.5px}.JeOz9W_outcome{font-size:12px;font-weight:600}.JeOz9W_outcome_done{color:var(--dsw-alias-state-success-primary,#22c55e)}.JeOz9W_outcome_error{color:var(--dsw-alias-state-error-primary,#f25a5a)}.JeOz9W_outcome_warning{color:var(--dsw-alias-state-warn-primary,#f59e0b)}.JeOz9W_outcome_ongoing{color:var(--dsw-alias-state-business-primary,#679efe)}.JeOz9W_artifactRow{gap:4px;display:grid}.JeOz9W_artifactText{background:var(--dsw-alias-bg-module-platform,#80808014);max-width:100%;max-height:240px;color:var(--dsw-alias-label-primary);white-space:pre-wrap;overflow-wrap:anywhere;border-radius:6px;margin:0;padding:6px 8px;font-family:inherit;font-size:11.5px;line-height:1.5;overflow:hidden auto}.JeOz9W_artifacts{flex-wrap:wrap;gap:6px;display:flex}.JeOz9W_artifactPath{background:var(--dsw-alias-bg-module-platform,#80808014);max-width:100%;color:var(--dsw-alias-label-secondary,GrayText);overflow-wrap:anywhere;user-select:all;border-radius:6px;padding:4px 8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;line-height:1.5}.JeOz9W_artifact{border:1px solid var(--dsw-alias-border-l3,#80808029);max-width:100%;color:var(--dsw-alias-state-business-primary,Highlight);text-overflow:ellipsis;white-space:nowrap;border-radius:999px;padding:3px 8px;font-size:11px;text-decoration:none;overflow:hidden}a.JeOz9W_artifact:hover{text-decoration:underline}.JeOz9W_result{background:var(--dsw-alias-bg-module-platform,#80808014);max-height:220px;color:var(--dsw-alias-label-primary);white-space:pre-wrap;overflow-wrap:anywhere;border-radius:6px;margin:0;padding:6px 8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.5;overflow:auto}.JeOz9W_resultError{color:var(--dsw-alias-state-error-primary)}.JeOz9W_goalCard{border-bottom:1px solid var(--dsw-alias-border-l2,#8080801f)}.JeOz9W_goalCard:last-child{border-bottom:0}.JeOz9W_goalHead{align-items:flex-start;gap:9px;width:100%;padding:9px 12px 6px;display:flex}.JeOz9W_goalSteps{--orbit-step-line:26px;padding-bottom:6px}.JeOz9W_goalSteps .JeOz9W_stepDisclosure{position:relative}.JeOz9W_goalSteps .JeOz9W_stepDisclosure:before{content:\"\";top:0;bottom:0;left:var(--orbit-step-line);background:var(--dsw-alias-label-tertiary,#808080b3);width:1px;margin-left:-.5px;position:absolute}.JeOz9W_goalSteps .JeOz9W_stepDisclosure:first-child:before{top:16px}.JeOz9W_goalSteps .JeOz9W_stepDisclosure:last-child:before{bottom:calc(100% - 16px)}.JeOz9W_goalSteps .JeOz9W_stepDisclosure:only-child:before{display:none}.JeOz9W_goalSteps .JeOz9W_stepDot{z-index:1;position:relative}.JeOz9W_detailHead{align-items:baseline;gap:8px;padding:0 12px;display:flex}.JeOz9W_detailGoal{font-size:13px;font-weight:650;line-height:1.4}.JeOz9W_detailMeta{border-bottom:1px solid var(--dsw-alias-border-l2,#8080801f);color:var(--dsw-alias-label-tertiary,GrayText);padding:2px 12px 8px;font-size:11px}.JeOz9W_flowButton{min-width:0;color:inherit;text-align:left;cursor:pointer;background:0 0;border:0;flex:auto;align-self:stretch;padding:9px 0;display:block}.JeOz9W_flowButton:hover{color:var(--dsw-alias-state-business-primary,Highlight);background:0 0}.JeOz9W_flowNewGoal{min-height:32px;color:var(--dsw-alias-label-secondary,GrayText);cursor:pointer;background:0 0;border:0;border-radius:10px;flex:none;margin-left:12px;padding:6px 10px;font-size:11.5px;font-weight:600;transition:background-color .12s}.JeOz9W_flowNewGoal:hover:not(:disabled){background:var(--dsw-alias-bg-module-platform,#80808014);text-decoration:none}.JeOz9W_flowNewGoal:disabled{opacity:.45;cursor:not-allowed}.JeOz9W_prose{color:var(--dsw-alias-label-secondary,GrayText);margin:0;padding:8px 12px;font-size:12px;line-height:1.55}.JeOz9W_workflowDetail{flex-direction:column;min-height:100%;display:flex}.JeOz9W_workflowDetail .JeOz9W_detailMeta,.JeOz9W_workflowDetailTabs,.JeOz9W_workflowActions,.JeOz9W_workflowDetail .JeOz9W_sectionLabel{position:relative}.JeOz9W_workflowDetail .JeOz9W_detailMeta{border-bottom:0}.JeOz9W_workflowDetailTabs{border:0;padding:0 12px;display:flex}.JeOz9W_workflowDetail .JeOz9W_detailMeta:after,.JeOz9W_workflowDetailTabs:before,.JeOz9W_workflowDetailTabs:after,.JeOz9W_workflowActions:before,.JeOz9W_workflowDetail .JeOz9W_sectionLabel:before{content:\"\";background:var(--dsw-alias-border-l2,#8080801f);height:1px;position:absolute;left:12px;right:12px}.JeOz9W_workflowDetail .JeOz9W_detailMeta:after,.JeOz9W_workflowDetailTabs:after{bottom:0}.JeOz9W_workflowDetailTabs:before,.JeOz9W_workflowActions:before,.JeOz9W_workflowDetail .JeOz9W_sectionLabel:before{top:0}.JeOz9W_workflowDetailTab,.JeOz9W_workflowDetailTabActive{color:var(--dsw-alias-label-tertiary,GrayText);cursor:pointer;background:0 0;border:0;padding:8px 10px;font-size:11.5px;position:relative}.JeOz9W_workflowDetailTabActive{color:var(--dsw-alias-label-primary,CanvasText);font-weight:600}.JeOz9W_workflowDetailTabActive:after{content:\"\";background:var(--dsw-alias-state-business-primary,Highlight);height:2px;position:absolute;bottom:-1px;left:8px;right:8px}.JeOz9W_workflowGraph{background:var(--dsw-alias-bg-base,Canvas);flex:none;width:auto;height:300px;min-height:240px;margin:0 12px}.JeOz9W_workflowDefinitionPanel{margin:0 12px}.JeOz9W_workflowGraph .react-flow__controls{border:1px solid var(--dsw-alias-border-l3,#80808029);box-shadow:none;border-radius:8px;overflow:hidden}.JeOz9W_workflowGraph .react-flow__controls-button{border-bottom-color:var(--dsw-alias-border-l2,#8080801f);background:var(--dsw-alias-bg-layer-1,Canvas);color:var(--dsw-alias-label-primary,CanvasText)}.JeOz9W_workflowGraph .react-flow__edge-text{fill:var(--dsw-alias-label-secondary,GrayText);font-size:10px}.JeOz9W_workflowGraph .react-flow__edge-textbg{fill:var(--dsw-alias-bg-base,Canvas)}.JeOz9W_graphNode{border:1px solid var(--dsw-alias-border-l3,#80808029);background:var(--dsw-alias-bg-layer-1,Canvas);min-width:210px;color:var(--dsw-alias-label-primary,CanvasText);border-radius:8px;padding:8px 10px;position:relative}.JeOz9W_graphNode_action{border-left:3px solid var(--dsw-alias-state-business-primary,#679efed9)}.JeOz9W_graphNode_human{border-left:3px solid var(--dsw-alias-state-warn-primary,#f59e0bd9)}.JeOz9W_graphNode_terminal{border-left:3px solid var(--dsw-alias-state-success-primary,#22c55ed9)}.JeOz9W_graphNode_decision{border-left:3px solid var(--dsw-alias-state-warn-primary,#d97706)}.JeOz9W_graphNode_join{border-left:3px solid var(--dsw-alias-label-tertiary,GrayText)}.JeOz9W_graphNodeKind{color:var(--dsw-alias-label-tertiary,GrayText);letter-spacing:.06em;text-transform:uppercase;font-size:10px;display:block}.JeOz9W_graphNodeTitle{margin-top:2px;font-size:13px;font-weight:600;display:block}.JeOz9W_graphNodeHandler{color:var(--dsw-alias-label-tertiary,GrayText);margin-top:6px;font:11px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;display:block}.JeOz9W_graphNode .react-flow__handle{opacity:0;width:7px;height:7px}.JeOz9W_workflowActions{border-top:0;align-items:center;gap:6px;padding:8px 12px;display:flex}.JeOz9W_workflowAction,.JeOz9W_workflowPrimaryAction,.JeOz9W_workflowDangerAction{border:1px solid var(--dsw-alias-border-l3,#80808029);background:var(--dsw-alias-bg-module-platform,#80808014);min-height:30px;color:var(--dsw-alias-label-primary,CanvasText);cursor:pointer;border-radius:7px;align-items:center;padding:5px 10px;font-size:11.5px;text-decoration:none;display:inline-flex}.JeOz9W_workflowPrimaryAction{background:var(--dsw-alias-state-business-primary,Highlight);color:var(--dsw-alias-label-on-color,HighlightText);border-color:#0000}.JeOz9W_workflowDangerAction{border-color:var(--dsw-alias-state-error-primary,#f25a5a);color:var(--dsw-alias-state-error-primary,LinkText);background:0 0}.JeOz9W_workflowDangerAction:disabled{opacity:.55;cursor:default}.JeOz9W_workflowDeleteConfirm{border:1px solid var(--dsw-alias-border-l3,#80808029);background:var(--dsw-alias-bg-module-platform,#80808014);color:var(--dsw-alias-label-secondary,GrayText);border-radius:8px;gap:7px;margin:0 12px 8px;padding:10px;font-size:11.5px;display:grid}.JeOz9W_workflowDeleteConfirm strong{color:var(--dsw-alias-label-primary,CanvasText);font-size:12px}.JeOz9W_workflowDeleteConfirm code{overflow-wrap:anywhere;font-size:10.5px}.JeOz9W_sectionLabel{border-top:1px solid var(--dsw-alias-border-l2,#8080801f);color:var(--dsw-alias-label-tertiary,GrayText);padding:8px 12px 4px;font-size:11px}.JeOz9W_workflowDetail .JeOz9W_sectionLabel{border-top:0}.JeOz9W_defnRow{border-left:2px solid var(--dsw-alias-label-tertiary,#adb2b8b3);padding:8px 12px 9px}.JeOz9W_kind_action{border-left-color:var(--dsw-alias-state-business-primary,#679efed9)}.JeOz9W_kind_human{border-left-color:var(--dsw-alias-state-warn-primary,#f59e0bd9)}.JeOz9W_kind_terminal{border-left-color:var(--dsw-alias-state-success-primary,#22c55ed9)}.JeOz9W_kind_decision{border-left-color:var(--dsw-alias-label-secondary,#cfd3d6d9)}.JeOz9W_kind_join{border-left-color:var(--dsw-alias-label-tertiary,#adb2b8b3)}.JeOz9W_defnHead{align-items:baseline;gap:6px;min-width:0;display:flex}.JeOz9W_defnName{text-overflow:ellipsis;white-space:nowrap;flex:0 auto;min-width:0;font-size:12.5px;font-weight:600;overflow:hidden}.JeOz9W_defnKind{color:var(--dsw-alias-label-tertiary,GrayText);letter-spacing:.04em;text-transform:uppercase;flex:none;font-size:10px}.JeOz9W_defnHandler{text-overflow:ellipsis;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-tertiary,GrayText);flex:0 auto;margin-left:auto;font-family:ui-monospace,monospace;font-size:11px;overflow:hidden}.JeOz9W_defnPrompt,.JeOz9W_defnNoPrompt{color:var(--dsw-alias-label-secondary,GrayText);-webkit-line-clamp:3;-webkit-box-orient:vertical;margin:3px 0 0;font-size:11.5px;line-height:1.5;display:-webkit-box;overflow:hidden}.JeOz9W_defnNoPrompt{color:var(--dsw-alias-label-tertiary,GrayText);font-style:italic}.JeOz9W_shape{align-items:center;margin-top:5px;display:flex}.JeOz9W_shapeNode{border:1px solid var(--dsw-alias-border-l3,#80808029);width:15px;height:15px;color:var(--dsw-alias-state-business-primary,#5078ffe6);border-radius:50%;flex:0 0 15px;place-items:center;font-family:ui-monospace,monospace;font-size:7.5px;font-weight:700;line-height:1;display:grid;position:relative}.JeOz9W_shapeNode+.JeOz9W_shapeNode{margin-left:8px}.JeOz9W_shapeNode+.JeOz9W_shapeNode:before{content:\"\";border-top:1px solid var(--dsw-alias-border-l3,#80808029);width:8px;position:absolute;top:50%;right:100%}.JeOz9W_node_human{color:var(--dsw-alias-state-warn-primary,#c88c28f2)}.JeOz9W_node_terminal{color:var(--dsw-alias-state-success-primary,#3ca05af2)}.JeOz9W_node_decision{color:var(--dsw-alias-label-secondary,GrayText)}.JeOz9W_node_more{color:var(--dsw-alias-label-tertiary,GrayText);font-size:7px}.JeOz9W_flowBlocked{color:var(--dsw-alias-state-warn-primary,#f59e0b);margin-left:6px;font-size:10px;font-weight:500}.JeOz9W_authoringRow{border-bottom:1px solid var(--dsw-alias-border-l2,#8080801f);background:var(--dsw-alias-bg-module-platform,#80808014);padding:9px 12px}.JeOz9W_authoringSummary{align-items:flex-start;gap:8px;display:flex}.JeOz9W_authoringMain{flex:auto;gap:2px;min-width:0;display:grid}.JeOz9W_authoringLabel{font-size:12px;font-weight:600;line-height:1.4}.JeOz9W_authoringPrompt{color:var(--dsw-alias-label-secondary,GrayText);-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:11px;line-height:1.45;display:-webkit-box;overflow:hidden}.JeOz9W_authoringOutputToggle{width:24px;height:24px;color:var(--dsw-alias-label-secondary,GrayText);cursor:pointer;background:0 0;border:0;flex:none;place-items:center;padding:0;display:grid}.JeOz9W_authoringOutputToggle svg{transition:transform .15s}.JeOz9W_authoringChevronOpen{transform:rotate(180deg)}.JeOz9W_authoringOutput{border:1px solid var(--dsw-alias-border-l3,#80808029);background:var(--dsw-alias-bg-base,Canvas);border-radius:6px;max-height:180px;margin:8px 0 0 16px;padding:8px;overflow:auto}.JeOz9W_authoringOutput pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}";
-		const tagId$1 = "@promptaflow/dsh/OrbitPanel.module.css";
+		//#region \0dsh-css:src/client/PromptaFlowPanel.module.css.mjs
+		const css$1 = ".jB2GrG_panel,.jB2GrG_panel *,.jB2GrG_panel :before,.jB2GrG_panel :after{box-sizing:border-box}.jB2GrG_panel{border:1px solid var(--dsw-alias-border-l4,#80808033);background:var(--dsw-alias-bg-layer-1,Canvas);color:var(--dsw-alias-label-primary);pointer-events:auto;border-radius:12px;flex-direction:column;display:flex;position:absolute;overflow:hidden;box-shadow:0 12px 40px #0000002e}.jB2GrG_bar{border-bottom:1px solid var(--dsw-alias-border-l2,#8080801f);background:var(--dsw-alias-bg-module-platform,#80808014);cursor:grab;user-select:none;align-items:center;gap:8px;padding:8px 10px 8px 12px;display:flex}.jB2GrG_bar:active{cursor:grabbing}.jB2GrG_title{font-size:13px;font-weight:600}.jB2GrG_count{color:var(--dsw-alias-label-tertiary);flex:1;font-size:12px}.jB2GrG_body{flex:1;min-height:0;overflow-y:auto}.jB2GrG_row{border-bottom:1px solid var(--dsw-alias-border-l2,#8080801f);grid-template-columns:8px 1fr auto;align-items:start;gap:8px;padding:10px 12px;display:grid}.jB2GrG_row:last-child{border-bottom:0}.jB2GrG_dot{border-radius:50%;width:8px;height:8px;margin-top:5px}.jB2GrG_live{background:var(--dsw-alias-state-business-primary,#679efe)}.jB2GrG_done{background:var(--dsw-alias-state-success-primary,#22c55e)}.jB2GrG_failed{background:var(--dsw-alias-state-error-primary,#f25a5a)}.jB2GrG_unknown{background:var(--dsw-alias-state-warn-primary,#f59e0b)}.jB2GrG_goal{-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:13px;line-height:1.4;display:-webkit-box;overflow:hidden}.jB2GrG_meta{color:var(--dsw-alias-label-tertiary);font-size:11px}.jB2GrG_status{color:var(--dsw-alias-label-secondary,GrayText);white-space:nowrap;margin-left:8px;font-size:11px}.jB2GrG_empty,.jB2GrG_error{color:var(--dsw-alias-label-tertiary);text-align:center;padding:20px 14px;font-size:12px}.jB2GrG_error{color:var(--dsw-alias-state-error-primary);text-align:left}.jB2GrG_connecting{color:var(--dsw-alias-label-secondary,GrayText);justify-content:center;align-items:center;gap:9px;padding:24px 14px;font-size:12px;display:flex}.jB2GrG_connectSpinner{border:2px solid var(--dsw-alias-border-l3,#80808029);border-top-color:var(--dsw-alias-state-business-primary,Highlight);border-radius:50%;width:14px;height:14px;animation:.7s linear infinite jB2GrG_promptaflow-spin}.jB2GrG_badge{border:1px solid var(--dsw-alias-border-l4,#80808033);background:var(--dsw-alias-bg-layer-1,Canvas);width:42px;height:42px;color:var(--dsw-alias-label-secondary);cursor:pointer;pointer-events:auto;border-radius:999px;place-items:center;margin-top:-21px;padding:0;display:grid;position:absolute;top:50%;right:18px;box-shadow:0 6px 20px #00000024}.jB2GrG_badge:hover{transform:translateY(-1px)}.jB2GrG_promptaflowMark{width:30px;height:30px}.jB2GrG_promptaflowBackground{fill:var(--dsw-alias-label-primary)}.jB2GrG_promptaflowRing{fill:none;stroke:var(--dsw-alias-bg-layer-1,Canvas);stroke-width:6px}.jB2GrG_promptaflowSatellite{fill:var(--dsw-alias-state-business-primary,Highlight)}.jB2GrG_resize{cursor:nwse-resize;width:14px;height:14px;position:absolute;inset:auto 0 0 auto}.jB2GrG_stepDisclosure{width:100%;min-width:0}.jB2GrG_stepRow{width:100%;min-width:0;height:32px;color:inherit;text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:8px;padding:4px 12px 4px 22px;font-size:12px;display:flex}.jB2GrG_stepRow:disabled{cursor:default}.jB2GrG_stepTitle{text-overflow:ellipsis;white-space:nowrap;flex:auto;min-width:0;overflow:hidden}.jB2GrG_stepChevron{color:var(--dsw-alias-label-tertiary,GrayText);flex:none;transition:transform .12s}.jB2GrG_stepChevronOpen{transform:rotate(180deg)}.jB2GrG_stepContent{padding:0 12px 4px 38px}.jB2GrG_stepDot{border-radius:50%;flex:none;width:8px;height:8px;display:block}.jB2GrG_stepDot_success{background:var(--dsw-alias-state-success-primary,#22c55e)}.jB2GrG_stepDot_error{background:var(--dsw-alias-state-error-primary,#f25a5a)}.jB2GrG_stepDot_skipped{background:var(--dsw-alias-label-tertiary,#adb2b8)}.jB2GrG_stepDot_warning{background:var(--dsw-alias-state-warn-primary,#f59e0b)}.jB2GrG_stepDot_ongoing{background:var(--dsw-alias-state-business-primary,#679efe)}.jB2GrG_attention{border-left:2px solid var(--dsw-alias-state-warn-primary,#f59e0b);color:var(--dsw-alias-label-secondary);margin:4px 0;padding:6px 8px;font-size:11px}.jB2GrG_actions{flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 8px;display:flex}.jB2GrG_runActions{justify-content:center;padding:0 12px}.jB2GrG_actions input{border:1px solid var(--dsw-alias-border-l3,#80808029);background:var(--dsw-alias-bg-layer-1,Canvas);min-width:0;color:var(--dsw-alias-label-primary);border-radius:6px;flex:140px;padding:4px 8px;font-size:11px}.jB2GrG_iconButton{color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:0;border-radius:4px;justify-content:center;align-items:center;padding:2px;display:inline-flex}.jB2GrG_iconButton:hover{color:var(--dsw-alias-label-primary)}.jB2GrG_iconButton:disabled{cursor:default}.jB2GrG_iconButton:disabled svg{animation:.7s linear infinite jB2GrG_promptaflow-spin}@keyframes jB2GrG_promptaflow-spin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.jB2GrG_iconButton:disabled svg,.jB2GrG_connectSpinner{opacity:.45;animation:none}}.jB2GrG_stopButton:hover{color:var(--dsw-alias-state-error-primary,LinkText)}.jB2GrG_confirmBar{border-bottom:1px solid var(--dsw-alias-border-l2,#8080801f);background:var(--dsw-alias-bg-module-platform,#80808014);gap:8px;padding:10px 12px;display:grid}.jB2GrG_confirmText{color:var(--dsw-alias-label-secondary,GrayText);font-size:12px;line-height:1.5}.jB2GrG_confirmBar input{border:1px solid var(--dsw-alias-border-l3,#80808029);background:var(--dsw-alias-bg-layer-1,Canvas);color:var(--dsw-alias-label-primary);border-radius:6px;min-width:0;padding:4px 8px;font-size:11px}.jB2GrG_confirmActions{justify-content:flex-end;gap:8px;display:flex}.jB2GrG_confirmCancel,.jB2GrG_confirmGo{font:inherit;cursor:pointer;border-radius:6px;padding:4px 10px;font-size:12px}.jB2GrG_confirmCancel{border:1px solid var(--dsw-alias-border-l3,#80808029);background:var(--dsw-alias-bg-layer-1,Canvas);color:var(--dsw-alias-label-primary)}.jB2GrG_confirmGo{background:var(--dsw-alias-state-error-primary,Highlight);color:var(--dsw-alias-label-primary-foreground,#fff);border:0}.jB2GrG_confirmGo:disabled{opacity:.6;cursor:default}.jB2GrG_catalogRow{justify-content:space-between;align-items:baseline;gap:8px;padding:4px 0 4px 12px;display:flex}.jB2GrG_catalogRow>*{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.jB2GrG_catalogRow>span{flex:auto}.jB2GrG_catalogRow>code{flex:0 auto}.jB2GrG_tabs{border-bottom:1px solid var(--dsw-alias-border-l2,#8080801f);background:var(--dsw-alias-bg-module-platform,#80808014);flex:none;gap:2px;padding:6px 8px 0;display:flex}.jB2GrG_tab{color:var(--dsw-alias-label-tertiary,GrayText);cursor:pointer;background:0 0;border:0;border-bottom:2px solid #0000;flex:1 1 0;padding:6px 4px 8px;font-size:12px}.jB2GrG_tab:hover{color:var(--dsw-alias-label-primary,CanvasText)}.jB2GrG_tabActive{color:var(--dsw-alias-label-primary,CanvasText);border-bottom-color:var(--dsw-alias-state-business-primary,Highlight);font-weight:600}.jB2GrG_agentsGrid{gap:10px;padding:10px 12px;display:grid}.jB2GrG_agentCard{border:1px solid var(--dsw-alias-border-l3,#80808029);background:var(--dsw-alias-bg-layer-1,Canvas);border-radius:8px;gap:11px;padding:12px;transition:border-color .12s,background-color .12s;display:grid}.jB2GrG_agentCard:hover{border-color:var(--dsw-alias-state-business-primary,Highlight);background:var(--dsw-alias-bg-module-platform,#80808014)}.jB2GrG_agentHead{align-items:flex-start;gap:10px;display:flex}.jB2GrG_avatar{letter-spacing:.5px;text-transform:uppercase;border-radius:7px;flex:none;place-items:center;width:36px;height:36px;font-size:10px;font-weight:700;display:grid}.jB2GrG_agentIdentity{gap:2px;min-width:0;display:grid}.jB2GrG_agentName{color:var(--dsw-alias-label-primary,CanvasText);text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:600;overflow:hidden}.jB2GrG_agentVersion{color:var(--dsw-alias-label-tertiary,GrayText);font-family:ui-monospace,monospace;font-size:11px}.jB2GrG_agentStat{border-top:1px solid var(--dsw-alias-border-l2,#8080801f);justify-content:space-between;align-items:center;padding-top:9px;display:flex}.jB2GrG_agentStatLabel{color:var(--dsw-alias-label-tertiary,GrayText);font-size:11px}.jB2GrG_agentStatPill{background:var(--dsw-alias-bg-module-platform,#80808014);color:var(--dsw-alias-label-secondary,GrayText);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:600}.jB2GrG_agentStatError{background:var(--dsw-alias-state-error-secondary,#f25a5a1f);color:var(--dsw-alias-state-error-primary,LinkText)}.jB2GrG_flowRow{align-items:center;min-height:68px;padding:0 12px;transition:background-color .12s;display:flex}.jB2GrG_flowRow:has(.jB2GrG_flowButton:hover){background:var(--dsw-alias-bg-module-platform,#80808014)}.jB2GrG_flowName{font-size:12.5px;font-weight:600;line-height:1.45}.jB2GrG_listRow{width:100%;color:inherit;text-align:left;cursor:pointer;background:0 0;border:0;align-items:flex-start;gap:0;padding:9px 12px;display:flex}.jB2GrG_listRow:hover{background:var(--dsw-alias-bg-module-platform,#80808014)}.jB2GrG_listRow,.jB2GrG_flowRow,.jB2GrG_defnRow{position:relative}.jB2GrG_listRow:after,.jB2GrG_flowRow:after,.jB2GrG_defnRow:after{content:\"\";background:var(--dsw-alias-border-l2,#8080801f);height:1px;position:absolute;bottom:0;left:12px;right:12px}.jB2GrG_defnRow:after{left:0}.jB2GrG_listRow:last-child:after,.jB2GrG_flowRow:last-child:after,.jB2GrG_defnRow:last-child:after{display:none}.jB2GrG_listDot{flex:none;margin-top:4px}.jB2GrG_listMain{flex:auto;grid-template-columns:minmax(0,1fr);gap:1px;min-width:0;display:grid}.jB2GrG_listGoal{-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:12.5px;line-height:1.4;display:-webkit-box;overflow:hidden}.jB2GrG_listPrompt{-webkit-line-clamp:2;color:var(--dsw-alias-label-tertiary);overflow-wrap:anywhere;white-space:normal;-webkit-box-orient:vertical;font-size:11px;line-height:1.45;display:-webkit-box;overflow:hidden}.jB2GrG_back{width:fit-content;color:var(--dsw-alias-state-business-primary,Highlight);cursor:pointer;background:0 0;border:0;border-radius:10px;align-self:flex-start;align-items:center;gap:5px;margin:6px;padding:6px 10px;font-size:14px;font-weight:500;transition:background-color .12s;display:flex}.jB2GrG_backArrow{font-size:16px;line-height:1}.jB2GrG_back:hover{background:var(--dsw-alias-bg-module-platform,#80808014)}.jB2GrG_back:hover .jB2GrG_backLabel{text-decoration:none}.jB2GrG_goalTitle{text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;font-weight:600;line-height:1.4;overflow:hidden}.jB2GrG_goalPromptCard{background:var(--dsw-alias-bg-module-platform,#80808014);border-radius:6px;min-width:0;max-width:100%;margin:3px 0 0;padding:6px 8px}.jB2GrG_goalPrompt{min-width:0;max-width:100%;color:var(--dsw-alias-label-secondary,GrayText);white-space:pre-wrap;overflow-wrap:anywhere;-webkit-box-orient:vertical;margin:0;font-family:inherit;font-size:11.5px;line-height:1.5;display:-webkit-box;overflow:hidden}.jB2GrG_goalPrompt[data-open]{display:block}.jB2GrG_goalPromptToggle{color:var(--dsw-alias-state-business-primary,Highlight);font:inherit;cursor:pointer;background:0 0;border:0;border-radius:6px;align-items:center;gap:3px;margin-top:4px;padding:0;font-size:11px;display:flex}.jB2GrG_goalPromptToggle:hover{text-decoration:underline}.jB2GrG_goalPromptChevronOpen{transform:rotate(180deg)}.jB2GrG_authoringStages{--promptaflow-step-line:26px;padding:2px 0 6px}.jB2GrG_authoringStages .jB2GrG_stepDisclosure{position:relative}.jB2GrG_authoringStages .jB2GrG_stepDisclosure:before{content:\"\";top:0;bottom:0;left:var(--promptaflow-step-line);background:var(--dsw-alias-label-tertiary,#808080b3);width:1px;margin-left:-.5px;position:absolute}.jB2GrG_authoringStages .jB2GrG_stepDisclosure:first-child:before{top:16px}.jB2GrG_authoringStages .jB2GrG_stepDisclosure:last-child:before{bottom:calc(100% - 16px)}.jB2GrG_authoringStages .jB2GrG_stepDot{z-index:1;position:relative}.jB2GrG_authoringStages .jB2GrG_stepRow{cursor:default}.jB2GrG_resultBlock{gap:3px;padding:4px 12px 8px 22px;display:grid}.jB2GrG_resultLabel{color:var(--dsw-alias-label-tertiary,GrayText);letter-spacing:.02em;font-size:10.5px}.jB2GrG_outcome{font-size:12px;font-weight:600}.jB2GrG_outcome_done{color:var(--dsw-alias-state-success-primary,#22c55e)}.jB2GrG_outcome_error{color:var(--dsw-alias-state-error-primary,#f25a5a)}.jB2GrG_outcome_warning{color:var(--dsw-alias-state-warn-primary,#f59e0b)}.jB2GrG_outcome_ongoing{color:var(--dsw-alias-state-business-primary,#679efe)}.jB2GrG_artifactRow{gap:4px;display:grid}.jB2GrG_artifactText{background:var(--dsw-alias-bg-module-platform,#80808014);max-width:100%;max-height:240px;color:var(--dsw-alias-label-primary);white-space:pre-wrap;overflow-wrap:anywhere;border-radius:6px;margin:0;padding:6px 8px;font-family:inherit;font-size:11.5px;line-height:1.5;overflow:hidden auto}.jB2GrG_artifacts{flex-wrap:wrap;gap:6px;display:flex}.jB2GrG_artifactPath{background:var(--dsw-alias-bg-module-platform,#80808014);max-width:100%;color:var(--dsw-alias-label-secondary,GrayText);overflow-wrap:anywhere;user-select:all;border-radius:6px;padding:4px 8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;line-height:1.5}.jB2GrG_artifact{border:1px solid var(--dsw-alias-border-l3,#80808029);max-width:100%;color:var(--dsw-alias-state-business-primary,Highlight);text-overflow:ellipsis;white-space:nowrap;border-radius:999px;padding:3px 8px;font-size:11px;text-decoration:none;overflow:hidden}a.jB2GrG_artifact:hover{text-decoration:underline}.jB2GrG_result{background:var(--dsw-alias-bg-module-platform,#80808014);max-height:220px;color:var(--dsw-alias-label-primary);white-space:pre-wrap;overflow-wrap:anywhere;border-radius:6px;margin:0;padding:6px 8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.5;overflow:auto}.jB2GrG_resultError{color:var(--dsw-alias-state-error-primary)}.jB2GrG_goalCard{border-bottom:1px solid var(--dsw-alias-border-l2,#8080801f)}.jB2GrG_goalCard:last-child{border-bottom:0}.jB2GrG_goalHead{align-items:flex-start;gap:9px;width:100%;padding:9px 12px 6px;display:flex}.jB2GrG_goalSteps{--promptaflow-step-line:26px;padding-bottom:6px}.jB2GrG_goalSteps .jB2GrG_stepDisclosure{position:relative}.jB2GrG_goalSteps .jB2GrG_stepDisclosure:before{content:\"\";top:0;bottom:0;left:var(--promptaflow-step-line);background:var(--dsw-alias-label-tertiary,#808080b3);width:1px;margin-left:-.5px;position:absolute}.jB2GrG_goalSteps .jB2GrG_stepDisclosure:first-child:before{top:16px}.jB2GrG_goalSteps .jB2GrG_stepDisclosure:last-child:before{bottom:calc(100% - 16px)}.jB2GrG_goalSteps .jB2GrG_stepDisclosure:only-child:before{display:none}.jB2GrG_goalSteps .jB2GrG_stepDot{z-index:1;position:relative}.jB2GrG_detailHead{align-items:baseline;gap:8px;padding:0 12px;display:flex}.jB2GrG_detailGoal{font-size:13px;font-weight:650;line-height:1.4}.jB2GrG_detailMeta{border-bottom:1px solid var(--dsw-alias-border-l2,#8080801f);color:var(--dsw-alias-label-tertiary,GrayText);padding:2px 12px 8px;font-size:11px}.jB2GrG_flowButton{min-width:0;color:inherit;text-align:left;cursor:pointer;background:0 0;border:0;flex:auto;align-self:stretch;padding:9px 0;display:block}.jB2GrG_flowButton:hover{color:var(--dsw-alias-state-business-primary,Highlight);background:0 0}.jB2GrG_flowNewGoal{min-height:32px;color:var(--dsw-alias-label-secondary,GrayText);cursor:pointer;background:0 0;border:0;border-radius:10px;flex:none;margin-left:12px;padding:6px 10px;font-size:11.5px;font-weight:600;transition:background-color .12s}.jB2GrG_flowNewGoal:hover:not(:disabled){background:var(--dsw-alias-bg-module-platform,#80808014);text-decoration:none}.jB2GrG_flowNewGoal:disabled{opacity:.45;cursor:not-allowed}.jB2GrG_prose{color:var(--dsw-alias-label-secondary,GrayText);margin:0;padding:8px 12px;font-size:12px;line-height:1.55}.jB2GrG_workflowDetail{flex-direction:column;min-height:100%;display:flex}.jB2GrG_workflowDetail .jB2GrG_detailMeta,.jB2GrG_workflowDetailTabs,.jB2GrG_workflowActions,.jB2GrG_workflowDetail .jB2GrG_sectionLabel{position:relative}.jB2GrG_workflowDetail .jB2GrG_detailMeta{border-bottom:0}.jB2GrG_workflowDetailTabs{border:0;padding:0 12px;display:flex}.jB2GrG_workflowDetail .jB2GrG_detailMeta:after,.jB2GrG_workflowDetailTabs:before,.jB2GrG_workflowDetailTabs:after,.jB2GrG_workflowActions:before,.jB2GrG_workflowDetail .jB2GrG_sectionLabel:before{content:\"\";background:var(--dsw-alias-border-l2,#8080801f);height:1px;position:absolute;left:12px;right:12px}.jB2GrG_workflowDetail .jB2GrG_detailMeta:after,.jB2GrG_workflowDetailTabs:after{bottom:0}.jB2GrG_workflowDetailTabs:before,.jB2GrG_workflowActions:before,.jB2GrG_workflowDetail .jB2GrG_sectionLabel:before{top:0}.jB2GrG_workflowDetailTab,.jB2GrG_workflowDetailTabActive{color:var(--dsw-alias-label-tertiary,GrayText);cursor:pointer;background:0 0;border:0;padding:8px 10px;font-size:11.5px;position:relative}.jB2GrG_workflowDetailTabActive{color:var(--dsw-alias-label-primary,CanvasText);font-weight:600}.jB2GrG_workflowDetailTabActive:after{content:\"\";background:var(--dsw-alias-state-business-primary,Highlight);height:2px;position:absolute;bottom:-1px;left:8px;right:8px}.jB2GrG_workflowGraph{background:var(--dsw-alias-bg-base,Canvas);flex:none;width:auto;height:300px;min-height:240px;margin:0 12px}.jB2GrG_workflowDefinitionPanel{margin:0 12px}.jB2GrG_workflowGraph .react-flow__controls{border:1px solid var(--dsw-alias-border-l3,#80808029);box-shadow:none;border-radius:8px;overflow:hidden}.jB2GrG_workflowGraph .react-flow__controls-button{border-bottom-color:var(--dsw-alias-border-l2,#8080801f);background:var(--dsw-alias-bg-layer-1,Canvas);color:var(--dsw-alias-label-primary,CanvasText)}.jB2GrG_workflowGraph .react-flow__edge-text{fill:var(--dsw-alias-label-secondary,GrayText);font-size:10px}.jB2GrG_workflowGraph .react-flow__edge-textbg{fill:var(--dsw-alias-bg-base,Canvas)}.jB2GrG_graphNode{border:1px solid var(--dsw-alias-border-l3,#80808029);background:var(--dsw-alias-bg-layer-1,Canvas);min-width:210px;color:var(--dsw-alias-label-primary,CanvasText);border-radius:8px;padding:8px 10px;position:relative}.jB2GrG_graphNode_action{border-left:3px solid var(--dsw-alias-state-business-primary,#679efed9)}.jB2GrG_graphNode_human{border-left:3px solid var(--dsw-alias-state-warn-primary,#f59e0bd9)}.jB2GrG_graphNode_terminal{border-left:3px solid var(--dsw-alias-state-success-primary,#22c55ed9)}.jB2GrG_graphNode_decision{border-left:3px solid var(--dsw-alias-state-warn-primary,#d97706)}.jB2GrG_graphNode_join{border-left:3px solid var(--dsw-alias-label-tertiary,GrayText)}.jB2GrG_graphNodeKind{color:var(--dsw-alias-label-tertiary,GrayText);letter-spacing:.06em;text-transform:uppercase;font-size:10px;display:block}.jB2GrG_graphNodeTitle{margin-top:2px;font-size:13px;font-weight:600;display:block}.jB2GrG_graphNodeHandler{color:var(--dsw-alias-label-tertiary,GrayText);margin-top:6px;font:11px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;display:block}.jB2GrG_graphNode .react-flow__handle{opacity:0;width:7px;height:7px}.jB2GrG_workflowActions{border-top:0;align-items:center;gap:6px;padding:8px 12px;display:flex}.jB2GrG_workflowAction,.jB2GrG_workflowPrimaryAction,.jB2GrG_workflowDangerAction{border:1px solid var(--dsw-alias-border-l3,#80808029);background:var(--dsw-alias-bg-module-platform,#80808014);min-height:30px;color:var(--dsw-alias-label-primary,CanvasText);cursor:pointer;border-radius:7px;align-items:center;padding:5px 10px;font-size:11.5px;text-decoration:none;display:inline-flex}.jB2GrG_workflowPrimaryAction{background:var(--dsw-alias-state-business-primary,Highlight);color:var(--dsw-alias-label-on-color,HighlightText);border-color:#0000}.jB2GrG_workflowDangerAction{border-color:var(--dsw-alias-state-error-primary,#f25a5a);color:var(--dsw-alias-state-error-primary,LinkText);background:0 0}.jB2GrG_workflowDangerAction:disabled{opacity:.55;cursor:default}.jB2GrG_workflowDeleteConfirm{border:1px solid var(--dsw-alias-border-l3,#80808029);background:var(--dsw-alias-bg-module-platform,#80808014);color:var(--dsw-alias-label-secondary,GrayText);border-radius:8px;gap:7px;margin:0 12px 8px;padding:10px;font-size:11.5px;display:grid}.jB2GrG_workflowDeleteConfirm strong{color:var(--dsw-alias-label-primary,CanvasText);font-size:12px}.jB2GrG_workflowDeleteConfirm code{overflow-wrap:anywhere;font-size:10.5px}.jB2GrG_sectionLabel{border-top:1px solid var(--dsw-alias-border-l2,#8080801f);color:var(--dsw-alias-label-tertiary,GrayText);padding:8px 12px 4px;font-size:11px}.jB2GrG_workflowDetail .jB2GrG_sectionLabel{border-top:0}.jB2GrG_defnRow{border-left:2px solid var(--dsw-alias-label-tertiary,#adb2b8b3);padding:8px 12px 9px}.jB2GrG_kind_action{border-left-color:var(--dsw-alias-state-business-primary,#679efed9)}.jB2GrG_kind_human{border-left-color:var(--dsw-alias-state-warn-primary,#f59e0bd9)}.jB2GrG_kind_terminal{border-left-color:var(--dsw-alias-state-success-primary,#22c55ed9)}.jB2GrG_kind_decision{border-left-color:var(--dsw-alias-label-secondary,#cfd3d6d9)}.jB2GrG_kind_join{border-left-color:var(--dsw-alias-label-tertiary,#adb2b8b3)}.jB2GrG_defnHead{align-items:baseline;gap:6px;min-width:0;display:flex}.jB2GrG_defnName{text-overflow:ellipsis;white-space:nowrap;flex:0 auto;min-width:0;font-size:12.5px;font-weight:600;overflow:hidden}.jB2GrG_defnKind{color:var(--dsw-alias-label-tertiary,GrayText);letter-spacing:.04em;text-transform:uppercase;flex:none;font-size:10px}.jB2GrG_defnHandler{text-overflow:ellipsis;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-tertiary,GrayText);flex:0 auto;margin-left:auto;font-family:ui-monospace,monospace;font-size:11px;overflow:hidden}.jB2GrG_defnPrompt,.jB2GrG_defnNoPrompt{color:var(--dsw-alias-label-secondary,GrayText);-webkit-line-clamp:3;-webkit-box-orient:vertical;margin:3px 0 0;font-size:11.5px;line-height:1.5;display:-webkit-box;overflow:hidden}.jB2GrG_defnNoPrompt{color:var(--dsw-alias-label-tertiary,GrayText);font-style:italic}.jB2GrG_shape{align-items:center;margin-top:5px;display:flex}.jB2GrG_shapeNode{border:1px solid var(--dsw-alias-border-l3,#80808029);width:15px;height:15px;color:var(--dsw-alias-state-business-primary,#5078ffe6);border-radius:50%;flex:0 0 15px;place-items:center;font-family:ui-monospace,monospace;font-size:7.5px;font-weight:700;line-height:1;display:grid;position:relative}.jB2GrG_shapeNode+.jB2GrG_shapeNode{margin-left:8px}.jB2GrG_shapeNode+.jB2GrG_shapeNode:before{content:\"\";border-top:1px solid var(--dsw-alias-border-l3,#80808029);width:8px;position:absolute;top:50%;right:100%}.jB2GrG_node_human{color:var(--dsw-alias-state-warn-primary,#c88c28f2)}.jB2GrG_node_terminal{color:var(--dsw-alias-state-success-primary,#3ca05af2)}.jB2GrG_node_decision{color:var(--dsw-alias-label-secondary,GrayText)}.jB2GrG_node_more{color:var(--dsw-alias-label-tertiary,GrayText);font-size:7px}.jB2GrG_flowBlocked{color:var(--dsw-alias-state-warn-primary,#f59e0b);margin-left:6px;font-size:10px;font-weight:500}.jB2GrG_authoringRow{border-bottom:1px solid var(--dsw-alias-border-l2,#8080801f);background:var(--dsw-alias-bg-module-platform,#80808014);padding:9px 12px}.jB2GrG_authoringSummary{align-items:flex-start;gap:8px;display:flex}.jB2GrG_authoringMain{flex:auto;gap:2px;min-width:0;display:grid}.jB2GrG_authoringLabel{font-size:12px;font-weight:600;line-height:1.4}.jB2GrG_authoringPrompt{color:var(--dsw-alias-label-secondary,GrayText);-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:11px;line-height:1.45;display:-webkit-box;overflow:hidden}.jB2GrG_authoringOutputToggle{width:24px;height:24px;color:var(--dsw-alias-label-secondary,GrayText);cursor:pointer;background:0 0;border:0;flex:none;place-items:center;padding:0;display:grid}.jB2GrG_authoringOutputToggle svg{transition:transform .15s}.jB2GrG_authoringChevronOpen{transform:rotate(180deg)}.jB2GrG_authoringOutput{border:1px solid var(--dsw-alias-border-l3,#80808029);background:var(--dsw-alias-bg-base,Canvas);border-radius:6px;max-height:180px;margin:8px 0 0 16px;padding:8px;overflow:auto}.jB2GrG_authoringOutput pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}";
+		const tagId$1 = "@promptaflow/dsh/PromptaFlowPanel.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@promptaflow/dsh";
@@ -513,160 +528,160 @@ window.__ModuleLoader__.load({
 			tag.textContent = css$1;
 			document.head.appendChild(tag);
 		}
-		var OrbitPanel_module_css_default = {
-			"actions": "JeOz9W_actions",
-			"agentCard": "JeOz9W_agentCard",
-			"agentHead": "JeOz9W_agentHead",
-			"agentIdentity": "JeOz9W_agentIdentity",
-			"agentName": "JeOz9W_agentName",
-			"agentStat": "JeOz9W_agentStat",
-			"agentStatError": "JeOz9W_agentStatError",
-			"agentStatLabel": "JeOz9W_agentStatLabel",
-			"agentStatPill": "JeOz9W_agentStatPill",
-			"agentVersion": "JeOz9W_agentVersion",
-			"agentsGrid": "JeOz9W_agentsGrid",
-			"artifact": "JeOz9W_artifact",
-			"artifactPath": "JeOz9W_artifactPath",
-			"artifactRow": "JeOz9W_artifactRow",
-			"artifactText": "JeOz9W_artifactText",
-			"artifacts": "JeOz9W_artifacts",
-			"attention": "JeOz9W_attention",
-			"authoringChevronOpen": "JeOz9W_authoringChevronOpen",
-			"authoringLabel": "JeOz9W_authoringLabel",
-			"authoringMain": "JeOz9W_authoringMain",
-			"authoringOutput": "JeOz9W_authoringOutput",
-			"authoringOutputToggle": "JeOz9W_authoringOutputToggle",
-			"authoringPrompt": "JeOz9W_authoringPrompt",
-			"authoringRow": "JeOz9W_authoringRow",
-			"authoringStages": "JeOz9W_authoringStages",
-			"authoringSummary": "JeOz9W_authoringSummary",
-			"avatar": "JeOz9W_avatar",
-			"back": "JeOz9W_back",
-			"backArrow": "JeOz9W_backArrow",
-			"backLabel": "JeOz9W_backLabel",
-			"badge": "JeOz9W_badge",
-			"bar": "JeOz9W_bar",
-			"body": "JeOz9W_body",
-			"catalogRow": "JeOz9W_catalogRow",
-			"confirmActions": "JeOz9W_confirmActions",
-			"confirmBar": "JeOz9W_confirmBar",
-			"confirmCancel": "JeOz9W_confirmCancel",
-			"confirmGo": "JeOz9W_confirmGo",
-			"confirmText": "JeOz9W_confirmText",
-			"connectSpinner": "JeOz9W_connectSpinner",
-			"connecting": "JeOz9W_connecting",
-			"count": "JeOz9W_count",
-			"defnHandler": "JeOz9W_defnHandler",
-			"defnHead": "JeOz9W_defnHead",
-			"defnKind": "JeOz9W_defnKind",
-			"defnName": "JeOz9W_defnName",
-			"defnNoPrompt": "JeOz9W_defnNoPrompt",
-			"defnPrompt": "JeOz9W_defnPrompt",
-			"defnRow": "JeOz9W_defnRow",
-			"detailGoal": "JeOz9W_detailGoal",
-			"detailHead": "JeOz9W_detailHead",
-			"detailMeta": "JeOz9W_detailMeta",
-			"done": "JeOz9W_done",
-			"dot": "JeOz9W_dot",
-			"empty": "JeOz9W_empty",
-			"error": "JeOz9W_error",
-			"failed": "JeOz9W_failed",
-			"flowBlocked": "JeOz9W_flowBlocked",
-			"flowButton": "JeOz9W_flowButton",
-			"flowName": "JeOz9W_flowName",
-			"flowNewGoal": "JeOz9W_flowNewGoal",
-			"flowRow": "JeOz9W_flowRow",
-			"goal": "JeOz9W_goal",
-			"goalCard": "JeOz9W_goalCard",
-			"goalHead": "JeOz9W_goalHead",
-			"goalPrompt": "JeOz9W_goalPrompt",
-			"goalPromptCard": "JeOz9W_goalPromptCard",
-			"goalPromptChevronOpen": "JeOz9W_goalPromptChevronOpen",
-			"goalPromptToggle": "JeOz9W_goalPromptToggle",
-			"goalSteps": "JeOz9W_goalSteps",
-			"goalTitle": "JeOz9W_goalTitle",
-			"graphNode": "JeOz9W_graphNode",
-			"graphNodeHandler": "JeOz9W_graphNodeHandler",
-			"graphNodeKind": "JeOz9W_graphNodeKind",
-			"graphNodeTitle": "JeOz9W_graphNodeTitle",
-			"graphNode_action": "JeOz9W_graphNode_action",
-			"graphNode_decision": "JeOz9W_graphNode_decision",
-			"graphNode_human": "JeOz9W_graphNode_human",
-			"graphNode_join": "JeOz9W_graphNode_join",
-			"graphNode_terminal": "JeOz9W_graphNode_terminal",
-			"iconButton": "JeOz9W_iconButton",
-			"kind_action": "JeOz9W_kind_action",
-			"kind_decision": "JeOz9W_kind_decision",
-			"kind_human": "JeOz9W_kind_human",
-			"kind_join": "JeOz9W_kind_join",
-			"kind_terminal": "JeOz9W_kind_terminal",
-			"listDot": "JeOz9W_listDot",
-			"listGoal": "JeOz9W_listGoal",
-			"listMain": "JeOz9W_listMain",
-			"listPrompt": "JeOz9W_listPrompt",
-			"listRow": "JeOz9W_listRow",
-			"live": "JeOz9W_live",
-			"meta": "JeOz9W_meta",
-			"node_decision": "JeOz9W_node_decision",
-			"node_human": "JeOz9W_node_human",
-			"node_more": "JeOz9W_node_more",
-			"node_terminal": "JeOz9W_node_terminal",
-			"orbit-spin": "JeOz9W_orbit-spin",
-			"orbitBackground": "JeOz9W_orbitBackground",
-			"orbitMark": "JeOz9W_orbitMark",
-			"orbitRing": "JeOz9W_orbitRing",
-			"orbitSatellite": "JeOz9W_orbitSatellite",
-			"outcome": "JeOz9W_outcome",
-			"outcome_done": "JeOz9W_outcome_done",
-			"outcome_error": "JeOz9W_outcome_error",
-			"outcome_ongoing": "JeOz9W_outcome_ongoing",
-			"outcome_warning": "JeOz9W_outcome_warning",
-			"panel": "JeOz9W_panel",
-			"prose": "JeOz9W_prose",
-			"resize": "JeOz9W_resize",
-			"result": "JeOz9W_result",
-			"resultBlock": "JeOz9W_resultBlock",
-			"resultError": "JeOz9W_resultError",
-			"resultLabel": "JeOz9W_resultLabel",
-			"row": "JeOz9W_row",
-			"runActions": "JeOz9W_runActions",
-			"sectionLabel": "JeOz9W_sectionLabel",
-			"shape": "JeOz9W_shape",
-			"shapeNode": "JeOz9W_shapeNode",
-			"status": "JeOz9W_status",
-			"stepChevron": "JeOz9W_stepChevron",
-			"stepChevronOpen": "JeOz9W_stepChevronOpen",
-			"stepContent": "JeOz9W_stepContent",
-			"stepDisclosure": "JeOz9W_stepDisclosure",
-			"stepDot": "JeOz9W_stepDot",
-			"stepDot_error": "JeOz9W_stepDot_error",
-			"stepDot_ongoing": "JeOz9W_stepDot_ongoing",
-			"stepDot_skipped": "JeOz9W_stepDot_skipped",
-			"stepDot_success": "JeOz9W_stepDot_success",
-			"stepDot_warning": "JeOz9W_stepDot_warning",
-			"stepRow": "JeOz9W_stepRow",
-			"stepTitle": "JeOz9W_stepTitle",
-			"stopButton": "JeOz9W_stopButton",
-			"tab": "JeOz9W_tab",
-			"tabActive": "JeOz9W_tabActive",
-			"tabs": "JeOz9W_tabs",
-			"title": "JeOz9W_title",
-			"unknown": "JeOz9W_unknown",
-			"workflowAction": "JeOz9W_workflowAction",
-			"workflowActions": "JeOz9W_workflowActions",
-			"workflowDangerAction": "JeOz9W_workflowDangerAction",
-			"workflowDefinitionPanel": "JeOz9W_workflowDefinitionPanel",
-			"workflowDeleteConfirm": "JeOz9W_workflowDeleteConfirm",
-			"workflowDetail": "JeOz9W_workflowDetail",
-			"workflowDetailTab": "JeOz9W_workflowDetailTab",
-			"workflowDetailTabActive": "JeOz9W_workflowDetailTabActive",
-			"workflowDetailTabs": "JeOz9W_workflowDetailTabs",
-			"workflowGraph": "JeOz9W_workflowGraph",
-			"workflowPrimaryAction": "JeOz9W_workflowPrimaryAction"
+		var PromptaFlowPanel_module_css_default = {
+			"actions": "jB2GrG_actions",
+			"agentCard": "jB2GrG_agentCard",
+			"agentHead": "jB2GrG_agentHead",
+			"agentIdentity": "jB2GrG_agentIdentity",
+			"agentName": "jB2GrG_agentName",
+			"agentStat": "jB2GrG_agentStat",
+			"agentStatError": "jB2GrG_agentStatError",
+			"agentStatLabel": "jB2GrG_agentStatLabel",
+			"agentStatPill": "jB2GrG_agentStatPill",
+			"agentVersion": "jB2GrG_agentVersion",
+			"agentsGrid": "jB2GrG_agentsGrid",
+			"artifact": "jB2GrG_artifact",
+			"artifactPath": "jB2GrG_artifactPath",
+			"artifactRow": "jB2GrG_artifactRow",
+			"artifactText": "jB2GrG_artifactText",
+			"artifacts": "jB2GrG_artifacts",
+			"attention": "jB2GrG_attention",
+			"authoringChevronOpen": "jB2GrG_authoringChevronOpen",
+			"authoringLabel": "jB2GrG_authoringLabel",
+			"authoringMain": "jB2GrG_authoringMain",
+			"authoringOutput": "jB2GrG_authoringOutput",
+			"authoringOutputToggle": "jB2GrG_authoringOutputToggle",
+			"authoringPrompt": "jB2GrG_authoringPrompt",
+			"authoringRow": "jB2GrG_authoringRow",
+			"authoringStages": "jB2GrG_authoringStages",
+			"authoringSummary": "jB2GrG_authoringSummary",
+			"avatar": "jB2GrG_avatar",
+			"back": "jB2GrG_back",
+			"backArrow": "jB2GrG_backArrow",
+			"backLabel": "jB2GrG_backLabel",
+			"badge": "jB2GrG_badge",
+			"bar": "jB2GrG_bar",
+			"body": "jB2GrG_body",
+			"catalogRow": "jB2GrG_catalogRow",
+			"confirmActions": "jB2GrG_confirmActions",
+			"confirmBar": "jB2GrG_confirmBar",
+			"confirmCancel": "jB2GrG_confirmCancel",
+			"confirmGo": "jB2GrG_confirmGo",
+			"confirmText": "jB2GrG_confirmText",
+			"connectSpinner": "jB2GrG_connectSpinner",
+			"connecting": "jB2GrG_connecting",
+			"count": "jB2GrG_count",
+			"defnHandler": "jB2GrG_defnHandler",
+			"defnHead": "jB2GrG_defnHead",
+			"defnKind": "jB2GrG_defnKind",
+			"defnName": "jB2GrG_defnName",
+			"defnNoPrompt": "jB2GrG_defnNoPrompt",
+			"defnPrompt": "jB2GrG_defnPrompt",
+			"defnRow": "jB2GrG_defnRow",
+			"detailGoal": "jB2GrG_detailGoal",
+			"detailHead": "jB2GrG_detailHead",
+			"detailMeta": "jB2GrG_detailMeta",
+			"done": "jB2GrG_done",
+			"dot": "jB2GrG_dot",
+			"empty": "jB2GrG_empty",
+			"error": "jB2GrG_error",
+			"failed": "jB2GrG_failed",
+			"flowBlocked": "jB2GrG_flowBlocked",
+			"flowButton": "jB2GrG_flowButton",
+			"flowName": "jB2GrG_flowName",
+			"flowNewGoal": "jB2GrG_flowNewGoal",
+			"flowRow": "jB2GrG_flowRow",
+			"goal": "jB2GrG_goal",
+			"goalCard": "jB2GrG_goalCard",
+			"goalHead": "jB2GrG_goalHead",
+			"goalPrompt": "jB2GrG_goalPrompt",
+			"goalPromptCard": "jB2GrG_goalPromptCard",
+			"goalPromptChevronOpen": "jB2GrG_goalPromptChevronOpen",
+			"goalPromptToggle": "jB2GrG_goalPromptToggle",
+			"goalSteps": "jB2GrG_goalSteps",
+			"goalTitle": "jB2GrG_goalTitle",
+			"graphNode": "jB2GrG_graphNode",
+			"graphNodeHandler": "jB2GrG_graphNodeHandler",
+			"graphNodeKind": "jB2GrG_graphNodeKind",
+			"graphNodeTitle": "jB2GrG_graphNodeTitle",
+			"graphNode_action": "jB2GrG_graphNode_action",
+			"graphNode_decision": "jB2GrG_graphNode_decision",
+			"graphNode_human": "jB2GrG_graphNode_human",
+			"graphNode_join": "jB2GrG_graphNode_join",
+			"graphNode_terminal": "jB2GrG_graphNode_terminal",
+			"iconButton": "jB2GrG_iconButton",
+			"kind_action": "jB2GrG_kind_action",
+			"kind_decision": "jB2GrG_kind_decision",
+			"kind_human": "jB2GrG_kind_human",
+			"kind_join": "jB2GrG_kind_join",
+			"kind_terminal": "jB2GrG_kind_terminal",
+			"listDot": "jB2GrG_listDot",
+			"listGoal": "jB2GrG_listGoal",
+			"listMain": "jB2GrG_listMain",
+			"listPrompt": "jB2GrG_listPrompt",
+			"listRow": "jB2GrG_listRow",
+			"live": "jB2GrG_live",
+			"meta": "jB2GrG_meta",
+			"node_decision": "jB2GrG_node_decision",
+			"node_human": "jB2GrG_node_human",
+			"node_more": "jB2GrG_node_more",
+			"node_terminal": "jB2GrG_node_terminal",
+			"outcome": "jB2GrG_outcome",
+			"outcome_done": "jB2GrG_outcome_done",
+			"outcome_error": "jB2GrG_outcome_error",
+			"outcome_ongoing": "jB2GrG_outcome_ongoing",
+			"outcome_warning": "jB2GrG_outcome_warning",
+			"panel": "jB2GrG_panel",
+			"promptaflow-spin": "jB2GrG_promptaflow-spin",
+			"promptaflowBackground": "jB2GrG_promptaflowBackground",
+			"promptaflowMark": "jB2GrG_promptaflowMark",
+			"promptaflowRing": "jB2GrG_promptaflowRing",
+			"promptaflowSatellite": "jB2GrG_promptaflowSatellite",
+			"prose": "jB2GrG_prose",
+			"resize": "jB2GrG_resize",
+			"result": "jB2GrG_result",
+			"resultBlock": "jB2GrG_resultBlock",
+			"resultError": "jB2GrG_resultError",
+			"resultLabel": "jB2GrG_resultLabel",
+			"row": "jB2GrG_row",
+			"runActions": "jB2GrG_runActions",
+			"sectionLabel": "jB2GrG_sectionLabel",
+			"shape": "jB2GrG_shape",
+			"shapeNode": "jB2GrG_shapeNode",
+			"status": "jB2GrG_status",
+			"stepChevron": "jB2GrG_stepChevron",
+			"stepChevronOpen": "jB2GrG_stepChevronOpen",
+			"stepContent": "jB2GrG_stepContent",
+			"stepDisclosure": "jB2GrG_stepDisclosure",
+			"stepDot": "jB2GrG_stepDot",
+			"stepDot_error": "jB2GrG_stepDot_error",
+			"stepDot_ongoing": "jB2GrG_stepDot_ongoing",
+			"stepDot_skipped": "jB2GrG_stepDot_skipped",
+			"stepDot_success": "jB2GrG_stepDot_success",
+			"stepDot_warning": "jB2GrG_stepDot_warning",
+			"stepRow": "jB2GrG_stepRow",
+			"stepTitle": "jB2GrG_stepTitle",
+			"stopButton": "jB2GrG_stopButton",
+			"tab": "jB2GrG_tab",
+			"tabActive": "jB2GrG_tabActive",
+			"tabs": "jB2GrG_tabs",
+			"title": "jB2GrG_title",
+			"unknown": "jB2GrG_unknown",
+			"workflowAction": "jB2GrG_workflowAction",
+			"workflowActions": "jB2GrG_workflowActions",
+			"workflowDangerAction": "jB2GrG_workflowDangerAction",
+			"workflowDefinitionPanel": "jB2GrG_workflowDefinitionPanel",
+			"workflowDeleteConfirm": "jB2GrG_workflowDeleteConfirm",
+			"workflowDetail": "jB2GrG_workflowDetail",
+			"workflowDetailTab": "jB2GrG_workflowDetailTab",
+			"workflowDetailTabActive": "jB2GrG_workflowDetailTabActive",
+			"workflowDetailTabs": "jB2GrG_workflowDetailTabs",
+			"workflowGraph": "jB2GrG_workflowGraph",
+			"workflowPrimaryAction": "jB2GrG_workflowPrimaryAction"
 		};
 		//#endregion
 		//#region src/client/panel-geometry.ts
-		const PANEL_STORAGE_KEY = "orbit:panel:v1";
+		const PANEL_STORAGE_KEY = "promptaflow:panel:v1";
 		const DEFAULT_PANEL_LAYOUT = Object.freeze({
 			mode: "docked",
 			collapsed: true,
@@ -756,7 +771,7 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region src/client/OrbitRunRow.tsx
+		//#region src/client/PromptaFlowRunRow.tsx
 		/** A Run as a row in a list, and the same Run as the panel's whole body.
 		*
 		* Two components rather than one disclosure, because a Run's detail does not
@@ -811,11 +826,11 @@ window.__ModuleLoader__.load({
 			const text = outputText(chunks);
 			const indicator = stepDotState(step.status);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: OrbitPanel_module_css_default.stepDisclosure,
+				className: PromptaFlowPanel_module_css_default.stepDisclosure,
 				"data-open": open || void 0,
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 					type: "button",
-					className: OrbitPanel_module_css_default.stepRow,
+					className: PromptaFlowPanel_module_css_default.stepRow,
 					disabled: !expandable,
 					"aria-expanded": expandable ? open : void 0,
 					onClick: () => {
@@ -823,27 +838,27 @@ window.__ModuleLoader__.load({
 					},
 					children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: `${OrbitPanel_module_css_default.stepDot} ${OrbitPanel_module_css_default[`stepDot_${indicator}`]}`,
+							className: `${PromptaFlowPanel_module_css_default.stepDot} ${PromptaFlowPanel_module_css_default[`stepDot_${indicator}`]}`,
 							"aria-hidden": "true"
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: OrbitPanel_module_css_default.stepTitle,
+							className: PromptaFlowPanel_module_css_default.stepTitle,
 							children: step.label
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: OrbitPanel_module_css_default.status,
+							className: PromptaFlowPanel_module_css_default.status,
 							children: step.status
 						}),
-						expandable ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: `${OrbitPanel_module_css_default.stepChevron} ${open ? OrbitPanel_module_css_default.stepChevronOpen : ""}` }) : null
+						expandable ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: `${PromptaFlowPanel_module_css_default.stepChevron} ${open ? PromptaFlowPanel_module_css_default.stepChevronOpen : ""}` }) : null
 					]
 				}), open ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: OrbitPanel_module_css_default.stepContent,
+					className: PromptaFlowPanel_module_css_default.stepContent,
 					children: [
 						step.needsPerson ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-							className: OrbitPanel_module_css_default.attention,
+							className: PromptaFlowPanel_module_css_default.attention,
 							children: t("needsPerson")
 						}), step.delegationId ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: OrbitPanel_module_css_default.actions,
+							className: PromptaFlowPanel_module_css_default.actions,
 							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
 								value: note,
 								placeholder: t("note"),
@@ -877,7 +892,7 @@ window.__ModuleLoader__.load({
 							text,
 							lines: OUTPUT_LINES
 						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-							className: OrbitPanel_module_css_default.empty,
+							className: PromptaFlowPanel_module_css_default.empty,
 							children: t("noOutput")
 						})
 					]
@@ -895,7 +910,7 @@ window.__ModuleLoader__.load({
 		function PanelErrorText({ t, error }) {
 			if (error === null) return null;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-				className: OrbitPanel_module_css_default.error,
+				className: PromptaFlowPanel_module_css_default.error,
 				title: error.detail,
 				children: t(error.key, error.values)
 			});
@@ -912,14 +927,14 @@ window.__ModuleLoader__.load({
 		function BackButton({ t, onBack }) {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 				type: "button",
-				className: OrbitPanel_module_css_default.back,
+				className: PromptaFlowPanel_module_css_default.back,
 				onClick: onBack,
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-					className: OrbitPanel_module_css_default.backArrow,
+					className: PromptaFlowPanel_module_css_default.backArrow,
 					"aria-hidden": "true",
 					children: "←"
 				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-					className: OrbitPanel_module_css_default.backLabel,
+					className: PromptaFlowPanel_module_css_default.backLabel,
 					children: t("back")
 				})]
 			});
@@ -932,7 +947,7 @@ window.__ModuleLoader__.load({
 		* happening", and an answer a reader has to click for is not on the page. The
 		* detail page draws the same list under the Run's controls.
 		*/
-		function OrbitStepList({ call, t, sessionId, runId, steps, live, onSettled }) {
+		function PromptaFlowStepList({ call, t, sessionId, runId, steps, live, onSettled }) {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: steps.map((step) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(StepDisclosure, {
 				call,
 				t,
@@ -950,22 +965,22 @@ window.__ModuleLoader__.load({
 		* over. It briefly grew a progress line for the Goal page; the Goal page draws
 		* the whole Run now, and no caller here ever had steps to give it.
 		*/
-		function OrbitRunListRow({ t, run, onOpen }) {
+		function PromptaFlowRunListRow({ t, run, onOpen }) {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 				type: "button",
-				className: OrbitPanel_module_css_default.listRow,
+				className: PromptaFlowPanel_module_css_default.listRow,
 				onClick: onOpen,
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-					className: OrbitPanel_module_css_default.listMain,
+					className: PromptaFlowPanel_module_css_default.listMain,
 					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: OrbitPanel_module_css_default.listGoal,
+						className: PromptaFlowPanel_module_css_default.listGoal,
 						children: run.goal
 					}), run.prompt ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: OrbitPanel_module_css_default.listPrompt,
+						className: PromptaFlowPanel_module_css_default.listPrompt,
 						children: run.prompt
 					}) : null]
 				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-					className: OrbitPanel_module_css_default.status,
+					className: PromptaFlowPanel_module_css_default.status,
 					children: run.status
 				})]
 			});
@@ -985,20 +1000,20 @@ window.__ModuleLoader__.load({
 		* a copy of what the reader is already looking at is a control that wastes the
 		* one click they were willing to spend.
 		*/
-		function OrbitRunGoalCard({ call, t, sessionId, run, steps, onSettled }) {
+		function PromptaFlowRunGoalCard({ call, t, sessionId, run, steps, onSettled }) {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
-				className: OrbitPanel_module_css_default.goalCard,
+				className: PromptaFlowPanel_module_css_default.goalCard,
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: OrbitPanel_module_css_default.goalHead,
+						className: PromptaFlowPanel_module_css_default.goalHead,
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {
 							state: dotState(run.status),
 							size: 9,
-							className: OrbitPanel_module_css_default.listDot
+							className: PromptaFlowPanel_module_css_default.listDot
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-							className: OrbitPanel_module_css_default.listMain,
+							className: PromptaFlowPanel_module_css_default.listMain,
 							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: OrbitPanel_module_css_default.goalTitle,
+								className: PromptaFlowPanel_module_css_default.goalTitle,
 								children: run.goal
 							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FoldedText, {
 								t,
@@ -1014,8 +1029,8 @@ window.__ModuleLoader__.load({
 						run
 					}),
 					steps?.length ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: OrbitPanel_module_css_default.goalSteps,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OrbitStepList, {
+						className: PromptaFlowPanel_module_css_default.goalSteps,
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PromptaFlowStepList, {
 							call,
 							t,
 							sessionId,
@@ -1073,18 +1088,18 @@ window.__ModuleLoader__.load({
 			}, [text, open]);
 			if (!text) return null;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: OrbitPanel_module_css_default.goalPromptCard,
+				className: PromptaFlowPanel_module_css_default.goalPromptCard,
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
 					ref: clamp,
-					className: OrbitPanel_module_css_default.goalPrompt,
+					className: PromptaFlowPanel_module_css_default.goalPrompt,
 					style: open ? void 0 : { WebkitLineClamp: lines },
 					"data-open": open || void 0,
 					children: text
 				}), folded || open ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 					type: "button",
-					className: OrbitPanel_module_css_default.goalPromptToggle,
+					className: PromptaFlowPanel_module_css_default.goalPromptToggle,
 					onClick: () => setOpen((value) => !value),
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: open ? OrbitPanel_module_css_default.goalPromptChevronOpen : void 0 }), t(open ? "promptCollapse" : "promptExpand")]
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: open ? PromptaFlowPanel_module_css_default.goalPromptChevronOpen : void 0 }), t(open ? "promptCollapse" : "promptExpand")]
 				}) : null]
 			});
 		}
@@ -1123,7 +1138,7 @@ window.__ModuleLoader__.load({
 			if (cancelAt === void 0 && resumeAt === void 0) return null;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: `${OrbitPanel_module_css_default.actions} ${OrbitPanel_module_css_default.runActions}`,
+					className: `${PromptaFlowPanel_module_css_default.actions} ${PromptaFlowPanel_module_css_default.runActions}`,
 					children: [cancelAt !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 						size: "sm",
 						variant: "primary",
@@ -1155,12 +1170,12 @@ window.__ModuleLoader__.load({
 					})] })]
 				}),
 				rejecting && approval !== void 0 && resumeAt !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: OrbitPanel_module_css_default.confirmBar,
+					className: PromptaFlowPanel_module_css_default.confirmBar,
 					role: "alertdialog",
 					"aria-label": t("reject"),
 					children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: OrbitPanel_module_css_default.confirmText,
+							className: PromptaFlowPanel_module_css_default.confirmText,
 							children: t("rejectAsk")
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
@@ -1170,10 +1185,10 @@ window.__ModuleLoader__.load({
 							onChange: (event) => setAnswer(event.currentTarget.value)
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: OrbitPanel_module_css_default.confirmActions,
+							className: PromptaFlowPanel_module_css_default.confirmActions,
 							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
-								className: OrbitPanel_module_css_default.confirmCancel,
+								className: PromptaFlowPanel_module_css_default.confirmCancel,
 								onClick: () => {
 									setRejecting(false);
 									setAnswer("");
@@ -1181,7 +1196,7 @@ window.__ModuleLoader__.load({
 								children: t("rejectCancel")
 							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
-								className: OrbitPanel_module_css_default.confirmGo,
+								className: PromptaFlowPanel_module_css_default.confirmGo,
 								disabled: busy,
 								onClick: () => {
 									setRejecting(false);
@@ -1236,28 +1251,28 @@ window.__ModuleLoader__.load({
 				artifactId
 			]);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: OrbitPanel_module_css_default.artifactRow,
+				className: PromptaFlowPanel_module_css_default.artifactRow,
 				children: [
 					inline === null ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
-						className: OrbitPanel_module_css_default.artifactText,
+						className: PromptaFlowPanel_module_css_default.artifactText,
 						children: inline
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: OrbitPanel_module_css_default.artifacts,
+						className: PromptaFlowPanel_module_css_default.artifacts,
 						children: [inline !== null ? null : href ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
-							className: OrbitPanel_module_css_default.artifact,
+							className: PromptaFlowPanel_module_css_default.artifact,
 							href,
 							target: "_blank",
 							rel: "noopener",
 							title: artifactId,
 							children: t("artifactOpen", { name: artifactLabel(artifactId) })
 						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: OrbitPanel_module_css_default.artifact,
+							className: PromptaFlowPanel_module_css_default.artifact,
 							title: artifactId,
 							children: artifactLabel(artifactId)
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
-							className: OrbitPanel_module_css_default.artifact,
+							className: PromptaFlowPanel_module_css_default.artifact,
 							disabled: busy,
 							onClick: () => {
 								setBusy(true);
@@ -1268,7 +1283,7 @@ window.__ModuleLoader__.load({
 						})]
 					}),
 					path ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
-						className: OrbitPanel_module_css_default.artifactPath,
+						className: PromptaFlowPanel_module_css_default.artifactPath,
 						title: path,
 						children: path
 					}) : null,
@@ -1287,18 +1302,18 @@ window.__ModuleLoader__.load({
 				artifacts: []
 			} : resultOutcome(run.result);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: OrbitPanel_module_css_default.resultBlock,
+				className: PromptaFlowPanel_module_css_default.resultBlock,
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: OrbitPanel_module_css_default.resultLabel,
+						className: PromptaFlowPanel_module_css_default.resultLabel,
 						children: t(failure ? "resultFailed" : "result")
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: `${OrbitPanel_module_css_default.outcome} ${OrbitPanel_module_css_default[`outcome_${dotState(run.status)}`]}`,
+						className: `${PromptaFlowPanel_module_css_default.outcome} ${PromptaFlowPanel_module_css_default[`outcome_${dotState(run.status)}`]}`,
 						children: t(`outcome_${run.status}`, { status: run.status })
 					}),
 					failure ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
-						className: `${OrbitPanel_module_css_default.result} ${OrbitPanel_module_css_default.resultError}`,
+						className: `${PromptaFlowPanel_module_css_default.result} ${PromptaFlowPanel_module_css_default.resultError}`,
 						children: failure
 					}) : null,
 					artifacts.map((id) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ArtifactRow, {
@@ -1308,13 +1323,13 @@ window.__ModuleLoader__.load({
 						artifactId: id
 					}, id)),
 					answer ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
-						className: OrbitPanel_module_css_default.result,
+						className: PromptaFlowPanel_module_css_default.result,
 						children: answer
 					}) : null
 				]
 			});
 		}
-		function OrbitRunDetail({ call, t, sessionId, run, onBack }) {
+		function PromptaFlowRunDetail({ call, t, sessionId, run, onBack }) {
 			const open = true;
 			const [steps, setSteps] = (0, react.useState)(null);
 			const [error, setError] = (0, react.useState)(null);
@@ -1349,18 +1364,18 @@ window.__ModuleLoader__.load({
 				t,
 				onBack
 			}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
-				className: OrbitPanel_module_css_default.goalCard,
+				className: PromptaFlowPanel_module_css_default.goalCard,
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: OrbitPanel_module_css_default.goalHead,
+						className: PromptaFlowPanel_module_css_default.goalHead,
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {
 							state: dotState(run.status),
 							size: 9,
-							className: OrbitPanel_module_css_default.listDot
+							className: PromptaFlowPanel_module_css_default.listDot
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-							className: OrbitPanel_module_css_default.listMain,
+							className: PromptaFlowPanel_module_css_default.listMain,
 							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: OrbitPanel_module_css_default.goalTitle,
+								className: PromptaFlowPanel_module_css_default.goalTitle,
 								children: run.workflowName
 							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FoldedText, {
 								t,
@@ -1380,12 +1395,12 @@ window.__ModuleLoader__.load({
 						error
 					}),
 					!error && steps === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-						className: OrbitPanel_module_css_default.empty,
+						className: PromptaFlowPanel_module_css_default.empty,
 						children: t("loading")
 					}) : null,
 					steps?.length ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: OrbitPanel_module_css_default.goalSteps,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OrbitStepList, {
+						className: PromptaFlowPanel_module_css_default.goalSteps,
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PromptaFlowStepList, {
 							call,
 							t,
 							sessionId,
@@ -12060,7 +12075,7 @@ window.__ModuleLoader__.load({
 		}
 		(0, react.memo)(ResizeControl);
 		//#endregion
-		//#region \0dsh-css:/Users/cxd/develop/orbit/integrations/deepseek-harness/node_modules/@xyflow/react/dist/style.css.mjs
+		//#region \0dsh-css:node_modules/@xyflow/react/dist/style.css.mjs
 		const css = ".react-flow{--xy-edge-stroke-default:#b1b1b7;--xy-edge-stroke-width-default:1;--xy-edge-stroke-selected-default:#555;--xy-connectionline-stroke-default:#b1b1b7;--xy-connectionline-stroke-width-default:1;--xy-attribution-background-color-default:#ffffff80;--xy-minimap-background-color-default:#fff;--xy-minimap-mask-background-color-default:#f0f0f099;--xy-minimap-mask-stroke-color-default:transparent;--xy-minimap-mask-stroke-width-default:1;--xy-minimap-node-background-color-default:#e2e2e2;--xy-minimap-node-stroke-color-default:transparent;--xy-minimap-node-stroke-width-default:2;--xy-background-color-default:transparent;--xy-background-pattern-dots-color-default:#91919a;--xy-background-pattern-lines-color-default:#eee;--xy-background-pattern-cross-color-default:#e2e2e2;background-color:var(--xy-background-color,var(--xy-background-color-default));--xy-node-color-default:inherit;--xy-node-border-default:1px solid #1a192b;--xy-node-background-color-default:#fff;--xy-node-group-background-color-default:#f0f0f040;--xy-node-boxshadow-hover-default:0 1px 4px 1px #00000014;--xy-node-boxshadow-selected-default:0 0 0 .5px #1a192b;--xy-node-border-radius-default:3px;--xy-handle-background-color-default:#1a192b;--xy-handle-border-color-default:#fff;--xy-selection-background-color-default:#0059dc14;--xy-selection-border-default:1px dotted #0059dccc;--xy-controls-button-background-color-default:#fefefe;--xy-controls-button-background-color-hover-default:#f4f4f4;--xy-controls-button-color-default:inherit;--xy-controls-button-color-hover-default:inherit;--xy-controls-button-border-color-default:#eee;--xy-controls-box-shadow-default:0 0 2px 1px #00000014;--xy-edge-label-background-color-default:#fff;--xy-edge-label-color-default:inherit;--xy-resize-background-color-default:#3367d9;direction:ltr}.react-flow.dark{--xy-edge-stroke-default:#3e3e3e;--xy-edge-stroke-width-default:1;--xy-edge-stroke-selected-default:#727272;--xy-connectionline-stroke-default:#b1b1b7;--xy-connectionline-stroke-width-default:1;--xy-attribution-background-color-default:#96969640;--xy-minimap-background-color-default:#141414;--xy-minimap-mask-background-color-default:#3c3c3c99;--xy-minimap-mask-stroke-color-default:transparent;--xy-minimap-mask-stroke-width-default:1;--xy-minimap-node-background-color-default:#2b2b2b;--xy-minimap-node-stroke-color-default:transparent;--xy-minimap-node-stroke-width-default:2;--xy-background-color-default:#141414;--xy-background-pattern-dots-color-default:#555;--xy-background-pattern-lines-color-default:#333;--xy-background-pattern-cross-color-default:#333;--xy-node-color-default:#f8f8f8;--xy-node-border-default:1px solid #3c3c3c;--xy-node-background-color-default:#1e1e1e;--xy-node-group-background-color-default:#f0f0f040;--xy-node-boxshadow-hover-default:0 1px 4px 1px #ffffff14;--xy-node-boxshadow-selected-default:0 0 0 .5px #999;--xy-handle-background-color-default:#bebebe;--xy-handle-border-color-default:#1e1e1e;--xy-selection-background-color-default:#c8c8dc14;--xy-selection-border-default:1px dotted #c8c8dccc;--xy-controls-button-background-color-default:#2b2b2b;--xy-controls-button-background-color-hover-default:#3e3e3e;--xy-controls-button-color-default:#f8f8f8;--xy-controls-button-color-hover-default:#fff;--xy-controls-button-border-color-default:#5b5b5b;--xy-controls-box-shadow-default:0 0 2px 1px #00000014;--xy-edge-label-background-color-default:#141414;--xy-edge-label-color-default:#f8f8f8}.react-flow__background{background-color:var(--xy-background-color-props,var(--xy-background-color,var(--xy-background-color-default)));pointer-events:none;z-index:-1}.react-flow__container{width:100%;height:100%;position:absolute;top:0;left:0}.react-flow__pane{z-index:1;touch-action:none}.react-flow__pane.draggable{cursor:grab}.react-flow__pane.dragging{cursor:grabbing}.react-flow__pane.selection{cursor:pointer}.react-flow__viewport{transform-origin:0 0;z-index:2;pointer-events:none}.react-flow__renderer{z-index:4}.react-flow__selection{z-index:6}.react-flow__nodesselection-rect:focus,.react-flow__nodesselection-rect:focus-visible{outline:none}.react-flow__edge-path{stroke:var(--xy-edge-stroke,var(--xy-edge-stroke-default));stroke-width:var(--xy-edge-stroke-width,var(--xy-edge-stroke-width-default));fill:none}.react-flow__connection-path{stroke:var(--xy-connectionline-stroke,var(--xy-connectionline-stroke-default));stroke-width:var(--xy-connectionline-stroke-width,var(--xy-connectionline-stroke-width-default));fill:none}.react-flow .react-flow__edges{position:absolute}.react-flow .react-flow__edges svg{pointer-events:none;position:absolute;overflow:visible}.react-flow__edge{pointer-events:visibleStroke}.react-flow__edge.selectable{cursor:pointer}.react-flow__edge.animated path{stroke-dasharray:5;animation:.5s linear infinite dashdraw}.react-flow__edge.animated path.react-flow__edge-interaction{stroke-dasharray:none;animation:none}.react-flow__edge.inactive{pointer-events:none}.react-flow__edge.selected,.react-flow__edge:focus,.react-flow__edge:focus-visible{outline:none}.react-flow__edge.selected .react-flow__edge-path,.react-flow__edge.selectable:focus .react-flow__edge-path,.react-flow__edge.selectable:focus-visible .react-flow__edge-path{stroke:var(--xy-edge-stroke-selected,var(--xy-edge-stroke-selected-default))}.react-flow__edge-textwrapper{pointer-events:all}.react-flow__edge .react-flow__edge-text{pointer-events:none;-webkit-user-select:none;-moz-user-select:none;user-select:none}.react-flow__arrowhead polyline{stroke:var(--xy-edge-stroke,var(--xy-edge-stroke-default))}.react-flow__arrowhead polyline.arrowclosed{fill:var(--xy-edge-stroke,var(--xy-edge-stroke-default))}.react-flow__connection{pointer-events:none}.react-flow__connection .animated{stroke-dasharray:5;animation:.5s linear infinite dashdraw}svg.react-flow__connectionline{z-index:1001;position:absolute;overflow:visible}.react-flow__nodes{pointer-events:none;transform-origin:0 0}.react-flow__node{-webkit-user-select:none;-moz-user-select:none;user-select:none;pointer-events:all;transform-origin:0 0;box-sizing:border-box;cursor:default;position:absolute}.react-flow__node.selectable{cursor:pointer}.react-flow__node.draggable{cursor:grab;pointer-events:all}.react-flow__node.draggable.dragging{cursor:grabbing}.react-flow__nodesselection{z-index:3;transform-origin:0 0;pointer-events:none}.react-flow__nodesselection-rect{pointer-events:all;cursor:grab;position:absolute}.react-flow__handle{pointer-events:none;background-color:var(--xy-handle-background-color,var(--xy-handle-background-color-default));border:1px solid var(--xy-handle-border-color,var(--xy-handle-border-color-default));border-radius:100%;width:6px;min-width:5px;height:6px;min-height:5px;position:absolute}.react-flow__handle.connectingfrom{pointer-events:all}.react-flow__handle.connectionindicator{pointer-events:all;cursor:crosshair}.react-flow__handle-bottom{top:auto;bottom:0;left:50%;transform:translate(-50%,50%)}.react-flow__handle-top{top:0;left:50%;transform:translate(-50%,-50%)}.react-flow__handle-left{top:50%;left:0;transform:translate(-50%,-50%)}.react-flow__handle-right{top:50%;right:0;transform:translate(50%,-50%)}.react-flow__edgeupdater{cursor:move;pointer-events:all}.react-flow__pane.selection .react-flow__panel{pointer-events:none}.react-flow__panel{z-index:5;margin:15px;position:absolute}.react-flow__panel.top{top:0}.react-flow__panel.bottom{bottom:0}.react-flow__panel.top.center,.react-flow__panel.bottom.center{left:50%;transform:translate(-15px)translate(-50%)}.react-flow__panel.left{left:0}.react-flow__panel.right{right:0}.react-flow__panel.left.center,.react-flow__panel.right.center{top:50%;transform:translateY(-15px)translateY(-50%)}.react-flow__attribution{background:var(--xy-attribution-background-color,var(--xy-attribution-background-color-default));margin:0;padding:2px 3px;font-size:10px}.react-flow__attribution a{color:#999;text-decoration:none}@keyframes dashdraw{0%{stroke-dashoffset:10px}}.react-flow__edgelabel-renderer{pointer-events:none;-webkit-user-select:none;-moz-user-select:none;user-select:none;width:100%;height:100%;position:absolute;top:0;left:0}.react-flow__viewport-portal{-webkit-user-select:none;-moz-user-select:none;user-select:none;width:100%;height:100%;position:absolute;top:0;left:0}.react-flow__minimap{background:var(--xy-minimap-background-color-props,var(--xy-minimap-background-color,var(--xy-minimap-background-color-default)))}.react-flow__minimap-svg{display:block}.react-flow__minimap-mask{fill:var(--xy-minimap-mask-background-color-props,var(--xy-minimap-mask-background-color,var(--xy-minimap-mask-background-color-default)));stroke:var(--xy-minimap-mask-stroke-color-props,var(--xy-minimap-mask-stroke-color,var(--xy-minimap-mask-stroke-color-default)));stroke-width:var(--xy-minimap-mask-stroke-width-props,var(--xy-minimap-mask-stroke-width,var(--xy-minimap-mask-stroke-width-default)))}.react-flow__minimap-node{fill:var(--xy-minimap-node-background-color-props,var(--xy-minimap-node-background-color,var(--xy-minimap-node-background-color-default)));stroke:var(--xy-minimap-node-stroke-color-props,var(--xy-minimap-node-stroke-color,var(--xy-minimap-node-stroke-color-default)));stroke-width:var(--xy-minimap-node-stroke-width-props,var(--xy-minimap-node-stroke-width,var(--xy-minimap-node-stroke-width-default)))}.react-flow__background-pattern.dots{fill:var(--xy-background-pattern-color-props,var(--xy-background-pattern-color,var(--xy-background-pattern-dots-color-default)))}.react-flow__background-pattern.lines{stroke:var(--xy-background-pattern-color-props,var(--xy-background-pattern-color,var(--xy-background-pattern-lines-color-default)))}.react-flow__background-pattern.cross{stroke:var(--xy-background-pattern-color-props,var(--xy-background-pattern-color,var(--xy-background-pattern-cross-color-default)))}.react-flow__controls{box-shadow:var(--xy-controls-box-shadow,var(--xy-controls-box-shadow-default));flex-direction:column;display:flex}.react-flow__controls.horizontal{flex-direction:row}.react-flow__controls-button{background:var(--xy-controls-button-background-color,var(--xy-controls-button-background-color-default));border:none;border-bottom:1px solid var(--xy-controls-button-border-color-props,var(--xy-controls-button-border-color,var(--xy-controls-button-border-color-default)));width:26px;height:26px;color:var(--xy-controls-button-color-props,var(--xy-controls-button-color,var(--xy-controls-button-color-default)));cursor:pointer;-webkit-user-select:none;-moz-user-select:none;user-select:none;justify-content:center;align-items:center;padding:4px;display:flex}.react-flow__controls-button svg{fill:currentColor;width:100%;max-width:12px;max-height:12px}.react-flow__edge.updating .react-flow__edge-path{stroke:#777}.react-flow__edge-text{font-size:10px}.react-flow__node.selectable:focus,.react-flow__node.selectable:focus-visible{outline:none}.react-flow__node-input,.react-flow__node-default,.react-flow__node-output,.react-flow__node-group{border-radius:var(--xy-node-border-radius,var(--xy-node-border-radius-default));width:150px;color:var(--xy-node-color,var(--xy-node-color-default));text-align:center;border:var(--xy-node-border,var(--xy-node-border-default));background-color:var(--xy-node-background-color,var(--xy-node-background-color-default));padding:10px;font-size:12px}.react-flow__node-input.selectable:hover,.react-flow__node-default.selectable:hover,.react-flow__node-output.selectable:hover,.react-flow__node-group.selectable:hover{box-shadow:var(--xy-node-boxshadow-hover,var(--xy-node-boxshadow-hover-default))}.react-flow__node-input.selectable.selected,.react-flow__node-input.selectable:focus,.react-flow__node-input.selectable:focus-visible,.react-flow__node-default.selectable.selected,.react-flow__node-default.selectable:focus,.react-flow__node-default.selectable:focus-visible,.react-flow__node-output.selectable.selected,.react-flow__node-output.selectable:focus,.react-flow__node-output.selectable:focus-visible,.react-flow__node-group.selectable.selected,.react-flow__node-group.selectable:focus,.react-flow__node-group.selectable:focus-visible{box-shadow:var(--xy-node-boxshadow-selected,var(--xy-node-boxshadow-selected-default))}.react-flow__node-group{background-color:var(--xy-node-group-background-color,var(--xy-node-group-background-color-default))}.react-flow__nodesselection-rect,.react-flow__selection{background:var(--xy-selection-background-color,var(--xy-selection-background-color-default));border:var(--xy-selection-border,var(--xy-selection-border-default))}.react-flow__nodesselection-rect:focus,.react-flow__nodesselection-rect:focus-visible,.react-flow__selection:focus,.react-flow__selection:focus-visible{outline:none}.react-flow__controls-button:hover{background:var(--xy-controls-button-background-color-hover-props,var(--xy-controls-button-background-color-hover,var(--xy-controls-button-background-color-hover-default)));color:var(--xy-controls-button-color-hover-props,var(--xy-controls-button-color-hover,var(--xy-controls-button-color-hover-default)))}.react-flow__controls-button:disabled{pointer-events:none}.react-flow__controls-button:disabled svg{fill-opacity:.4}.react-flow__controls-button:last-child{border-bottom:none}.react-flow__controls.horizontal .react-flow__controls-button{border-bottom:none;border-right:1px solid var(--xy-controls-button-border-color-props,var(--xy-controls-button-border-color,var(--xy-controls-button-border-color-default)))}.react-flow__controls.horizontal .react-flow__controls-button:last-child{border-right:none}.react-flow__resize-control{position:absolute}.react-flow__resize-control.left,.react-flow__resize-control.right{cursor:ew-resize}.react-flow__resize-control.top,.react-flow__resize-control.bottom{cursor:ns-resize}.react-flow__resize-control.top.left,.react-flow__resize-control.bottom.right{cursor:nwse-resize}.react-flow__resize-control.bottom.left,.react-flow__resize-control.top.right{cursor:nesw-resize}.react-flow__resize-control.handle{background-color:var(--xy-resize-background-color,var(--xy-resize-background-color-default));border:1px solid #fff;border-radius:1px;width:5px;height:5px;translate:-50% -50%}.react-flow__resize-control.handle.left{top:50%;left:0}.react-flow__resize-control.handle.right{top:50%;left:100%}.react-flow__resize-control.handle.top{top:0;left:50%}.react-flow__resize-control.handle.bottom{top:100%;left:50%}.react-flow__resize-control.handle.top.left,.react-flow__resize-control.handle.bottom.left{left:0}.react-flow__resize-control.handle.top.right,.react-flow__resize-control.handle.bottom.right{left:100%}.react-flow__resize-control.line{border-color:var(--xy-resize-background-color,var(--xy-resize-background-color-default));border-style:solid;border-width:0}.react-flow__resize-control.line.left,.react-flow__resize-control.line.right{width:1px;height:100%;top:0;transform:translate(-50%)}.react-flow__resize-control.line.left{border-left-width:1px;left:0}.react-flow__resize-control.line.right{border-right-width:1px;left:100%}.react-flow__resize-control.line.top,.react-flow__resize-control.line.bottom{width:100%;height:1px;left:0;transform:translateY(-50%)}.react-flow__resize-control.line.top{border-top-width:1px;top:0}.react-flow__resize-control.line.bottom{border-bottom-width:1px;top:100%}.react-flow__edge-textbg{fill:var(--xy-edge-label-background-color,var(--xy-edge-label-background-color-default))}.react-flow__edge-text{fill:var(--xy-edge-label-color,var(--xy-edge-label-color-default))}";
 		const tagId = "@promptaflow/dsh/style.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
@@ -12071,12 +12086,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		//#endregion
-		//#region src/client/OrbitWorkflowGraph.tsx
+		//#region src/client/PromptaFlowWorkflowGraph.tsx
 		const DEPTH_WIDTH = 320;
 		const LANE_HEIGHT = 140;
 		const nodeTypes = { workflow: (0, react.memo)(function WorkflowGraphNodeCard({ data }) {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: `${OrbitPanel_module_css_default.graphNode} ${OrbitPanel_module_css_default[`graphNode_${data.kind}`] ?? ""}`,
+				className: `${PromptaFlowPanel_module_css_default.graphNode} ${PromptaFlowPanel_module_css_default[`graphNode_${data.kind}`] ?? ""}`,
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Handle, {
 						type: "target",
@@ -12084,15 +12099,15 @@ window.__ModuleLoader__.load({
 						isConnectable: false
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: OrbitPanel_module_css_default.graphNodeKind,
+						className: PromptaFlowPanel_module_css_default.graphNodeKind,
 						children: data.kind
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: OrbitPanel_module_css_default.graphNodeTitle,
+						className: PromptaFlowPanel_module_css_default.graphNodeTitle,
 						children: data.label
 					}),
 					data.handler ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: OrbitPanel_module_css_default.graphNodeHandler,
+						className: PromptaFlowPanel_module_css_default.graphNodeHandler,
 						children: data.handler
 					}) : null,
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Handle, {
@@ -12103,7 +12118,7 @@ window.__ModuleLoader__.load({
 				]
 			});
 		}) };
-		function OrbitWorkflowGraph({ graph }) {
+		function PromptaFlowWorkflowGraph({ graph }) {
 			const model = (0, react.useMemo)(() => {
 				const positions = new Map((graph.layout?.positions ?? []).map((item) => [item.node_id, item]));
 				return {
@@ -12141,7 +12156,7 @@ window.__ModuleLoader__.load({
 				};
 			}, [graph]);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-				className: OrbitPanel_module_css_default.workflowGraph,
+				className: PromptaFlowPanel_module_css_default.workflowGraph,
 				"aria-label": "Workflow graph",
 				children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(index, {
 					nodes: model.nodes,
@@ -12167,7 +12182,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region src/client/OrbitWorkflowDetail.tsx
+		//#region src/client/PromptaFlowWorkflowDetail.tsx
 		/** One Workflow as the panel's body, using the same graph/definition hierarchy
 		* as PromptaFlow's MCP App card. */
 		/** The kinds that carry work, and so are the ones a missing prompt is news about. */
@@ -12175,33 +12190,33 @@ window.__ModuleLoader__.load({
 		function StepRow({ t, step }) {
 			const prompt = step.prompt.trim();
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: `${OrbitPanel_module_css_default.defnRow} ${OrbitPanel_module_css_default[`kind_${step.kind}`] ?? ""}`,
+				className: `${PromptaFlowPanel_module_css_default.defnRow} ${PromptaFlowPanel_module_css_default[`kind_${step.kind}`] ?? ""}`,
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: OrbitPanel_module_css_default.defnHead,
+					className: PromptaFlowPanel_module_css_default.defnHead,
 					children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: OrbitPanel_module_css_default.defnName,
+							className: PromptaFlowPanel_module_css_default.defnName,
 							children: step.label
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: OrbitPanel_module_css_default.defnKind,
+							className: PromptaFlowPanel_module_css_default.defnKind,
 							children: step.kind
 						}),
 						step.handler ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
-							className: OrbitPanel_module_css_default.defnHandler,
+							className: PromptaFlowPanel_module_css_default.defnHandler,
 							children: step.handler.replace(/^agent\./, "")
 						}) : null
 					]
 				}), prompt ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-					className: OrbitPanel_module_css_default.defnPrompt,
+					className: PromptaFlowPanel_module_css_default.defnPrompt,
 					children: prompt
 				}) : PROMPTED.has(step.kind) ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-					className: OrbitPanel_module_css_default.defnNoPrompt,
+					className: PromptaFlowPanel_module_css_default.defnNoPrompt,
 					children: t("noPrompt")
 				}) : null]
 			});
 		}
-		function OrbitWorkflowDetail({ call, t, sessionId, workflow, runs, onBack, onNewGoal, onModify, onDelete, onOpenRun }) {
+		function PromptaFlowWorkflowDetail({ call, t, sessionId, workflow, runs, onBack, onNewGoal, onModify, onDelete, onOpenRun }) {
 			const ran = runs.filter((run) => run.workflow.startsWith(`${workflow.workflow_id}@`));
 			const [steps, setSteps] = (0, react.useState)(null);
 			const [graph, setGraph] = (0, react.useState)(null);
@@ -12229,21 +12244,21 @@ window.__ModuleLoader__.load({
 				workflow.workflow_id
 			]);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: OrbitPanel_module_css_default.workflowDetail,
+				className: PromptaFlowPanel_module_css_default.workflowDetail,
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(BackButton, {
 						t,
 						onBack
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: OrbitPanel_module_css_default.detailHead,
+						className: PromptaFlowPanel_module_css_default.detailHead,
 						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: OrbitPanel_module_css_default.detailGoal,
+							className: PromptaFlowPanel_module_css_default.detailGoal,
 							children: workflow.name || workflow.workflow_id
 						})
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: OrbitPanel_module_css_default.detailMeta,
+						className: PromptaFlowPanel_module_css_default.detailMeta,
 						children: [
 							workflow.workflow_id,
 							"@",
@@ -12251,7 +12266,7 @@ window.__ModuleLoader__.load({
 						]
 					}),
 					workflow.description ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-						className: OrbitPanel_module_css_default.prose,
+						className: PromptaFlowPanel_module_css_default.prose,
 						children: workflow.description
 					}) : null,
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(PanelErrorText, {
@@ -12259,63 +12274,63 @@ window.__ModuleLoader__.load({
 						error: stepsError
 					}),
 					stepsError === null && steps === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-						className: OrbitPanel_module_css_default.empty,
+						className: PromptaFlowPanel_module_css_default.empty,
 						children: t("stepsLoading")
 					}) : null,
 					steps !== null ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: OrbitPanel_module_css_default.workflowDetailTabs,
+						className: PromptaFlowPanel_module_css_default.workflowDetailTabs,
 						role: "tablist",
 						"aria-label": t("workflowViews"),
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
 							role: "tab",
 							"aria-selected": view === "graph",
-							className: view === "graph" ? OrbitPanel_module_css_default.workflowDetailTabActive : OrbitPanel_module_css_default.workflowDetailTab,
+							className: view === "graph" ? PromptaFlowPanel_module_css_default.workflowDetailTabActive : PromptaFlowPanel_module_css_default.workflowDetailTab,
 							onClick: () => setView("graph"),
 							children: t("workflowGraph")
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
 							role: "tab",
 							"aria-selected": view === "definition",
-							className: view === "definition" ? OrbitPanel_module_css_default.workflowDetailTabActive : OrbitPanel_module_css_default.workflowDetailTab,
+							className: view === "definition" ? PromptaFlowPanel_module_css_default.workflowDetailTabActive : PromptaFlowPanel_module_css_default.workflowDetailTab,
 							onClick: () => setView("definition"),
 							children: t("workflowDefinition")
 						})]
-					}), view === "graph" ? graph?.nodes?.length ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OrbitWorkflowGraph, { graph }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-						className: OrbitPanel_module_css_default.empty,
+					}), view === "graph" ? graph?.nodes?.length ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PromptaFlowWorkflowGraph, { graph }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+						className: PromptaFlowPanel_module_css_default.empty,
 						children: t("noWorkflowGraph")
 					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: OrbitPanel_module_css_default.workflowDefinitionPanel,
+						className: PromptaFlowPanel_module_css_default.workflowDefinitionPanel,
 						children: steps.map((step) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(StepRow, {
 							t,
 							step
 						}, step.node_id))
 					})] }) : null,
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: OrbitPanel_module_css_default.workflowActions,
+						className: PromptaFlowPanel_module_css_default.workflowActions,
 						children: [
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
-								className: OrbitPanel_module_css_default.workflowPrimaryAction,
+								className: PromptaFlowPanel_module_css_default.workflowPrimaryAction,
 								onClick: onNewGoal,
 								children: t("newGoal")
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
-								className: OrbitPanel_module_css_default.workflowAction,
+								className: PromptaFlowPanel_module_css_default.workflowAction,
 								onClick: onModify,
 								children: t("editWorkflow")
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
-								className: OrbitPanel_module_css_default.workflowDangerAction,
+								className: PromptaFlowPanel_module_css_default.workflowDangerAction,
 								onClick: () => setConfirmingDelete(true),
 								children: t("deleteWorkflow")
 							})
 						]
 					}),
 					confirmingDelete ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: OrbitPanel_module_css_default.workflowDeleteConfirm,
+						className: PromptaFlowPanel_module_css_default.workflowDeleteConfirm,
 						role: "alertdialog",
 						"aria-label": t("deleteWorkflowTitle"),
 						children: [
@@ -12323,10 +12338,10 @@ window.__ModuleLoader__.load({
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: workflow.name || workflow.workflow_id }),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: workflow.workflow_id }),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: OrbitPanel_module_css_default.confirmActions,
+								className: PromptaFlowPanel_module_css_default.confirmActions,
 								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
-									className: OrbitPanel_module_css_default.confirmCancel,
+									className: PromptaFlowPanel_module_css_default.confirmCancel,
 									onClick: () => {
 										setConfirmingDelete(false);
 										setDeleteError(null);
@@ -12334,7 +12349,7 @@ window.__ModuleLoader__.load({
 									children: t("deleteCancel")
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
-									className: OrbitPanel_module_css_default.workflowDangerAction,
+									className: PromptaFlowPanel_module_css_default.workflowDangerAction,
 									disabled: deleting,
 									onClick: () => {
 										setDeleting(true);
@@ -12351,44 +12366,44 @@ window.__ModuleLoader__.load({
 						]
 					}) : null,
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: OrbitPanel_module_css_default.sectionLabel,
+						className: PromptaFlowPanel_module_css_default.sectionLabel,
 						children: t("factRuns", { total: ran.length })
 					}),
-					ran.length ? ran.map((run) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OrbitRunListRow, {
+					ran.length ? ran.map((run) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PromptaFlowRunListRow, {
 						t,
 						run,
 						onOpen: () => onOpenRun(run.runId)
 					}, run.runId)) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-						className: OrbitPanel_module_css_default.empty,
+						className: PromptaFlowPanel_module_css_default.empty,
 						children: t("neverRun")
 					})
 				]
 			});
 		}
 		//#endregion
-		//#region src/client/OrbitPanel.tsx
+		//#region src/client/PromptaFlowPanel.tsx
 		/** The resident PromptaFlow panel: what is running, and a way into PromptaFlow itself. */
 		/** PromptaFlow's ring-and-satellite mark, kept inline so the folded control is self-contained. */
-		function OrbitMark() {
+		function PromptaFlowMark() {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
-				className: OrbitPanel_module_css_default.orbitMark,
+				className: PromptaFlowPanel_module_css_default.promptaflowMark,
 				viewBox: "0 0 64 64",
 				"aria-hidden": "true",
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("circle", {
-						className: OrbitPanel_module_css_default.orbitBackground,
+						className: PromptaFlowPanel_module_css_default.promptaflowBackground,
 						cx: "32",
 						cy: "32",
 						r: "32"
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("circle", {
-						className: OrbitPanel_module_css_default.orbitRing,
+						className: PromptaFlowPanel_module_css_default.promptaflowRing,
 						cx: "32",
 						cy: "32",
 						r: "18"
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("circle", {
-						className: OrbitPanel_module_css_default.orbitSatellite,
+						className: PromptaFlowPanel_module_css_default.promptaflowSatellite,
 						cx: "48",
 						cy: "22",
 						r: "6"
@@ -12397,7 +12412,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		async function hostCall$1(action, args, signal) {
-			const response = await fetch("/plugins/dsh-orbit/api", {
+			const response = await fetch("/plugins/dsh-promptaflow/api", {
 				method: "POST",
 				headers: { "content-type": "application/json" },
 				body: JSON.stringify({
@@ -12483,13 +12498,13 @@ window.__ModuleLoader__.load({
 			}
 			if (!shown.length) return null;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: OrbitPanel_module_css_default.shape,
+				className: PromptaFlowPanel_module_css_default.shape,
 				"aria-hidden": "true",
 				children: [shown.map((kind, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-					className: `${OrbitPanel_module_css_default.shapeNode} ${OrbitPanel_module_css_default[`node_${kind}`] ?? ""}`,
+					className: `${PromptaFlowPanel_module_css_default.shapeNode} ${PromptaFlowPanel_module_css_default[`node_${kind}`] ?? ""}`,
 					children: glyph(kind)
 				}, index)), total > shown.length ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-					className: `${OrbitPanel_module_css_default.shapeNode} ${OrbitPanel_module_css_default.node_more}`,
+					className: `${PromptaFlowPanel_module_css_default.shapeNode} ${PromptaFlowPanel_module_css_default.node_more}`,
 					children: ["+", total - shown.length]
 				}) : null]
 			});
@@ -12553,62 +12568,62 @@ window.__ModuleLoader__.load({
 				job.output_href
 			]);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: OrbitPanel_module_css_default.authoringRow,
+				className: PromptaFlowPanel_module_css_default.authoringRow,
 				"data-open": open || void 0,
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: OrbitPanel_module_css_default.authoringSummary,
+						className: PromptaFlowPanel_module_css_default.authoringSummary,
 						children: [
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {
 								state,
 								size: 8
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: OrbitPanel_module_css_default.authoringMain,
+								className: PromptaFlowPanel_module_css_default.authoringMain,
 								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: OrbitPanel_module_css_default.authoringLabel,
+									className: PromptaFlowPanel_module_css_default.authoringLabel,
 									children: [label, job.requested_agent ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-										className: OrbitPanel_module_css_default.meta,
+										className: PromptaFlowPanel_module_css_default.meta,
 										children: [" · ", t("authoringBy", { agent: job.requested_agent })]
 									}) : null]
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: OrbitPanel_module_css_default.authoringPrompt,
+									className: PromptaFlowPanel_module_css_default.authoringPrompt,
 									children: settled && job.status === "failed" && job.error ? job.error : job.prompt
 								})]
 							}),
 							job.output_href ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
-								className: OrbitPanel_module_css_default.authoringOutputToggle,
+								className: PromptaFlowPanel_module_css_default.authoringOutputToggle,
 								"aria-expanded": open,
 								title: t(open ? "hideAgentOutput" : "showAgentOutput"),
 								onClick: () => setOpen((value) => !value),
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: open ? OrbitPanel_module_css_default.authoringChevronOpen : "" })
+								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: open ? PromptaFlowPanel_module_css_default.authoringChevronOpen : "" })
 							}) : null
 						]
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: OrbitPanel_module_css_default.authoringStages,
+						className: PromptaFlowPanel_module_css_default.authoringStages,
 						children: progress.stages.map((stage) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: OrbitPanel_module_css_default.stepDisclosure,
+							className: PromptaFlowPanel_module_css_default.stepDisclosure,
 							children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: OrbitPanel_module_css_default.stepRow,
+								className: PromptaFlowPanel_module_css_default.stepRow,
 								children: [
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: `${OrbitPanel_module_css_default.stepDot} ${OrbitPanel_module_css_default[`stepDot_${stepDotState(stage.status)}`]}`,
+										className: `${PromptaFlowPanel_module_css_default.stepDot} ${PromptaFlowPanel_module_css_default[`stepDot_${stepDotState(stage.status)}`]}`,
 										"aria-hidden": "true"
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: OrbitPanel_module_css_default.stepTitle,
+										className: PromptaFlowPanel_module_css_default.stepTitle,
 										children: t(`stage_${stage.stage}`)
 									}),
 									stage.status === "running" && progress.attempt > 1 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: OrbitPanel_module_css_default.status,
+										className: PromptaFlowPanel_module_css_default.status,
 										children: t("stageAttempt", {
 											attempt: progress.attempt,
 											max: progress.maxAttempts
 										})
 									}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: OrbitPanel_module_css_default.status,
+										className: PromptaFlowPanel_module_css_default.status,
 										children: stage.status
 									})
 								]
@@ -12616,19 +12631,19 @@ window.__ModuleLoader__.load({
 						}, stage.stage))
 					}),
 					open ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: OrbitPanel_module_css_default.authoringOutput,
+						className: PromptaFlowPanel_module_css_default.authoringOutput,
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(PanelErrorText, {
 							t,
 							error: outputError
 						}), chunks.length ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", { children: chunks.map((chunk) => chunk.text).join("") }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-							className: OrbitPanel_module_css_default.empty,
+							className: PromptaFlowPanel_module_css_default.empty,
 							children: t("agentOutputWaiting")
 						})]
 					}) : null
 				]
 			});
 		}
-		function OrbitPanel({ t, useSessions, onSelectWorkflow, onEditWorkflow, onDeleteWorkflow }) {
+		function PromptaFlowPanel({ t, useSessions, onSelectWorkflow, onEditWorkflow, onDeleteWorkflow }) {
 			const sessionId = useSessions((state) => state.current);
 			const [layout, setLayout] = (0, react.useState)(() => {
 				try {
@@ -12671,8 +12686,8 @@ window.__ModuleLoader__.load({
 					...readLayoutSafely(layout),
 					collapsed: !layout.collapsed
 				});
-				window.addEventListener("orbit:toggle-panel", toggle);
-				return () => window.removeEventListener("orbit:toggle-panel", toggle);
+				window.addEventListener("promptaflow:toggle-panel", toggle);
+				return () => window.removeEventListener("promptaflow:toggle-panel", toggle);
 			}, [layout, update]);
 			(0, react.useEffect)(() => {
 				const show = (event) => {
@@ -12688,8 +12703,8 @@ window.__ModuleLoader__.load({
 						setTab("workflows");
 					}
 				};
-				window.addEventListener("orbit:show-panel", show);
-				return () => window.removeEventListener("orbit:show-panel", show);
+				window.addEventListener("promptaflow:show-panel", show);
+				return () => window.removeEventListener("promptaflow:show-panel", show);
 			}, [layout, update]);
 			(0, react.useEffect)(() => {
 				if (!sessionId || layout.dismissed) {
@@ -12737,7 +12752,7 @@ window.__ModuleLoader__.load({
 						const authoringLive = state.authoring.some((job) => job.status === "queued" || job.status === "running");
 						timer = setTimeout(() => {
 							tick();
-						}, layout.collapsed ? ORBIT_IDLE_MS : authoringLive ? ORBIT_POLL_MS : nextInterval(next));
+						}, layout.collapsed ? PROMPTAFLOW_IDLE_MS : authoringLive ? PROMPTAFLOW_POLL_MS : nextInterval(next));
 					} catch (reason) {
 						if (controller.signal.aborted) return;
 						setConnecting(false);
@@ -12768,13 +12783,13 @@ window.__ModuleLoader__.load({
 			if (layout.dismissed) return null;
 			if (layout.collapsed) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 				type: "button",
-				className: OrbitPanel_module_css_default.badge,
+				className: PromptaFlowPanel_module_css_default.badge,
 				onClick: () => update({
 					...layout,
 					collapsed: false
 				}),
 				"aria-label": t("expand"),
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OrbitMark, {})
+				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PromptaFlowMark, {})
 			});
 			const onPointerDown = (event) => {
 				if (event.target.closest("button, a, input")) return;
@@ -12798,7 +12813,7 @@ window.__ModuleLoader__.load({
 				storeLayout(layout);
 			};
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
-				className: OrbitPanel_module_css_default.panel,
+				className: PromptaFlowPanel_module_css_default.panel,
 				style: {
 					left: box.left,
 					top: box.top,
@@ -12809,22 +12824,22 @@ window.__ModuleLoader__.load({
 				"aria-label": t("title"),
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: OrbitPanel_module_css_default.bar,
+						className: PromptaFlowPanel_module_css_default.bar,
 						onPointerDown,
 						onPointerMove,
 						onPointerUp,
 						children: [
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: OrbitPanel_module_css_default.title,
+								className: PromptaFlowPanel_module_css_default.title,
 								children: t("title")
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: OrbitPanel_module_css_default.count,
+								className: PromptaFlowPanel_module_css_default.count,
 								children: counts.live ? t("liveCount", counts) : t("idleCount", counts)
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
-								className: OrbitPanel_module_css_default.iconButton,
+								className: PromptaFlowPanel_module_css_default.iconButton,
 								disabled: asking,
 								onClick: () => {
 									forceNext.current = true;
@@ -12836,7 +12851,7 @@ window.__ModuleLoader__.load({
 								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutline16, { size: 14 })
 							}),
 							uiUrl ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
-								className: OrbitPanel_module_css_default.iconButton,
+								className: PromptaFlowPanel_module_css_default.iconButton,
 								href: uiUrl,
 								target: "_blank",
 								rel: "noopener",
@@ -12846,7 +12861,7 @@ window.__ModuleLoader__.load({
 							}) : null,
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
-								className: OrbitPanel_module_css_default.iconButton,
+								className: PromptaFlowPanel_module_css_default.iconButton,
 								onClick: () => update({
 									...layout,
 									collapsed: true
@@ -12857,7 +12872,7 @@ window.__ModuleLoader__.load({
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
-								className: `${OrbitPanel_module_css_default.iconButton} ${OrbitPanel_module_css_default.stopButton}`,
+								className: `${PromptaFlowPanel_module_css_default.iconButton} ${PromptaFlowPanel_module_css_default.stopButton}`,
 								disabled: stopping,
 								onClick: () => setConfirmingStop(true),
 								"aria-label": t("stopRuntime"),
@@ -12867,24 +12882,24 @@ window.__ModuleLoader__.load({
 						]
 					}),
 					confirmingStop ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: OrbitPanel_module_css_default.confirmBar,
+						className: PromptaFlowPanel_module_css_default.confirmBar,
 						role: "alertdialog",
 						"aria-label": t("stopRuntime"),
 						children: [
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: OrbitPanel_module_css_default.confirmText,
+								className: PromptaFlowPanel_module_css_default.confirmText,
 								children: t("stopRuntimeAsk")
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: OrbitPanel_module_css_default.confirmActions,
+								className: PromptaFlowPanel_module_css_default.confirmActions,
 								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
-									className: OrbitPanel_module_css_default.confirmCancel,
+									className: PromptaFlowPanel_module_css_default.confirmCancel,
 									onClick: () => setConfirmingStop(false),
 									children: t("stopCancel")
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
-									className: OrbitPanel_module_css_default.confirmGo,
+									className: PromptaFlowPanel_module_css_default.confirmGo,
 									disabled: stopping,
 									onClick: () => {
 										setStopping(true);
@@ -12909,7 +12924,7 @@ window.__ModuleLoader__.load({
 						]
 					}) : null,
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("nav", {
-						className: OrbitPanel_module_css_default.tabs,
+						className: PromptaFlowPanel_module_css_default.tabs,
 						"aria-label": t("title"),
 						children: [
 							["goal", "tabGoal"],
@@ -12918,7 +12933,7 @@ window.__ModuleLoader__.load({
 							["agents", "tabAgents"]
 						].map(([key, label]) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
-							className: key === tab ? `${OrbitPanel_module_css_default.tab} ${OrbitPanel_module_css_default.tabActive}` : OrbitPanel_module_css_default.tab,
+							className: key === tab ? `${PromptaFlowPanel_module_css_default.tab} ${PromptaFlowPanel_module_css_default.tabActive}` : PromptaFlowPanel_module_css_default.tab,
 							"aria-pressed": key === tab,
 							onClick: () => {
 								setSelected(null);
@@ -12929,14 +12944,14 @@ window.__ModuleLoader__.load({
 						}, key))
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: OrbitPanel_module_css_default.body,
-						children: chosen !== void 0 && sessionId !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OrbitRunDetail, {
+						className: PromptaFlowPanel_module_css_default.body,
+						children: chosen !== void 0 && sessionId !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PromptaFlowRunDetail, {
 							call: hostCall$1,
 							t,
 							sessionId,
 							run: chosen,
 							onBack: () => setSelected(null)
-						}) : chosenFlow !== void 0 && sessionId !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OrbitWorkflowDetail, {
+						}) : chosenFlow !== void 0 && sessionId !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PromptaFlowWorkflowDetail, {
 							call: hostCall$1,
 							t,
 							sessionId,
@@ -12949,10 +12964,10 @@ window.__ModuleLoader__.load({
 							onOpenRun: (runId) => setSelected(runId)
 						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 							connecting ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: OrbitPanel_module_css_default.connecting,
+								className: PromptaFlowPanel_module_css_default.connecting,
 								role: "status",
 								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: OrbitPanel_module_css_default.connectSpinner,
+									className: PromptaFlowPanel_module_css_default.connectSpinner,
 									"aria-hidden": "true"
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("connectingRuntime") })]
 							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PanelErrorText, {
@@ -12960,10 +12975,10 @@ window.__ModuleLoader__.load({
 								error
 							}),
 							!connecting && error === null && rows === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-								className: OrbitPanel_module_css_default.empty,
+								className: PromptaFlowPanel_module_css_default.empty,
 								children: t("loading")
 							}) : null,
-							!connecting && error === null && rows !== null && sessionId !== void 0 && tab === "goal" ? goal.length ? goal.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OrbitRunGoalCard, {
+							!connecting && error === null && rows !== null && sessionId !== void 0 && tab === "goal" ? goal.length ? goal.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PromptaFlowRunGoalCard, {
 								call: hostCall$1,
 								t,
 								sessionId,
@@ -12974,15 +12989,15 @@ window.__ModuleLoader__.load({
 									[row.runId]: settled
 								}))
 							}, row.runId)) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-								className: OrbitPanel_module_css_default.empty,
+								className: PromptaFlowPanel_module_css_default.empty,
 								children: t("emptyGoal")
 							}) : null,
-							!connecting && error === null && rows !== null && tab === "history" ? settled.length ? settled.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OrbitRunListRow, {
+							!connecting && error === null && rows !== null && tab === "history" ? settled.length ? settled.map((row) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PromptaFlowRunListRow, {
 								t,
 								run: row,
 								onOpen: () => setSelected(row.runId)
 							}, row.runId)) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-								className: OrbitPanel_module_css_default.empty,
+								className: PromptaFlowPanel_module_css_default.empty,
 								children: t("emptyHistory")
 							}) : null,
 							!connecting && error === null && sessionId && tab === "workflows" ? authoring.map((job) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(AuthoringRow, {
@@ -12991,15 +13006,15 @@ window.__ModuleLoader__.load({
 								sessionId
 							}, job.job_id)) : null,
 							!connecting && error === null && tab === "workflows" ? workflows.length ? workflows.map((item) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: OrbitPanel_module_css_default.flowRow,
+								className: PromptaFlowPanel_module_css_default.flowRow,
 								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 									type: "button",
-									className: OrbitPanel_module_css_default.flowButton,
+									className: PromptaFlowPanel_module_css_default.flowButton,
 									onClick: () => setSelectedFlow(item.workflow_id),
 									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-										className: OrbitPanel_module_css_default.flowName,
+										className: PromptaFlowPanel_module_css_default.flowName,
 										children: [item.name || item.workflow_id, item.goal_readiness === "ready" ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: OrbitPanel_module_css_default.flowBlocked,
+											className: PromptaFlowPanel_module_css_default.flowBlocked,
 											children: t(item.goal_readiness === "needs_migration" ? "needsMigration" : "needsUpgrade")
 										})]
 									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(WorkflowShape, {
@@ -13008,7 +13023,7 @@ window.__ModuleLoader__.load({
 									})]
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
-									className: OrbitPanel_module_css_default.flowNewGoal,
+									className: PromptaFlowPanel_module_css_default.flowNewGoal,
 									disabled: !sessionId || item.goal_readiness !== "ready",
 									onClick: () => {
 										if (sessionId) onSelectWorkflow(item, sessionId);
@@ -13016,53 +13031,53 @@ window.__ModuleLoader__.load({
 									children: t("newGoal")
 								})]
 							}, item.workflow_id)) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-								className: OrbitPanel_module_css_default.empty,
+								className: PromptaFlowPanel_module_css_default.empty,
 								children: t("emptyWorkflows")
 							}) : null,
 							!connecting && error === null && tab === "agents" ? agents.length ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: OrbitPanel_module_css_default.agentsGrid,
+								className: PromptaFlowPanel_module_css_default.agentsGrid,
 								children: agents.map((item) => {
 									const mark = agentMark(item.name);
 									const attempts = item.attempt_count ?? 0;
 									const failed = item.failed_count ?? 0;
 									return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("article", {
-										className: OrbitPanel_module_css_default.agentCard,
+										className: PromptaFlowPanel_module_css_default.agentCard,
 										children: [
 											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-												className: OrbitPanel_module_css_default.agentHead,
+												className: PromptaFlowPanel_module_css_default.agentHead,
 												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-													className: OrbitPanel_module_css_default.avatar,
+													className: PromptaFlowPanel_module_css_default.avatar,
 													style: mark.style,
 													"aria-hidden": true,
 													children: mark.initials
 												}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-													className: OrbitPanel_module_css_default.agentIdentity,
+													className: PromptaFlowPanel_module_css_default.agentIdentity,
 													children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-														className: OrbitPanel_module_css_default.agentName,
+														className: PromptaFlowPanel_module_css_default.agentName,
 														children: item.name.replace(/^agent\./u, "")
 													}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-														className: OrbitPanel_module_css_default.agentVersion,
+														className: PromptaFlowPanel_module_css_default.agentVersion,
 														children: item.version
 													})]
 												})]
 											}),
 											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-												className: OrbitPanel_module_css_default.agentStat,
+												className: PromptaFlowPanel_module_css_default.agentStat,
 												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-													className: OrbitPanel_module_css_default.agentStatLabel,
+													className: PromptaFlowPanel_module_css_default.agentStatLabel,
 													children: t("agentRunsLabel")
 												}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-													className: OrbitPanel_module_css_default.agentStatPill,
+													className: PromptaFlowPanel_module_css_default.agentStatPill,
 													children: t("agentRuns", { count: attempts })
 												})]
 											}),
 											failed > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-												className: OrbitPanel_module_css_default.agentStat,
+												className: PromptaFlowPanel_module_css_default.agentStat,
 												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-													className: OrbitPanel_module_css_default.agentStatLabel,
+													className: PromptaFlowPanel_module_css_default.agentStatLabel,
 													children: t("agentFailedLabel")
 												}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-													className: `${OrbitPanel_module_css_default.agentStatPill} ${OrbitPanel_module_css_default.agentStatError}`,
+													className: `${PromptaFlowPanel_module_css_default.agentStatPill} ${PromptaFlowPanel_module_css_default.agentStatError}`,
 													children: t("agentFailed", { count: failed })
 												})]
 											}) : null
@@ -13070,13 +13085,13 @@ window.__ModuleLoader__.load({
 									}, item.name);
 								})
 							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-								className: OrbitPanel_module_css_default.empty,
+								className: PromptaFlowPanel_module_css_default.empty,
 								children: t("emptyAgents")
 							}) : null
 						] })
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: OrbitPanel_module_css_default.resize,
+						className: PromptaFlowPanel_module_css_default.resize,
 						onPointerDown,
 						onPointerMove: (event) => {
 							const from = drag.current;
@@ -13102,7 +13117,7 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region src/client/locales.ts
 		/** Panel copy, registered with the Harness locale service. */
-		const ORBIT_LOCALE_NAMESPACE = "promptaflow";
+		const PROMPTAFLOW_LOCALE_NAMESPACE = "promptaflow";
 		const en = {
 			title: "PromptaFlow",
 			expand: "Show PromptaFlow runs",
@@ -13158,7 +13173,7 @@ window.__ModuleLoader__.load({
 			errHostGone: "This page has lost the app behind it. Restart it, then reload.",
 			errNoRuntime: "PromptaFlow is not running for this Workspace. Reopen the panel to start it.",
 			errStartFailed: "PromptaFlow would not start here. Hover for what it said on the way out.",
-			errDiscoveryFailed: "The orbit command did not answer properly. Check that it is installed and on PATH.",
+			errDiscoveryFailed: "The promptaflow command did not answer properly. Check that it is installed and on PATH.",
 			errRuntimeAddress: "PromptaFlow is running but published no address this panel can use.",
 			errRuntimeConflict: "More than one PromptaFlow Runtime claims this Workspace. Stop the extra one.",
 			errNoWorkspace: "This Session has no project folder open, so there is nothing for PromptaFlow to work on.",
@@ -13288,7 +13303,7 @@ window.__ModuleLoader__.load({
 			errHostGone: "这个页面背后的服务已经停止。重启它，然后刷新页面。",
 			errNoRuntime: "PromptaFlow 没有在这个 Workspace 上运行。重新打开面板会启动它。",
 			errStartFailed: "PromptaFlow 在这里启动失败了。把鼠标移上去可以看到它退出前说了什么。",
-			errDiscoveryFailed: "orbit 命令没有正常返回。检查它是否已安装、是否在 PATH 中。",
+			errDiscoveryFailed: "promptaflow 命令没有正常返回。检查它是否已安装、是否在 PATH 中。",
 			errRuntimeAddress: "PromptaFlow 在运行，但没有公布面板可以使用的地址。",
 			errRuntimeConflict: "有多个 PromptaFlow 运行时都声称管理这个 Workspace。请停掉多余的那个。",
 			errNoWorkspace: "当前会话没有打开项目目录，PromptaFlow 没有可以工作的对象。",
@@ -13453,7 +13468,7 @@ window.__ModuleLoader__.load({
 		const LIST_COMMAND = "promptaflow-workflows";
 		const GENERATE_COMMAND = "promptaflow-generate";
 		/** `/promptaflow` folds the resident panel; it never opens a second one. */
-		function registerOrbitSlashSource(ctx, t) {
+		function registerPromptaFlowSlashSource(ctx, t) {
 			const inputTriggers = ctx.get("inputTriggers");
 			if (!inputTriggers) throw new Error("PromptaFlow /promptaflow requires the Harness inputTriggers service");
 			const claim = () => ({
@@ -13463,7 +13478,7 @@ window.__ModuleLoader__.load({
 						kind: "error",
 						text: "/promptaflow takes no argument; it shows or hides the PromptaFlow panel"
 					};
-					window.dispatchEvent(new Event("orbit:toggle-panel"));
+					window.dispatchEvent(new Event("promptaflow:toggle-panel"));
 					return { kind: "success" };
 				}
 			});
@@ -13483,7 +13498,7 @@ window.__ModuleLoader__.load({
 					clipboardText: (ref) => `${MARK_OPEN}${ref}${MARK_CLOSE}`,
 					serialize: async (ref) => ref
 				}
-			}), "orbit: slash command folding the panel");
+			}), "promptaflow: slash command folding the panel");
 		}
 		/** `/promptaflow-generate` starts the existing authoring flow and reveals its row. */
 		function registerGenerateSlashSource(ctx, t) {
@@ -13497,7 +13512,7 @@ window.__ModuleLoader__.load({
 						kind: "error",
 						text: t("generateUsage")
 					};
-					showOrbitPanel("workflows");
+					showPromptaFlowPanel("workflows");
 					try {
 						await hostCall("generateWorkflowForSession", [session.sessionId, prompt], new AbortController().signal);
 						return { kind: "success" };
@@ -13522,7 +13537,7 @@ window.__ModuleLoader__.load({
 				onPick: (pick) => ({ claim: claim(pick.session) }),
 				matchSpace: (session, token) => token === `/${GENERATE_COMMAND}` ? { claim: claim(session) } : void 0,
 				matchEnter: async (session, line) => new RegExp(`^/${GENERATE_COMMAND}(?:\\s|$)`, "u").test(line.trim()) ? { claim: claim(session) } : void 0
-			}), "orbit: slash command generating a workflow");
+			}), "promptaflow: slash command generating a workflow");
 		}
 		function conversationFor(ctx, sessionId) {
 			const actx = ctx.get("sessions")?.scope(sessionId);
@@ -13554,7 +13569,7 @@ window.__ModuleLoader__.load({
 		/**
 		* Bring the panel out, wherever it was put.
 		*
-		* Distinct from `orbit:toggle-panel`, which flips: a command that toggles is a
+		* Distinct from `promptaflow:toggle-panel`, which flips: a command that toggles is a
 		* command that hides the panel for anyone who already had it open. This one
 		* only ever shows, so running an PromptaFlow command twice is not a way to lose
 		* sight of what it did.
@@ -13564,13 +13579,13 @@ window.__ModuleLoader__.load({
 		* hidden panel has reported nothing. Called before the work rather than after
 		* it, so a failure is met by an open panel too.
 		*/
-		function showOrbitPanel(tab) {
-			window.dispatchEvent(new CustomEvent("orbit:show-panel", { detail: tab === void 0 ? {} : { tab } }));
+		function showPromptaFlowPanel(tab) {
+			window.dispatchEvent(new CustomEvent("promptaflow:show-panel", { detail: tab === void 0 ? {} : { tab } }));
 		}
 		const MARK_OPEN = "「";
 		const MARK_CLOSE = "」";
 		async function hostCall(action, args, signal) {
-			const response = await fetch("/plugins/dsh-orbit/api", {
+			const response = await fetch("/plugins/dsh-promptaflow/api", {
 				method: "POST",
 				headers: { "content-type": "application/json" },
 				body: JSON.stringify({
@@ -13601,7 +13616,7 @@ window.__ModuleLoader__.load({
 				ui: {
 					kind: "popupSelect",
 					options: async (session, signal) => {
-						showOrbitPanel();
+						showPromptaFlowPanel();
 						return ((await hostCall("getPanelState", [
 							session.sessionId,
 							false,
@@ -13625,7 +13640,7 @@ window.__ModuleLoader__.load({
 						caretToEnd(input.state.getSnapshot().draft);
 					}
 				}
-			}), "orbit: workflow popup");
+			}), "promptaflow: workflow popup");
 		}
 		const inject = [
 			"inputTriggers",
@@ -13636,15 +13651,15 @@ window.__ModuleLoader__.load({
 			"sessions"
 		];
 		function apply(ctx) {
-			ctx.effect(() => ctx.locale.register(ORBIT_LOCALE_NAMESPACE, {
+			ctx.effect(() => ctx.locale.register(PROMPTAFLOW_LOCALE_NAMESPACE, {
 				zh,
 				en
-			}), "orbit: dictionaries");
-			const t = ctx.locale.bind(ORBIT_LOCALE_NAMESPACE);
-			registerOrbitSlashSource(ctx, t);
+			}), "promptaflow: dictionaries");
+			const t = ctx.locale.bind(PROMPTAFLOW_LOCALE_NAMESPACE);
+			registerPromptaFlowSlashSource(ctx, t);
 			registerGenerateSlashSource(ctx, t);
 			registerWorkflowPopup(ctx, t);
-			const Panel = ({ t, useSessions }) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(OrbitPanel, {
+			const Panel = ({ t, useSessions }) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PromptaFlowPanel, {
 				t,
 				useSessions,
 				onSelectWorkflow: (workflow, sessionId) => writeWorkflowDraft(ctx, t, workflow, sessionId),
@@ -13663,10 +13678,10 @@ window.__ModuleLoader__.load({
 			});
 			ctx.slots.inject("shell.overlay", () => ctx.slots.register({
 				name: "shell.overlay",
-				id: "orbit-runs",
+				id: "promptaflow-runs",
 				order: 80,
 				label: "PromptaFlow runs",
-				locale: ORBIT_LOCALE_NAMESPACE
+				locale: PROMPTAFLOW_LOCALE_NAMESPACE
 			}, Panel));
 		}
 		//#endregion

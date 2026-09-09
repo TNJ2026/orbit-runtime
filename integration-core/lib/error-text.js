@@ -19,7 +19,7 @@
  * will ever see. A host supplies the wording — `errNoRuntime` reads differently
  * in a panel and in a terminal — and must supply it for every key.
  */
-export const ORBIT_ERROR_KEYS = [
+export const PROMPTAFLOW_ERROR_KEYS = [
     'errAborted',
     'errArtifactTooLarge',
     'errAuthoringActive',
@@ -54,27 +54,22 @@ export const ORBIT_ERROR_KEYS = [
 /* Matched in order, because these overlap: a stopped Runtime answers a tool
    call with a transport failure, and a workflow that was deleted is also a
    workflow that is not found. The more specific reading goes first. */
-// Both spellings throughout. These read arbitrary text produced by another
-// process — a Runtime, a Host, a bundle on its own upgrade schedule — and a
-// reading that stops matching does not fail: it silently degrades every one
-// of those errors to the generic `errUnknown` the panel shows when it has
-// nothing useful to say.
 const READINGS = [
-    [/Hub workspace registration returned invalid JSON|(PromptaFlow|Orbit) command failed/i, 'errDiscoveryFailed'],
+    [/Hub workspace registration returned invalid JSON|PromptaFlow command failed/i, 'errDiscoveryFailed'],
     [/Hub auto-start requires a loopback HTTP URL/i, 'errRuntimeAddress'],
     // The Runtime is not there. Nothing else can be true at the same time, and
     // it is the one a person can fix by opening the panel again.
-    [/No independent (PromptaFlow|Orbit) Runtime is serving/i, 'errNoRuntime'],
+    [/No independent PromptaFlow Runtime is serving/i, 'errNoRuntime'],
     // Before the plain timeout below: a start that ran out of time is a failed
     // start, and the message now carries the Runtime's own last words. Those
     // words are arbitrary text, so this has to win before anything reads them.
     [/auto-start (failed|timed out)/i, 'errStartFailed'],
-    // The `orbit` command itself, rather than the Runtime it was asked about.
+    // The `promptaflow` command itself, rather than the Runtime it was asked about.
     [/Runtime discovery (failed|returned invalid JSON|must return an array)/i, 'errDiscoveryFailed'],
-    [/Multiple (PromptaFlow|Orbit) Runtimes claim/i, 'errRuntimeConflict'],
+    [/Multiple PromptaFlow Runtimes claim/i, 'errRuntimeConflict'],
     [/not reachable over HTTP MCP|published no HTTP address|did not publish a browser address/i,
         'errRuntimeAddress'],
-    [/incompatible (PromptaFlow|Orbit) integration protocol/i, 'errVersionMismatch'],
+    [/incompatible PromptaFlow integration protocol/i, 'errVersionMismatch'],
     // Refused rather than failed. Above the transport readings and above the
     // refusal below, because these carry status codes of their own: a stop that
     // came back 403 is a permission fact, which is the actionable half, while

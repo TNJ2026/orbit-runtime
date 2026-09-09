@@ -90,19 +90,11 @@ class AuthorizationTests(unittest.TestCase):
         self.assertTrue(guard.allows(LOCAL_ACTOR, WRITE_SCOPE))
         self.assertFalse(guard.allows("someone-else", READ_SCOPE))
 
-    def test_a_gateway_from_before_the_rename_is_still_understood(self) -> None:
-        """The header a pinned older bundle sends still refines the identity.
-
-        The Gateway ships pinned inside a Harness Profile and the Runtime is
-        installed separately, so during an upgrade the old client reaching the
-        new Runtime is the ordinary case. If this stopped being read, that
-        client would silently fall back to the unscoped local actor.
-        """
-
+    def test_promptaflow_gateway_header_refines_the_identity(self) -> None:
         request = SimpleNamespace(
             client=SimpleNamespace(host="127.0.0.1"),
             url=SimpleNamespace(path="/mcp"),
-            headers={"x-orbit-actor": "harness:session:abc-123"},
+            headers={"x-promptaflow-actor": "harness:session:abc-123"},
         )
         self.assertEqual(
             "harness:session:abc-123",
@@ -250,7 +242,7 @@ class WorkspacePathTests(unittest.TestCase):
                 self.assertEqual(self.provider.worktrees_root.name, path.parent.name)
 
     def test_a_symlinked_worktrees_root_is_refused(self) -> None:
-        """A stale or hostile checkout can point .orbit/worktrees anywhere."""
+        """A stale or hostile checkout can point .promptaflow/worktrees anywhere."""
 
         outside = Path(self.temp.name) / "outside"
         outside.mkdir()
@@ -307,16 +299,16 @@ class DevToolBoundaryTests(unittest.TestCase):
     def test_the_child_environment_is_built_not_inherited(self) -> None:
         """A verify run must not pick up the operator's exported tokens."""
 
-        os.environ["ORBIT_TEST_LEAKED_TOKEN"] = "leaked"
+        os.environ["PROMPTAFLOW_TEST_LEAKED_TOKEN"] = "leaked"
         try:
             GitStatusAdapter(self.runner).execute(
                 ToolRequest({"workspace_ref": "ws1"}, "k", {}), None
             )
         finally:
-            del os.environ["ORBIT_TEST_LEAKED_TOKEN"]
+            del os.environ["PROMPTAFLOW_TEST_LEAKED_TOKEN"]
         _argv, kwargs = self.calls[0]
         self.assertEqual({"PATH": "/usr/bin"}, kwargs["env"])
-        self.assertNotIn("ORBIT_TEST_LEAKED_TOKEN", kwargs["env"])
+        self.assertNotIn("PROMPTAFLOW_TEST_LEAKED_TOKEN", kwargs["env"])
 
 
 class OutputBombTests(unittest.TestCase):

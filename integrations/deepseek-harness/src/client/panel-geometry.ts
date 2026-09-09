@@ -33,7 +33,7 @@ export interface PanelBounds {
   readonly height: number
 }
 
-export const PANEL_STORAGE_KEY = 'orbit:panel:v1'
+export const PANEL_STORAGE_KEY = 'promptaflow:panel:v1'
 export const PANEL_DEFAULT_WIDTH = 400
 export const PANEL_DEFAULT_HEIGHT = 420
 export const PANEL_MIN_WIDTH = 320

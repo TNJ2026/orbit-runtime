@@ -41,7 +41,7 @@ AGENT_RESULT_PORT = "result"
 # is rejected as "not of type object", which is where an Agent chain used to die
 # one node after the Agent that actually answered.
 AGENT_RESULT_TEXT_KEY = "text"
-AGENT_COMPLETION_MARKER = "ORBIT_RESULT_COMPLETE"
+AGENT_COMPLETION_MARKER = "PROMPTAFLOW_RESULT_COMPLETE"
 
 
 def _completion_protocol(marker: str) -> str:
@@ -149,7 +149,7 @@ class TrustedCliAgentClient:
         )
         # Where a run's Agents are put to work. Without one they inherited the
         # Runtime's own working directory, which on a developer's machine is
-        # whatever repository they happened to start `orbit serve` in — and an
+        # whatever repository they happened to start `promptaflow serve` in — and an
         # Agent asked to merge a pull request merged that repository.
         #
         # This is isolation, not confinement. Nothing stops a CLI from writing

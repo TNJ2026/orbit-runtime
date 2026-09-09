@@ -4,7 +4,7 @@
 #
 # The start half is deliberately not implemented here. `agent-app.json` already
 # declares the command, the ready URL and how long a cold start may take, and
-# `orbit agent-app ensure` — what `start-promptaflow.sh` runs — owns the
+# `promptaflow agent-app ensure` — what `start-promptaflow.sh` runs — owns the
 # `pid.json` that records which process holds the port. A restart that starts
 # the Hub itself leaves that file naming a process it killed, and the next
 # `ensure` then refuses to run at all: the port answers, the recorded PID is
@@ -14,7 +14,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 STATE_ROOT="${AGENT_APP_STATE_DIR:-${HOME}/.local/state/agent-apps}"
-RUNTIME_ROOT="${ORBIT_RUNTIME_ROOT:-${HOME}/.orbit}"
+RUNTIME_ROOT="${PROMPTAFLOW_RUNTIME_ROOT:-${HOME}/.promptaflow}"
 DRY_RUN=0
 STOP_ONLY=0
 
@@ -39,7 +39,7 @@ else
   exit 127
 fi
 
-temporary="$(mktemp -d "${TMPDIR:-/tmp}/orbit-restart.XXXXXX")"
+temporary="$(mktemp -d "${TMPDIR:-/tmp}/promptaflow-restart.XXXXXX")"
 trap 'rm -rf "$temporary"' EXIT
 pids="$temporary/pids"
 
@@ -81,21 +81,14 @@ def identity_of(pid: int) -> str:
     return " ".join(answer.split())
 
 
-# What each kind of process looks like on the command line. Both spellings:
-# a Hub or Runtime started by the build before the rename is still running as
-# `orbit`, and it is precisely the process a restart exists to stop — matching
-# only the new name would quietly leave the old one holding the port.
-HUB_COMMANDS = ("promptaflow hub serve", "orbit hub serve")
-RUNTIME_COMMANDS = ("promptaflow serve", "orbit serve")
+# What each kind of PromptaFlow process looks like on the command line.
+HUB_COMMANDS = ("promptaflow hub serve",)
+RUNTIME_COMMANDS = ("promptaflow serve",)
 
 candidates: list[tuple[int, str, tuple[str, ...]]] = []
 # The Hub, as the Agent App host records it — not as whatever holds the port,
 # which is a different question with a worse answer when they disagree.
-# Both app ids: the Agent App host keyed this directory by the manifest id,
-# and an install that predates the rename still has one named `orbit`.
-pid_files = sorted(
-    {*state_root.glob("promptaflow/*/pid.json"), *state_root.glob("orbit/*/pid.json")}
-)
+pid_files = sorted(state_root.glob("promptaflow/*/pid.json"))
 for pid_file in pid_files:
     try:
         payload = json.loads(pid_file.read_text(encoding="utf-8"))
@@ -120,7 +113,7 @@ if port is not None and shutil.which("lsof"):
     ).stdout.split()
     for value in listeners:
         try:
-            candidates.append((int(value), "PromptaFlow Hub", "orbit hub serve"))
+            candidates.append((int(value), "PromptaFlow Hub", HUB_COMMANDS))
         except ValueError:
             continue
 

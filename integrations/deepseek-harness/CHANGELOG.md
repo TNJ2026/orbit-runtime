@@ -2,13 +2,13 @@
 
 ## Unreleased
 
-- Added `/orbit <goal>` with a native searchable Workflow picker, JSON input,
+- Added `/promptaflow <goal>` with a native searchable Workflow picker, JSON input,
   keyboard/focus handling, ready-version revalidation, and refresh-safe Harness
   command lifecycle persistence.
 - Added a same-origin bounded Host API for browser UI calls, keeping Runtime
   endpoints and actor credentials out of Client code.
 - Propagated the Host-resolved Harness Workspace id, canonical path and optional
-  isolation metadata to PromptaFlow MCP calls; `/orbit` now rejects stale or forged
+  isolation metadata to PromptaFlow MCP calls; `/promptaflow` now rejects stale or forged
   browser Workspace identities before starting a Run.
 - Changed the Host Gateway to discover an independently started `promptaflow serve`
   Runtime and communicate over HTTP MCP; it no longer owns a Runtime process.
@@ -23,7 +23,7 @@
   advertised-command revision checks.
 - Added a real-process independent Runtime E2E gate and endpoint rediscovery
   after transport loss or Runtime restart.
-- Added cross-platform `ORBIT_RUNTIME_ROOT` discovery for custom Runtime database locations.
+- Added cross-platform `PROMPTAFLOW_RUNTIME_ROOT` discovery for custom Runtime database locations.
 - Expanded General Settings diagnostics with Runtime/protocol versions, tool
   profile, reconnect probing and a copyable independent-Runtime start command.
 - Added the native PromptaFlow product workspace with Session Run history, full Run

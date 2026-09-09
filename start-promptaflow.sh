@@ -2,14 +2,11 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-# Workspace Runtimes deliberately run from the target project. Keep the Orbit
+# Workspace Runtimes deliberately run from the target project. Keep the PromptaFlow
 # checkout they may patch explicit rather than letting that cwd stand in for it.
 export PROMPTAFLOW_SOURCE_ROOT="$ROOT_DIR"
-export ORBIT_SOURCE_ROOT="$ROOT_DIR"
 
-# `ORBIT_CLI` is what an Agent App manifest written before the rename
-# still exports; the new name wins when both are set.
-PROMPTAFLOW_CLI="${PROMPTAFLOW_CLI:-${ORBIT_CLI:-}}"
+PROMPTAFLOW_CLI="${PROMPTAFLOW_CLI:-}"
 if [ -n "$PROMPTAFLOW_CLI" ]; then
   [ -x "$PROMPTAFLOW_CLI" ] || { echo "PROMPTAFLOW_CLI is not executable: $PROMPTAFLOW_CLI" >&2; exit 127; }
   PROMPTAFLOW=("$PROMPTAFLOW_CLI")
@@ -32,8 +29,8 @@ if [ "${1:-}" = "--hub-service" ]; then
 fi
 if [ "${1:-}" = "--mcp-proxy" ]; then
   shift
-  if [ -n "${PROMPTAFLOW_AGENT_APP_WORKSPACE:-${ORBIT_AGENT_APP_WORKSPACE:-}}" ]; then
-    workspace="$(cd "${PROMPTAFLOW_AGENT_APP_WORKSPACE:-$ORBIT_AGENT_APP_WORKSPACE}" && pwd -P)"
+  if [ -n "${PROMPTAFLOW_AGENT_APP_WORKSPACE:-}" ]; then
+    workspace="$(cd "$PROMPTAFLOW_AGENT_APP_WORKSPACE" && pwd -P)"
     exec "${PROMPTAFLOW[@]}" agent-app mcp-proxy "$ROOT_DIR/agent-app.json" --workspace "$workspace" "$@"
   fi
   exec "${PROMPTAFLOW[@]}" agent-app mcp-proxy "$ROOT_DIR/agent-app.json" "$@"
@@ -45,7 +42,7 @@ if [ "$#" -gt 1 ]; then
 fi
 workspace_input="${1:-$PWD}"
 if [ ! -d "$workspace_input" ]; then
-  echo "Orbit project path is not a directory: $workspace_input" >&2
+  echo "PromptaFlow project path is not a directory: $workspace_input" >&2
   exit 2
 fi
 workspace="$(cd "$workspace_input" && pwd -P)"

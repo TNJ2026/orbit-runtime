@@ -18,11 +18,11 @@ $agentAppStateRoot = if ($env:AGENT_APP_STATE_DIR) {
 else {
     Join-Path $userProfilePath ".local\state\agent-apps"
 }
-$runtimeStateRoot = if ($env:ORBIT_RUNTIME_ROOT) {
-    $env:ORBIT_RUNTIME_ROOT
+$runtimeStateRoot = if ($env:PROMPTAFLOW_RUNTIME_ROOT) {
+    $env:PROMPTAFLOW_RUNTIME_ROOT
 }
 else {
-    Join-Path $userProfilePath ".orbit"
+    Join-Path $userProfilePath ".promptaflow"
 }
 
 function Resolve-PromptaflowCommand {
@@ -57,7 +57,7 @@ function Invoke-PromptaflowJson {
     $output = & $script:promptaflowCommand.Executable @prefix "runtimes" "--json" 2>$null
     $result = $global:LASTEXITCODE
     if ($null -ne $result -and $result -ne 0) {
-        throw "orbit runtimes --json failed with exit code $result"
+        throw "promptaflow runtimes --json failed with exit code $result"
     }
     $text = ($output | Out-String).Trim()
     if (-not $text) { return @() }
@@ -88,15 +88,15 @@ function Get-IdentityCommandLine {
     return $parts[1]
 }
 
-function Test-OrbitCommand {
+function Test-PromptaFlowCommand {
     param(
         [Parameter(Mandatory = $true)][string] $CommandLine,
         [Parameter(Mandatory = $true)][ValidateSet("Hub", "Runtime")][string] $Kind
     )
 
-    $orbitPrefix = '(?i)(?:\b-m\s+orbit\s+|orbit(?:\.exe)?["'']?\s+)'
+    $promptaflowPrefix = '(?i)(?:\b-m\s+promptaflow\s+|promptaflow(?:\.exe)?["'']?\s+)'
     if ($Kind -eq "Hub") {
-        if ($CommandLine -match ($orbitPrefix + '(?:hub\s+serve|serve)(?:\s|$)')) {
+        if ($CommandLine -match ($promptaflowPrefix + '(?:hub\s+serve|serve)(?:\s|$)')) {
             return $true
         }
         $escapedLauncher = [regex]::Escape((Join-Path $promptaflowSourceRoot "start-promptaflow.ps1"))
@@ -108,7 +108,7 @@ function Test-OrbitCommand {
             "(?i)" + $escapedBashLauncher + '.*--hub-service(?:\s|$)'
         )
     }
-    return $CommandLine -match ($orbitPrefix + '(?:_runtime|serve)(?:\s|$)')
+    return $CommandLine -match ($promptaflowPrefix + '(?:_runtime|serve)(?:\s|$)')
 }
 
 $candidates = @{}
@@ -130,16 +130,16 @@ function Add-Candidate {
     $identity = Get-ProcessIdentity -ProcessId $ProcessId
     if (-not $identity) { return }
     $commandLine = Get-IdentityCommandLine -Identity $identity
-    if (-not (Test-OrbitCommand -CommandLine $commandLine -Kind $Kind)) {
+    if (-not (Test-PromptaFlowCommand -CommandLine $commandLine -Kind $Kind)) {
         [Console]::Error.WriteLine(
-            "skipping PID ${ProcessId}: recorded as Orbit $Kind but now runs $commandLine"
+            "skipping PID ${ProcessId}: recorded as PromptaFlow $Kind but now runs $commandLine"
         )
         return
     }
     $candidates[$key] = [pscustomobject]@{
         ProcessId = $ProcessId
         Kind = $Kind
-        Label = "Orbit $Kind"
+        Label = "PromptaFlow $Kind"
         BaseUrl = $BaseUrl
         Identity = $identity
     }
@@ -177,7 +177,7 @@ function Add-HubDescendants {
                 $commandLine = [regex]::Replace(
                     [string]$process.CommandLine, "\s+", " "
                 ).Trim()
-                if (Test-OrbitCommand -CommandLine $commandLine -Kind Hub) {
+                if (Test-PromptaFlowCommand -CommandLine $commandLine -Kind Hub) {
                     Add-Candidate -ProcessId ([int]$process.ProcessId) -Kind Hub
                 }
                 $next += [int]$process.ProcessId
@@ -253,7 +253,7 @@ function Force-StopCandidateTree {
 try {
     $script:promptaflowCommand = Resolve-PromptaflowCommand
 
-    $pidRoot = Join-Path $agentAppStateRoot "orbit"
+    $pidRoot = Join-Path $agentAppStateRoot "promptaflow"
     if (Test-Path -LiteralPath $pidRoot -PathType Container) {
         Get-ChildItem -LiteralPath $pidRoot -Filter "pid.json" -Recurse -File |
             Sort-Object FullName | ForEach-Object {

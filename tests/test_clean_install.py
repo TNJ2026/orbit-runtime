@@ -65,7 +65,7 @@ class CleanInstallTests(unittest.TestCase):
         )
         if install.returncode != 0:
             raise unittest.SkipTest(f"install failed:\n{install.stderr[-2000:]}")
-        cls.orbit = cls.venv / scripts / (
+        cls.promptaflow = cls.venv / scripts / (
             "promptaflow.exe" if os.name == "nt" else "promptaflow"
         )
 
@@ -73,20 +73,20 @@ class CleanInstallTests(unittest.TestCase):
     def tearDownClass(cls) -> None:
         cls.temp.cleanup()
 
-    def orbit_cli(self, *args: str) -> subprocess.CompletedProcess:
+    def promptaflow_cli(self, *args: str) -> subprocess.CompletedProcess:
         return subprocess.run(
-            [str(self.orbit), *args], capture_output=True, text=True,
+            [str(self.promptaflow), *args], capture_output=True, text=True,
             cwd=str(self.dir), timeout=180, env=self.environment,
         )
 
     def test_the_console_script_is_installed(self) -> None:
-        self.assertTrue(self.orbit.exists(), "no `promptaflow` entry point in the wheel")
-        result = self.orbit_cli("--version")
+        self.assertTrue(self.promptaflow.exists(), "no `promptaflow` entry point in the wheel")
+        result = self.promptaflow_cli("--version")
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn("promptaflow", result.stdout)
 
     def test_the_installed_cli_offers_only_the_target_commands(self) -> None:
-        result = self.orbit_cli("--help")
+        result = self.promptaflow_cli("--help")
         self.assertEqual(0, result.returncode, result.stderr)
         for command in ("serve", "workflow", "mcp", "agent-app", "run"):
             with self.subTest(command=command):
@@ -128,9 +128,9 @@ class CleanInstallTests(unittest.TestCase):
         with zipfile.ZipFile(self.wheel) as archive:
             names = set(archive.namelist())
         for removed in (
-            "orbit/server.py", "orbit/store.py", "orbit/project_index.py",
-            "orbit/static/ui.html", "orbit/static/workflow-ui.html",
-            "orbit/static/vendor/dagre.min.js",
+            "promptaflow/server.py", "promptaflow/store.py", "promptaflow/project_index.py",
+            "promptaflow/static/ui.html", "promptaflow/static/workflow-ui.html",
+            "promptaflow/static/vendor/dagre.min.js",
         ):
             with self.subTest(removed=removed):
                 self.assertNotIn(removed, names)
@@ -149,7 +149,7 @@ class CleanInstallTests(unittest.TestCase):
         database = self.dir / "serve.db"
         server = subprocess.Popen(
             [
-                str(self.orbit), "_runtime", "--port", str(port),
+                str(self.promptaflow), "_runtime", "--port", str(port),
                 "--db", str(database), "--no-agent-discovery",
             ],
             cwd=str(self.dir), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,

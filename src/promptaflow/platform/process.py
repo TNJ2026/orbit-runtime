@@ -3,7 +3,7 @@
 Behaviour contract: docs/migration/m1b-behaviour-inventory.md §1.
 
 Every child runs in its own process group, so terminating one never signals
-orbit itself.  The descendant snapshot is taken *before* the kill: once a parent
+promptaflow itself.  The descendant snapshot is taken *before* the kill: once a parent
 dies its children reparent to init and the tree link is gone, so a `setsid`
 child that escaped the group could not be found afterwards.
 

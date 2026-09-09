@@ -4,7 +4,7 @@ import { open, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { decodeRun, decodeToolResult } from './codecs.js';
-class OrbitTransportError extends Error {
+class PromptaFlowTransportError extends Error {
 }
 const STARTUP_TIMEOUT_MS = 10_000;
 const STARTUP_POLL_MS = 100;
@@ -17,8 +17,8 @@ const STARTUP_POLL_MS = 100;
  * does not extend the call: it aborts here, the request is cancelled at the
  * Runtime, and the caller is told about a timeout it chose for itself.
  */
-export const ORBIT_RPC_TIMEOUT_MS = 60_000;
-export class OrbitGateway {
+export const PROMPTAFLOW_RPC_TIMEOUT_MS = 60_000;
+export class PromptaFlowGateway {
     command;
     commandPrefix;
     fetchImpl;
@@ -28,7 +28,7 @@ export class OrbitGateway {
     telemetry = {
         discoveryAttempts: 0, rpcCalls: 0, transportFailures: 0,
     };
-    constructor(command = 'promptaflow', commandPrefix = [], fetchImpl = globalThis.fetch, discoveryRoot = process.env.PROMPTAFLOW_RUNTIME_ROOT || process.env.ORBIT_RUNTIME_ROOT || undefined, hubUrl = process.env.PROMPTAFLOW_HUB_URL || process.env.ORBIT_HUB_URL || 'http://127.0.0.1:8848') {
+    constructor(command = 'promptaflow', commandPrefix = [], fetchImpl = globalThis.fetch, discoveryRoot = process.env.PROMPTAFLOW_RUNTIME_ROOT || undefined, hubUrl = process.env.PROMPTAFLOW_HUB_URL || 'http://127.0.0.1:8848') {
         this.command = command;
         this.commandPrefix = commandPrefix;
         this.fetchImpl = fetchImpl;
@@ -103,10 +103,7 @@ export class OrbitGateway {
         try {
             envelope = await this.rpc(runtime, 'tools/call', {
                 name, arguments: args, _meta: {
-                    // Both spellings while Runtimes older than the rename are still
-                    // installed: the pinned bundle and the Runtime upgrade separately.
                     'promptaflow/actor': actor,
-                    'orbit/actor': actor,
                     'promptaflow/workspace': {
                         id: workspace.id,
                         canonicalPath: key,
@@ -119,7 +116,7 @@ export class OrbitGateway {
             });
         }
         catch (error) {
-            if (error instanceof OrbitTransportError) {
+            if (error instanceof PromptaFlowTransportError) {
                 this.telemetry.transportFailures++;
                 this.telemetry.lastTransportError = error.message;
                 this.runtimes.delete(key);
@@ -135,31 +132,6 @@ export class OrbitGateway {
         const runtime = await this.runtime(workspace);
         return runtime.uiUrl;
     }
-    /**
-     * Read the same durable attempt totals as PromptaFlow's Agent page.
-     *
-     * This HTTP projection also keeps a newly upgraded Harness compatible with
-     * a Runtime process started before `list_agents` grew the aggregate fields.
-     */
-    async handlerAttemptCounts(workspace, sessionId) {
-        const runtime = await this.runtime(workspace);
-        if (!runtime.baseUrl)
-            return new Map();
-        const response = await this.fetchImpl(`${runtime.baseUrl.replace(/\/$/, '')}/api/v1/handler-catalog`, { headers: { 'x-promptaflow-actor': `harness:session:${sessionId}` } });
-        if (!response.ok)
-            throw new OrbitTransportError(`PromptaFlow Handler catalog failed with HTTP ${String(response.status)}`);
-        const envelope = await response.json();
-        const counts = new Map();
-        for (const handler of envelope.data?.handlers ?? []) {
-            if (typeof handler.name !== 'string')
-                continue;
-            counts.set(handler.name, {
-                attempt_count: Number(handler.attempt_count ?? 0),
-                failed_count: Number(handler.failed_count ?? 0),
-            });
-        }
-        return counts;
-    }
     async authoringOutput(workspace, sessionId, outputHref, after) {
         if (!/^\/api\/v1\/workflow-authoring-jobs\/[^/?#]+\/output$/u.test(outputHref)) {
             throw new Error('PromptaFlow returned an invalid authoring output address');
@@ -171,7 +143,7 @@ export class OrbitGateway {
             throw new Error('PromptaFlow Runtime did not publish a browser address');
         const response = await this.fetchImpl(`${runtime.baseUrl.replace(/\/$/, '')}${outputHref}?after=${String(after)}`, { headers: { 'x-promptaflow-actor': `harness:session:${sessionId}` } });
         if (!response.ok)
-            throw new OrbitTransportError(`PromptaFlow authoring output failed with HTTP ${String(response.status)}`);
+            throw new PromptaFlowTransportError(`PromptaFlow authoring output failed with HTTP ${String(response.status)}`);
         const envelope = await response.json();
         if (!envelope.data || !Array.isArray(envelope.data.chunks)) {
             throw new Error('PromptaFlow authoring output returned invalid JSON');
@@ -264,10 +236,10 @@ export class OrbitGateway {
             try {
                 await this.rpc(runtime, 'initialize', {
                     protocolVersion: '2025-06-18', capabilities: {},
-                    clientInfo: { name: 'dsh-orbit', version: '0.1.0' },
+                    clientInfo: { name: 'dsh-promptaflow', version: '0.1.0' },
                 });
                 runtime.capabilities = await this.callRaw(runtime, 'get_capabilities', {});
-                if (runtime.capabilities.integration_protocol !== 'orbit-harness/1')
+                if (runtime.capabilities.integration_protocol !== 'promptaflow-harness/2')
                     throw new Error('incompatible PromptaFlow integration protocol');
                 this.telemetry.lastConnectedAt = new Date().toISOString();
                 this.telemetry.lastTransportError = undefined;
@@ -276,7 +248,7 @@ export class OrbitGateway {
                 return runtime;
             }
             catch (error) {
-                if (!startIfMissing || !(error instanceof OrbitTransportError) || Date.now() >= deadline)
+                if (!startIfMissing || !(error instanceof PromptaFlowTransportError) || Date.now() >= deadline)
                     throw error;
                 if (!started) {
                     await this.startHub();
@@ -287,7 +259,7 @@ export class OrbitGateway {
         }
     }
     async registerWorkspace(workspaceRoot) {
-        const output = await this.runOrbit(['hub', 'register', workspaceRoot], workspaceRoot);
+        const output = await this.runPromptaFlow(['hub', 'register', workspaceRoot], workspaceRoot);
         try {
             const value = JSON.parse(output);
             if (typeof value.workspace_id === 'string' && value.workspace_id)
@@ -296,7 +268,7 @@ export class OrbitGateway {
         catch { }
         throw new Error('PromptaFlow Hub workspace registration returned invalid JSON');
     }
-    async runOrbit(args, cwd) {
+    async runPromptaFlow(args, cwd) {
         return await new Promise((resolve, reject) => {
             const child = spawn(this.command, [...this.commandPrefix, ...args], {
                 cwd, stdio: ['ignore', 'pipe', 'pipe'],
@@ -316,7 +288,7 @@ export class OrbitGateway {
             throw new Error(`PromptaFlow Hub auto-start requires a loopback HTTP URL: ${this.hubUrl}`);
         }
         const port = url.port ? Number(url.port) : 80;
-        const log = await open(join(tmpdir(), `dsh-orbit-hub-${String(port)}.log`), 'w');
+        const log = await open(join(tmpdir(), `dsh-promptaflow-hub-${String(port)}.log`), 'w');
         try {
             const child = spawn(this.command, [
                 ...this.commandPrefix, 'hub', 'serve', '--host', url.hostname, '--port', String(port),
@@ -368,7 +340,7 @@ export class OrbitGateway {
         this.telemetry.rpcCalls++;
         const id = runtime.nextId++;
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), ORBIT_RPC_TIMEOUT_MS);
+        const timer = setTimeout(() => controller.abort(), PROMPTAFLOW_RPC_TIMEOUT_MS);
         try {
             const actor = this.actorFrom(params);
             const response = await this.fetchImpl(runtime.mcpUrl, {
@@ -378,7 +350,7 @@ export class OrbitGateway {
                 body: JSON.stringify({ jsonrpc: '2.0', id, method, params }),
             });
             if (!response.ok)
-                throw new OrbitTransportError(`PromptaFlow MCP HTTP ${String(response.status)}`);
+                throw new PromptaFlowTransportError(`PromptaFlow MCP HTTP ${String(response.status)}`);
             const message = await response.json();
             if (message.error !== undefined)
                 throw new Error(message.error.message || 'PromptaFlow MCP request failed');
@@ -386,9 +358,9 @@ export class OrbitGateway {
         }
         catch (error) {
             if (controller.signal.aborted)
-                throw new OrbitTransportError(`PromptaFlow MCP ${method} timed out`);
+                throw new PromptaFlowTransportError(`PromptaFlow MCP ${method} timed out`);
             if (error instanceof TypeError)
-                throw new OrbitTransportError(`PromptaFlow MCP transport failed: ${error.message}`);
+                throw new PromptaFlowTransportError(`PromptaFlow MCP transport failed: ${error.message}`);
             throw error;
         }
         finally {
@@ -397,7 +369,7 @@ export class OrbitGateway {
     }
     actorFrom(params) {
         const meta = params._meta;
-        const actor = meta?.['promptaflow/actor'] ?? meta?.['orbit/actor'];
+        const actor = meta?.['promptaflow/actor'];
         return typeof actor === 'string' ? actor : undefined;
     }
     async callRaw(runtime, name, args) {

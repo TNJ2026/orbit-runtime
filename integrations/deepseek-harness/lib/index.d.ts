@@ -74,7 +74,7 @@ interface AuthoringOutputPage {
   chunks: AuthoringOutputChunk[];
   has_more: boolean;
 }
-interface OrbitCommandRequest {
+interface PromptaFlowCommandRequest {
   workspace: WorkspaceRef;
   sessionId: string;
   runId: string;
@@ -122,8 +122,8 @@ interface AgentSummary {
   name: string;
   version: string;
   node_kinds: string[];
-  attempt_count?: number;
-  failed_count?: number;
+  attempt_count: number;
+  failed_count: number;
 }
 interface RunGraph {
   [key: string]: unknown;
@@ -201,10 +201,10 @@ interface ArtifactContent {
 }
 //#endregion
 //#region ../../integration-core/src/commands.d.ts
-type OrbitRunCommand = 'langgraph_run.cancel' | 'langgraph_run.resume';
+type PromptaFlowRunCommand = 'langgraph_run.cancel' | 'langgraph_run.resume';
 //#endregion
 //#region ../../integration-core/src/session-bridge.d.ts
-interface OrbitCursorStore {
+interface PromptaFlowCursorStore {
   load(workspaceId: string, sessionId: string): number | undefined | Promise<number | undefined>;
   save(workspaceId: string, sessionId: string, position: number): void | Promise<void>;
 }
@@ -212,7 +212,7 @@ interface OrbitCursorStore {
 //#region src/index.d.ts
 declare module '@deepseek-ai/cordis' {
   interface Context {
-    promptaflow: OrbitRemoteService;
+    promptaflow: PromptaFlowRemoteService;
   }
 }
 interface WorkflowGraph {
@@ -237,7 +237,7 @@ interface WorkflowGraph {
     }[];
   };
 }
-declare class OrbitRemoteService extends TypertRemoteService {
+declare class PromptaFlowRemoteService extends TypertRemoteService {
   static inject: string[];
   private readonly gateway;
   private readonly agents;
@@ -343,8 +343,8 @@ declare class OrbitRemoteService extends TypertRemoteService {
    * is registered here whether or not anything else happens.
    *
    * This is all that happens at Session start now. It used to also run
-   * `OrbitSessionBridge`, which recorded each Run into the Session log as
-   * `orbit/run-started` / `-checkpoint` / `-ended`; see `stopSessionBridge`
+   * `PromptaFlowSessionBridge`, which recorded each Run into the Session log as
+   * `promptaflow/run-started` / `-checkpoint` / `-ended`; see `stopSessionBridge`
    * and the note on why that stopped.
    */
   private bindSessionWorkspace;
@@ -382,12 +382,12 @@ declare class OrbitRemoteService extends TypertRemoteService {
    * Drive the Session Bridge for one Session, writing each Run into its log.
    *
    * NOT called at Session start, and must not be until the Harness can accept
-   * the events it writes. `orbit/run-*` are not in the Harness's own event
+   * the events it writes. `promptaflow/run-*` are not in the Harness's own event
    * vocabulary, and `Session.append` offers no way to set the envelope's
    * `ignorable` marker — the one thing that lets a reader skip a type it does
    * not know. So every Session this ran in became unreadable on reload:
    *
-   *   session "…" contains event type "orbit/run-started" (seq 964) unknown to
+   *   session "…" contains event type "promptaflow/run-started" (seq 964) unknown to
    *   this harness and not marked ignorable; refusing to interpret the log
    *
    * Kept rather than deleted because nothing here is wrong except where the
@@ -397,7 +397,7 @@ declare class OrbitRemoteService extends TypertRemoteService {
    * vocabulary can be extended, calling this from `bindSessionWorkspace`
    * restores the account of what ran.
    */
-  bridgeSession(workspace: WorkspaceRef, session: Session, cursor: OrbitCursorStore, signal: AbortSignal, knownRuns?: Iterable<string>): Promise<void>;
+  bridgeSession(workspace: WorkspaceRef, session: Session, cursor: PromptaFlowCursorStore, signal: AbortSignal, knownRuns?: Iterable<string>): Promise<void>;
   getRuntime(workspace: WorkspaceRef, signal: AbortSignal): Promise<RuntimeSummary>;
   getRuntimeUi(sessionId: string, signal: AbortSignal): Promise<string>;
   /**
@@ -490,7 +490,7 @@ declare class OrbitRemoteService extends TypertRemoteService {
    * a Run that changed under the reader — the refusal is the point: whoever
    * pressed the button was looking at something else.
    */
-  runCommand(sessionId: string, runId: string, command: OrbitRunCommand, expectedRevision: number, value: unknown, interruptId: string | undefined, signal: AbortSignal): Promise<RunDto>;
+  runCommand(sessionId: string, runId: string, command: PromptaFlowRunCommand, expectedRevision: number, value: unknown, interruptId: string | undefined, signal: AbortSignal): Promise<RunDto>;
   /** Record a person's ruling on what an external Agent actually did. */
   reconcileStep(sessionId: string, runId: string, delegationId: string, outcome: 'confirmed_succeeded' | 'confirmed_failed', note: string, signal: AbortSignal): Promise<{
     steps: StepSummary[];
@@ -564,7 +564,7 @@ declare class OrbitRemoteService extends TypertRemoteService {
   reconcileDelegation(workspace: WorkspaceRef, sessionId: string, runId: string, delegationId: string, outcome: 'confirmed_succeeded' | 'confirmed_failed', note: string, signal: AbortSignal): Promise<StepSummary[]>;
   private readRunField;
   private readListField;
-  executeCommand(request: OrbitCommandRequest, signal: AbortSignal): Promise<RunDto>;
+  executeCommand(request: PromptaFlowCommandRequest, signal: AbortSignal): Promise<RunDto>;
 }
 //#endregion
-export { OrbitRemoteService, OrbitRemoteService as default };
+export { PromptaFlowRemoteService, PromptaFlowRemoteService as default };

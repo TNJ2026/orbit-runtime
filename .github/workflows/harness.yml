@@ -46,7 +46,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: integrations/deepseek-harness/package-lock.json
-      - name: Install Orbit
+      - name: Install PromptaFlow
         run: uv sync --extra dev
       - name: Test Runtime ownership and Harness security
         run: >-

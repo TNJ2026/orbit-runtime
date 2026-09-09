@@ -459,11 +459,11 @@ async function boot() {
   };
   for (const option of themeOptions) {
     option.addEventListener("click", () => {
-      localStorage.setItem("orbit.theme", option.dataset.themeValue);
+      localStorage.setItem("promptaflow.theme", option.dataset.themeValue);
       applyTheme(option.dataset.themeValue);
     });
   }
-  applyTheme(localStorage.getItem("orbit.theme") || "dark");
+  applyTheme(localStorage.getItem("promptaflow.theme") || "dark");
   installMoreMenu();
 
   try {
@@ -483,7 +483,7 @@ async function boot() {
   document.documentElement.dataset.shell = "ready";
 
   document.getElementById("refresh").addEventListener("click", () => render());
-  window.addEventListener("orbit:refresh", () => render());
+  window.addEventListener("promptaflow:refresh", () => render());
   views.scheduleLivePolling();
   for (const button of document.querySelectorAll(".nav-button[data-view]")) {
     button.addEventListener("click", () => {

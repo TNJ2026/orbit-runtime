@@ -8,39 +8,39 @@ import unittest
 
 from promptaflow.web import mcp_app
 from promptaflow.web.mcp_app import (
-    ORBIT_AUTHORING_HTML,
-    ORBIT_AUTHORING_URI,
-    ORBIT_DASHBOARD_HTML,
-    ORBIT_DASHBOARD_URI,
-    ORBIT_GOALS_HTML,
-    ORBIT_GOALS_URI,
-    ORBIT_MCP_APP_RESOURCES,
-    ORBIT_RUN_HTML,
-    ORBIT_RUN_URI,
-    ORBIT_WORKFLOWS_HTML,
-    ORBIT_WORKFLOWS_URI,
+    PROMPTAFLOW_AUTHORING_HTML,
+    PROMPTAFLOW_AUTHORING_URI,
+    PROMPTAFLOW_DASHBOARD_HTML,
+    PROMPTAFLOW_DASHBOARD_URI,
+    PROMPTAFLOW_GOALS_HTML,
+    PROMPTAFLOW_GOALS_URI,
+    PROMPTAFLOW_MCP_APP_RESOURCES,
+    PROMPTAFLOW_RUN_HTML,
+    PROMPTAFLOW_RUN_URI,
+    PROMPTAFLOW_WORKFLOWS_HTML,
+    PROMPTAFLOW_WORKFLOWS_URI,
 )
 
 # The template before its placeholders are filled in, so a test can ask
 # whether the shared sheet is composed in rather than copied out.
-ORBIT_DASHBOARD_HTML_SOURCE = (
+PROMPTAFLOW_DASHBOARD_HTML_SOURCE = (
     Path(mcp_app.__file__).read_text(encoding="utf-8")
 )
 
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://promptaflow/current-task-v51.html", ORBIT_DASHBOARD_URI)
-        self.assertEqual(ORBIT_DASHBOARD_URI, ORBIT_MCP_APP_RESOURCES[0]["uri"])
+        self.assertEqual("ui://promptaflow/current-task-v51.html", PROMPTAFLOW_DASHBOARD_URI)
+        self.assertEqual(PROMPTAFLOW_DASHBOARD_URI, PROMPTAFLOW_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
         self.assertEqual(
             {
-                ORBIT_DASHBOARD_URI, ORBIT_WORKFLOWS_URI,
-                ORBIT_AUTHORING_URI, ORBIT_RUN_URI,
-                ORBIT_GOALS_URI,
+                PROMPTAFLOW_DASHBOARD_URI, PROMPTAFLOW_WORKFLOWS_URI,
+                PROMPTAFLOW_AUTHORING_URI, PROMPTAFLOW_RUN_URI,
+                PROMPTAFLOW_GOALS_URI,
             },
-            {item["uri"] for item in ORBIT_MCP_APP_RESOURCES},
+            {item["uri"] for item in PROMPTAFLOW_MCP_APP_RESOURCES},
         )
 
     def test_every_card_speaks_both_languages(self) -> None:
@@ -55,16 +55,16 @@ class CurrentTaskCardTests(unittest.TestCase):
         """
 
         for html in (
-            ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML,
-            ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
+            PROMPTAFLOW_DASHBOARD_HTML, PROMPTAFLOW_WORKFLOWS_HTML,
+            PROMPTAFLOW_AUTHORING_HTML, PROMPTAFLOW_RUN_HTML, PROMPTAFLOW_GOALS_HTML,
         ):
             with self.subTest():
                 self.assertIn("'en-US'", html)
                 self.assertIn("'zh-CN'", html)
 
         # One locale, declared once per surface, fed by the host.
-        for html in (ORBIT_WORKFLOWS_HTML, ORBIT_AUTHORING_HTML,
-                     ORBIT_RUN_HTML, ORBIT_GOALS_HTML):
+        for html in (PROMPTAFLOW_WORKFLOWS_HTML, PROMPTAFLOW_AUTHORING_HTML,
+                     PROMPTAFLOW_RUN_HTML, PROMPTAFLOW_GOALS_HTML):
             with self.subTest():
                 self.assertIn("function strings(table){return()=>table[locale]", html)
                 self.assertIn("applyLocale(context.locale||context.language)", html)
@@ -73,7 +73,7 @@ class CurrentTaskCardTests(unittest.TestCase):
 
         # The prompt editor reads the same variable rather than sniffing the
         # document, which would ignore a host that told us its language.
-        for html in (ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML):
+        for html in (PROMPTAFLOW_DASHBOARD_HTML, PROMPTAFLOW_WORKFLOWS_HTML):
             with self.subTest():
                 self.assertIn("function promptEditorLabels(){return locale==='zh-CN'?", html)
                 self.assertNotIn("document.documentElement.lang||navigator.language", html)
@@ -87,15 +87,15 @@ class CurrentTaskCardTests(unittest.TestCase):
 
         # The two files are written in different styles; what matters is that
         # each has an English form of the prompt it sends.
-        self.assertIn("promptGoal: (name,id) => `Run the workflow", ORBIT_DASHBOARD_HTML)
-        self.assertIn("promptGoal:(n,i)=>`Run the workflow", ORBIT_WORKFLOWS_HTML)
-        self.assertIn("promptModify: (name,id) => `Modify the workflow", ORBIT_DASHBOARD_HTML)
-        self.assertIn("promptModify:(n,i)=>`Modify the workflow", ORBIT_WORKFLOWS_HTML)
-        self.assertIn("promptOpen:id=>`Show PromptaFlow goal run", ORBIT_GOALS_HTML)
+        self.assertIn("promptGoal: (name,id) => `Run the workflow", PROMPTAFLOW_DASHBOARD_HTML)
+        self.assertIn("promptGoal:(n,i)=>`Run the workflow", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertIn("promptModify: (name,id) => `Modify the workflow", PROMPTAFLOW_DASHBOARD_HTML)
+        self.assertIn("promptModify:(n,i)=>`Modify the workflow", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertIn("promptOpen:id=>`Show PromptaFlow goal run", PROMPTAFLOW_GOALS_HTML)
         # And the Chinese half is still there, unchanged.
-        self.assertIn("我确认删除工作流", ORBIT_WORKFLOWS_HTML)
-        self.assertIn("使用工作流「", ORBIT_WORKFLOWS_HTML)
-        self.assertIn("使用工作流「", ORBIT_DASHBOARD_HTML)
+        self.assertIn("我确认删除工作流", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertIn("使用工作流「", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertIn("使用工作流「", PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_every_card_wears_the_mark_the_full_ui_wears(self) -> None:
         """The UI's own mark, not the favicon that stands in for it.
@@ -111,8 +111,8 @@ class CurrentTaskCardTests(unittest.TestCase):
         """
 
         for html in (
-            ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML,
-            ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
+            PROMPTAFLOW_DASHBOARD_HTML, PROMPTAFLOW_WORKFLOWS_HTML,
+            PROMPTAFLOW_AUTHORING_HTML, PROMPTAFLOW_RUN_HTML, PROMPTAFLOW_GOALS_HTML,
         ):
             with self.subTest():
                 self.assertIn('<svg class="mark"', html)
@@ -152,7 +152,7 @@ class CurrentTaskCardTests(unittest.TestCase):
                 self.assertIn(value, block)
 
     def test_it_reads_current_task_and_embedded_workflow_views(self) -> None:
-        calls = set(re.findall(r"callTool\('([a-z_]+)'", ORBIT_DASHBOARD_HTML))
+        calls = set(re.findall(r"callTool\('([a-z_]+)'", PROMPTAFLOW_DASHBOARD_HTML))
         self.assertEqual(
             {
                 "list_runs", "list_authoring_jobs", "get_run_steps",
@@ -164,7 +164,7 @@ class CurrentTaskCardTests(unittest.TestCase):
             calls,
         )
         for absent in ("read_run_output", "read_authoring_output"):
-            self.assertNotIn(absent, ORBIT_DASHBOARD_HTML)
+            self.assertNotIn(absent, PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_workflow_selection_switches_views_inside_the_card(self) -> None:
         for marker in (
@@ -172,7 +172,7 @@ class CurrentTaskCardTests(unittest.TestCase):
             "callTool('list_workflows'", "callTool('get_workflow_definition'",
             "data-back-view", "renderWorkflowList", "renderWorkflowDetail",
         ):
-            self.assertIn(marker, ORBIT_DASHBOARD_HTML)
+            self.assertIn(marker, PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_agents_switches_to_a_list_inside_the_dashboard_card(self) -> None:
         for marker in (
@@ -180,12 +180,12 @@ class CurrentTaskCardTests(unittest.TestCase):
             "callTool('list_agents'", 'class="agentRow"',
             "currentTab === 'agents'", "data-back-view",
         ):
-            self.assertIn(marker, ORBIT_DASHBOARD_HTML)
+            self.assertIn(marker, PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_add_agent_uses_the_host_aware_prompt_editor(self) -> None:
         for marker in (
             "addAgent: 'Add Agent'", "addAgent: '添加 Agent'",
-            "promptAddAgent: '给Orbit添加Agent cli：'",
+            "promptAddAgent: '给PromptaFlow添加Agent cli：'",
             "card.innerHTML = `${rows || `<div class=\"empty\">${esc(t().noAgents)}</div>`}${add}`",
             'data-prompt="${esc(t().promptAddAgent)}"',
             "button.addEventListener('click', () => dispatchPrompt(button))",
@@ -193,16 +193,16 @@ class CurrentTaskCardTests(unittest.TestCase):
             "hostProvidesPromptEditor()",
             "dialog.id='promptEditorDialog'",
         ):
-            self.assertIn(marker, ORBIT_DASHBOARD_HTML)
+            self.assertIn(marker, PROMPTAFLOW_DASHBOARD_HTML)
         for absent in ("window.prompt", "data-add-agent-form", "data-add-agent-input"):
-            self.assertNotIn(absent, ORBIT_DASHBOARD_HTML)
+            self.assertNotIn(absent, PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_embedded_workflow_list_offers_new_goal_directly(self) -> None:
         for marker in (
             'class="rowItem"', "rowAction", "t().newGoal",
             "t().promptGoal(name,workflow.workflow_id)",
         ):
-            self.assertIn(marker, ORBIT_DASHBOARD_HTML)
+            self.assertIn(marker, PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_the_dashboard_is_painted_by_the_shared_card_theme(self) -> None:
         """One theme for every card, not a second copy of it here.
@@ -215,23 +215,23 @@ class CurrentTaskCardTests(unittest.TestCase):
         comparing two cards is comparing one stylesheet.
         """
 
-        self.assertIn("__CARD_STYLE__", ORBIT_DASHBOARD_HTML_SOURCE)
-        self.assertIn('"__CARD_STYLE__", _CARD_STYLE,', ORBIT_DASHBOARD_HTML_SOURCE)
+        self.assertIn("__CARD_STYLE__", PROMPTAFLOW_DASHBOARD_HTML_SOURCE)
+        self.assertIn('"__CARD_STYLE__", _CARD_STYLE,', PROMPTAFLOW_DASHBOARD_HTML_SOURCE)
         # Declared once, by the shared sheet.
-        self.assertEqual(1, ORBIT_DASHBOARD_HTML.count("--accent:"))
-        self.assertEqual(1, ORBIT_DASHBOARD_HTML.count(".action.primary"))
-        self.assertEqual(1, ORBIT_DASHBOARD_HTML.count("body{margin:0"))
+        self.assertEqual(1, PROMPTAFLOW_DASHBOARD_HTML.count("--accent:"))
+        self.assertEqual(1, PROMPTAFLOW_DASHBOARD_HTML.count(".action.primary"))
+        self.assertEqual(1, PROMPTAFLOW_DASHBOARD_HTML.count("body{margin:0"))
         for restated in (
             "--bg: light-dark", ".action { min-height", ".action.danger {",
             "@keyframes pulse {", "--faint",
         ):
-            self.assertNotIn(restated, ORBIT_DASHBOARD_HTML)
+            self.assertNotIn(restated, PROMPTAFLOW_DASHBOARD_HTML)
         # And the shared vocabulary is used rather than renamed: rows are
         # `.row`, a title is `.name`, a secondary line is `.meta`.
         for shared in ('class="row" type="button" data-workflow-id=',
                        'class="name"', 'class="meta"', 'class="card"',
                        'class="tabs" role="tablist"', 'id="refresh" class="icon"'):
-            self.assertIn(shared, ORBIT_DASHBOARD_HTML)
+            self.assertIn(shared, PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_it_contains_no_administration_surface(self) -> None:
         """Tabs are navigation, not administration.
@@ -247,17 +247,17 @@ class CurrentTaskCardTests(unittest.TestCase):
             "workflowDelete", "deleteWorkflow",
             "workflowGenerator", "authoringConsole", "stepOutput",
         ):
-            self.assertNotIn(absent, ORBIT_DASHBOARD_HTML)
+            self.assertNotIn(absent, PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_it_shows_steps_and_attention_without_a_progress_bar(self) -> None:
         for marker in (
             "waitingNotice", 'class="steps"', "step.status === 'waiting'",
         ):
-            self.assertIn(marker, ORBIT_DASHBOARD_HTML)
+            self.assertIn(marker, PROMPTAFLOW_DASHBOARD_HTML)
         for absent in (
             'class="progress"', "progressText", "Math.round", "DONE_STEPS",
         ):
-            self.assertNotIn(absent, ORBIT_DASHBOARD_HTML)
+            self.assertNotIn(absent, PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_history_is_a_tab_in_the_card_and_not_a_link_out(self) -> None:
         """The run list the full UI shows, in the card, for this project.
@@ -274,15 +274,15 @@ class CurrentTaskCardTests(unittest.TestCase):
             "function runDuration(run)", 'class="historyDay"', "data-run-id",
             "showRun(button.dataset.runId)",
         ):
-            self.assertIn(marker, ORBIT_DASHBOARD_HTML)
+            self.assertIn(marker, PROMPTAFLOW_DASHBOARD_HTML)
         for absent in (
             "promptHistory", "127.0.0.1:8848/ui/#/history",
             "idleActions", "renderIdle", "renderRecentRun",
         ):
-            self.assertNotIn(absent, ORBIT_DASHBOARD_HTML)
+            self.assertNotIn(absent, PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_a_history_row_opens_the_run_it_names(self) -> None:
-        run = ORBIT_DASHBOARD_HTML.split("async function showRun(runId,known) {", 1)[1]
+        run = PROMPTAFLOW_DASHBOARD_HTML.split("async function showRun(runId,known) {", 1)[1]
         run = run.split("function refresh()", 1)[0]
         for marker in (
             "callTool('get_run_steps'", "renderRun(run,steps,await runOutcome(run))",
@@ -299,7 +299,7 @@ class CurrentTaskCardTests(unittest.TestCase):
             "draw({...run,status:'running'},[])",
             "timer=setTimeout(refresh,2000)",
         ):
-            self.assertIn(marker, ORBIT_RUN_HTML)
+            self.assertIn(marker, PROMPTAFLOW_RUN_HTML)
 
     def test_goal_run_card_keeps_a_rejected_start_as_its_own_error(self) -> None:
         for marker in (
@@ -307,7 +307,7 @@ class CurrentTaskCardTests(unittest.TestCase):
             "if(failure){clearTimeout(timer)",
             "value?.run_id||failureMessage(value)",
         ):
-            self.assertIn(marker, ORBIT_RUN_HTML)
+            self.assertIn(marker, PROMPTAFLOW_RUN_HTML)
 
     def test_the_card_opens_on_the_goal_and_decides_nothing_else(self) -> None:
         """There is nothing left for the opening to choose between.
@@ -318,12 +318,12 @@ class CurrentTaskCardTests(unittest.TestCase):
         whether or not anything is running — so opening is one call.
         """
 
-        start = ORBIT_DASHBOARD_HTML.split("async function start() {", 1)[1]
+        start = PROMPTAFLOW_DASHBOARD_HTML.split("async function start() {", 1)[1]
         start = start.split("bridge = mcpBridge()", 1)[0]
         self.assertIn("return showGoal();", start)
         for gone in ("showRun(active.run_id", "isRecent(run)", "showWorkflows()"):
             self.assertNotIn(gone, start)
-        self.assertNotIn("promptStart", ORBIT_DASHBOARD_HTML)
+        self.assertNotIn("promptStart", PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_the_goal_page_keeps_a_finished_goal_until_the_next_one(self) -> None:
         """The Harness's rule, for the Harness's reason.
@@ -334,7 +334,7 @@ class CurrentTaskCardTests(unittest.TestCase):
         looking at "nothing is running here".
         """
 
-        rule = ORBIT_DASHBOARD_HTML.split("function goalRuns(runs) {", 1)[1]
+        rule = PROMPTAFLOW_DASHBOARD_HTML.split("function goalRuns(runs) {", 1)[1]
         rule = rule.split("\n  }", 1)[0]
         self.assertIn("const live = runs.filter(run => !TERMINAL.has(run.status));", rule)
         self.assertIn("if (live.length) return live;", rule)
@@ -357,7 +357,7 @@ class CurrentTaskCardTests(unittest.TestCase):
         question again.
         """
 
-        section = ORBIT_DASHBOARD_HTML.split("function runSection(run,steps,outcome) {", 1)[1]
+        section = PROMPTAFLOW_DASHBOARD_HTML.split("function runSection(run,steps,outcome) {", 1)[1]
         section = section.split("function renderRun", 1)[0]
         self.assertIn("const live = !TERMINAL.has(run.status);", section)
         self.assertIn(
@@ -365,7 +365,7 @@ class CurrentTaskCardTests(unittest.TestCase):
         )
 
     def test_create_workflow_sits_beside_the_tabs_not_among_them(self) -> None:
-        tabs = ORBIT_DASHBOARD_HTML.split('<nav id="tabs"', 1)[1].split("</nav>", 1)[0]
+        tabs = PROMPTAFLOW_DASHBOARD_HTML.split('<nav id="tabs"', 1)[1].split("</nav>", 1)[0]
         # Goal first: it is what the card opens on.
         self.assertLess(tabs.index('data-tab="goal"'), tabs.index('data-tab="workflows"'))
         self.assertLess(tabs.index('data-tab="workflows"'), tabs.index('data-tab="history"'))
@@ -373,30 +373,30 @@ class CurrentTaskCardTests(unittest.TestCase):
         # Last in the row, and not a tab: it creates rather than navigates.
         self.assertLess(tabs.index('data-tab="agents"'), tabs.index('id="createWorkflow"'))
         self.assertNotIn('id="createWorkflow" type="button" role="tab"', tabs)
-        self.assertIn("#createWorkflow { margin-left: auto; }", ORBIT_DASHBOARD_HTML)
+        self.assertIn("#createWorkflow { margin-left: auto; }", PROMPTAFLOW_DASHBOARD_HTML)
         self.assertIn(
             "createButton.dataset.prompt = t().promptCreateWorkflow;",
-            ORBIT_DASHBOARD_HTML,
+            PROMPTAFLOW_DASHBOARD_HTML,
         )
 
     def test_generation_in_flight_is_a_strip_above_the_workflow_list(self) -> None:
-        strip = ORBIT_DASHBOARD_HTML.split("function authoringStrip(job) {", 1)[1]
+        strip = PROMPTAFLOW_DASHBOARD_HTML.split("function authoringStrip(job) {", 1)[1]
         strip = strip.split("function renderWorkflowList", 1)[0]
         for marker in ("t().authoring", "t().authoringDone", "t().authoringFailed"):
             self.assertIn(marker, strip)
         self.assertIn(
-            "card.innerHTML = `${authoringStrip(job)}${rows ||", ORBIT_DASHBOARD_HTML,
+            "card.innerHTML = `${authoringStrip(job)}${rows ||", PROMPTAFLOW_DASHBOARD_HTML,
         )
         # Progress belongs to the generation card; this one only says it runs.
-        self.assertNotIn("callTool('get_authoring_job'", ORBIT_DASHBOARD_HTML)
+        self.assertNotIn("callTool('get_authoring_job'", PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_suggested_actions_return_to_the_conversation(self) -> None:
-        self.assertIn("'ui/message'", ORBIT_DASHBOARD_HTML)
-        self.assertIn("sendFollowUpMessage", ORBIT_DASHBOARD_HTML)
+        self.assertIn("'ui/message'", PROMPTAFLOW_DASHBOARD_HTML)
+        self.assertIn("sendFollowUpMessage", PROMPTAFLOW_DASHBOARD_HTML)
         for prompt in (
             "promptHandle", "promptCancel", "promptCreateWorkflow",
         ):
-            self.assertIn(prompt, ORBIT_DASHBOARD_HTML)
+            self.assertIn(prompt, PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_a_finished_run_reports_its_outcome_the_way_the_harness_does(self) -> None:
         """The same rules, in the same order, as the Harness panel.
@@ -423,9 +423,9 @@ class CurrentTaskCardTests(unittest.TestCase):
             "async function runOutcome(run)",
             "renderRun(run,steps,await runOutcome(run))",
         ):
-            self.assertIn(marker, ORBIT_DASHBOARD_HTML)
+            self.assertIn(marker, PROMPTAFLOW_DASHBOARD_HTML)
 
-        outcome = ORBIT_DASHBOARD_HTML.split("async function runOutcome(run) {", 1)[1]
+        outcome = PROMPTAFLOW_DASHBOARD_HTML.split("async function runOutcome(run) {", 1)[1]
         outcome = outcome.split("function bindActions", 1)[0]
         # Nothing at all while it is still going.
         self.assertIn("if (!TERMINAL.has(run.status)) return '';", outcome)
@@ -438,14 +438,14 @@ class CurrentTaskCardTests(unittest.TestCase):
             ("zh-CN", "completed: '已完成'", "resultFailed: '失败原因'"),
         ):
             with self.subTest(language=language):
-                self.assertIn(finished, ORBIT_DASHBOARD_HTML)
-                self.assertIn(failed, ORBIT_DASHBOARD_HTML)
+                self.assertIn(finished, PROMPTAFLOW_DASHBOARD_HTML)
+                self.assertIn(failed, PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_the_outcome_rules_are_the_ones_the_harness_uses(self) -> None:
         """Read out of the Harness's own source, not copied by eye."""
 
         core = Path(__file__).resolve().parents[1].joinpath(
-            "integration-core/src/orbit-model.ts"
+            "integration-core/src/promptaflow-model.ts"
         ).read_text(encoding="utf-8")
         export = Path(__file__).resolve().parents[1].joinpath(
             "integration-core/src/artifact-export.ts"
@@ -455,10 +455,10 @@ class CurrentTaskCardTests(unittest.TestCase):
         self.assertIn("['text/markdown', 'text/plain']", export)
         self.assertIn("READABLE_MAX_BYTES = 2048", export)
         # And the card carries the same four.
-        self.assertIn("/^langgraph_artifact:[A-Za-z0-9]+$/", ORBIT_DASHBOARD_HTML)
-        self.assertIn("bare.length > 12", ORBIT_DASHBOARD_HTML)
-        self.assertIn("['text/markdown', 'text/plain']", ORBIT_DASHBOARD_HTML)
-        self.assertIn("READABLE_MAX_BYTES = 2048", ORBIT_DASHBOARD_HTML)
+        self.assertIn("/^langgraph_artifact:[A-Za-z0-9]+$/", PROMPTAFLOW_DASHBOARD_HTML)
+        self.assertIn("bare.length > 12", PROMPTAFLOW_DASHBOARD_HTML)
+        self.assertIn("['text/markdown', 'text/plain']", PROMPTAFLOW_DASHBOARD_HTML)
+        self.assertIn("READABLE_MAX_BYTES = 2048", PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_a_run_offers_only_what_can_still_be_done_to_it(self) -> None:
         """Two ways out of the card is not something to do with a run.
@@ -474,24 +474,24 @@ class CurrentTaskCardTests(unittest.TestCase):
             "promptExplain", "promptOpen", "t().explain", "t().open",
             "解释结果", "打开完整 PromptaFlow UI", "Open full PromptaFlow UI",
         ):
-            self.assertNotIn(absent, ORBIT_DASHBOARD_HTML)
+            self.assertNotIn(absent, PROMPTAFLOW_DASHBOARD_HTML)
         for marker in (
             "const approvals = approvalActions(run);",
             "live ? action(t().cancel,t().promptCancel(run.run_id),'direct') : ''",
             "${actions ? `<div class=\"actions\">${actions}</div>` : ''}",
         ):
-            self.assertIn(marker, ORBIT_DASHBOARD_HTML)
+            self.assertIn(marker, PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_history_rows_are_separated_like_every_other_list(self) -> None:
         """The one list in the card that ran its rows together."""
 
         self.assertIn(
             "border-bottom: 1px solid var(--line); color: inherit; text-align: left;",
-            ORBIT_DASHBOARD_HTML,
+            PROMPTAFLOW_DASHBOARD_HTML,
         )
         # One line between rows, and one between days — never two.
-        self.assertIn(".historyRow:last-child { border-bottom: 0; }", ORBIT_DASHBOARD_HTML)
-        self.assertIn(".historyDay:last-child { border-bottom: 0; }", ORBIT_DASHBOARD_HTML)
+        self.assertIn(".historyRow:last-child { border-bottom: 0; }", PROMPTAFLOW_DASHBOARD_HTML)
+        self.assertIn(".historyDay:last-child { border-bottom: 0; }", PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_approval_buttons_send_explicit_decisions_to_the_agent(self) -> None:
         for marker in (
@@ -502,8 +502,8 @@ class CurrentTaskCardTests(unittest.TestCase):
             "decision=\"${decision}\" and value=null",
             "当前的 interrupt_id、revision、allowed_commands 和 output_ports",
         ):
-            self.assertIn(marker, ORBIT_DASHBOARD_HTML)
-        self.assertNotIn("callTool('resume_run'", ORBIT_DASHBOARD_HTML)
+            self.assertIn(marker, PROMPTAFLOW_DASHBOARD_HTML)
+        self.assertNotIn("callTool('resume_run'", PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_buttons_are_labels_and_the_card_is_a_frame(self) -> None:
         """No filled rectangles, and no fill behind them either.
@@ -520,8 +520,8 @@ class CurrentTaskCardTests(unittest.TestCase):
         """
 
         for html in (
-            ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML,
-            ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
+            PROMPTAFLOW_DASHBOARD_HTML, PROMPTAFLOW_WORKFLOWS_HTML,
+            PROMPTAFLOW_AUTHORING_HTML, PROMPTAFLOW_RUN_HTML, PROMPTAFLOW_GOALS_HTML,
         ):
             with self.subTest():
                 rule = html.split(".action{", 1)[1].split("}", 1)[0]
@@ -573,7 +573,7 @@ class CurrentTaskCardTests(unittest.TestCase):
         than as the way out of the view.
         """
 
-        for html in (ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML):
+        for html in (PROMPTAFLOW_DASHBOARD_HTML, PROMPTAFLOW_WORKFLOWS_HTML):
             with self.subTest():
                 # The chevron and the title are one control: they name one
                 # action, so they take one hover. A chip around the glyph
@@ -589,8 +589,8 @@ class CurrentTaskCardTests(unittest.TestCase):
                 self.assertIn("‹</span>", html)
                 self.assertNotIn("←", html)
         # And it is still one rule, not one per card.
-        self.assertEqual(1, ORBIT_DASHBOARD_HTML.count(".back{"))
-        self.assertEqual(1, ORBIT_WORKFLOWS_HTML.count(".back{"))
+        self.assertEqual(1, PROMPTAFLOW_DASHBOARD_HTML.count(".back{"))
+        self.assertEqual(1, PROMPTAFLOW_WORKFLOWS_HTML.count(".back{"))
 
     def test_a_view_head_is_defined_once_for_every_card(self) -> None:
         """Both cards with a detail view had drawn their own.
@@ -599,7 +599,7 @@ class CurrentTaskCardTests(unittest.TestCase):
         again the moment one of them restyled its way back out of a card.
         """
 
-        for html in (ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML):
+        for html in (PROMPTAFLOW_DASHBOARD_HTML, PROMPTAFLOW_WORKFLOWS_HTML):
             with self.subTest():
                 self.assertEqual(1, html.count(".viewHead{"))
                 self.assertEqual(0, html.count(".viewHead {"))
@@ -611,32 +611,32 @@ class CurrentTaskCardTests(unittest.TestCase):
                 self.assertEqual(1, html.count(".back .viewTitle{"))
 
     def test_it_does_not_request_a_large_display_surface(self) -> None:
-        self.assertNotIn("request-display-mode", ORBIT_DASHBOARD_HTML)
-        self.assertNotIn("fullscreen", ORBIT_DASHBOARD_HTML)
+        self.assertNotIn("request-display-mode", PROMPTAFLOW_DASHBOARD_HTML)
+        self.assertNotIn("fullscreen", PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_it_has_no_direct_mutation_path(self) -> None:
-        self.assertNotIn("start_run", ORBIT_DASHBOARD_HTML)
-        self.assertNotIn("cancel_run", ORBIT_DASHBOARD_HTML)
-        self.assertNotIn("resume_run", ORBIT_DASHBOARD_HTML)
-        self.assertNotIn("await fetch(", ORBIT_DASHBOARD_HTML)
+        self.assertNotIn("start_run", PROMPTAFLOW_DASHBOARD_HTML)
+        self.assertNotIn("cancel_run", PROMPTAFLOW_DASHBOARD_HTML)
+        self.assertNotIn("resume_run", PROMPTAFLOW_DASHBOARD_HTML)
+        self.assertNotIn("await fetch(", PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_it_supports_chinese_and_english(self) -> None:
-        self.assertIn("'en-US'", ORBIT_DASHBOARD_HTML)
-        self.assertIn("'zh-CN'", ORBIT_DASHBOARD_HTML)
+        self.assertIn("'en-US'", PROMPTAFLOW_DASHBOARD_HTML)
+        self.assertIn("'zh-CN'", PROMPTAFLOW_DASHBOARD_HTML)
 
 
 class DedicatedCardTests(unittest.TestCase):
     def test_goals_card_lists_runs_without_embedding_the_browser_ui(self) -> None:
-        self.assertIn("callTool('list_runs',{limit:100})", ORBIT_GOALS_HTML)
-        self.assertIn("data-run-id", ORBIT_GOALS_HTML)
-        self.assertIn("目标执行卡片", ORBIT_GOALS_HTML)
-        self.assertNotIn("<iframe", ORBIT_GOALS_HTML)
-        self.assertNotIn("127.0.0.1:8848/ui", ORBIT_GOALS_HTML)
+        self.assertIn("callTool('list_runs',{limit:100})", PROMPTAFLOW_GOALS_HTML)
+        self.assertIn("data-run-id", PROMPTAFLOW_GOALS_HTML)
+        self.assertIn("目标执行卡片", PROMPTAFLOW_GOALS_HTML)
+        self.assertNotIn("<iframe", PROMPTAFLOW_GOALS_HTML)
+        self.assertNotIn("127.0.0.1:8848/ui", PROMPTAFLOW_GOALS_HTML)
 
     def test_workflow_list_contains_only_catalog_calls(self) -> None:
-        self.assertIn("callTool('list_workflows'", ORBIT_WORKFLOWS_HTML)
-        self.assertNotIn("list_runs", ORBIT_WORKFLOWS_HTML)
-        self.assertNotIn("list_authoring_jobs", ORBIT_WORKFLOWS_HTML)
+        self.assertIn("callTool('list_workflows'", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertNotIn("list_runs", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertNotIn("list_authoring_jobs", PROMPTAFLOW_WORKFLOWS_HTML)
 
     def test_workflow_list_items_offer_the_same_new_goal_prompt(self) -> None:
         """Same offer, same prompt, same button, same construction.
@@ -654,10 +654,10 @@ class DedicatedCardTests(unittest.TestCase):
             "event.stopPropagation()",
             "t().promptGoal(b.dataset.goalName,b.dataset.goalId)",
         ):
-            self.assertIn(marker, ORBIT_WORKFLOWS_HTML)
+            self.assertIn(marker, PROMPTAFLOW_WORKFLOWS_HTML)
         # Nothing left that repaints it away from the shared button.
         for absent in ("light-dark(#e5e5e8, #303034)", ".listGoal"):
-            self.assertNotIn(absent, ORBIT_WORKFLOWS_HTML)
+            self.assertNotIn(absent, PROMPTAFLOW_WORKFLOWS_HTML)
 
     def test_a_row_with_a_control_still_highlights_to_its_own_edge(self) -> None:
         """The row fills the item; the control sits over it, not beside it.
@@ -668,7 +668,7 @@ class DedicatedCardTests(unittest.TestCase):
         construction now, in the shared sheet, so it cannot diverge again.
         """
 
-        for html in (ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML):
+        for html in (PROMPTAFLOW_DASHBOARD_HTML, PROMPTAFLOW_WORKFLOWS_HTML):
             with self.subTest():
                 self.assertIn(
                     ".rowItem{position:relative;border-bottom:1px solid var(--line)}", html,
@@ -694,23 +694,23 @@ class DedicatedCardTests(unittest.TestCase):
             "document.getElementById('workflowBack').onclick=showList",
             "else if(value?.workflow_id){current=value;drawDetail(current)}",
         ):
-            self.assertIn(marker, ORBIT_WORKFLOWS_HTML)
-        self.assertNotIn("使用工作流详情卡片展示", ORBIT_WORKFLOWS_HTML)
+            self.assertIn(marker, PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertNotIn("使用工作流详情卡片展示", PROMPTAFLOW_WORKFLOWS_HTML)
 
     def test_workflow_detail_returns_mutations_to_chat(self) -> None:
-        self.assertIn("get_workflow_definition", ORBIT_WORKFLOWS_HTML)
+        self.assertIn("get_workflow_definition", PROMPTAFLOW_WORKFLOWS_HTML)
         for label in ("新目标", "修改", "删除"):
-            self.assertIn(label, ORBIT_WORKFLOWS_HTML)
+            self.assertIn(label, PROMPTAFLOW_WORKFLOWS_HTML)
         self.assertIn(
             'data-prompt="${esc(t().promptGoal(w.name||w.workflow_id,w.workflow_id))}"',
-            ORBIT_WORKFLOWS_HTML,
+            PROMPTAFLOW_WORKFLOWS_HTML,
         )
         self.assertIn(
             'data-prompt="${esc(t().promptModify(w.name||w.workflow_id,w.workflow_id))}"',
-            ORBIT_WORKFLOWS_HTML,
+            PROMPTAFLOW_WORKFLOWS_HTML,
         )
-        self.assertNotIn("callTool('start_run'", ORBIT_WORKFLOWS_HTML)
-        self.assertNotIn("callTool('delete", ORBIT_WORKFLOWS_HTML)
+        self.assertNotIn("callTool('start_run'", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertNotIn("callTool('delete", PROMPTAFLOW_WORKFLOWS_HTML)
 
     def test_workflow_delete_requires_card_confirmation_then_returns_to_chat(self) -> None:
         for marker in (
@@ -719,23 +719,23 @@ class DedicatedCardTests(unittest.TestCase):
             "我确认删除工作流", "重新读取其最新版本", "新的幂等键",
             "bindDeleteConfirmation(w)",
         ):
-            self.assertIn(marker, ORBIT_WORKFLOWS_HTML)
-        self.assertNotIn("callTool('delete_workflow'", ORBIT_WORKFLOWS_HTML)
+            self.assertIn(marker, PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertNotIn("callTool('delete_workflow'", PROMPTAFLOW_WORKFLOWS_HTML)
 
     def test_workflow_detail_uses_the_bundled_xyflow_viewer(self) -> None:
         for marker in (
-            "OrbitWorkflowGraph", "OrbitWorkflowGraph.mount",
+            "PromptaFlowWorkflowGraph", "PromptaFlowWorkflowGraph.mount",
             'data-workflow-graph aria-label="Workflow graph"',
             "react-flow__controls", "react-flow__background",
         ):
-            self.assertIn(marker, ORBIT_WORKFLOWS_HTML)
+            self.assertIn(marker, PROMPTAFLOW_WORKFLOWS_HTML)
         for absent in ('class="graphEdge', "function bindGraph()", "forceSimulation"):
-            self.assertNotIn(absent, ORBIT_WORKFLOWS_HTML)
+            self.assertNotIn(absent, PROMPTAFLOW_WORKFLOWS_HTML)
 
     def test_workflow_detail_embeds_assets_without_remote_runtime_dependencies(self) -> None:
-        self.assertNotRegex(ORBIT_WORKFLOWS_HTML, r'<script[^>]+src=')
-        self.assertNotRegex(ORBIT_WORKFLOWS_HTML, r'<link[^>]+href=')
-        self.assertRegex(ORBIT_WORKFLOWS_HTML, r"(?:const|var) OrbitWorkflowGraph=")
+        self.assertNotRegex(PROMPTAFLOW_WORKFLOWS_HTML, r'<script[^>]+src=')
+        self.assertNotRegex(PROMPTAFLOW_WORKFLOWS_HTML, r'<link[^>]+href=')
+        self.assertRegex(PROMPTAFLOW_WORKFLOWS_HTML, r"(?:const|var) PromptaFlowWorkflowGraph=")
 
     def test_workflow_detail_defaults_to_graph_and_tabs_to_definitions(self) -> None:
         for marker in (
@@ -745,23 +745,23 @@ class DedicatedCardTests(unittest.TestCase):
             'id="workflowDefinitionPanel" class="detailPanel definition" role="tabpanel"',
             "function bindTabs()", "ArrowLeft", "ArrowRight", "Home", "End",
         ):
-            self.assertIn(marker, ORBIT_WORKFLOWS_HTML)
+            self.assertIn(marker, PROMPTAFLOW_WORKFLOWS_HTML)
         self.assertIn(
             'id="workflowDefinitionPanel" class="detailPanel definition" role="tabpanel" '
             'aria-labelledby="workflowDefinitionTab" hidden',
-            ORBIT_WORKFLOWS_HTML,
+            PROMPTAFLOW_WORKFLOWS_HTML,
         )
-        self.assertIn('.tab[aria-selected="true"]::after{background:var(--accent)}', ORBIT_WORKFLOWS_HTML)
-        self.assertNotIn('.tab[aria-selected="true"]{color:var(--text);background:', ORBIT_WORKFLOWS_HTML)
+        self.assertIn('.tab[aria-selected="true"]::after{background:var(--accent)}', PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertNotIn('.tab[aria-selected="true"]{color:var(--text);background:', PROMPTAFLOW_WORKFLOWS_HTML)
 
     def test_workflow_list_and_detail_share_a_stable_card_height(self) -> None:
-        self.assertIn("#cardFrame { height: var(--card-height); }", ORBIT_WORKFLOWS_HTML)
-        self.assertNotIn("--workflow-card-height", ORBIT_WORKFLOWS_HTML)
-        self.assertIn("card.className='card workflowList'", ORBIT_WORKFLOWS_HTML)
-        self.assertIn("card.className='card workflowDetail'", ORBIT_WORKFLOWS_HTML)
+        self.assertIn("#cardFrame { height: var(--card-height); }", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertNotIn("--workflow-card-height", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertIn("card.className='card workflowList'", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertIn("card.className='card workflowDetail'", PROMPTAFLOW_WORKFLOWS_HTML)
         self.assertIn(
             "#card.workflowDetail .detailPanel { flex: 1 1 auto; height: auto; min-height: 0; }",
-            ORBIT_WORKFLOWS_HTML,
+            PROMPTAFLOW_WORKFLOWS_HTML,
         )
 
     def test_dashboard_height_is_one_height_for_every_tab(self) -> None:
@@ -775,19 +775,19 @@ class DedicatedCardTests(unittest.TestCase):
 
         self.assertIn(
             "#cardFrame { height: var(--card-height); margin-top: 12px; }",
-            ORBIT_DASHBOARD_HTML,
+            PROMPTAFLOW_DASHBOARD_HTML,
         )
         for absent in ("min-height: var(--dashboard", "max-height: var(--dashboard"):
-            self.assertNotIn(absent, ORBIT_DASHBOARD_HTML)
+            self.assertNotIn(absent, PROMPTAFLOW_DASHBOARD_HTML)
         # Tall enough to hold the prompt editor it opens over itself.
-        self.assertIn(".promptEditorInput { display: block; width: 100%; min-height: 132px;", ORBIT_DASHBOARD_HTML)
+        self.assertIn(".promptEditorInput { display: block; width: 100%; min-height: 132px;", PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_cards_receive_late_codex_tool_output(self) -> None:
-        self.assertIn("openai:set_globals", ORBIT_WORKFLOWS_HTML)
-        self.assertIn("globals.toolOutput", ORBIT_WORKFLOWS_HTML)
-        self.assertIn("publishToolResult", ORBIT_WORKFLOWS_HTML)
-        self.assertIn(".detailPanel{height:420px;overflow:hidden}", ORBIT_WORKFLOWS_HTML)
-        self.assertIn(".detailPanel.definition{overflow-y:auto}", ORBIT_WORKFLOWS_HTML)
+        self.assertIn("openai:set_globals", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertIn("globals.toolOutput", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertIn("publishToolResult", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertIn(".detailPanel{height:420px;overflow:hidden}", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertIn(".detailPanel.definition{overflow-y:auto}", PROMPTAFLOW_WORKFLOWS_HTML)
 
     def test_workflow_graph_supports_zoom_and_horizontal_pan(self) -> None:
         for marker in (
@@ -795,56 +795,56 @@ class DedicatedCardTests(unittest.TestCase):
             "react-flow__controls-zoomout", "react-flow__controls-fitview",
             "panOnScroll", "Horizontal", "maxZoom", "minZoom",
         ):
-            self.assertIn(marker, ORBIT_WORKFLOWS_HTML)
+            self.assertIn(marker, PROMPTAFLOW_WORKFLOWS_HTML)
 
     def test_workflow_graph_tracks_the_codex_host_theme(self) -> None:
         for marker in (
             "host-context-changed", "applyHostContext", "currentTheme()",
             "document.documentElement.style.colorScheme=theme",
         ):
-            self.assertIn(marker, ORBIT_WORKFLOWS_HTML)
+            self.assertIn(marker, PROMPTAFLOW_WORKFLOWS_HTML)
 
     def test_workflow_detail_uses_the_host_background(self) -> None:
-        self.assertIn("--host-canvas: light-dark(#ffffff, #151515)", ORBIT_WORKFLOWS_HTML)
-        self.assertIn("html, body, main", ORBIT_WORKFLOWS_HTML)
-        self.assertIn("background: var(--host-canvas) !important", ORBIT_WORKFLOWS_HTML)
+        self.assertIn("--host-canvas: light-dark(#ffffff, #151515)", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertIn("html, body, main", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertIn("background: var(--host-canvas) !important", PROMPTAFLOW_WORKFLOWS_HTML)
         self.assertIn(
             ".card, .tabs, .actions, .workflowGraphMount, .mcp-xyflow-viewer",
-            ORBIT_WORKFLOWS_HTML,
+            PROMPTAFLOW_WORKFLOWS_HTML,
         )
-        self.assertIn("background: transparent !important", ORBIT_WORKFLOWS_HTML)
+        self.assertIn("background: transparent !important", PROMPTAFLOW_WORKFLOWS_HTML)
 
     def test_definition_items_expand_to_show_node_details(self) -> None:
         for marker in (
             "definitionItemToggle", 'aria-expanded="false"',
             "bindDefinitionItems()", "n.handler", "n.prompt",
         ):
-            self.assertIn(marker, ORBIT_WORKFLOWS_HTML)
+            self.assertIn(marker, PROMPTAFLOW_WORKFLOWS_HTML)
 
     def test_authoring_card_is_scoped_to_authoring(self) -> None:
         for marker in ("get_authoring_job", "list_authoring_jobs", "Publish workflow"):
-            self.assertIn(marker, ORBIT_AUTHORING_HTML)
-        self.assertNotIn("list_runs", ORBIT_AUTHORING_HTML)
+            self.assertIn(marker, PROMPTAFLOW_AUTHORING_HTML)
+        self.assertNotIn("list_runs", PROMPTAFLOW_AUTHORING_HTML)
 
     def test_run_card_is_scoped_to_one_run_and_its_result(self) -> None:
         for marker in ("inspect_run", "get_run_steps", "read_artifact_content"):
-            self.assertIn(marker, ORBIT_RUN_HTML)
-        self.assertNotIn("list_authoring_jobs", ORBIT_RUN_HTML)
+            self.assertIn(marker, PROMPTAFLOW_RUN_HTML)
+        self.assertNotIn("list_authoring_jobs", PROMPTAFLOW_RUN_HTML)
 
     def test_run_card_labels_its_result(self) -> None:
-        self.assertIn('<h2 class="resultTitle">${esc(t().result)}</h2>', ORBIT_RUN_HTML)
-        self.assertIn("result:'Result'", ORBIT_RUN_HTML)
-        self.assertIn("result:'执行结果'", ORBIT_RUN_HTML)
-        self.assertIn(".resultTitle{margin:0 0 6px", ORBIT_RUN_HTML)
+        self.assertIn('<h2 class="resultTitle">${esc(t().result)}</h2>', PROMPTAFLOW_RUN_HTML)
+        self.assertIn("result:'Result'", PROMPTAFLOW_RUN_HTML)
+        self.assertIn("result:'执行结果'", PROMPTAFLOW_RUN_HTML)
+        self.assertIn(".resultTitle{margin:0 0 6px", PROMPTAFLOW_RUN_HTML)
 
     def test_run_card_clamps_the_goal_and_has_no_progress_bar(self) -> None:
         for marker in (
             "-webkit-line-clamp: 3", "-webkit-box-orient: vertical",
             'class="goal"', 'class="steps"',
         ):
-            self.assertIn(marker, ORBIT_RUN_HTML)
+            self.assertIn(marker, PROMPTAFLOW_RUN_HTML)
         for absent in ('class="progress"', "Math.round", "steps.length} steps"):
-            self.assertNotIn(absent, ORBIT_RUN_HTML)
+            self.assertNotIn(absent, PROMPTAFLOW_RUN_HTML)
 
     def test_run_card_uses_content_height_up_to_a_600px_maximum(self) -> None:
         """The ceiling is the shared one; only the scroll behaviour is local."""
@@ -855,8 +855,8 @@ class DedicatedCardTests(unittest.TestCase):
             "#card.goalRun { overscroll-behavior: contain; }",
             "card.className='card goalRun'",
         ):
-            self.assertIn(marker, ORBIT_RUN_HTML)
-        self.assertNotIn("--goal-run-card-max-height", ORBIT_RUN_HTML)
+            self.assertIn(marker, PROMPTAFLOW_RUN_HTML)
+        self.assertNotIn("--goal-run-card-max-height", PROMPTAFLOW_RUN_HTML)
 
     def test_every_card_stops_at_the_same_height(self) -> None:
         """A card with no ceiling grows with its data.
@@ -868,8 +868,8 @@ class DedicatedCardTests(unittest.TestCase):
         """
 
         for html in (
-            ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML,
-            ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
+            PROMPTAFLOW_DASHBOARD_HTML, PROMPTAFLOW_WORKFLOWS_HTML,
+            PROMPTAFLOW_AUTHORING_HTML, PROMPTAFLOW_RUN_HTML, PROMPTAFLOW_GOALS_HTML,
         ):
             with self.subTest():
                 self.assertEqual(1, html.count("--card-height:600px"))
@@ -896,8 +896,8 @@ class DedicatedCardTests(unittest.TestCase):
         """
 
         for html in (
-            ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML,
-            ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
+            PROMPTAFLOW_DASHBOARD_HTML, PROMPTAFLOW_WORKFLOWS_HTML,
+            PROMPTAFLOW_AUTHORING_HTML, PROMPTAFLOW_RUN_HTML, PROMPTAFLOW_GOALS_HTML,
         ):
             with self.subTest():
                 self.assertIn(
@@ -912,7 +912,7 @@ class DedicatedCardTests(unittest.TestCase):
                 )
                 # The chrome is not what gets squeezed.
                 self.assertIn("margin-bottom:14px;flex:none}", html)
-        self.assertIn("#tabs { align-items: center; flex: none;", ORBIT_DASHBOARD_HTML)
+        self.assertIn("#tabs { align-items: center; flex: none;", PROMPTAFLOW_DASHBOARD_HTML)
 
     def test_the_frame_ends_where_the_content_does(self) -> None:
         """The scrollbar sits beside the rounded outline, not inside it.
@@ -927,8 +927,8 @@ class DedicatedCardTests(unittest.TestCase):
         """
 
         for html in (
-            ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML,
-            ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
+            PROMPTAFLOW_DASHBOARD_HTML, PROMPTAFLOW_WORKFLOWS_HTML,
+            PROMPTAFLOW_AUTHORING_HTML, PROMPTAFLOW_RUN_HTML, PROMPTAFLOW_GOALS_HTML,
         ):
             with self.subTest():
                 self.assertIn(
@@ -961,8 +961,8 @@ class DedicatedCardTests(unittest.TestCase):
         """
 
         for html in (
-            ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML,
-            ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
+            PROMPTAFLOW_DASHBOARD_HTML, PROMPTAFLOW_WORKFLOWS_HTML,
+            PROMPTAFLOW_AUTHORING_HTML, PROMPTAFLOW_RUN_HTML, PROMPTAFLOW_GOALS_HTML,
         ):
             with self.subTest():
                 self.assertIn("scrollbar-gutter:auto;scrollbar-width:thin;", html)
@@ -993,10 +993,10 @@ class DedicatedCardTests(unittest.TestCase):
         printed in the same ink as the title above it.
         """
 
-        self.assertIn(".goalMeta { margin-top: 5px; color: var(--muted);", ORBIT_GOALS_HTML)
+        self.assertIn(".goalMeta { margin-top: 5px; color: var(--muted);", PROMPTAFLOW_GOALS_HTML)
         for html in (
-            ORBIT_DASHBOARD_HTML, ORBIT_WORKFLOWS_HTML,
-            ORBIT_AUTHORING_HTML, ORBIT_RUN_HTML, ORBIT_GOALS_HTML,
+            PROMPTAFLOW_DASHBOARD_HTML, PROMPTAFLOW_WORKFLOWS_HTML,
+            PROMPTAFLOW_AUTHORING_HTML, PROMPTAFLOW_RUN_HTML, PROMPTAFLOW_GOALS_HTML,
         ):
             with self.subTest():
                 self.assertNotIn("var(--faint)", html)

@@ -26,7 +26,7 @@ export default defineConfig({
       entry: fileURLToPath(
         new URL("./src/mcp-workflow-graph.jsx", import.meta.url),
       ),
-      name: "OrbitWorkflowGraph",
+      name: "PromptaFlowWorkflowGraph",
       formats: ["iife"],
       fileName: () => "workflow-detail.js",
     },

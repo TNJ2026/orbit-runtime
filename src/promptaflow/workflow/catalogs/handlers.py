@@ -95,7 +95,7 @@ class HandlerManifest:
         `MappingProxyType`, which pickle refuses — and the registrations are
         pickled whenever `multiprocessing` uses `spawn` rather than `fork`.
         That is every Windows Runtime: `--execution-workers` defaults to 1, so
-        `orbit serve` died in `process.start()` before it ever bound a port.
+        `promptaflow serve` died in `process.start()` before it ever bound a port.
 
         Rebuilt through the constructor rather than by restoring attributes,
         so the manifest arriving in the worker is re-frozen and re-validated

@@ -9,14 +9,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, IconChevronDownOutline14, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
 import { panelError, type PanelError } from '@promptaflow/integration-core'
 import type { OutputChunk, StepSummary } from '@promptaflow/integration-core'
-import styles from './OrbitPanel.module.css'
+import styles from './PromptaFlowPanel.module.css'
 import {
   approvalValue, artifactHref, artifactLabel, commandRevision, dotState, mergeChunks,
-  outputText, resultOutcome, stepDotState, toStepRow, type OrbitRunRow as RunRowData,
+  outputText, resultOutcome, stepDotState, toStepRow, type PromptaFlowRunRow as RunRowData,
 } from '@promptaflow/integration-core'
-import type { OrbitLocaleKey } from './locales.ts'
+import type { PromptaFlowLocaleKey } from './locales.ts'
 
-type Translate = (key: OrbitLocaleKey, values?: Record<string, string | number>) => string
+type Translate = (key: PromptaFlowLocaleKey, values?: Record<string, string | number>) => string
 type HostCall = <T>(action: string, args: unknown[], signal: AbortSignal) => Promise<T>
 
 interface StepProps {
@@ -181,7 +181,7 @@ export function BackButton({ t, onBack }: { t: Translate; onBack: () => void }) 
  * happening", and an answer a reader has to click for is not on the page. The
  * detail page draws the same list under the Run's controls.
  */
-export function OrbitStepList(
+export function PromptaFlowStepList(
   { call, t, sessionId, runId, steps, live, onSettled }: {
     call: HostCall; t: Translate; sessionId: string; runId: string
     steps: readonly StepSummary[]; live: boolean
@@ -208,7 +208,7 @@ export function OrbitStepList(
  * over. It briefly grew a progress line for the Goal page; the Goal page draws
  * the whole Run now, and no caller here ever had steps to give it.
  */
-export function OrbitRunListRow(
+export function PromptaFlowRunListRow(
   { t, run, onOpen }: { t: Translate; run: RunRowData; onOpen: () => void },
 ) {
   return (
@@ -242,7 +242,7 @@ export function OrbitRunListRow(
  * a copy of what the reader is already looking at is a control that wastes the
  * one click they were willing to spend.
  */
-export function OrbitRunGoalCard(
+export function PromptaFlowRunGoalCard(
   { call, t, sessionId, run, steps, onSettled }: {
     call: HostCall; t: Translate; sessionId: string; run: RunRowData
     steps?: readonly StepSummary[]
@@ -265,7 +265,7 @@ export function OrbitRunGoalCard(
       <RunControls call={call} t={t} sessionId={sessionId} run={run} />
       {steps?.length ? (
         <div className={styles.goalSteps}>
-          <OrbitStepList
+          <PromptaFlowStepList
             call={call} t={t} sessionId={sessionId} runId={run.runId}
             steps={steps} live={run.live} onSettled={onSettled}
           />
@@ -570,7 +570,7 @@ function RunResult(
           being answered with whatever the terminal step happened to emit —
           which for a Run that wrote a file was a 64-character hash. */}
       <span className={`${styles.outcome} ${styles[`outcome_${dotState(run.status)}`]}`}>
-        {t(`outcome_${run.status}` as OrbitLocaleKey, { status: run.status })}
+        {t(`outcome_${run.status}` as PromptaFlowLocaleKey, { status: run.status })}
       </span>
       {failure ? <pre className={`${styles.result} ${styles.resultError}`}>{failure}</pre> : null}
       {artifacts.map(id => (
@@ -581,12 +581,12 @@ function RunResult(
   )
 }
 
-export interface OrbitRunRowProps {
+export interface PromptaFlowRunRowProps {
   call: HostCall; t: Translate; sessionId: string; run: RunRowData
   onBack: () => void
 }
 
-export function OrbitRunDetail({ call, t, sessionId, run, onBack }: OrbitRunRowProps) {
+export function PromptaFlowRunDetail({ call, t, sessionId, run, onBack }: PromptaFlowRunRowProps) {
   const open = true
   const [steps, setSteps] = useState<StepSummary[] | null>(null)
   const [error, setError] = useState<PanelError | null>(null)
@@ -619,7 +619,7 @@ export function OrbitRunDetail({ call, t, sessionId, run, onBack }: OrbitRunRowP
         {!error && steps === null ? <p className={styles.empty}>{t('loading')}</p> : null}
         {steps?.length ? (
           <div className={styles.goalSteps}>
-            <OrbitStepList
+            <PromptaFlowStepList
               call={call} t={t} sessionId={sessionId} runId={run.runId}
               steps={steps} live={run.live} onSettled={setSteps}
             />

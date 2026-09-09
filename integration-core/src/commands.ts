@@ -2,7 +2,7 @@
 
 import type { RunDto } from './types.js'
 
-export type OrbitRunCommand = 'langgraph_run.cancel' | 'langgraph_run.resume'
+export type PromptaFlowRunCommand = 'langgraph_run.cancel' | 'langgraph_run.resume'
 
 /**
  * The advertised entry for a command at the revision the caller was reading,
@@ -14,7 +14,7 @@ export type OrbitRunCommand = 'langgraph_run.cancel' | 'langgraph_run.resume'
  * at it, doing the thing they asked to a state they never saw.
  */
 export function advertisedAt(
-  run: RunDto, command: OrbitRunCommand, expectedRevision: number,
+  run: RunDto, command: PromptaFlowRunCommand, expectedRevision: number,
 ): { command: string; expected_version: number } | undefined {
   return run.allowed_commands.find(
     item => item.command === command && item.expected_version === expectedRevision,
@@ -22,6 +22,6 @@ export function advertisedAt(
 }
 
 /** The wire tool one command is carried by. */
-export function commandTool(command: OrbitRunCommand): 'cancel_run' | 'resume_run' {
+export function commandTool(command: PromptaFlowRunCommand): 'cancel_run' | 'resume_run' {
   return command === 'langgraph_run.cancel' ? 'cancel_run' : 'resume_run'
 }

@@ -216,7 +216,7 @@ if __name__ == "__main__":
 
 
 class RunCommandTests(CliMatrixTestCase):
-    """`orbit run` reads what a server wrote, without being one."""
+    """`promptaflow run` reads what a server wrote, without being one."""
 
     def seed(self):
         from tests.test_web_composition import (
@@ -227,7 +227,7 @@ class RunCommandTests(CliMatrixTestCase):
 
         publish_linear_workflow(self.db)
         publish_human_workflow(self.db)
-        # Wired the way `orbit serve` wires it: state beside the database, so
+        # Wired the way `promptaflow serve` wires it: state beside the database, so
         # the CLI and the server describe one engine rather than two.
         engine = build_service(
             self.db, [transform_registration()], state_directory=self.db.parent,
@@ -290,7 +290,7 @@ class RunCommandTests(CliMatrixTestCase):
         A CLI that started one would rebuild the whole Handler wiring a server
         has — discovery, workspaces, secrets — and still behave differently
         from the server that normally runs them. Starting is the UI's, or
-        `start_run` over `orbit mcp`.
+        `start_run` over `promptaflow mcp`.
         """
 
         result = cli("run", "start", "workflow:linear", "--db", str(self.db))

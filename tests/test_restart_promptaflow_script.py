@@ -47,13 +47,13 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
 
         uv = bin_dir / "uv"
         uv.write_text(
-            "#!/bin/sh\ncat \"$ORBIT_TEST_RUNTIMES\"\n", encoding="utf-8",
+            "#!/bin/sh\ncat \"$PROMPTAFLOW_TEST_RUNTIMES\"\n", encoding="utf-8",
         )
         uv.chmod(0o755)
         (root / "runtimes.json").write_text(json.dumps(listed), encoding="utf-8")
 
         # `ps -p N -o lstart=,command=` answers from a table the test wrote.
-        # After `ORBIT_TEST_PS_SWITCH` calls it answers from the second table,
+        # After `PROMPTAFLOW_TEST_PS_SWITCH` calls it answers from the second table,
         # which is how a PID reused mid-run is modelled.
         ps_script = bin_dir / "ps"
         ps_script.write_text(
@@ -62,12 +62,12 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
             '  case "$1" in -p) shift; pid="$1";; esac\n'
             "  shift\n"
             "done\n"
-            'calls=$(cat "$ORBIT_TEST_PS_CALLS" 2>/dev/null || echo 0)\n'
-            'echo $((calls + 1)) > "$ORBIT_TEST_PS_CALLS"\n'
-            'table="$ORBIT_TEST_PS"\n'
-            'if [ -n "${ORBIT_TEST_PS_SWITCH:-}" ] '
-            '&& [ "$calls" -ge "$ORBIT_TEST_PS_SWITCH" ]; then\n'
-            '  table="$ORBIT_TEST_PS_AFTER"\n'
+            'calls=$(cat "$PROMPTAFLOW_TEST_PS_CALLS" 2>/dev/null || echo 0)\n'
+            'echo $((calls + 1)) > "$PROMPTAFLOW_TEST_PS_CALLS"\n'
+            'table="$PROMPTAFLOW_TEST_PS"\n'
+            'if [ -n "${PROMPTAFLOW_TEST_PS_SWITCH:-}" ] '
+            '&& [ "$calls" -ge "$PROMPTAFLOW_TEST_PS_SWITCH" ]; then\n'
+            '  table="$PROMPTAFLOW_TEST_PS_AFTER"\n'
             "fi\n"
             # Non-zero for a PID it has no row for, the way the real `ps`
             # answers — a fake that always succeeds hides what `set -e` does
@@ -93,11 +93,11 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
             **os.environ,
             "PATH": f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}",
             "AGENT_APP_STATE_DIR": str(root / "state"),
-            "ORBIT_RUNTIME_ROOT": str(root / "runtime-root"),
-            "ORBIT_TEST_RUNTIMES": str(root / "runtimes.json"),
-            "ORBIT_TEST_PS": str(root / "ps.txt"),
-            "ORBIT_TEST_PS_AFTER": str(root / "ps-after.txt"),
-            "ORBIT_TEST_PS_CALLS": str(root / "ps-calls.txt"),
+            "PROMPTAFLOW_RUNTIME_ROOT": str(root / "runtime-root"),
+            "PROMPTAFLOW_TEST_RUNTIMES": str(root / "runtimes.json"),
+            "PROMPTAFLOW_TEST_PS": str(root / "ps.txt"),
+            "PROMPTAFLOW_TEST_PS_AFTER": str(root / "ps-after.txt"),
+            "PROMPTAFLOW_TEST_PS_CALLS": str(root / "ps-calls.txt"),
         }
 
     @staticmethod
@@ -140,7 +140,7 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
                 recorded=4243,
                 ps_answers={
                     4242: "/usr/bin/postgres -D /var/lib/postgres",
-                    4243: "python -m orbit hub serve",
+                    4243: "python -m promptaflow hub serve",
                 },
             )
 
@@ -159,9 +159,9 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
                 listed=[{"pid": 5001}, {"pid": 5002}],
                 recorded=5000,
                 ps_answers={
-                    5000: "python -m orbit hub serve --port 8848",
-                    5001: "python -m orbit serve --project-root /a",
-                    5002: "python -m orbit serve --project-root /b",
+                    5000: "python -m promptaflow hub serve --port 8848",
+                    5001: "python -m promptaflow serve --project-root /a",
+                    5002: "python -m promptaflow serve --project-root /b",
                 },
             )
 
@@ -191,14 +191,14 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
             root = Path(temporary)
             environment = self.environment(
                 root, listed=[], recorded=bystander.pid,
-                ps_answers={bystander.pid: "python -m orbit hub serve"},
+                ps_answers={bystander.pid: "python -m promptaflow hub serve"},
             )
             # One `ps` call discovers it; every later call sees a stranger.
             self.write_ps_table(
                 root / "ps-after.txt",
                 {bystander.pid: "/usr/bin/postgres -D /var/lib/pg"},
             )
-            environment["ORBIT_TEST_PS_SWITCH"] = "1"
+            environment["PROMPTAFLOW_TEST_PS_SWITCH"] = "1"
 
             result = subprocess.run(
                 ["bash", str(root / "restart-promptaflow.sh")], cwd=root, env=environment,
@@ -229,13 +229,13 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
             environment = self.environment(
                 root, listed=[{"pid": 8001}], recorded=8000,
                 ps_answers={
-                    8000: "python -m orbit hub serve",
-                    8001: "python -m orbit serve --project-root /a",
+                    8000: "python -m promptaflow hub serve",
+                    8001: "python -m promptaflow serve --project-root /a",
                 },
             )
             # Both exit while the run is still working through them.
             self.write_ps_table(root / "ps-after.txt", {})
-            environment["ORBIT_TEST_PS_SWITCH"] = "2"
+            environment["PROMPTAFLOW_TEST_PS_SWITCH"] = "2"
 
             result = subprocess.run(
                 ["bash", str(root / "restart-promptaflow.sh")], cwd=root, env=environment,
@@ -250,11 +250,11 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
             root = Path(temporary)
             environment = self.environment(
                 root, listed=[], recorded=7002,
-                ps_answers={7002: "python -m orbit hub serve"},
+                ps_answers={7002: "python -m promptaflow hub serve"},
             )
             # Gone after discovery: `ps` answers nothing for it.
             self.write_ps_table(root / "ps-after.txt", {})
-            environment["ORBIT_TEST_PS_SWITCH"] = "1"
+            environment["PROMPTAFLOW_TEST_PS_SWITCH"] = "1"
 
             result = subprocess.run(
                 ["bash", str(root / "restart-promptaflow.sh")], cwd=root, env=environment,
@@ -273,8 +273,8 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
             environment = self.environment(
                 root, listed=[{"pid": 6001}], recorded=6000,
                 ps_answers={
-                    6000: "python -m orbit hub serve",
-                    6001: "python -m orbit serve --project-root /a",
+                    6000: "python -m promptaflow hub serve",
+                    6001: "python -m promptaflow serve --project-root /a",
                 },
             )
             # One line, no spaces: what `json.dumps` gives by default.
@@ -292,10 +292,10 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
             root = Path(temporary)
             environment = self.environment(
                 root, listed=[], recorded=9000,
-                ps_answers={9000: "python -m orbit hub serve"},
+                ps_answers={9000: "python -m promptaflow hub serve"},
             )
             self.write_ps_table(root / "ps-after.txt", {})
-            environment["ORBIT_TEST_PS_SWITCH"] = "1"
+            environment["PROMPTAFLOW_TEST_PS_SWITCH"] = "1"
 
             result = subprocess.run(
                 ["bash", str(root / "restart-promptaflow.sh"), "--stop-only"],
@@ -318,8 +318,8 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
             environment = self.environment(
                 root, listed=[], recorded=9100,
                 ps_answers={
-                    9100: "python -m orbit hub serve",
-                    9101: "python -m orbit serve --project-root /workspace",
+                    9100: "python -m promptaflow hub serve",
+                    9101: "python -m promptaflow serve --project-root /workspace",
                 },
             )
             lock = root / "runtime-root" / "projects" / "runtime.db.owner.lock"

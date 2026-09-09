@@ -1576,7 +1576,7 @@ def compile_workflow(
             or int(policy.config["threshold"]) <= 1
         ):
             continue
-        gate = f"__orbit_n_of_m_gate__{join.id}"
+        gate = f"__promptaflow_n_of_m_gate__{join.id}"
         while gate in used_node_ids:
             gate += "_"
         used_node_ids.add(gate)

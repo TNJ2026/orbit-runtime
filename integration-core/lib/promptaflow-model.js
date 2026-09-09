@@ -11,9 +11,9 @@ import { isLive, labelOf } from './run-progress.js';
 export { isLive };
 export { goalRuns, progressOf } from './run-progress.js';
 /** Cadence while a Run is moving. */
-export const ORBIT_POLL_MS = 2_000;
+export const PROMPTAFLOW_POLL_MS = 2_000;
 /** Cadence while nothing is. A resident panel costs nothing when idle. */
-export const ORBIT_IDLE_MS = 15_000;
+export const PROMPTAFLOW_IDLE_MS = 15_000;
 /** Read the interrupts a Run advertises, keeping only the ones answerable here.
  *
  * An interrupt with no output port is a question this panel cannot form an
@@ -207,7 +207,7 @@ export function artifactHref(sessionId, artifactId) {
     if (!sessionId || !artifactId)
         return '';
     const query = new URLSearchParams({ session: sessionId, id: artifactId });
-    return `/plugins/dsh-orbit/artifact?${query.toString()}`;
+    return `/plugins/dsh-promptaflow/artifact?${query.toString()}`;
 }
 /** The short name an Artifact is offered under: its id without the kind. */
 export function artifactLabel(artifactId) {
@@ -216,7 +216,7 @@ export function artifactLabel(artifactId) {
 }
 /** How soon to ask again, given what the last answer contained. */
 export function nextInterval(rows) {
-    return rows.some(row => row.live) ? ORBIT_POLL_MS : ORBIT_IDLE_MS;
+    return rows.some(row => row.live) ? PROMPTAFLOW_POLL_MS : PROMPTAFLOW_IDLE_MS;
 }
 /** Newest first, with anything still running ahead of anything finished.
  *

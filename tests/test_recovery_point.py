@@ -376,7 +376,7 @@ class FileBackupRecoveryTests(unittest.TestCase):
         (self.project / "src" / "main.py").write_text("print('before')\n")
         (self.project / "unnamed.txt").write_text("nobody asked for me\n")
         self.points = FileBackupRecoveryPoints(
-            self.project, self.project / ".orbit",
+            self.project, self.project / ".promptaflow",
         )
 
     def test_nothing_declared_is_refused_rather_than_covering_nothing(self) -> None:
@@ -485,7 +485,7 @@ class FileBackupRecoveryTests(unittest.TestCase):
         from promptaflow.workspace.recovery import FileBackupRecoveryPoints
 
         points = FileBackupRecoveryPoints(
-            self.project, self.project / ".orbit", min_free_bytes=10 ** 18,
+            self.project, self.project / ".promptaflow", min_free_bytes=10 ** 18,
         )
         with self.assertRaises(RecoveryUnavailable):
             points.create("run-1", protect=["important.conf"])

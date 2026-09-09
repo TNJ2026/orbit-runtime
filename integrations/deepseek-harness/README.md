@@ -1,7 +1,7 @@
 # PromptaFlow for DeepSeek Harness
 
 This directory is the installable Host Profile Bundle for `deepseek-harness`.
-PromptaFlow Runtime stays an independent process. The `OrbitGateway` discovers the
+PromptaFlow Runtime stays an independent process. The `PromptaFlowGateway` discovers the
 `promptaflow serve` instance published for the normalized Workspace, starts one on a
 free port when none exists, performs the capability handshake, and communicates
 with it only through HTTP MCP. A Runtime started this way remains available
@@ -17,7 +17,7 @@ By default the Gateway discovers ownership records below `~/.promptaflow`. If Pr
 uses a database outside that tree, set `PROMPTAFLOW_RUNTIME_ROOT` for the Harness
 Profile to the directory containing the Runtime ownership record. The same
 setting works on macOS, Linux and Windows; no platform-specific socket path is
-required. `ORBIT_RUNTIME_ROOT` remains supported as a compatibility alias.
+required. Set `PROMPTAFLOW_RUNTIME_ROOT` when ownership records live elsewhere.
 
 Install this directory into the target Harness Web Profile with one command:
 
@@ -40,7 +40,7 @@ is not named `dsh` on `PATH`. To test the exact release artifact, set
 | Component | Supported range |
 | --- | --- |
 | PromptaFlow Runtime | `>=0.4.0 <0.5.0` |
-| PromptaFlow integration protocol | `orbit-harness/1` |
+| PromptaFlow integration protocol | `promptaflow-harness/2` |
 | Harness packages | `>=0.1.2-rc.1 <0.2.0` (alpha prereleases are not supported) |
 | Verified Harness launcher | `0.1.2-rc.1` |
 | React | `^18.2.0` |
@@ -120,7 +120,7 @@ id — the Host derives the Workspace itself, for reads and writes alike.
 
 ## Starting a Run
 
-By saying so. The Agent has `orbit_list_workflows` and `orbit_start_run`, so
+By saying so. The Agent has `promptaflow_list_workflows` and `promptaflow_start_run`, so
 "run the CSV cleaner over today's export" is the whole interface; the Run
 appears in the panel a moment later.
 
@@ -155,7 +155,7 @@ Authoring is elsewhere for a different reason: writing or revising a Workflow
 means reading the generated DSL, its compile diagnostics and its diagram, and
 that is PromptaFlow's own UI, one press away from the panel's title bar.
 
-The Host API at `/plugins/dsh-orbit/api` on the Harness origin remains available
+The Host API at `/plugins/dsh-promptaflow/api` on the Harness origin remains available
 for a caller that wants Run inspection, Steps, Graph, Edges, cursor-based output,
 bounded Artifact content, and Attachment import. Every call carries a Workspace,
 and the Host trusts none of them: each is checked against the Session it claims
@@ -173,7 +173,7 @@ or credentials.
 
 The Host automatically attaches one Bridge to every live root Session with a
 `cwd`, including Sessions restored during startup. The Bridge derives its
-cursor and known Run ids from durable `orbit/run-*` Session events, so a Host
+cursor and known Run ids from durable `promptaflow/run-*` Session events, so a Host
 restart resumes without a second cursor database. Session disposal aborts the
 poller, and a temporarily unavailable Runtime is retried without blocking the
 Session lifecycle.
@@ -188,20 +188,20 @@ grant a remote caller or local process any additional scope.
 The Host registers a bounded native Harness tool surface which routes each
 execution through the same Workspace-aware MCP Gateway:
 
-- `orbit_list_workflows`
-- `orbit_list_runs`
-- `orbit_inspect_run`
-- `orbit_start_run`
-- `orbit_cancel_run`
-- `orbit_resume_run`
+- `promptaflow_list_workflows`
+- `promptaflow_list_runs`
+- `promptaflow_inspect_run`
+- `promptaflow_start_run`
+- `promptaflow_cancel_run`
+- `promptaflow_resume_run`
 
 The model never supplies an endpoint, actor, idempotency key, or mutation
 revision. The Host derives Workspace and Session from `ToolRunContext`, creates
 idempotency keys, and re-reads `allowed_commands[]` before cancel or resume.
-`orbit_start_run` always sends `wait: false`; Run progress is projected by the
+`promptaflow_start_run` always sends `wait: false`; Run progress is projected by the
 Session Bridge rather than holding a Harness tool call open.
 
-Every MCP tool call also carries an `orbit/workspace` metadata object derived
+Every MCP tool call also carries an `promptaflow/workspace` metadata object derived
 by the Host from the Harness Workspace registry: its stable Workspace id and
 canonical path, plus isolation metadata when available. A Host API caller
 supplies a Workspace too, and it is verified against the Session before use, so

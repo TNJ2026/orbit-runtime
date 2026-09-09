@@ -71,10 +71,8 @@ export function decodeToolResult(name, value) {
             string(entry.name, `agents[${index}].name`);
             string(entry.version, `agents[${index}].version`);
             array(entry.node_kinds, `agents[${index}].node_kinds`);
-            if (entry.attempt_count !== undefined)
-                number(entry.attempt_count, `agents[${index}].attempt_count`);
-            if (entry.failed_count !== undefined)
-                number(entry.failed_count, `agents[${index}].failed_count`);
+            number(entry.attempt_count, `agents[${index}].attempt_count`);
+            number(entry.failed_count, `agents[${index}].failed_count`);
         }
         return item;
     }

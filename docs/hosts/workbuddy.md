@@ -5,7 +5,7 @@
 | | |
 | --- | --- |
 | Reaches PromptaFlow through | a custom connector, HTTP straight at the Hub |
-| Registers as | `orbit`, and `workbuddy-third-party:custom-mcp:orbit` |
+| Registers as | `promptaflow`, and `workbuddy-third-party:custom-mcp:promptaflow` |
 | Draws PromptaFlow's cards | yes |
 | Event tools | the Runtime's `list_runtime_events` |
 
@@ -76,7 +76,7 @@ values:
 
 | Field | Value |
 | --- | --- |
-| Name | `PromptaFlow` |
+| Name | `promptaflow` |
 | MCP URL | `http://127.0.0.1:8848/mcp` |
 | Transport | Streamable HTTP |
 | Authentication | None |
@@ -86,7 +86,7 @@ configure a remote URL: PromptaFlow's Hub is intentionally loopback-only.
 
 ### 5. Verify the connection
 
-1. Confirm WorkBuddy reports tools for the `PromptaFlow` connector.
+1. Confirm WorkBuddy reports tools for the `promptaflow` connector.
 2. Ask it to call `list_workspaces`.
 3. If more than one Workspace is returned, select the intended one with
    `select_workspace`; never guess a path.
@@ -119,7 +119,7 @@ uv tool install --force /absolute/stable/path/promptaflow
 The connector URL does not change, so WorkBuddy normally needs no connector
 edit. Reconnect or restart WorkBuddy if it retains an old tool catalogue.
 
-To remove the integration, disable or delete the `PromptaFlow` custom connector in
+To remove the integration, disable or delete the `promptaflow` custom connector in
 WorkBuddy. That does not delete Runtime data. Stop PromptaFlow separately with the
 **Stop PromptaFlow** control or through the exact Runtime process you started; do not
 delete `~/.promptaflow` as an uninstall shortcut.
@@ -134,8 +134,8 @@ work out rather than a person's to look at. The same pair exists as
 
 ## Why it appears under two names
 
-WorkBuddy announces `workbuddy-third-party:custom-mcp:orbit` from the
-connector settings and plain `orbit` once the connector is loaded into an
+WorkBuddy announces `workbuddy-third-party:custom-mcp:promptaflow` from the
+connector settings and plain `promptaflow` once the connector is loaded into an
 agent, so the same App shows up under two names depending on which of its own
 paths made the call. Neither shadows a discovered CLI, so neither is refused —
 which is the rule the `-app` suffix exists for, and WorkBuddy is the exception
@@ -184,7 +184,7 @@ ask before continuing or reconciling when not. See
 
 ## Example: a prompt that generates an expert
 
-Once the `PromptaFlow` connector works, paste this into WorkBuddy to create a
+Once the `promptaflow` connector works, paste this into WorkBuddy to create a
 reusable expert instead of repeating the orchestration instructions in every
 conversation:
 

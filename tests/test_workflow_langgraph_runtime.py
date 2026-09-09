@@ -4278,7 +4278,7 @@ class LangGraphWorkflowServiceTests(unittest.TestCase):
         the same thing in an end-to-end test that raced — a graceful shutdown
         cancelled the running Handler, the attempt was recorded failed and the
         run went terminal, so there was nothing left to recover — and that
-        engine is not the one `orbit serve` runs.
+        engine is not the one `promptaflow serve` runs.
         """
 
         started = []
@@ -5383,7 +5383,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
             store = self.publish(directory, ir)
             service = self.service(directory, store, registry)
             app = create_app(
-                Path(directory) / "orbit.sqlite3",
+                Path(directory) / "promptaflow.sqlite3",
                 workflow_db_path=store.path,
                 langgraph_service=service,
                 authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
@@ -5469,7 +5469,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
                 artifact_store=artifacts,
             )
             app = create_app(
-                Path(directory) / "orbit.sqlite3",
+                Path(directory) / "promptaflow.sqlite3",
                 langgraph_service=service,
                 authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda actor: (READ_SCOPE,)),
@@ -5543,7 +5543,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
     def test_routes_are_absent_without_explicit_service(self) -> None:
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
             app = create_app(
-                Path(directory) / "orbit.sqlite3",
+                Path(directory) / "promptaflow.sqlite3",
                 authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda actor: (READ_SCOPE,)),
             )
@@ -5570,7 +5570,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
             root = Path(directory)
             app = create_app(
-                root / "orbit.sqlite3",
+                root / "promptaflow.sqlite3",
                 langgraph_state_directory=root,
                 authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda actor: (
@@ -5614,7 +5614,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
         service = RecoveringService()
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
             app = create_app(
-                Path(directory) / "orbit.sqlite3",
+                Path(directory) / "promptaflow.sqlite3",
                 langgraph_service=service,
                 authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda actor: (READ_SCOPE,)),
@@ -5647,7 +5647,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
             app = create_app(
-                Path(directory) / "orbit.sqlite3",
+                Path(directory) / "promptaflow.sqlite3",
                 langgraph_service=BrokenService(),
                 authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda actor: (READ_SCOPE,)),
@@ -5669,7 +5669,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
             app = create_app(
-                Path(directory) / "orbit.sqlite3",
+                Path(directory) / "promptaflow.sqlite3",
                 langgraph_service=RecoveringService(),
                 authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda actor: (READ_SCOPE,)),
@@ -5688,7 +5688,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
             app = create_app(
-                Path(directory) / "orbit.sqlite3",
+                Path(directory) / "promptaflow.sqlite3",
                 langgraph_service=PartialService(),
                 authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda actor: (READ_SCOPE,)),
@@ -5779,7 +5779,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
                 workflow_path, registrations, state_directory=root,
             )
             app = create_app(
-                root / "orbit.sqlite3",
+                root / "promptaflow.sqlite3",
                 workflow_db_path=workflow_path,
                 handlers=registrations,
                 schemas=BUILTIN_SCHEMAS,
@@ -5865,7 +5865,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
             store = self.publish(directory, ir)
             service = self.service(directory, store, registry)
             app = create_app(
-                Path(directory) / "orbit.sqlite3",
+                Path(directory) / "promptaflow.sqlite3",
                 workflow_db_path=store.path,
                 langgraph_service=service,
                 authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
@@ -5959,7 +5959,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
             store = self.publish(directory, ir)
             service = self.service(directory, store, registry)
             app = create_app(
-                Path(directory) / "orbit.sqlite3",
+                Path(directory) / "promptaflow.sqlite3",
                 workflow_db_path=store.path,
                 langgraph_service=service,
                 authenticator=lambda request: request.headers.get("x-promptaflow-actor"),

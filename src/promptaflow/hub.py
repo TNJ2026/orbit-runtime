@@ -35,10 +35,10 @@ from .web.mcp import (
     PROTOCOL_VERSION, SERVER_INFO, SESSION_RECOVERY_INSTRUCTIONS,
     McpSessionRegistry,
 )
-from .web.mcp_app import ORBIT_DASHBOARD_MIME_TYPE, ORBIT_MCP_APP_RESOURCES
+from .web.mcp_app import PROMPTAFLOW_DASHBOARD_MIME_TYPE, PROMPTAFLOW_MCP_APP_RESOURCES
 from .environment import env
 from .paths import home_root
-from .web.local_identity import LEGACY_SCOPED_ACTOR_HEADER, SCOPED_ACTOR_HEADER
+from .web.local_identity import SCOPED_ACTOR_HEADER
 
 
 def default_hub_root() -> Path:
@@ -46,7 +46,7 @@ def default_hub_root() -> Path:
 
     Overridable, and read on each call rather than at import, because the
     thing that most needs to move it is a test: registering a workspace goes
-    through the `orbit` CLI, so a suite that cannot redirect this writes its
+    through the `promptaflow` CLI, so a suite that cannot redirect this writes its
     throwaway directories into the developer's real registry and leaves them
     there. Every e2e run added one, and none was ever removed.
     """
@@ -430,7 +430,7 @@ class WorkspaceRuntimeManager:
             return subprocess.Popen(
                 self._serve_arguments(workspace),
                 cwd=workspace,
-                env={**os.environ, "PROMPTAFLOW_HUB_CHILD": "1"},
+                env=os.environ.copy(),
                 stdin=subprocess.DEVNULL,
                 stdout=stdout,
                 stderr=stderr,
@@ -596,26 +596,26 @@ def create_hub_app(
                     "uri": resource["uri"],
                     "name": resource["name"],
                     "description": resource["description"],
-                    "mimeType": ORBIT_DASHBOARD_MIME_TYPE,
+                    "mimeType": PROMPTAFLOW_DASHBOARD_MIME_TYPE,
                     "_meta": {
                         "ui": {"prefersBorder": resource["prefers_border"]},
                         "openai/widgetPrefersBorder": resource["prefers_border"],
                     },
                 }
-                for resource in ORBIT_MCP_APP_RESOURCES
+                for resource in PROMPTAFLOW_MCP_APP_RESOURCES
             ]})
         if method == "resources/templates/list":
             return result(request_id, {"resourceTemplates": []})
         if method == "resources/read":
             resource = next(
-                (item for item in ORBIT_MCP_APP_RESOURCES if item["uri"] == params.get("uri")),
+                (item for item in PROMPTAFLOW_MCP_APP_RESOURCES if item["uri"] == params.get("uri")),
                 None,
             )
             if resource is None:
                 return failure(request_id, INVALID_PARAMS, "unknown resource")
             return result(request_id, {"contents": [{
                 "uri": resource["uri"],
-                "mimeType": ORBIT_DASHBOARD_MIME_TYPE,
+                "mimeType": PROMPTAFLOW_DASHBOARD_MIME_TYPE,
                 "text": resource["html"],
                 "_meta": {
                     "ui": {"prefersBorder": resource["prefers_border"]},
@@ -702,7 +702,7 @@ def create_hub_app(
         """Persist workspace routing in the process that owns Hub state.
 
         Agent-App MCP proxies can be sandboxed to their project and therefore
-        cannot safely rewrite ``~/.orbit/hub/workspaces.json`` themselves.
+        cannot safely rewrite ``~/.promptaflow/hub/workspaces.json`` themselves.
         The Hub is already the authority for that registry, so the proxy sends
         only the absolute path across loopback and receives scoped URLs back.
         """
@@ -746,7 +746,7 @@ def create_hub_app(
 
     # The template store takes a machine-wide file lock, and a lock with no
     # timeout is not something to hold the event loop on: a second Hub, an
-    # `orbit hub register`, or a home directory on a network mount would park
+    # `promptaflow hub register`, or a home directory on a network mount would park
     # every other request this process is routing — `/mcp`, `/health/ready`,
     # every workspace proxy — behind one JSON file. Same treatment as
     # `runtimes.ensure` and `_runtime_json` below.
@@ -965,7 +965,6 @@ def create_hub_app(
             return JSONResponse(failure(None, PARSE_ERROR, "request body must be JSON"))
         forwarded_actor = (
             request.headers.get(SCOPED_ACTOR_HEADER)
-            or request.headers.get(LEGACY_SCOPED_ACTOR_HEADER)
         )
         actor = forwarded_actor or "local"
         try:

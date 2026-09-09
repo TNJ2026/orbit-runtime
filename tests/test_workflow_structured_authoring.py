@@ -467,7 +467,7 @@ class AppWiringTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(directory.cleanup)
         return create_app(
-            Path(directory.name) / "orbit.sqlite3",
+            Path(directory.name) / "promptaflow.sqlite3",
             authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: (READ_SCOPE,)),
             **kwargs,

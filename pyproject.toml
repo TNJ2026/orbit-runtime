@@ -1,6 +1,4 @@
 [project]
-# `orbit` alone was taken on PyPI before this project existed, and the two
-# names do not have to match. It also lines up with the npm scope the
 name = "promptaflow"
 dynamic = ["version"]
 description = "Local durable workflow runtime for agent work"

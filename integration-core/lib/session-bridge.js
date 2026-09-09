@@ -44,7 +44,7 @@ export async function bridgeWithRetry(options) {
     }
 }
 const TERMINAL = new Set(['completed', 'failed', 'cancelled', 'unknown']);
-export class OrbitSessionBridge {
+export class PromptaFlowSessionBridge {
     gateway;
     cursor;
     intervalMs;

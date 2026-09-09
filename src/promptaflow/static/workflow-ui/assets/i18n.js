@@ -6,7 +6,7 @@
  */
 
 export const LOCALES = ["zh-CN", "en-US"];
-const STORAGE_KEY = "orbit.locale";
+const STORAGE_KEY = "promptaflow.locale";
 
 export function preferredLocale(
   stored = localStorage.getItem(STORAGE_KEY),

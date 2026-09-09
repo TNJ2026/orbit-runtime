@@ -107,13 +107,13 @@ ANSWERS = {
 # One shot per card. `setup` runs after load, before the shot. The height is
 # a starting frame only — each shot is refitted to its own content below.
 SHOTS = [
-    ("dashboard", mcp_app.ORBIT_DASHBOARD_HTML, 700,
+    ("dashboard", mcp_app.PROMPTAFLOW_DASHBOARD_HTML, 700,
      lambda page: (page.click("#tabHistory"), page.wait_for_selector(".historyRow"))),
-    ("workflows", mcp_app.ORBIT_WORKFLOWS_HTML, 700,
+    ("workflows", mcp_app.PROMPTAFLOW_WORKFLOWS_HTML, 700,
      lambda page: page.wait_for_selector(".rowItem")),
-    ("workflow-generation", mcp_app.ORBIT_AUTHORING_HTML, 700, None),
-    ("goal-execution", mcp_app.ORBIT_RUN_HTML, 700, None),
-    ("goals", mcp_app.ORBIT_GOALS_HTML, 700,
+    ("workflow-generation", mcp_app.PROMPTAFLOW_AUTHORING_HTML, 700, None),
+    ("goal-execution", mcp_app.PROMPTAFLOW_RUN_HTML, 700, None),
+    ("goals", mcp_app.PROMPTAFLOW_GOALS_HTML, 700,
      lambda page: page.wait_for_selector(".goalRow")),
 ]
 
@@ -170,10 +170,10 @@ def main() -> int:
             )
             context.add_init_script(initial)
             page = context.new_page()
-            page.route("https://orbit.docs/card.html", lambda route, _=None, body=html:
+            page.route("https://promptaflow.docs/card.html", lambda route, _=None, body=html:
                        route.fulfill(status=200, content_type="text/html; charset=utf-8",
                                      body=body))
-            page.goto("https://orbit.docs/card.html")
+            page.goto("https://promptaflow.docs/card.html")
             page.wait_for_selector("#card")
             if setup:
                 setup(page)

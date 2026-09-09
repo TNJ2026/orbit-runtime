@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "orbit://ui-contracts/workflow-draft/2.0",
+  "$id": "promptaflow://ui-contracts/workflow-draft/2.0",
   "title": "WorkflowDraft 2.0",
   "description": "One actor's persistent Agent-edited draft. Agent output is staged as a candidate and must be accepted before it replaces source.",
   "type": "object",

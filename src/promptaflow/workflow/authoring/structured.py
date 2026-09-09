@@ -120,7 +120,7 @@ def _build_agent(model: Any, output_type: Any, instructions: str | None) -> Any:
     except ImportError as exc:  # pragma: no cover - depends on the install
         raise AuthoringUnavailableError(
             "structured generation needs the optional 'pydantic-ai' dependency; "
-            "install orbit[structured-authoring] or use a trusted Agent CLI"
+            "install promptaflow[structured-authoring] or use a trusted Agent CLI"
         ) from exc
     return Agent(model, output_type=output_type, instructions=instructions)
 

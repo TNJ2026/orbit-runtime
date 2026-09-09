@@ -14,14 +14,14 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://promptaflow/current-task-v51.html"
-ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
+PROMPTAFLOW_DASHBOARD_URI = "ui://promptaflow/current-task-v51.html"
+PROMPTAFLOW_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://promptaflow/workflows-v26.html"
-ORBIT_AUTHORING_URI = "ui://promptaflow/workflow-authoring-v15.html"
-ORBIT_RUN_URI = "ui://promptaflow/goal-run-v21.html"
-ORBIT_GOALS_URI = "ui://promptaflow/goals-v15.html"
+PROMPTAFLOW_WORKFLOWS_URI = "ui://promptaflow/workflows-v26.html"
+PROMPTAFLOW_AUTHORING_URI = "ui://promptaflow/workflow-authoring-v15.html"
+PROMPTAFLOW_RUN_URI = "ui://promptaflow/goal-run-v21.html"
+PROMPTAFLOW_GOALS_URI = "ui://promptaflow/goals-v15.html"
 
 # The mark the full PromptaFlow UI shows in its own top-left corner — the same
 # geometry as `workflow-ui/index.html`'s `.brand-mark`, not the favicon the
@@ -33,7 +33,7 @@ ORBIT_GOALS_URI = "ui://promptaflow/goals-v15.html"
 # from the page and an <img> cannot: it is a plate, a ring and a satellite,
 # and each of the three follows the theme. Embedded rather than fetched
 # either way — MCP App documents must not depend on a separate HTTP asset.
-ORBIT_LOGO_MARK = (
+PROMPTAFLOW_LOGO_MARK = (
     '<svg class="mark" viewBox="0 0 20 20" aria-hidden="true" focusable="false">'
     '<rect class="plate" x="0.5" y="0.5" width="19" height="19" rx="5"/>'
     '<circle class="ring" cx="10" cy="10" r="5"/>'
@@ -242,12 +242,12 @@ _CARD_STYLE = r"""
 """ + _PROMPT_EDITOR_STYLE
 
 
-ORBIT_DASHBOARD_HTML = r"""<!doctype html>
+PROMPTAFLOW_DASHBOARD_HTML = r"""<!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="orbit-surface" content="mcp-app">
+  <meta name="promptaflow-surface" content="mcp-app">
   <style>
 __CARD_STYLE__
     /* What only this card has: a heading that says when it last read, a tab
@@ -344,7 +344,7 @@ __CARD_STYLE__
 </head>
 <body>
 <main>
-  <header>__ORBIT_LOGO__<div class="heading"><h1>PromptaFlow</h1>
+  <header>__PROMPTAFLOW_LOGO__<div class="heading"><h1>PromptaFlow</h1>
     <div id="updated"></div></div><button id="refresh" class="icon" type="button" aria-label="Refresh">↻</button></header>
   <nav id="tabs" class="tabs" role="tablist">
     <button class="tab" id="tabGoal" type="button" role="tab" data-tab="goal" aria-selected="false"></button>
@@ -430,7 +430,7 @@ __CARD_STYLE__
         + `按已声明的输出端口提交 decision="${decision}"、value=null 的对象，不要自创顶层字段。`,
       promptCancel: id => `取消 PromptaFlow 运行 ${id}。`,
       promptCreateWorkflow: '按照下面的要求创建 PromptaFlow 工作流：',
-      promptAddAgent: '给Orbit添加Agent cli：',
+      promptAddAgent: '给PromptaFlow添加Agent cli：',
       promptGoal: (name,id) => `使用工作流「${name}」（${id}）执行：`,
       promptModify: (name,id) => `按照下面的要求修改工作流「${name}」（${id}）：`,
     },
@@ -474,7 +474,7 @@ __CARD_STYLE__
   async function ensureReady() {
     if (!bridge) throw new Error('No MCP App host');
     if (!ready) ready = bridge.request('ui/initialize', {
-      appCapabilities: {}, appInfo: {name:'orbit-current-task',version:'1'}, protocolVersion:PROTOCOL,
+      appCapabilities: {}, appInfo: {name:'promptaflow-current-task',version:'1'}, protocolVersion:PROTOCOL,
     }, 4000).then(result => {
       const next = result?.hostContext?.locale || result?.hostContext?.language;
       if (String(next).toLowerCase().startsWith('zh')) locale = 'zh-CN';
@@ -906,7 +906,7 @@ __CARD_STYLE__
   start();
 </script>
 </body>
-</html>""".replace("__ORBIT_LOGO__", ORBIT_LOGO_MARK).replace(
+</html>""".replace("__PROMPTAFLOW_LOGO__", PROMPTAFLOW_LOGO_MARK).replace(
     "__CARD_STYLE__", _CARD_STYLE,
 ).replace("__PROMPT_EDITOR_SCRIPT__", _PROMPT_EDITOR_SCRIPT)
 
@@ -935,7 +935,7 @@ function mcpBridge(){if(window.parent===window)return null;const pending=new Map
   window.parent.postMessage({jsonrpc:'2.0',id:callId,method,params},'*');setTimeout(()=>{if(pending.delete(callId))reject(new Error(`Timeout: ${method}`))},timeout)}),
   notify:(method,params={})=>window.parent.postMessage({jsonrpc:'2.0',method,params},'*')}}
 async function ensureReady(){if(!bridge)throw new Error('No MCP App host');if(!ready)ready=bridge.request('ui/initialize',{
- appCapabilities:{},appInfo:{name:'orbit-card',version:'1'},protocolVersion:PROTOCOL},4000).then(r=>{applyHostContext(r?.hostContext);bridge.notify('ui/notifications/initialized',{});return r});return ready}
+ appCapabilities:{},appInfo:{name:'promptaflow-card',version:'1'},protocolVersion:PROTOCOL},4000).then(r=>{applyHostContext(r?.hostContext);bridge.notify('ui/notifications/initialized',{});return r});return ready}
 async function callTool(name,args={}){if(window.openai?.callTool)return payload(await window.openai.callTool(name,args));await ensureReady();return payload(await bridge.request('tools/call',{name,arguments:args}))}
 async function send(prompt){if(bridge){try{await ensureReady();await bridge.request('ui/message',{role:'user',content:[{type:'text',text:prompt}]},10000);return}catch(_){}}
  if(window.openai?.sendFollowUpMessage)await window.openai.sendFollowUpMessage({prompt,scrollToBottom:true})}
@@ -1003,8 +1003,8 @@ def _card(
     extra_script: str = "",
 ) -> str:
     return f"""<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
-<meta name=\"orbit-surface\" content=\"mcp-app\"><style>{_CARD_STYLE}{extra_style}</style></head><body><main>
-<header>{ORBIT_LOGO_MARK}<h1>{title}</h1><button id=\"refresh\" class=\"icon\" type=\"button\">↻</button></header>
+<meta name=\"promptaflow-surface\" content=\"mcp-app\"><style>{_CARD_STYLE}{extra_style}</style></head><body><main>
+<header>{PROMPTAFLOW_LOGO_MARK}<h1>{title}</h1><button id=\"refresh\" class=\"icon\" type=\"button\">↻</button></header>
 <div id=\"cardFrame\" class=\"cardFrame\"><section id=\"card\" class=\"card\"><div class=\"empty\">Connecting…</div></section></div></main><script>{_CARD_BRIDGE}{extra_script}{body}</script></body></html>"""
 
 
@@ -1021,7 +1021,7 @@ _WORKFLOW_LIST_STYLE = r"""
 """
 
 
-ORBIT_WORKFLOWS_HTML = _card("PromptaFlow · Workflows", r"""
+PROMPTAFLOW_WORKFLOWS_HTML = _card("PromptaFlow · Workflows", r"""
 const card=document.getElementById('card');let current=null;
 const t=strings({'en-US':{
  newGoal:'New goal',modify:'Modify',remove:'Delete',cancel:'Cancel',confirm:'Delete workflow',
@@ -1056,7 +1056,7 @@ function runnable(w){const answer=w?.langgraph_compatibility;return !answer||ans
 function refusalMarkup(w){if(runnable(w))return '';const answer=w.langgraph_compatibility||{};const detail=answer.detail||answer.reason||'';
  return `<div class="refusal">${esc(t().refusal)}${detail?`${locale==='zh-CN'?'：':': '}${esc(detail)}`:'。'}</div>`}
 function graphMarkup(graph){return graph?.nodes?.length?'<div class="workflowGraphMount" data-workflow-graph aria-label="Workflow graph"></div>':`<div class="empty">${esc(t().noGraph)}</div>`}
-function mountGraph(graph){const element=card.querySelector('[data-workflow-graph]');if(element&&globalThis.OrbitWorkflowGraph?.mount)globalThis.OrbitWorkflowGraph.mount(element,graph,currentTheme())}
+function mountGraph(graph){const element=card.querySelector('[data-workflow-graph]');if(element&&globalThis.PromptaFlowWorkflowGraph?.mount)globalThis.PromptaFlowWorkflowGraph.mount(element,graph,currentTheme())}
 function bindTabs(){const tabs=[...card.querySelectorAll('[role="tab"]')];
  function select(tab){tabs.forEach(item=>{const selected=item===tab;item.setAttribute('aria-selected',String(selected));item.tabIndex=selected?0:-1;const panel=document.getElementById(item.getAttribute('aria-controls'));if(panel)panel.hidden=!selected});if(tab.id==='workflowGraphTab')window.dispatchEvent(new Event('resize'))}
  tabs.forEach((tab,index)=>{tab.onclick=()=>select(tab);tab.onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();let next=index;if(event.key==='ArrowLeft')next=(index-1+tabs.length)%tabs.length;if(event.key==='ArrowRight')next=(index+1)%tabs.length;if(event.key==='Home')next=0;if(event.key==='End')next=tabs.length-1;select(tabs[next]);tabs[next].focus()}})}
@@ -1090,7 +1090,7 @@ async function refresh(){if(current?.workflow_id)await openDetail(current.workfl
 document.getElementById('refresh').onclick=refresh;onHostContext(()=>refresh());onToolResult(value=>{if(Array.isArray(value?.workflows))drawList(value.workflows);else if(value?.workflow_id){current=value;drawDetail(current)}});refresh();
 """, extra_style=_WORKFLOW_LIST_STYLE + _WORKFLOW_DETAIL_STYLE, extra_script=_XYFLOW_SCRIPT)
 
-ORBIT_AUTHORING_HTML = _card("PromptaFlow · Workflow generation", r"""
+PROMPTAFLOW_AUTHORING_HTML = _card("PromptaFlow · Workflow generation", r"""
 const card=document.getElementById('card');let job=initial(),timer=null;
 const t=strings({'en-US':{preparing:'Preparing',title:'Workflow generation',generated:'Generated',
  prepare:'Prepare request',generate:'Generate and validate',publish:'Publish workflow',
@@ -1121,7 +1121,7 @@ _RUN_STYLE = r"""
   overflow: hidden; }
 """
 
-ORBIT_RUN_HTML = _card("PromptaFlow · Goal execution", r"""
+PROMPTAFLOW_RUN_HTML = _card("PromptaFlow · Goal execution", r"""
 const card=document.getElementById('card');card.className='card goalRun';let run=initial(),timer=null,firstPaint=true;const terminal=new Set(['completed','failed','cancelled','unknown']);
 const t=strings({'en-US':{preparing:'Preparing',goal:'Goal',result:'Result',
  status:{queued:'Queued',running:'Running',waiting:'Needs your input',interrupted:'Needs your input',
@@ -1159,7 +1159,7 @@ _GOALS_STYLE = r"""
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 """
 
-ORBIT_GOALS_HTML = _card("PromptaFlow · Goals", r"""
+PROMPTAFLOW_GOALS_HTML = _card("PromptaFlow · Goals", r"""
 const card=document.getElementById('card');let timer=null;
 const live=new Set(['running','queued','waiting','interrupted']);
 const t=strings({'en-US':{goal:'Goal',empty:'No goals yet',
@@ -1177,10 +1177,10 @@ async function refresh(){try{const data=await callTool('list_runs',{limit:100});
 document.getElementById('refresh').onclick=refresh;document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh()});onToolResult(value=>{if(Array.isArray(value?.runs))draw(value.runs)});onHostContext(()=>refresh());refresh();
 """, extra_style=_GOALS_STYLE)
 
-ORBIT_MCP_APP_RESOURCES = (
-    {"uri": ORBIT_DASHBOARD_URI, "name": "PromptaFlow workspace", "description": "PromptaFlow goals, workflows, history, agents, and attention state.", "html": ORBIT_DASHBOARD_HTML, "prefers_border": False},
-    {"uri": ORBIT_WORKFLOWS_URI, "name": "PromptaFlow workflows", "description": "Published workflow list.", "html": ORBIT_WORKFLOWS_HTML, "prefers_border": False},
-    {"uri": ORBIT_AUTHORING_URI, "name": "PromptaFlow workflow generation", "description": "Workflow generation progress and result.", "html": ORBIT_AUTHORING_HTML, "prefers_border": False},
-    {"uri": ORBIT_RUN_URI, "name": "PromptaFlow goal execution", "description": "Goal execution progress and result.", "html": ORBIT_RUN_HTML, "prefers_border": False},
-    {"uri": ORBIT_GOALS_URI, "name": "PromptaFlow goals", "description": "Recent goal runs and their current status.", "html": ORBIT_GOALS_HTML, "prefers_border": False},
+PROMPTAFLOW_MCP_APP_RESOURCES = (
+    {"uri": PROMPTAFLOW_DASHBOARD_URI, "name": "PromptaFlow workspace", "description": "PromptaFlow goals, workflows, history, agents, and attention state.", "html": PROMPTAFLOW_DASHBOARD_HTML, "prefers_border": False},
+    {"uri": PROMPTAFLOW_WORKFLOWS_URI, "name": "PromptaFlow workflows", "description": "Published workflow list.", "html": PROMPTAFLOW_WORKFLOWS_HTML, "prefers_border": False},
+    {"uri": PROMPTAFLOW_AUTHORING_URI, "name": "PromptaFlow workflow generation", "description": "Workflow generation progress and result.", "html": PROMPTAFLOW_AUTHORING_HTML, "prefers_border": False},
+    {"uri": PROMPTAFLOW_RUN_URI, "name": "PromptaFlow goal execution", "description": "Goal execution progress and result.", "html": PROMPTAFLOW_RUN_HTML, "prefers_border": False},
+    {"uri": PROMPTAFLOW_GOALS_URI, "name": "PromptaFlow goals", "description": "Recent goal runs and their current status.", "html": PROMPTAFLOW_GOALS_HTML, "prefers_border": False},
 )

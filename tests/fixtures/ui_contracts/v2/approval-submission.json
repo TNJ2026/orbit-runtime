@@ -1,5 +1,5 @@
 {
-  "$comment": "What an approval node accepts as its answer. The Runtime side is checked by tests/test_ui_contract_goldens.py against validate_human_response; the client side by integration-core/tests/orbit-model.test.mjs against approvalValue. Neither can drift without the other noticing, which is the whole reason this file is not written twice.",
+  "$comment": "What an approval node accepts as its answer. The Runtime side is checked by tests/test_ui_contract_goldens.py against validate_human_response; the client side by integration-core/tests/promptaflow-model.test.mjs against approvalValue. Neither can drift without the other noticing, which is the whole reason this file is not written twice.",
   "output_port": "result",
   "accepted": [
     {

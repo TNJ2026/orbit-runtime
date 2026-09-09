@@ -2,7 +2,7 @@
 
 `web/app.py` wires ports to adapters and owns the process lifecycle. It holds
 no state machine, no routing decision, no planner policy and no SQL — those
-belong to `orbit.workflow`.
+belong to `promptaflow.workflow`.
 """
 
 from .app import RuntimeComposition, create_app

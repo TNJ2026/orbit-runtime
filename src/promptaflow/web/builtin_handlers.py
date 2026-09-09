@@ -1,6 +1,6 @@
 """The trusted first-party handler set, defined exactly once.
 
-`orbit serve`, the tests, and anything that publishes a workflow against the
+`promptaflow serve`, the tests, and anything that publishes a workflow against the
 production registry all read the manifests from here. That matters more than it
 looks: a manifest's fingerprint is part of the compiled workflow, so a second
 copy of these definitions that drifts by one field produces workflows the

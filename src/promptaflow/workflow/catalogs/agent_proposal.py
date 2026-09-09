@@ -47,7 +47,7 @@ def source_checkout_root(configured: Path | str | None = None) -> Path | None:
     A Workspace Runtime runs with the user's project as its cwd.  That project
     is the *target* of workflows, never the checkout containing PromptaFlow's trusted
     Agent allowlist.  Repository launchers therefore name their own checkout
-    through ``ORBIT_SOURCE_ROOT``; editable development installs can derive the
+    through ``PROMPTAFLOW_SOURCE_ROOT``; editable development installs can derive the
     same root from this module.  A wheel installation has neither and must not
     pretend that its site-packages directory is an editable source tree.
     """

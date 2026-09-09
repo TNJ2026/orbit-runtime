@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Offline, backed-up migration from versioned to name/contract Handler refs.
 
-Run without --apply first. Stop all Orbit writers before --apply. Historical
+Run without --apply first. Stop all PromptaFlow writers before --apply. Historical
 workflow version numbers are preserved. A hash collision aborts the migration.
 """
 import argparse

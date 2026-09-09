@@ -17,8 +17,8 @@ DOM. That is a mechanical test, and it is the only one:
   protocol checks that decide a Runtime is usable.
 - `codecs.ts`, `types.ts` — the wire shapes and how to read them.
 - `error-text.ts` — every failure this integration can meet, classified into
-  `ORBIT_ERROR_KEYS`. **The vocabulary is here; the wording is the host's.**
-- `orbit-model.ts`, `run-progress.ts` — a Run's shape for anything that draws.
+  `PROMPTAFLOW_ERROR_KEYS`. **The vocabulary is here; the wording is the host's.**
+- `promptaflow-model.ts`, `run-progress.ts` — a Run's shape for anything that draws.
 - `workflow-catalog.ts` — what a model is told can run.
 - `authoring-claim.ts`, `authoring-progress.ts` — the writer loop.
 - `artifact-export.ts` — handing an Artifact over as a file.
@@ -38,7 +38,7 @@ single caller has been *separated*, not yet *shown to be reusable*, and the two
 are easy to confuse.
 
 The separation still earns its keep — the boundary is checkable rather than a
-matter of taste, and it is what made `ORBIT_ERROR_KEYS` possible: the set of
+matter of taste, and it is what made `PROMPTAFLOW_ERROR_KEYS` possible: the set of
 things that can go wrong used to be typed as `keyof typeof en`, which made it a
 property of one panel's copy. It is not. A host supplies the wording, and the
 panel's "Reopen the panel to start it" is not a sentence a background process

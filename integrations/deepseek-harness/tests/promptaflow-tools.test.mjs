@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { OrbitToolBridge } from '../lib/orbit-tools.js'
+import { PromptaFlowToolBridge } from '../lib/promptaflow-tools.js'
 
 function fixture() {
   const definitions = new Map(), calls = [], watched = []
@@ -20,30 +20,30 @@ function fixture() {
       return { run_id: runId, allowed_commands: [{ command: 'langgraph_run.cancel', expected_version: 7 }] }
     },
   }
-  new OrbitToolBridge(ctx, gateway, (workspace, sessionId, job) => {
+  new PromptaFlowToolBridge(ctx, gateway, (workspace, sessionId, job) => {
     watched.push({ workspace, sessionId, job })
   }).register()
   const exec = { signal: new AbortController().signal, agent: { session: { id: 'session:abc', header: { cwd: '/workspace' } } } }
   return { definitions, calls, exec, watched }
 }
 
-test('registers the bounded Orbit MCP tool surface', () => {
+test('registers the bounded PromptaFlow MCP tool surface', () => {
   const { definitions } = fixture()
   assert.deepEqual([...definitions.keys()], [
-    'orbit_list_workflows', 'orbit_list_runs', 'orbit_list_delegations',
-    'orbit_claim_delegation', 'orbit_renew_delegation',
-    'orbit_complete_delegation', 'orbit_reconcile_delegation', 'orbit_inspect_run',
-    'orbit_start_run', 'orbit_generate_workflow', 'orbit_get_authoring_job',
-    'orbit_cancel_run', 'orbit_resume_run',
+    'promptaflow_list_workflows', 'promptaflow_list_runs', 'promptaflow_list_delegations',
+    'promptaflow_claim_delegation', 'promptaflow_renew_delegation',
+    'promptaflow_complete_delegation', 'promptaflow_reconcile_delegation', 'promptaflow_inspect_run',
+    'promptaflow_start_run', 'promptaflow_generate_workflow', 'promptaflow_get_authoring_job',
+    'promptaflow_cancel_run', 'promptaflow_resume_run',
   ])
 })
 
 test('delegation tools bind leases to the current Harness Session', async () => {
   const { definitions, calls, exec } = fixture()
-  await definitions.get('orbit_list_delegations').execute({}, exec)
-  await definitions.get('orbit_claim_delegation').execute({}, exec)
-  await definitions.get('orbit_renew_delegation').execute({ delegation_id: 'd:1' }, exec)
-  await definitions.get('orbit_complete_delegation').execute({
+  await definitions.get('promptaflow_list_delegations').execute({}, exec)
+  await definitions.get('promptaflow_claim_delegation').execute({}, exec)
+  await definitions.get('promptaflow_renew_delegation').execute({ delegation_id: 'd:1' }, exec)
+  await definitions.get('promptaflow_complete_delegation').execute({
     delegation_id: 'd:1', result: { answer: 'done' },
   }, exec)
 
@@ -61,7 +61,7 @@ test('generate owns idempotency and tells the panel before it answers', async ()
   // Telling the model first would leave a person looking at a still panel for
   // as long as the Agent takes to say something.
   const { definitions, calls, exec, watched } = fixture()
-  const job = await definitions.get('orbit_generate_workflow')
+  const job = await definitions.get('promptaflow_generate_workflow')
     .execute({ prompt: '  clean the CSV  ', agent: 'codex' }, exec)
 
   assert.equal(job.job_id, 'job:1')
@@ -76,13 +76,13 @@ test('generate owns idempotency and tells the panel before it answers', async ()
 
 test('the Agent is the Runtime\'s choice unless the caller named one', async () => {
   const { definitions, calls, exec } = fixture()
-  await definitions.get('orbit_generate_workflow').execute({ prompt: 'anything' }, exec)
+  await definitions.get('promptaflow_generate_workflow').execute({ prompt: 'anything' }, exec)
   assert.equal('agent' in calls[0].args, false)
 })
 
 test('start routes through Session Workspace and owns idempotency', async () => {
   const { definitions, calls, exec } = fixture()
-  const result = await definitions.get('orbit_start_run').execute({ workflow_id: 'wf', goal: 'ship it' }, exec)
+  const result = await definitions.get('promptaflow_start_run').execute({ workflow_id: 'wf', goal: 'ship it' }, exec)
   assert.equal(result.run_id, 'run:1')
   assert.equal(calls[0].workspace.id, 'workspace:1')
   assert.equal(calls[0].sessionId, 'session:abc')
@@ -93,7 +93,7 @@ test('start routes through Session Workspace and owns idempotency', async () => 
 
 test('cancel re-reads advertised command and revision before mutation', async () => {
   const { definitions, calls, exec } = fixture()
-  await definitions.get('orbit_cancel_run').execute({ run_id: 'run:1' }, exec)
+  await definitions.get('promptaflow_cancel_run').execute({ run_id: 'run:1' }, exec)
   assert.deepEqual(calls.map(call => call.name), ['inspect_run', 'cancel_run'])
   assert.equal(calls[1].args.expected_version, 7)
   assert.match(calls[1].args.idempotency_key, /^[0-9a-f-]{36}$/)
@@ -101,6 +101,6 @@ test('cancel re-reads advertised command and revision before mutation', async ()
 
 test('tool execution refuses calls without a live Agent Session cwd', async () => {
   const { definitions, exec } = fixture()
-  await assert.rejects(definitions.get('orbit_list_runs').execute({}, { ...exec, agent: undefined }), /live Harness Agent Session/)
-  await assert.rejects(definitions.get('orbit_list_runs').execute({}, { ...exec, agent: { session: { id: 'x', header: {} } } }), /Workspace cwd/)
+  await assert.rejects(definitions.get('promptaflow_list_runs').execute({}, { ...exec, agent: undefined }), /live Harness Agent Session/)
+  await assert.rejects(definitions.get('promptaflow_list_runs').execute({}, { ...exec, agent: { session: { id: 'x', header: {} } } }), /Workspace cwd/)
 })

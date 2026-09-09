@@ -2,7 +2,7 @@
  *
  * Scoped because the card around it is not this viewer's document: an
  * unscoped :root here replaced the card's own palette, which is how the
- * workflow card's accent became #2563eb while every other Orbit card stayed
+ * workflow card's accent became #2563eb while every other PromptaFlow card stayed
  * #7772ff. Scoping also makes the theme the host posts actually win — the
  * attribute is on this element, so a selector on :root never saw it. */
 .mcp-xyflow-viewer {

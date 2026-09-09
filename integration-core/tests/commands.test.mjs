@@ -22,7 +22,7 @@ test('a revision the reader was not looking at is refused, not corrected', () =>
   assert.equal(advertisedAt(moved, 'langgraph_run.resume', 9), undefined)
 })
 
-test('a command Orbit never offered has nothing to act at', () => {
+test('a command PromptaFlow never offered has nothing to act at', () => {
   const running = run([{ command: 'langgraph_run.cancel', expected_version: 9 }])
   assert.equal(advertisedAt(running, 'langgraph_run.resume', 9), undefined)
   assert.equal(advertisedAt(run([]), 'langgraph_run.cancel', 9), undefined)

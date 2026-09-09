@@ -1,6 +1,6 @@
 """Runs the JavaScript client-module tests under node, if node is installed.
 
-node is not a build dependency of orbit, so this skips rather than fails when
+node is not a build dependency of promptaflow, so this skips rather than fails when
 it is missing — but it runs in any environment that has it, which is where the
 client-side regressions would otherwise go unnoticed until someone opened the
 page.

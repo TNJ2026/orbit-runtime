@@ -83,7 +83,7 @@ checkout。
 
 打开 `/promptaflow` 时，必要则为该 Harness Workspace 启动 PromptaFlow；这样启动的 Runtime 在面板或
 Profile 关闭后依然存活。Gateway 默认在 `~/.promptaflow` 下寻找归属记录——如果 Runtime 数据库
-在别处，为该 Profile 设置 `PROMPTAFLOW_RUNTIME_ROOT`（`ORBIT_RUNTIME_ROOT` 仍作为兼容别名）。PromptaFlow CLI 对该数据库持有一把非阻塞的
+在别处，为该 Profile 设置 `PROMPTAFLOW_RUNTIME_ROOT`。PromptaFlow CLI 对该数据库持有一把非阻塞的
 归属锁，并在归属记录里公布自己的 Workspace 和 MCP 端点；Harness 从不持有这把锁，也不
 制造第二个写入者。
 
@@ -115,7 +115,7 @@ dsh --profile web --dump-config
 | 组件 | 支持范围 |
 | --- | --- |
 | PromptaFlow Runtime | `>=0.4.0 <0.5.0` |
-| PromptaFlow 集成协议 | `orbit-harness/1` |
+| PromptaFlow 集成协议 | `promptaflow-harness/2` |
 | Harness 包 | `>=0.1.1-rc.2 <0.2.0`（不支持 alpha 预发布版本） |
 | React | `^18.2.0` |
 | Node.js | `>=22` |
@@ -126,8 +126,8 @@ dsh --profile web --dump-config
 PromptaFlow 自己的 UI。
 
 **Run 由对 Agent 说话来启动，不从面板启动。** Agent 拥有一组有界的原生工具——
-`orbit_list_workflows`、`orbit_list_runs`、`orbit_inspect_run`、`orbit_start_run`、
-`orbit_cancel_run`、`orbit_resume_run`——所以「用 CSV 清洗流跑一下今天的导出」就是全部
+`promptaflow_list_workflows`、`promptaflow_list_runs`、`promptaflow_inspect_run`、`promptaflow_start_run`、
+`promptaflow_cancel_run`、`promptaflow_resume_run`——所以「用 CSV 清洗流跑一下今天的导出」就是全部
 接口。模型从不提供端点、actor、幂等键或变更版本号：Host 从工具运行上下文推导 Workspace
 与 Session、自己生成幂等键，并在 cancel 或 resume 前重新读取 `allowed_commands[]`。
 `/promptaflow-workflows` 会打开外壳自己的选择弹窗，把选中的工作流作为引用 chip 放进草稿。
@@ -176,7 +176,7 @@ Runtime 挂了的时候，留在上下文里的是上一个答案，而不是空
 
 ## Host API
 
-Harness 源上的 `/plugins/dsh-orbit/api` 提供 Run 检查、Steps、Graph、Edges、基于游标的
+Harness 源上的 `/plugins/dsh-promptaflow/api` 提供 Run 检查、Steps、Graph、Edges、基于游标的
 输出、有上限的 Artifact 内容和附件导入。每次调用都带一个 Workspace，而 **Host 一个都不信**：
 在任何 Gateway 调用之前，都要对着它声称所属的 Session、或对着 Workspace 注册表校验一遍。
 它从不让调用方直接够到 PromptaFlow 的回环地址；客户端代码也永远拿不到 Runtime 端点、子进程句柄、
@@ -191,7 +191,7 @@ actor 头或 PromptaFlow 凭据。
 ## Session 与恢复
 
 Host 会为每个带 `cwd` 的活跃根 Session 自动挂一个 Bridge，包括启动期间恢复出来的 Session。
-Bridge 的游标和已知 Run id 来自持久化的 `orbit/run-*` Session 事件，所以 Host 重启后无需
+Bridge 的游标和已知 Run id 来自持久化的 `promptaflow/run-*` Session 事件，所以 Host 重启后无需
 第二个游标数据库即可续上。Session 释放会中止轮询器；Runtime 暂时不可用时会重试，而不会
 阻塞 Session 生命周期。
 

@@ -9,12 +9,6 @@ const body = (stage, attempt, max) => JSON.stringify({ stage, attempt, max_attem
 const mark = (stage, attempt = 1, max = 3) => ({
   text: `\x1epromptaflow-progress:${body(stage, attempt, max)}`,
 })
-// What a Runtime from before the rename emits. It upgrades separately from
-// this bundle, so the panel reads its markers during the overlap or shows a
-// ladder that never moves.
-const legacyMark = (stage, attempt = 1, max = 3) => ({
-  text: `\x1eorbit-progress:${body(stage, attempt, max)}`,
-})
 const said = text => ({ text })
 const names = p => p.stages.map(s => `${s.stage}:${s.status}`)
 
@@ -65,32 +59,24 @@ test('only a whole marker chunk moves the ladder', () => {
   assert.equal(isProgressMarker(said('writing the workflow…')), false)
   // An Agent printing the sentinel inside its own output is printing, not
   // reporting: the marker is the whole chunk or it is nothing.
-  assert.equal(isProgressMarker(said('note: \x1eorbit-progress:{"stage":"publishing"}')), false)
+  assert.equal(isProgressMarker(said('note: \x1epromptaflow-progress:{"stage":"publishing"}')), false)
   assert.deepEqual(
-    names(authoringProgress([mark('generating'), said('note: \x1eorbit-progress:{"stage":"publishing"}')], 'running')),
+    names(authoringProgress([mark('generating'), said('note: \x1epromptaflow-progress:{"stage":"publishing"}')], 'running')),
     ['generating:running', 'validating:not_reached', 'publishing:not_reached'])
 })
 
 test('a marker this cannot read loses itself, not the ladder', () => {
-  const chunks = [mark('generating'), said('\x1eorbit-progress:{not json'), mark('validating')]
+  const chunks = [mark('generating'), said('\x1epromptaflow-progress:{not json'), mark('validating')]
   assert.deepEqual(names(authoringProgress(chunks, 'running')),
     ['generating:succeeded', 'validating:running', 'publishing:not_reached'])
   assert.deepEqual(
-    names(authoringProgress([mark('generating'), said('\x1eorbit-progress:{"stage":"inventing"}')], 'running')),
+    names(authoringProgress([mark('generating'), said('\x1epromptaflow-progress:{"stage":"inventing"}')], 'running')),
     ['generating:running', 'validating:not_reached', 'publishing:not_reached'],
     'a stage this build does not know must not move the ladder somewhere odd')
 })
 
 test('the attempt count is absent rather than invented', () => {
-  const progress = authoringProgress([said('\x1eorbit-progress:{"stage":"publishing"}')], 'running')
+  const progress = authoringProgress([said('\x1epromptaflow-progress:{"stage":"publishing"}')], 'running')
   assert.equal(progress.attempt, 0)
   assert.equal(progress.maxAttempts, 0)
-})
-
-test('a marker from before the rename still moves the ladder', () => {
-  assert.equal(isProgressMarker(legacyMark('generating')), true)
-  assert.deepEqual(
-    names(authoringProgress([legacyMark('generating'), mark('validating')], 'running')),
-    names(authoringProgress([mark('generating'), mark('validating')], 'running')),
-  )
 })

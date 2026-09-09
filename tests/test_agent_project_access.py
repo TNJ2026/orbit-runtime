@@ -145,7 +145,7 @@ class GitProjectAccessTests(unittest.TestCase):
         )
         self.assertIn("README.md", response.output["files"])
         # Never the real project root itself.
-        self.assertFalse((self.root / ".orbit-marker").exists())
+        self.assertFalse((self.root / ".promptaflow-marker").exists())
 
     def test_files_in_the_policy_config_are_ignored_for_git(self) -> None:
         """A worktree already gives the whole tree; a narrower `files` list
@@ -587,10 +587,10 @@ class ScratchDirectoryPromptTests(unittest.TestCase):
 
         rendered = render_agent_prompt(
             {"prompt": "do the thing"}, {},
-            scratch_dir=Path("/p/.orbit/run-tmp/run-1"),
+            scratch_dir=Path("/p/.promptaflow/run-tmp/run-1"),
         )
 
-        self.assertIn("/p/.orbit/run-tmp/run-1", rendered)
+        self.assertIn("/p/.promptaflow/run-tmp/run-1", rendered)
         self.assertIn("real project directory", rendered)
 
     def test_a_node_without_the_project_is_told_nothing_extra(self) -> None:

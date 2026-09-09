@@ -7,7 +7,7 @@ import {
 
 const ART = 'langgraph_artifact:4c1e5281cb5f49d9b60afbbac0508a7c4c2c37022312a116ebd54d703adfecd6'
 
-test('the type Orbit recorded decides the extension', () => {
+test('the type PromptaFlow recorded decides the extension', () => {
   // Every Artifact in a real store here is text/markdown, and a `.md` is the
   // difference between a file that opens and one that has to be told what it is.
   assert.equal(artifactExtension('text/markdown'), '.md')

@@ -19,7 +19,7 @@ try:
 except ImportError:  # pragma: no cover - exercised by the skip
     sync_playwright = None
 
-from promptaflow.web.mcp_app import ORBIT_DASHBOARD_HTML
+from promptaflow.web.mcp_app import PROMPTAFLOW_DASHBOARD_HTML
 
 
 WORKFLOWS = [
@@ -135,13 +135,13 @@ class DashboardCardTests(unittest.TestCase):
         )
         page = context.new_page()
         page.route(
-            "https://orbit.test/card.html",
+            "https://promptaflow.test/card.html",
             lambda route: route.fulfill(
                 status=200, content_type="text/html; charset=utf-8",
-                body=ORBIT_DASHBOARD_HTML,
+                body=PROMPTAFLOW_DASHBOARD_HTML,
             ),
         )
-        page.goto("https://orbit.test/card.html")
+        page.goto("https://promptaflow.test/card.html")
         page.wait_for_selector("#tabs .tab[aria-selected='true']")
         return page
 

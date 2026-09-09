@@ -16,9 +16,6 @@ from urllib.request import Request as UrlRequest, urlopen
 import uvicorn
 
 from . import __version__
-from .platform.cutover import (
-    ACKNOWLEDGE_FLAG, CutoverRequired, ensure_cutover_acknowledged, read_marker,
-)
 from .platform.projects import (
     project_db_path,
     project_state_dir,
@@ -27,7 +24,6 @@ from .platform.projects import (
     upsert_project,
 )
 from .environment import env
-from .paths import LEGACY_DIR_NAME, migrate_home_root
 
 
 def _workflow_db_path(
@@ -45,40 +41,18 @@ def _workflow_db_path(
 
     if explicit:
         return explicit
-    # Resolve first so callers still get the normal project cutover gate even
-    # though definitions themselves no longer live in that project's DB.
-    _runtime_db_path(None, project_root=project_root)
     return str(public_workflow_db_path())
 
 
 def _runtime_db_path(
     explicit: str | None,
     *,
-    acknowledged: bool = False,
     project_root: Path | str | None = None,
 ) -> str:
-    """Resolve the runtime database, gating on the cutover acknowledgement.
-
-    Every command that touches the default database goes through here, so
-    neither the path rule nor the gate can drift between `serve`, `workflow
-    publish`, `run start` and `db check`. Putting the gate anywhere else is how
-    `promptaflow workflow publish` came to write a fresh `runtime.db` for a project
-    whose legacy data had never been acknowledged.
-
-    An explicit `--db` is not gated: the gate protects the *default* path,
-    where abandoning pre-migration data would otherwise be silent. Naming a
-    database on the command line is already an explicit choice of which one.
-    """
+    """Resolve the runtime database for the selected project."""
 
     if explicit:
         return explicit
-    try:
-        ensure_cutover_acknowledged(
-            acknowledged=acknowledged, project_dir=project_root,
-        )
-    except CutoverRequired as exc:
-        print(str(exc), flush=True)
-        raise SystemExit(exc.exit_code) from None
     return str(project_db_path(resolve_project_root(project_root)))
 
 
@@ -390,8 +364,7 @@ def _running_hub(base_url: str) -> bool:
     return (
         response.status == 200
         and isinstance(payload, dict)
-        # A Hub started by a build from before the rename still says so.
-        and payload.get("service") in {"promptaflow-hub", "orbit-hub"}
+        and payload.get("service") == "promptaflow-hub"
     )
 
 
@@ -431,13 +404,7 @@ def _serve(args) -> None:
     )
 
     project_root = resolve_project_root(args.project_root)
-    # Fail at the entry point instead of letting the Hub wait a full Runtime
-    # readiness timeout for a child that the cutover gate refused to start.
-    _runtime_db_path(
-        None,
-        acknowledged=args.acknowledge_discard_legacy_data,
-        project_root=project_root,
-    )
+    _runtime_db_path(None, project_root=project_root)
 
     base_url = _hub_health_url(args.host, args.port)
     if _running_hub(base_url):
@@ -489,24 +456,7 @@ def _serve_runtime(args) -> None:
 
     project_root = resolve_project_root(getattr(args, "project_root", None))
 
-    # `serve` is the one command that can *grant* the acknowledgement; the gate
-    # itself lives in _runtime_db_path so every other command is covered too.
-    db_path = _runtime_db_path(
-        args.db,
-        acknowledged=args.acknowledge_discard_legacy_data,
-        project_root=project_root,
-    )
-    if args.acknowledge_discard_legacy_data:
-        marker = read_marker(project_root)
-        if marker is not None:
-            print(
-                f"cutover acknowledged at {marker.acknowledged_at}; "
-                "legacy files are left untouched",
-                flush=True,
-            )
-
-    # Preserve the cutover fail-closed boundary: a refused legacy database must
-    # not create even an empty Artifact directory as a startup side effect.
+    db_path = _runtime_db_path(args.db, project_root=project_root)
     try:
         assert_runtime_schema(db_path)
     except MixedSchemaError as exc:
@@ -949,14 +899,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--project-root", default=None,
         help="Workspace to register and start (default: current directory)",
     )
-    serve_entry.add_argument(
-        ACKNOWLEDGE_FLAG,
-        action="store_true",
-        help=(
-            "Acknowledge, once, that pre-migration data from the legacy engine "
-            "is abandoned. promptaflow never opens, imports or deletes those files."
-        ),
-    )
 
     # Hub subprocess protocol. This is intentionally not a supported
     # standalone user mode; only WorkspaceRuntimeManager constructs it.
@@ -1053,14 +995,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--execution-workers", type=int, default=1, metavar="N",
         help="Independent Handler worker processes per workspace (default: 1, max: 16)",
     )
-    serve_cmd.add_argument(
-        ACKNOWLEDGE_FLAG,
-        action="store_true",
-        help=(
-            "Acknowledge, once, that pre-migration data from the legacy engine "
-            "is abandoned. promptaflow never opens, imports or deletes those files."
-        ),
-    )
 
     mcp_cmd = sub.add_parser(
         "mcp",
@@ -1142,8 +1076,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=env("BACKGROUND_AGENT_COMMAND"),
         help=(
             "Start one machine background Agent worker using this JSON "
-            "stdin/stdout child command (or PROMPTAFLOW_BACKGROUND_AGENT_COMMAND; "
-            "ORBIT_BACKGROUND_AGENT_COMMAND is the legacy alias)"
+            "stdin/stdout child command (or PROMPTAFLOW_BACKGROUND_AGENT_COMMAND)"
         ),
     )
     hub_serve.add_argument(
@@ -1333,42 +1266,7 @@ def _runtimes(args) -> None:
 
 
 def main() -> None:
-    # Before anything reads state. The home root carried the old name until
-    # this release, so an install that upgrades in place has every project
-    # under it. Deliberately here and not at import time: importing this
-    # package must never move a developer's real directory.
-    migration = migrate_home_root()
-    if migration.moved_to is not None:
-        # Exit rather than carry on. Every default path in this process was
-        # resolved at import time, before the move — `DEFAULT_STATE_ROOT` and
-        # its siblings are module constants — so continuing would run the
-        # whole command against a directory that is no longer there. One extra
-        # invocation, once, on exactly one upgrade.
-        print(
-            f"promptaflow: moved ~/{LEGACY_DIR_NAME} to {migration.moved_to}. "
-            "Run the command again.",
-            file=sys.stderr,
-        )
-        raise SystemExit(0)
-    if migration.blocked_by:
-        print(
-            f"promptaflow: ~/{LEGACY_DIR_NAME} is still in use by "
-            f"{len(migration.blocked_by)} Runtime(s) and was left where it is; "
-            "stop them and run again to move it.",
-            file=sys.stderr,
-        )
-
     argv = sys.argv[1:]
-    # Upgrade bridge for a Hub process that was started before this version.
-    # Older managers launch `promptaflow serve` but already mark the process as a Hub
-    # child. Translate that private protocol before argparse sees the public
-    # `serve` surface; interactive callers never receive the old Runtime mode.
-    if (
-        env("HUB_CHILD") == "1"
-        and argv
-        and argv[0] == "serve"
-    ):
-        argv = ["_runtime", *argv[1:]]
     args = build_parser().parse_args(argv)
 
     if args.command == "workflow":

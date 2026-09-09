@@ -1,6 +1,6 @@
 .venv/
 .dev_loop/
-.orbit/
+.promptaflow/
 __pycache__/
 *.pyc
 dist/

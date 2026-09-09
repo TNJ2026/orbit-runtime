@@ -491,7 +491,7 @@ class WorkflowDslSemanticTests(unittest.TestCase):
         value = json.loads(json.dumps(VALID_DSL))
         value["extensions"] = [
             {
-                "extension_id": "orbit.agentic-region",
+                "extension_id": "promptaflow.agentic-region",
                 "extension_version": "draft-1",
                 "config": {"region": "main"},
             }
@@ -502,7 +502,7 @@ class WorkflowDslSemanticTests(unittest.TestCase):
         registry = InMemoryExtensionRegistry(
             [
                 ExtensionManifest(
-                    "orbit.agentic-region",
+                    "promptaflow.agentic-region",
                     "draft-1",
                     {
                         "type": "object",
@@ -517,7 +517,7 @@ class WorkflowDslSemanticTests(unittest.TestCase):
             json.dumps(value), self.handlers, self.schemas,
             source_format="json", extensions=registry,
         )
-        self.assertEqual("orbit.agentic-region", compiled.ir.extensions[0].extension_id)
+        self.assertEqual("promptaflow.agentic-region", compiled.ir.extensions[0].extension_id)
 
     def test_ui_structured_condition_ast_matches_human_string(self) -> None:
         text_value = json.loads(json.dumps(VALID_DSL))

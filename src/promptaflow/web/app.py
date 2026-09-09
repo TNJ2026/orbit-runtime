@@ -568,7 +568,7 @@ def create_app(
             agent for agent in discovered if agent.spec.runtime_compatible
         )
         # Where a run's Agents are put to work. Beside the Runtime database by
-        # default, and never the directory `orbit serve` was started in: an
+        # default, and never the directory `promptaflow serve` was started in: an
         # Agent asked to merge a pull request will merge whatever repository it
         # wakes up in, and on a developer's machine that is theirs.
         workspace_root = (
@@ -1061,7 +1061,7 @@ def create_app(
 
     # The MCP surface is a second protocol over the same application services
     # and the same identity, not a second implementation. Built here rather
-    # than inside the route factory so `orbit mcp` can carry this very
+    # than inside the route factory so `promptaflow mcp` can carry this very
     # dispatcher over stdio instead of standing up its own services against a
     # database this process already has open.
     mcp_dispatch = build_mcp_dispatcher(
@@ -1191,7 +1191,7 @@ def create_app(
     routes.extend(extra_routes)
     app = Starlette(routes=routes, lifespan=lifespan)
     app.state.runtime = composition
-    # `orbit mcp` reaches the tools through this instead of over its own HTTP
+    # `promptaflow mcp` reaches the tools through this instead of over its own HTTP
     # connection: same dispatcher, same services, one transport removed.
     app.state.mcp_dispatch = mcp_dispatch
     app.state.mcp_sessions = mcp_sessions

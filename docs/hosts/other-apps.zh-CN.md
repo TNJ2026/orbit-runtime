@@ -14,7 +14,7 @@
 ```json
 {
   "mcpServers": {
-    "orbit": {
+    "promptaflow": {
       "command": "bash",
       "args": ["/absolute/path/to/promptaflow/start-promptaflow.sh", "--mcp-proxy"],
       "env": {

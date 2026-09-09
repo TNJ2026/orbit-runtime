@@ -32,7 +32,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install Orbit
+      - name: Install PromptaFlow
         run: uv sync --extra dev
 
       # `run-release-tests.py`, not plain discovery: it leaves out the visual

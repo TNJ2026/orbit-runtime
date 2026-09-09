@@ -1,13 +1,8 @@
 import { ApiError } from "../api.js";
 import { el } from "../components/dom.js";
 
-/** Progress markers the Runtime writes into an authoring job's output.
- *
- * Both spellings: a job that was already running when the Runtime was
- * upgraded has the pre-rename marker stored in its output, and this reads
- * that output back rather than a live stream.
- */
-const SENTINELS = ["\x1epromptaflow-progress:", "\x1eorbit-progress:"];
+/** Progress marker the Runtime writes into an authoring job's output. */
+const SENTINEL = "\x1epromptaflow-progress:";
 
 /** Render and own the polling lifecycle for one authoring job.
  *
@@ -143,10 +138,9 @@ export function workflowGenerationProgress(
           // Both spellings: a job that was already running when the Runtime
           // was upgraded has the old marker stored in its output, and this
           // reads that output back rather than a live stream.
-          const marker = SENTINELS.find((candidate) => chunk.text.startsWith(candidate));
-          if (marker) {
+          if (chunk.text.startsWith(SENTINEL)) {
             try {
-              const event = JSON.parse(chunk.text.slice(marker.length));
+              const event = JSON.parse(chunk.text.slice(SENTINEL.length));
               updateProgress(event.stage, event.attempt, event.max_attempts);
             } catch (_) {
               // A malformed diagnostic event must not hide the Agent's output.

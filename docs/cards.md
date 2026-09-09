@@ -26,8 +26,7 @@ so treat the visible surface as a separate question from the call.
 
 Pick the card from the intent rather than opening the workspace card first: a
 request to see the workflows is `list_workflows`, and a request to run a goal
-is `start_run`. Opening PromptaFlow itself is `open_promptaflow_dashboard`; the legacy tool
-name remains stable for existing clients.
+is `start_run`. Opening PromptaFlow itself is `open_promptaflow_dashboard`.
 
 ## What each one is
 

@@ -224,7 +224,7 @@ class AgentSelectionTests(unittest.TestCase):
         """Single-Agent mode must never be worse than not having it on.
 
         Several CLIs installed and nothing connected yet is the state a fresh
-        `orbit serve` is in on a developer's machine — the session registry
+        `promptaflow serve` is in on a developer's machine — the session registry
         lives in the process, so every restart returns to it. Refusing there
         stopped Workflows that had started perfectly well the moment before,
         bound to an Agent that is installed, for a substitution nobody asked

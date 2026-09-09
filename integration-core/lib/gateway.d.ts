@@ -17,8 +17,8 @@ export interface GatewayDiagnostics {
  * does not extend the call: it aborts here, the request is cancelled at the
  * Runtime, and the caller is told about a timeout it chose for itself.
  */
-export declare const ORBIT_RPC_TIMEOUT_MS = 60000;
-export declare class OrbitGateway {
+export declare const PROMPTAFLOW_RPC_TIMEOUT_MS = 60000;
+export declare class PromptaFlowGateway {
     private readonly command;
     private readonly commandPrefix;
     private readonly fetchImpl;
@@ -46,16 +46,6 @@ export declare class OrbitGateway {
     call(workspace: WorkspaceRef, sessionId: string, name: string, args: object): Promise<unknown>;
     /** Stable Hub UI namespace for this Workspace. */
     uiUrl(workspace: WorkspaceRef): Promise<string>;
-    /**
-     * Read the same durable attempt totals as PromptaFlow's Agent page.
-     *
-     * This HTTP projection also keeps a newly upgraded Harness compatible with
-     * a Runtime process started before `list_agents` grew the aggregate fields.
-     */
-    handlerAttemptCounts(workspace: WorkspaceRef, sessionId: string): Promise<ReadonlyMap<string, {
-        attempt_count: number;
-        failed_count: number;
-    }>>;
     authoringOutput(workspace: WorkspaceRef, sessionId: string, outputHref: string, after: number): Promise<AuthoringOutputPage>;
     run(workspace: WorkspaceRef, sessionId: string, runId: string): Promise<RunDto>;
     /** Generate a Workflow and execute its Goal through Runtime MCP, without a UI.
@@ -72,7 +62,7 @@ export declare class OrbitGateway {
     private runtimeFor;
     private connect;
     private registerWorkspace;
-    private runOrbit;
+    private runPromptaFlow;
     private startHub;
     private discover;
     private rpc;

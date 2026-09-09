@@ -7,7 +7,7 @@
  */
 
 import { readFileSync } from 'node:fs'
-import { basename } from 'node:path'
+import { basename, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { transform } from 'lightningcss'
 import { defineConfig } from 'tsdown'
@@ -63,19 +63,21 @@ const CLIENT_EXTERNALS: readonly string[] = [...PLATFORM_MODULES, ...PRELOADED]
  * Resolve the shared integration layer from source so this package can inline
  * it without depending on an unpublished workspace package.
  */
-const ORBIT_CORE_ENTRY = fileURLToPath(
+const PROMPTAFLOW_CORE_ENTRY = fileURLToPath(
   new URL('../../integration-core/src/index.ts', import.meta.url),
 )
-const ORBIT_CORE_TYPES = fileURLToPath(
+const PROMPTAFLOW_CORE_TYPES = fileURLToPath(
   new URL('../../integration-core/src/types.ts', import.meta.url),
 )
-const ORBIT_CORE_ALIAS = { '@promptaflow/integration-core': ORBIT_CORE_ENTRY }
+const PROMPTAFLOW_CORE_ALIAS = { '@promptaflow/integration-core': PROMPTAFLOW_CORE_ENTRY }
 
 /** Wire/type layers a client bundle may inline (no shared runtime identity). */
 const INLINE_SAFE = /^@deepseek-ai\/dsh-(session|tools|brand)(\/|$)/
 
 const CSS_VIRTUAL_PREFIX = '\0dsh-css:'
 const CSS_VIRTUAL_SUFFIX = '.mjs'
+const PACKAGE_ROOT = fileURLToPath(new URL('.', import.meta.url))
+const CSS_FILES = new Map<string, string>()
 
 /** The id the host looks this bundle up by: the package name, read not restated. */
 const PLUGIN_ID: string = JSON.parse(
@@ -96,7 +98,7 @@ export default defineConfig([{
   sourcemap: false,
   clean: false,
   codeSplitting: false,
-  alias: ORBIT_CORE_ALIAS,
+  alias: PROMPTAFLOW_CORE_ALIAS,
   deps: {
     // Host and Node dependencies stay external; integration-core resolves to
     // local source through the alias above and is therefore bundled.
@@ -109,7 +111,7 @@ export default defineConfig([{
   },
 }, {
   name: `${PLUGIN_ID}/types`,
-  entry: { types: ORBIT_CORE_TYPES },
+  entry: { types: PROMPTAFLOW_CORE_TYPES },
   tsconfig: 'tsconfig.bundle.json',
   outDir: 'lib',
   format: 'esm',
@@ -139,7 +141,7 @@ export default defineConfig([{
   dts: false,
   sourcemap: true,
   clean: false,
-  alias: ORBIT_CORE_ALIAS,
+  alias: PROMPTAFLOW_CORE_ALIAS,
   deps: {
     neverBundle: (id: string) => CLIENT_EXTERNALS.includes(id),
     alwaysBundle: (id: string) => !CLIENT_EXTERNALS.includes(id),
@@ -171,11 +173,15 @@ export default defineConfig([{
       } else {
         abs = fileURLToPath(import.meta.resolve(source))
       }
-      return CSS_VIRTUAL_PREFIX + abs + CSS_VIRTUAL_SUFFIX
+      const stableId = relative(PACKAGE_ROOT, abs).replaceAll('\\', '/')
+      const virtualId = CSS_VIRTUAL_PREFIX + stableId + CSS_VIRTUAL_SUFFIX
+      CSS_FILES.set(virtualId, abs)
+      return virtualId
     },
     load(virtualId: string) {
       if (!virtualId.startsWith(CSS_VIRTUAL_PREFIX)) return null
-      const fileId = virtualId.slice(CSS_VIRTUAL_PREFIX.length, -CSS_VIRTUAL_SUFFIX.length)
+      const fileId = CSS_FILES.get(virtualId)
+      if (fileId === undefined) throw new Error(`unknown CSS virtual module: ${virtualId}`)
       const isModule = fileId.endsWith('.module.css')
       const { code, exports: cssExports } = transform({
         filename: fileId, code: readFileSync(fileId),

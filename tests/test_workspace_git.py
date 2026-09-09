@@ -3,7 +3,7 @@
 Replaces the worktree half of tests/test_worktree.py (WorktreeLifecycleTests,
 GitProvisioningTests, WorktreeSweepTests) and adds the traversal, symlink,
 dirty-tree, repeat-acquire and crash-cleanup coverage the plan asks for.
-No import of orbit.server or orbit.store.
+No import of promptaflow.server or promptaflow.store.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ class GitWorkspaceTestCase(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name).resolve()
-        self.state = self.root / ".orbit"
+        self.state = self.root / ".promptaflow"
         git(self.root, "init", "-q")
         git(self.root, "config", "user.email", "test@example.com")
         git(self.root, "config", "user.name", "test")
@@ -118,14 +118,14 @@ class UnavailableTests(unittest.TestCase):
         self.temp.cleanup()
 
     def test_non_repository_is_unavailable_not_an_error(self) -> None:
-        provider = GitWorkspaceProvider(self.root, self.root / ".orbit")
+        provider = GitWorkspaceProvider(self.root, self.root / ".promptaflow")
         with self.assertRaises(WorkspaceUnavailable):
             provider.acquire("run:one")
 
     @unittest.skipUnless(git_available(), "git is not installed")
     def test_repository_without_commits_is_unavailable(self) -> None:
         git(self.root, "init", "-q")
-        provider = GitWorkspaceProvider(self.root, self.root / ".orbit")
+        provider = GitWorkspaceProvider(self.root, self.root / ".promptaflow")
         with self.assertRaises(WorkspaceUnavailable):
             provider.acquire("run:one")
 
@@ -265,13 +265,13 @@ class GitignoreTests(GitWorkspaceTestCase):
     def test_state_dir_is_added_to_gitignore(self) -> None:
         self.provider.ensure_state_dir_ignored()
         content = (self.root / ".gitignore").read_text(encoding="utf-8")
-        self.assertIn(".orbit/", content)
+        self.assertIn(".promptaflow/", content)
 
     def test_ensure_is_idempotent(self) -> None:
         self.provider.ensure_state_dir_ignored()
         self.provider.ensure_state_dir_ignored()
         content = (self.root / ".gitignore").read_text(encoding="utf-8")
-        self.assertEqual(1, content.count(".orbit/"))
+        self.assertEqual(1, content.count(".promptaflow/"))
 
     def test_worktree_does_not_dirty_the_main_tree(self) -> None:
         self.provider.ensure_state_dir_ignored()

@@ -8,7 +8,7 @@ import unittest
 class WorkflowDependencyBoundaryTests(unittest.TestCase):
     def test_domain_and_dsl_do_not_import_runtime_or_infrastructure(self) -> None:
         root = Path(__file__).parents[1] / "src" / "promptaflow" / "workflow"
-        forbidden = {"sqlite3", "starlette", "uvicorn", "orbit.server", "orbit.store"}
+        forbidden = {"sqlite3", "starlette", "uvicorn", "promptaflow.server", "promptaflow.store"}
         violations = []
         for directory in (root / "domain", root / "dsl"):
             for path in directory.glob("*.py"):
@@ -58,7 +58,7 @@ class WorkflowDependencyBoundaryTests(unittest.TestCase):
     def test_handlers_do_not_import_runtime_repositories(self) -> None:
         root = Path(__file__).parents[1] / "src" / "promptaflow" / "workflow"
         forbidden = {
-            "sqlite3", "orbit.server", "orbit.store",
+            "sqlite3", "promptaflow.server", "promptaflow.store",
             "promptaflow.workflow.persistence", "promptaflow.workflow.application",
             "persistence", "application",
         }

@@ -27,11 +27,6 @@ import time
 GIT_TIMEOUT_SECONDS = 30.0
 LOCK_RETRIES = 5
 BRANCH_PREFIX = "promptaflow/ws-"
-# Branches this created before the rename, in the user's own repository. New
-# ones are never written under it, and cleanup still has to find it: a reclaim
-# that only knew the current prefix would leave one dead branch behind per
-# workspace, in a repository that is not ours to litter.
-LEGACY_BRANCH_PREFIXES = ("orbit/ws-",)
 WORKTREES_DIRNAME = "worktrees"
 
 _SAFE_SLUG = re.compile(r"[^A-Za-z0-9_.-]+")
@@ -127,9 +122,9 @@ class GitWorkspaceProvider:
     def _checked_root(self) -> Path:
         """The worktrees root, proven not to be a symlink out of the state dir.
 
-        A hostile or stale checkout can leave `.orbit/worktrees` as a symlink
+        A hostile or stale checkout can leave `.promptaflow/worktrees` as a symlink
         pointing anywhere; writing through it would put worktrees outside the
-        area orbit owns. Resolving both sides and requiring containment catches
+        area promptaflow owns. Resolving both sides and requiring containment catches
         that. Traversal via the ref itself is impossible by construction:
         :func:`workspace_slug` strips path separators and dots.
         """
@@ -247,15 +242,15 @@ class GitWorkspaceProvider:
             raise WorkspaceUnavailable(
                 f"{self.project_root} has no commit to snapshot from"
             )
-        descriptor, index_name = tempfile.mkstemp(prefix="orbit-index-")
+        descriptor, index_name = tempfile.mkstemp(prefix="promptaflow-index-")
         os.close(descriptor)
         Path(index_name).unlink(missing_ok=True)  # read-tree creates the index.
         snapshot_env = {
             "GIT_INDEX_FILE": index_name,
             "GIT_AUTHOR_NAME": "PromptaFlow",
-            "GIT_AUTHOR_EMAIL": "orbit@localhost",
+            "GIT_AUTHOR_EMAIL": "promptaflow@localhost",
             "GIT_COMMITTER_NAME": "PromptaFlow",
-            "GIT_COMMITTER_EMAIL": "orbit@localhost",
+            "GIT_COMMITTER_EMAIL": "promptaflow@localhost",
         }
         try:
             for command in (("read-tree", base), ("add", "-A")):
@@ -391,7 +386,7 @@ class GitWorkspaceProvider:
         was read. A grace period comfortably wider than that gap makes
         reclamation safe without a lock, and is the only version of this that
         works when `acquire()` and `sweep()` run in different processes (the
-        default `orbit serve` shape once `--execution-workers` is nonzero):
+        default `promptaflow serve` shape once `--execution-workers` is nonzero):
         a lock only ever excludes callers in the same process.
         """
 
@@ -415,10 +410,6 @@ class GitWorkspaceProvider:
                 ("worktree", "remove", "--force", str(path)),
                 ("worktree", "prune"),
                 ("branch", "-D", f"{BRANCH_PREFIX}{slug}"),
-                *(
-                    ("branch", "-D", f"{prefix}{slug}")
-                    for prefix in LEGACY_BRANCH_PREFIXES
-                ),
             ):
                 try:
                     _git(self.project_root, *args)

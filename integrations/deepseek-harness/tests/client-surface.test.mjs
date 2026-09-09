@@ -17,24 +17,24 @@ const code = sources.join('\n').split('\n')
   .filter(line => !line.trimStart().startsWith('*')).join('\n')
 
 /**
- * The panel says what is running and links into Orbit for the rest.
+ * The panel says what is running and links into PromptaFlow for the rest.
  *
  * That boundary is the whole reason this module is 500 lines instead of the
- * 685-line duplicate it replaced: Orbit already draws graphs, Artifacts and
+ * 685-line duplicate it replaced: PromptaFlow already draws graphs, Artifacts and
  * Workflow authoring, and a second drawing of them is a second answer to the
  * same question. Reading their data here is how a panel becomes that duplicate,
  * so reading their data is what this forbids.
  */
-test('the deep surfaces stay in Orbit', () => {
+test('the deep surfaces stay in PromptaFlow', () => {
   for (const elsewhere of [
     'getGraph', 'getEdges', 'listArtifacts', 'getArtifactContent', 'importArtifact',
-    // Not the bare 'generateWorkflow': `/orbit-generate` starts a job from this
+    // Not the bare 'generateWorkflow': `/promptaflow-generate` starts a job from this
     // Session and the Workflows page follows its console, which is news about
     // this Workspace. The resident detail may prepare a modification prompt,
-    // but the actual authoring surface remains in Orbit.
+    // but the actual authoring surface remains in PromptaFlow.
     'getAuthoringJob',
   ]) {
-    assert.equal(code.includes(elsewhere), false, `${elsewhere} belongs to Orbit's own UI`)
+    assert.equal(code.includes(elsewhere), false, `${elsewhere} belongs to PromptaFlow's own UI`)
   }
 })
 
@@ -58,7 +58,7 @@ test('every Host call is one the panel can name a reason for', async () => {
 })
 
 test('the panel is a Harness surface, not one with its own palette', async () => {
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   const hardcoded = [...css.matchAll(/#[0-9a-fA-F]{3,8}\b/g)].map(([hit]) => hit)
   assert.deepEqual(hardcoded, [], 'colours belong to the --dsw-alias-* tokens')
   assert.match(css, /--dsw-alias-/)
@@ -69,7 +69,7 @@ test('the panel reads its Session from the store the slot actually hands over', 
   // A `sessionId` prop typechecks, arrives undefined forever, and leaves the
   // panel permanently empty — which is exactly how it shipped once.
   assert.match(code, /useSessions\(state => state\.current\)/)
-  const panel = sources[names.indexOf('OrbitPanel.tsx')]
+  const panel = sources[names.indexOf('PromptaFlowPanel.tsx')]
   assert.equal(/sessionId\?: string\s*\}/.test(panel), false, 'a prop the slot never sends is back')
 })
 
@@ -85,7 +85,7 @@ test('the title area drags, and only its controls do not', () => {
 test('every border names a colour that survives an unfamiliar theme', async () => {
   // An undefined custom property invalidates the whole declaration, not just
   // its colour: a divider written without a fallback is simply not drawn.
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   const bare = [...css.matchAll(/var\(--dsw-alias-[a-z0-9-]+\)/g)]
     .map(([hit]) => hit)
     .filter(hit => /line|bg-/.test(hit))
@@ -93,13 +93,13 @@ test('every border names a colour that survives an unfamiliar theme', async () =
 })
 
 test('bar controls are glyphs, not buttons with a surface of their own', async () => {
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   const rule = css.slice(css.indexOf('.iconButton {'), css.indexOf('}', css.indexOf('.iconButton {')))
   assert.match(rule, /background:\s*none/)
   assert.match(rule, /border:\s*0/)
 })
 
-test('the deep surfaces are reachable, in Orbit rather than redrawn here', () => {
+test('the deep surfaces are reachable, in PromptaFlow rather than redrawn here', () => {
   // An anchor, not a scripted open: the browser's own new-tab behaviour is the
   // behaviour a person expects from something that leaves the page, and a
   // pop-up blocker never gets to decide whether the press counted.
@@ -110,7 +110,7 @@ test('the deep surfaces are reachable, in Orbit rather than redrawn here', () =>
 
 test('the panel carries the Runtime\'s own four pages, in its order', () => {
   // Goal, Workflows, History, Agents — what is running, what could, what did,
-  // and who by. Reading them off Orbit rather than inventing a fifth keeps one
+  // and who by. Reading them off PromptaFlow rather than inventing a fifth keeps one
   // vocabulary between the two surfaces.
   const strip = code.slice(code.indexOf('styles.tabs'), code.indexOf('styles.body'))
   assert.deepEqual(
@@ -142,7 +142,7 @@ test('selecting a Workflow writes the request, it does not start one', () => {
   // The Run has to be the Agent's or it cannot report on it afterwards — and a
   // popupSelect has nowhere to put the goal these Workflows declare an input
   // for, so the sentence is left for the person to finish.
-  const select = code.slice(code.indexOf('onSelect: (option, session)'), code.indexOf("}, 'orbit: workflow popup'"))
+  const select = code.slice(code.indexOf('onSelect: (option, session)'), code.indexOf("}, 'promptaflow: workflow popup'"))
   assert.match(select, /input\.setDraft\(/)
   assert.equal(/start_run|runCommand|window\.open/.test(select), false, 'the popup grew a launcher')
 })
@@ -156,7 +156,7 @@ test('selecting a Workflow writes the request, it does not start one', () => {
  * now: it goes in with the one `setDraft` or not at all.
  */
 test('the sentence is written whole, in a single draft write', () => {
-  const select = code.slice(code.indexOf('onSelect: (option, session)'), code.indexOf("}, 'orbit: workflow popup'"))
+  const select = code.slice(code.indexOf('onSelect: (option, session)'), code.indexOf("}, 'promptaflow: workflow popup'"))
   assert.equal((select.match(/input\.setDraft\(/g) ?? []).length, 1)
   assert.doesNotMatch(select, /if \(!inserted\)/)
   assert.doesNotMatch(select, /draftRev/)
@@ -172,7 +172,7 @@ test('the source that owns the reference can project and serialise it', () => {
   // `}), ` — the registration closes a call, not just an object. The anchor
   // used to read `}, `, never matched, and sliced to the end of the file; the
   // count it asserted happened to hold across the whole module.
-  const end = code.indexOf("}), 'orbit: slash command")
+  const end = code.indexOf("}), 'promptaflow: slash command")
   assert.notEqual(end, -1, 'the codec slice no longer ends where it thinks')
   const codec = code.slice(code.indexOf('codec: {'), end)
   // Answered from the id itself. There is no table of names to miss in now,
@@ -183,9 +183,9 @@ test('the source that owns the reference can project and serialise it', () => {
   assert.match(codec, /serialize: async \(ref: string\) => ref/)
 })
 
-test('/orbit still only folds the panel', () => {
-  const source = code.slice(code.indexOf('registerOrbitSlashSource'), code.indexOf('interface SelectOption'))
-  assert.match(source, /orbit:toggle-panel/)
+test('/promptaflow still only folds the panel', () => {
+  const source = code.slice(code.indexOf('registerPromptaFlowSlashSource'), code.indexOf('interface SelectOption'))
+  assert.match(source, /promptaflow:toggle-panel/)
   // Comments stripped first: this is about what the source does, and a comment
   // explaining why it no longer carries Workflows names them to say so.
   const behaviour = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
@@ -203,7 +203,7 @@ test('the sentence leaves a gap for the Workflow rather than naming it', async (
 
 test('workflow cards use the host conversation input bridge', async () => {
   const client = await readFile(join(clientDir, 'index.tsx'), 'utf8')
-  const panel = await readFile(join(clientDir, 'OrbitPanel.tsx'), 'utf8')
+  const panel = await readFile(join(clientDir, 'PromptaFlowPanel.tsx'), 'utf8')
   assert.match(client, /function writeWorkflowDraft\(/)
   assert.match(client, /conversation\.input\.for\(actx\)/)
   assert.match(client, /input\.setDraft\(/)
@@ -250,7 +250,7 @@ test('a Goal keeps the name of a Workflow that was deleted', async () => {
      and keep being opened. The catalog stops offering it — a catalog is what
      can be started — so the panel had only the id left and drew
      `workflow:wf_…` where the name goes, which reads as a Goal pointed at
-     something that is not there. Orbit keeps the definition for exactly this
+     something that is not there. PromptaFlow keeps the definition for exactly this
      case, so the Host asks it for the name. */
   const host = await readFile(join(here, '..', 'src', 'index.ts'), 'utf8')
   const resolver = host.slice(host.indexOf('private async retiredWorkflowNames('))
@@ -342,12 +342,12 @@ test('a page with nothing on it still says something', () => {
   assert.ok(code.includes("t('loading')"), 'nothing is said while the first poll runs')
 })
 
-test('the Agent mark is derived, not a palette that would drift from Orbit\'s', async () => {
+test('the Agent mark is derived, not a palette that would drift from PromptaFlow\'s', async () => {
   // The same Agent must look the same on every open; shipping colours of our
   // own would be a second palette to keep in step with the Runtime's.
   assert.match(code, /function agentMark/)
   assert.match(code, /codePointAt/)
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   assert.equal(/\.avatar\s*\{[^}]*background:\s*(?!none)[^v}]/.test(css), false,
     'the mark carries a fixed colour')
 })
@@ -373,11 +373,11 @@ test('what the panel lists, it can open', async () => {
 test('a Run opens into the panel rather than inside the list', () => {
   // A 400px panel cannot show a Run's steps beside its siblings: expanding one
   // inline pushed the rest of the list out, which is the same as losing it.
-  assert.match(code, /OrbitRunListRow/)
-  assert.match(code, /OrbitRunDetail/)
-  const detail = code.slice(code.indexOf('export function OrbitRunDetail'))
+  assert.match(code, /PromptaFlowRunListRow/)
+  assert.match(code, /PromptaFlowRunDetail/)
+  const detail = code.slice(code.indexOf('export function PromptaFlowRunDetail'))
   assert.match(detail, /onBack/, 'detail with no way back')
-  assert.equal(/<DisclosureRow[\s\S]{0,400}OrbitRunDetail/.test(code), false)
+  assert.equal(/<DisclosureRow[\s\S]{0,400}PromptaFlowRunDetail/.test(code), false)
 })
 
 test('changing page clears every detail it was showing', () => {
@@ -391,12 +391,12 @@ test('changing page clears every detail it was showing', () => {
 test('a Workflow detail draws the compiled graph and keeps its definition list', async () => {
   // The resident detail mirrors the MCP App card: the graph and definition
   // are two views over the same definition response, not a second catalog.
-  const detail = await readFile(join(clientDir, 'OrbitWorkflowDetail.tsx'), 'utf8')
-  const graph = await readFile(join(clientDir, 'OrbitWorkflowGraph.tsx'), 'utf8')
-  assert.doesNotMatch(detail, /openThisInOrbit|#\/workflows\//)
+  const detail = await readFile(join(clientDir, 'PromptaFlowWorkflowDetail.tsx'), 'utf8')
+  const graph = await readFile(join(clientDir, 'PromptaFlowWorkflowGraph.tsx'), 'utf8')
+  assert.doesNotMatch(detail, /openThisInPromptaFlow|#\/workflows\//)
   assert.match(detail, /getWorkflowDefinition/)
   assert.match(detail, /detail\.graph/)
-  assert.match(detail, /<OrbitWorkflowGraph graph=\{graph\}/)
+  assert.match(detail, /<PromptaFlowWorkflowGraph graph=\{graph\}/)
   assert.match(detail, /view === 'definition'/)
   assert.match(graph, /from '@xyflow\/react'/)
   assert.match(graph, /graph\.layout\?\.positions/)
@@ -412,8 +412,8 @@ test('a Workflow row opens detail and its New goal action writes the draft', () 
 })
 
 test('Workflow detail modification edits the draft and deletion confirms before sending', async () => {
-  const panel = sources[names.indexOf('OrbitPanel.tsx')]
-  const detail = await readFile(join(clientDir, 'OrbitWorkflowDetail.tsx'), 'utf8')
+  const panel = sources[names.indexOf('PromptaFlowPanel.tsx')]
+  const detail = await readFile(join(clientDir, 'PromptaFlowWorkflowDetail.tsx'), 'utf8')
   const client = await readFile(join(clientDir, 'index.tsx'), 'utf8')
   const locales = await readFile(join(clientDir, 'locales.ts'), 'utf8')
   assert.match(panel, /onModify=\{\(\) => onEditWorkflow\(chosenFlow, sessionId\)\}/)
@@ -443,7 +443,7 @@ test('the listing draws a workflow from the tally it was sent', async () => {
 test('a definition is read once, not polled', async () => {
   // It changes only when somebody republishes it. A poll would re-ask a
   // settled question at the cadence of one that is not.
-  const detail = await readFile(join(clientDir, 'OrbitWorkflowDetail.tsx'), 'utf8')
+  const detail = await readFile(join(clientDir, 'PromptaFlowWorkflowDetail.tsx'), 'utf8')
   assert.equal(/setInterval|setTimeout/.test(detail), false)
 })
 
@@ -451,16 +451,16 @@ test('a definition is read once, not polled', async () => {
  * The list still says which Workflows a goal cannot be started from.
  *
  * The detail page used to carry the readiness verdict and its reason as well.
- * Both are gone from it, so the "why" now lives only in Orbit — but the list
+ * Both are gone from it, so the "why" now lives only in PromptaFlow — but the list
  * has to keep the verdict: it carries the whole catalog, and without it the
  * ones needing work read as ready.
  */
 test('the catalog marks what a goal cannot be started from', () => {
-  const panel = sources[names.indexOf('OrbitPanel.tsx')]
+  const panel = sources[names.indexOf('PromptaFlowPanel.tsx')]
   assert.match(panel, /item\.goal_readiness === 'ready' \? null : \(/)
   assert.match(panel, /needsMigration' : 'needsUpgrade'/)
   // And the detail page no longer repeats the verdict beside it.
-  const detail = sources[names.indexOf('OrbitWorkflowDetail.tsx')]
+  const detail = sources[names.indexOf('PromptaFlowWorkflowDetail.tsx')]
   assert.doesNotMatch(detail, /goal_readiness|readiness_reason/)
   assert.doesNotMatch(detail, /styles\.facts/)
 })
@@ -473,26 +473,26 @@ test('the catalog marks what a goal cannot be started from', () => {
  * and made the reader leave the page for the second.
  */
 test('a running Goal draws its steps on the Goal page', () => {
-  const panel = sources[names.indexOf('OrbitPanel.tsx')]
-  const rows = sources[names.indexOf('OrbitRunRow.tsx')]
+  const panel = sources[names.indexOf('PromptaFlowPanel.tsx')]
+  const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
   const from = panel.indexOf("tab === 'goal' ? (")
   const until = panel.indexOf("tab === 'history' ? (")
   assert.ok(from > 0 && until > from, 'the Goal and History blocks were not found')
   const goal = panel.slice(from, until)
-  assert.ok(goal.includes('OrbitRunGoalCard'), 'the Goal page draws the Run as a card')
+  assert.ok(goal.includes('PromptaFlowRunGoalCard'), 'the Goal page draws the Run as a card')
   // Drawn from the polled steps, not from nothing: the card renders its
   // heading either way, so a card handed no steps loses the ladder in silence.
   assert.match(goal, /steps=\{steps\[/, 'the Goal card is fed the polled steps')
-  assert.equal(goal.includes('OrbitRunListRow'), false,
+  assert.equal(goal.includes('PromptaFlowRunListRow'), false,
     'the Goal page is past the summary row it replaced')
   // The History page keeps the row: a finished Run's steps are read by opening
   // it, and a page of settled ladders is not a list any more.
-  assert.ok(panel.slice(until).includes('OrbitRunListRow'))
-  assert.ok(rows.includes('export function OrbitStepList'))
+  assert.ok(panel.slice(until).includes('PromptaFlowRunListRow'))
+  assert.ok(rows.includes('export function PromptaFlowStepList'))
   // Both readers of a Run go through it, so neither can drift from the other.
-  assert.equal((rows.match(/<OrbitStepList/g) ?? []).length, 2)
+  assert.equal((rows.match(/<PromptaFlowStepList/g) ?? []).length, 2)
   assert.equal((rows.match(/<StepDisclosure/g) ?? []).length, 1,
-    'the step row is instantiated in one place, inside OrbitStepList')
+    'the step row is instantiated in one place, inside PromptaFlowStepList')
 })
 
 /** The Goal page needs `has_output` and the reconciliation fields, or its steps
@@ -525,7 +525,7 @@ test('the Goal page and the Host agree on which Runs it is about', async () => {
   // test exists to prevent.
   assert.match(host, /goalRuns[^\n]*|[^\n]*goalRuns/)
   assert.match(host, /from '@promptaflow\/integration-core'/)
-  const panel = sources[names.indexOf('OrbitPanel.tsx')]
+  const panel = sources[names.indexOf('PromptaFlowPanel.tsx')]
   const from = panel.indexOf("tab === 'goal' ? (")
   const until = panel.indexOf("tab === 'history' ? (")
   assert.match(panel.slice(from, until), /goal\.map\(/, 'the Goal page draws goalRuns')
@@ -543,7 +543,7 @@ test('the Goal page and the Host agree on which Runs it is about', async () => {
  * could say a Run succeeded and never say at what.
  */
 test('a Goal shows its output and its answer without being asked', () => {
-  const rows = sources[names.indexOf('OrbitRunRow.tsx')]
+  const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
   // Open because the step has something to say. Seeded from `hasOutput` on
   // every render rather than into useState, because that arrives a poll later
   // than the step does.
@@ -562,11 +562,11 @@ test('a Goal shows its output and its answer without being asked', () => {
  *
  * And the controls came with it. Cancel and resume lived on the detail page,
  * which the Goal page was the only way into for a Run still running — History
- * lists Runs that are over, and Orbit advertises neither command for those.
+ * lists Runs that are over, and PromptaFlow advertises neither command for those.
  */
 test('the Goal heading is not a link, and the Run is still actionable', () => {
-  const rows = sources[names.indexOf('OrbitRunRow.tsx')]
-  const card = rows.slice(rows.indexOf('export function OrbitRunGoalCard'))
+  const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
+  const card = rows.slice(rows.indexOf('export function PromptaFlowRunGoalCard'))
   const body = card.slice(0, card.indexOf('\n}'))
   assert.equal(/onOpen/.test(body), false, 'the Goal card no longer navigates')
   assert.match(body, /<div className=\{styles\.goalHead\}/, 'the heading is a heading')
@@ -576,7 +576,7 @@ test('the Goal heading is not a link, and the Run is still actionable', () => {
   assert.equal((rows.match(/<RunControls/g) ?? []).length, 2)
   assert.equal((rows.match(/commandRevision\(/g) ?? []).length, 2,
     'the advertised revision is read in one place, inside RunControls')
-  const panel = sources[names.indexOf('OrbitPanel.tsx')]
+  const panel = sources[names.indexOf('PromptaFlowPanel.tsx')]
   const from = panel.indexOf("tab === 'goal' ? (")
   assert.equal(/onOpen/.test(panel.slice(from, panel.indexOf("tab === 'history' ? ("))), false)
   // History still opens a Run: its steps are worth reading, and reading them
@@ -593,8 +593,8 @@ test('the Goal heading is not a link, and the Run is still actionable', () => {
  * that card nothing else carries, was on no page at all.
  */
 test('the Goal heading is the goal and the request, not the id and the status', () => {
-  const rows = sources[names.indexOf('OrbitRunRow.tsx')]
-  const card = rows.slice(rows.indexOf('export function OrbitRunGoalCard'))
+  const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
+  const card = rows.slice(rows.indexOf('export function PromptaFlowRunGoalCard'))
   const head = card.slice(card.indexOf('goalHead'), card.indexOf('</div>'))
   assert.match(head, /run\.goal/)
   assert.match(head, /<FoldedText t=\{t\} text=\{run\.prompt\}/)
@@ -623,8 +623,8 @@ test('the Goal heading is the goal and the request, not the id and the status', 
  * somebody was already watching the thing it was there to replace.
  */
 test('an authoring job draws its stages, not one unchanging line', () => {
-  const panel = sources[names.indexOf('OrbitPanel.tsx')]
-  const row = panel.slice(panel.indexOf('function AuthoringRow'), panel.indexOf('export interface OrbitPanelProps'))
+  const panel = sources[names.indexOf('PromptaFlowPanel.tsx')]
+  const row = panel.slice(panel.indexOf('function AuthoringRow'), panel.indexOf('export interface PromptaFlowPanelProps'))
   assert.match(row, /authoringProgress\(markers, job\.status\)/)
   assert.match(row, /progress\.stages\.map\(/)
   // Read unconditionally: the previous guard was `!open || !outputHref`.
@@ -696,8 +696,8 @@ test('an authoring turn is queued on the Agent, framed as the platform frames on
  * a compact hover surface, so it remains easy to find without filling a row.
  */
 test('detail pages share a compact, readable back control', async () => {
-  const rows = sources[names.indexOf('OrbitRunRow.tsx')]
-  const flow = sources[names.indexOf('OrbitWorkflowDetail.tsx')]
+  const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
+  const flow = sources[names.indexOf('PromptaFlowWorkflowDetail.tsx')]
   assert.ok(rows.includes('export function BackButton'))
   for (const page of [rows, flow]) assert.match(page, /<BackButton t=\{t\} onBack=\{onBack\} \/>/)
   // Spelled once, inside the shared component and nowhere else. Counted rather
@@ -706,7 +706,7 @@ test('detail pages share a compact, readable back control', async () => {
   assert.equal((flow.match(/className=\{styles\.back\}/g) ?? []).length, 0)
 
   // Read rather than taken from `sources`, which holds only .ts and .tsx.
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   const back = css.slice(css.indexOf('.back {'), css.indexOf('.backArrow'))
   // A token the shell actually defines. `--dsw-alias-label-accent`, which the
   // hover used to reach for, is not one — so that colour only ever existed as
@@ -731,13 +731,13 @@ test('detail pages share a compact, readable back control', async () => {
  * The close button stops a service, so it asks before it does.
  *
  * Every other control in that bar is reversible — fold the panel, open a tab,
- * poll again. This one stops a Runtime that Orbit's own UI, other Sessions and
+ * poll again. This one stops a Runtime that PromptaFlow's own UI, other Sessions and
  * any Run in flight are using, and a press in that row cannot be undone. The
  * Gateway's own note said a panel must never stop a Runtime; that changed
  * deliberately, and the question is what makes it safe.
  */
-test('stopping Orbit is asked for, not merely clicked', async () => {
-  const panel = sources[names.indexOf('OrbitPanel.tsx')]
+test('stopping PromptaFlow is asked for, not merely clicked', async () => {
+  const panel = sources[names.indexOf('PromptaFlowPanel.tsx')]
   // The press opens the question; only the confirm reaches the Host.
   assert.match(panel, /onClick=\{\(\) => setConfirmingStop\(true\)\}/)
   const asked = panel.slice(panel.indexOf('confirmingStop ? ('))
@@ -790,7 +790,7 @@ test('stopping Orbit is asked for, not merely clicked', async () => {
  * its height on hover and climb back on leaving.
  */
 test('the collapsed mark is centred against the right edge', async () => {
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   const badge = css.slice(css.indexOf('.badge {'), css.indexOf('.badge:hover'))
   assert.match(badge, /top: 50%/)
   assert.match(badge, /right: 18px/)
@@ -805,7 +805,7 @@ test('the collapsed mark is centred against the right edge', async () => {
   // The lift keeps the transform it needs.
   assert.match(css, /\.badge:hover \{ transform: translateY\(-1px\)/)
   // Nothing places it from the component any more.
-  const panel = sources[names.indexOf('OrbitPanel.tsx')]
+  const panel = sources[names.indexOf('PromptaFlowPanel.tsx')]
   assert.doesNotMatch(panel, /style=\{\{ right: 18, bottom: 24 \}\}/)
 })
 
@@ -819,7 +819,7 @@ test('the collapsed mark is centred against the right edge', async () => {
  * fit it, so the panel scrolls sideways instead.
  */
 test('the request and a step console share one card, which never widens the panel', async () => {
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   // The card is the wrapper, so the control that unfolds the request is inside
   // it rather than a separate remark sitting under a tinted block.
   const wrapper = css.slice(css.indexOf('.goalPromptCard {'), css.indexOf('.goalPrompt {'))
@@ -871,7 +871,7 @@ test('no panel surface prints a raw failure', () => {
     assert.equal(/String\(reason\)|String\(error\)/.test(sources[index]), false,
       `${name} still shows a failure as it arrived`)
   }
-  const rows = sources[names.indexOf('OrbitRunRow.tsx')]
+  const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
   assert.ok(rows.includes('export function PanelErrorText'))
   // The original rides along on the element, where it can be hovered and copied.
   assert.match(rows, /title=\{error\.detail\}/)
@@ -897,7 +897,7 @@ test('no panel surface prints a raw failure', () => {
  * the question it was hiding — did this work — is answered in a word first.
  */
 test('a result is an outcome and a door, not an artifact id', () => {
-  const rows = sources[names.indexOf('OrbitRunRow.tsx')]
+  const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
   const result = rows.slice(rows.indexOf('function RunResult'))
   const body = result.slice(0, result.indexOf('\n}'))
   // How it ended, before anything the terminal step happened to emit.
@@ -921,23 +921,23 @@ test('a result is an outcome and a door, not an artifact id', () => {
  *
  * Artifacts are owned by the actor that produced them; a browser reaching
  * `/api/v1` on loopback is `local`; a Run this panel starts belongs to
- * `harness:session:<id>`. Orbit's own link is therefore a 404 for every
- * Artifact this Harness ever made — and so is Orbit's own UI. The Host is the
+ * `harness:session:<id>`. PromptaFlow's own link is therefore a 404 for every
+ * Artifact this Harness ever made — and so is PromptaFlow's own UI. The Host is the
  * identity that can read one, so the link points at the Host.
  *
  * It passes bytes through and draws nothing: no gallery, no viewer, no second
- * drawing of anything Orbit draws.
+ * drawing of anything PromptaFlow draws.
  */
-test('an Artifact is served by the Host, sandboxed and typed as Orbit recorded it', async () => {
+test('an Artifact is served by the Host, sandboxed and typed as PromptaFlow recorded it', async () => {
   const host = await readFile(join(here, '..', 'src', 'index.ts'), 'utf8')
-  const route = host.slice(host.indexOf("path: '/plugins/dsh-orbit/artifact'"))
-  const body = route.slice(0, route.indexOf("path: '/plugins/dsh-orbit/api'"))
+  const route = host.slice(host.indexOf("path: '/plugins/dsh-promptaflow/artifact'"))
+  const body = route.slice(0, route.indexOf("path: '/plugins/dsh-promptaflow/api'"))
   // Read as the Session, which is the whole reason this route exists.
   assert.match(body, /this\.sessionWorkspace\(sessionId\)/)
   assert.match(body, /'read_artifact_content', \{ artifact_id: artifactId \}/)
   // A GET, because a link is what a person clicks.
   assert.match(body, /req\.method !== 'GET'/)
-  // Typed as Orbit recorded it, never guessed: guessing is how a text file
+  // Typed as PromptaFlow recorded it, never guessed: guessing is how a text file
   // becomes a download and a script becomes a script.
   assert.match(body, /held\.artifact\.content_type \|\| 'application\/octet-stream'/)
   assert.match(body, /nosniff/)
@@ -951,14 +951,14 @@ test('an Artifact is served by the Host, sandboxed and typed as Orbit recorded i
  * An Artifact is offered two ways, because they answer different questions.
  *
  * The link opens the bytes in a tab — "what does it say". The export writes an
- * ordinary file and says where — "give me the file". The path Orbit already
+ * ordinary file and says where — "give me the file". The path PromptaFlow already
  * has is neither: it is a content-addressed blob named by its own sha256,
  * shared with every Artifact holding the same bytes and collected when nothing
  * references it, so a person told "that is your file" would corrupt the store
  * by saving in it.
  */
 test('an Artifact can be looked at and can be taken away', async () => {
-  const rows = sources[names.indexOf('OrbitRunRow.tsx')]
+  const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
   const row = rows.slice(rows.indexOf('function ArtifactRow'))
   const body = row.slice(0, row.indexOf('\nfunction RunResult'))
   // Read here when its text is the answer, and only then: a link is not
@@ -1009,7 +1009,7 @@ test('an Artifact can be looked at and can be taken away', async () => {
  * inside one.
  */
 test('list rows are separated, not bounded', async () => {
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   const rule = css.slice(css.indexOf('.listRow::after'), css.indexOf('/* Nothing to separate it from'))
   // Inset to the padding the rows already use, so the line starts where their
   // text does rather than at the panel's edge.
@@ -1048,61 +1048,61 @@ test('list rows are separated, not bounded', async () => {
 })
 
 /**
- * An Orbit command reports into the panel, so it opens the panel.
+ * An PromptaFlow command reports into the panel, so it opens the panel.
  *
- * The panel is where the work an Orbit command starts becomes visible — a
+ * The panel is where the work an PromptaFlow command starts becomes visible — a
  * Run's steps, a Workflow being written. Started behind a folded panel or a
  * dismissed one, a command has done something and said nothing.
  *
- * `orbit:show-panel` and not `orbit:toggle-panel`: a toggle run twice hides
+ * `promptaflow:show-panel` and not `promptaflow:toggle-panel`: a toggle run twice hides
  * the thing it was meant to reveal, and hides it for someone who already had
- * it open. `/orbit` is the one command that may toggle, because toggling is
+ * it open. `/promptaflow` is the one command that may toggle, because toggling is
  * what it is for.
  */
-test('every Orbit command that does work opens the panel', async () => {
+test('every PromptaFlow command that does work opens the panel', async () => {
   const client = await readFile(join(clientDir, 'index.tsx'), 'utf8')
 
   // One helper, and it only ever shows.
-  assert.match(client, /function showOrbitPanel\(tab\?: 'workflows'\): void/)
-  const helper = client.slice(client.indexOf('function showOrbitPanel'),
+  assert.match(client, /function showPromptaFlowPanel\(tab\?: 'workflows'\): void/)
+  const helper = client.slice(client.indexOf('function showPromptaFlowPanel'),
     client.indexOf('const MARK_OPEN'))
-  assert.match(helper, /'orbit:show-panel'/)
+  assert.match(helper, /'promptaflow:show-panel'/)
   assert.doesNotMatch(helper, /toggle/)
 
-  // Only `/orbit` toggles. Counted over code alone: the helper's own comment
+  // Only `/promptaflow` toggles. Counted over code alone: the helper's own comment
   // names the toggle event in order to say it is not that.
   const code = client.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
-  const toggles = [...code.matchAll(/orbit:toggle-panel/g)]
-  assert.equal(toggles.length, 1, 'something other than /orbit is toggling the panel')
-  const panelCommand = client.slice(client.indexOf('function registerOrbitSlashSource'),
+  const toggles = [...code.matchAll(/promptaflow:toggle-panel/g)]
+  assert.equal(toggles.length, 1, 'something other than /promptaflow is toggling the panel')
+  const panelCommand = client.slice(client.indexOf('function registerPromptaFlowSlashSource'),
     client.indexOf('interface SelectOption'))
-  assert.match(panelCommand, /orbit:toggle-panel/)
+  assert.match(panelCommand, /promptaflow:toggle-panel/)
 
   // Both working commands call it, and neither dispatches the event itself.
   // Ends at its own registration, not at whatever declaration follows it: the
   // helper is defined further down the file and would otherwise be read as
   // part of this command's body.
   const generate = client.slice(client.indexOf('function registerGenerateSlashSource'),
-    client.indexOf("}), 'orbit: slash command generating a workflow')"))
+    client.indexOf("}), 'promptaflow: slash command generating a workflow')"))
   assert.ok(generate.length > 0 && generate.length < 4000, 'the generate slice ran past its command')
   const popup = client.slice(client.indexOf('function registerWorkflowPopup'),
-    client.indexOf("}), 'orbit: workflow popup')"))
+    client.indexOf("}), 'promptaflow: workflow popup')"))
   for (const [where, body] of [['generate', generate], ['popup', popup]]) {
-    assert.match(body, /showOrbitPanel\(/, `${where} does not open the panel`)
+    assert.match(body, /showPromptaFlowPanel\(/, `${where} does not open the panel`)
     assert.doesNotMatch(body, /dispatchEvent/, `${where} should go through the helper`)
   }
 
   // Before the work, not after it: a failure has to be met by an open panel
   // too, and writing a Workflow takes long enough that the panel is the only
   // thing that can say it started.
-  const started = generate.indexOf('showOrbitPanel')
+  const started = generate.indexOf('showPromptaFlowPanel')
   const called = generate.indexOf('hostCall')
   assert.ok(started > 0 && started < called, 'the panel opens only if the work succeeds')
 
   // The generate command lands on the tab its job will appear on; the popup
   // takes no view over, having just shown the list itself.
-  assert.match(generate, /showOrbitPanel\('workflows'\)/)
-  assert.match(popup, /showOrbitPanel\(\)/)
+  assert.match(generate, /showPromptaFlowPanel\('workflows'\)/)
+  assert.match(popup, /showPromptaFlowPanel\(\)/)
 })
 
 /**
@@ -1114,8 +1114,8 @@ test('every Orbit command that does work opens the panel', async () => {
  * at something that had stopped listening.
  */
 test('a hidden panel is still listening for the command that reveals it', async () => {
-  const panel = await readFile(join(clientDir, 'OrbitPanel.tsx'), 'utf8')
-  const listener = panel.indexOf("addEventListener('orbit:show-panel'")
+  const panel = await readFile(join(clientDir, 'PromptaFlowPanel.tsx'), 'utf8')
+  const listener = panel.indexOf("addEventListener('promptaflow:show-panel'")
   const bail = panel.indexOf('if (layout.dismissed) return null')
   assert.ok(listener > 0 && bail > 0)
   assert.ok(listener < bail, 'the show listener is registered after the panel bails out')
@@ -1146,7 +1146,7 @@ test('a hidden panel is still listening for the command that reveals it', async 
  */
 test('a picked Workflow is written into the draft as its whole name', async () => {
   const client = await readFile(join(clientDir, 'index.tsx'), 'utf8')
-  const pick = client.slice(client.indexOf('onSelect:'), client.indexOf("}), 'orbit: workflow popup')"))
+  const pick = client.slice(client.indexOf('onSelect:'), client.indexOf("}), 'promptaflow: workflow popup')"))
 
   // One write, of the whole sentence, with the name entire.
   assert.match(pick, /input\.setDraft\(`\$\{head\}\$\{MARK_OPEN\}\$\{option\.label\}\$\{MARK_CLOSE\}\$\{t\('runTail'\)\}`\)/)
@@ -1186,8 +1186,8 @@ test('the run sentence leans on the brackets, not on spaces', async () => {
  * Typing the command is the asking.
  *
  * `getPanelState` takes `startIfMissing`, and the entry points disagreed about
- * it: the panel passes it when it is expanded, `/orbit-generate` passes it to
- * have something to write into, and `/orbit-workflows` passed only a Session
+ * it: the panel passes it when it is expanded, `/promptaflow-generate` passes it to
+ * have something to write into, and `/promptaflow-workflows` passed only a Session
  * id — so both trailing parameters defaulted to false. A person who typed the
  * command to find out what could run was told that nothing was running, on a
  * machine where the fix was to start the thing they had just asked about.
@@ -1197,14 +1197,14 @@ test('the run sentence leans on the brackets, not on spaces', async () => {
  */
 test('every deliberate entry point starts a Runtime rather than reporting its absence', async () => {
   const client = await readFile(join(clientDir, 'index.tsx'), 'utf8')
-  const panel = await readFile(join(clientDir, 'OrbitPanel.tsx'), 'utf8')
+  const panel = await readFile(join(clientDir, 'PromptaFlowPanel.tsx'), 'utf8')
 
-  // The popup behind `/orbit-workflows`.
+  // The popup behind `/promptaflow-workflows`.
   assert.match(client, /'getPanelState', \[session\.sessionId, false, true\]/)
 
   // Nowhere passes the Session id alone: the two flags after it are the whole
-  // difference between starting Orbit and complaining that it is not up.
-  for (const [source, where] of [[client, 'index.tsx'], [panel, 'OrbitPanel.tsx']]) {
+  // difference between starting PromptaFlow and complaining that it is not up.
+  for (const [source, where] of [[client, 'index.tsx'], [panel, 'PromptaFlowPanel.tsx']]) {
     for (const [call] of source.matchAll(/'getPanelState',\s*\[[^\]]*\]/g)) {
       const args = call.slice(call.indexOf('[') + 1, -1).split(',')
       assert.equal(args.length, 3, `${where}: getPanelState needs all three arguments: ${call}`)
@@ -1263,19 +1263,19 @@ test('every failure this integration can throw is classified', async () => {
   // A start that ran out of time is a failed start, not a generic timeout —
   // and it now carries the Runtime's own last words, which are arbitrary text
   // that must not be matched against anything further down.
-  assert.equal(readingOf('Orbit Runtime auto-start timed out for Workspace /x'), 'errStartFailed')
+  assert.equal(readingOf('PromptaFlow Runtime auto-start timed out for Workspace /x'), 'errStartFailed')
   assert.equal(readingOf(
-    'Orbit Runtime auto-start failed with code 3 for Workspace /x: run not found'), 'errStartFailed')
+    'PromptaFlow Runtime auto-start failed with code 3 for Workspace /x: run not found'), 'errStartFailed')
   // A refusal that carries a 5xx of its own is still a refusal.
-  assert.equal(readingOf('Orbit refused to stop: HTTP 503'), 'errStopRefused')
+  assert.equal(readingOf('PromptaFlow refused to stop: HTTP 503'), 'errStopRefused')
   // Names both a missing Session and a missing folder; the folder is the half
   // a reader can do something about.
   assert.equal(readingOf(
-    'Orbit requires the Harness Session to have a Workspace cwd'), 'errNoWorkspace')
-  assert.equal(readingOf('Orbit requires a live Harness Session'), 'errNoSession')
+    'PromptaFlow requires the Harness Session to have a Workspace cwd'), 'errNoWorkspace')
+  assert.equal(readingOf('PromptaFlow requires a live Harness Session'), 'errNoSession')
   // The thrown text says "advertised"; the reading used to say "advertises".
   assert.equal(readingOf(
-    'Orbit command is no longer advertised at this revision'), 'errRunMoved')
+    'PromptaFlow command is no longer advertised at this revision'), 'errRunMoved')
 
   // Every reading has a sentence in both languages, or it shows a key.
   const locales = await readFile(join(clientDir, 'locales.ts'), 'utf8')
@@ -1303,7 +1303,7 @@ test('every failure this integration can throw is classified', async () => {
  * so a new bordered element has to be placed rather than silently inheriting.
  */
 test('lines are weighted by what they separate', async () => {
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   const rules = css.replace(/\/\*[\s\S]*?\*\//g, '')
   assert.doesNotMatch(rules, /--dsw-alias-line-normal[,)]/,
     '--dsw-alias-line-normal is not a token the shell defines')
@@ -1364,7 +1364,7 @@ test('lines are weighted by what they separate', async () => {
  * fallback has to do when it cannot know which theme it is standing in.
  */
 test('module surfaces name a token that exists, and lift off the page', async () => {
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   const rules = css.replace(/\/\*[\s\S]*?\*\//g, '')
   // `bg-module-platform` starts with `bg-module`, so the bare name is only
   // matched where a `,` or `)` closes it.
@@ -1403,7 +1403,7 @@ test('module surfaces name a token that exists, and lift off the page', async ()
  * nothing in common except the mistake.
  */
 test('no rule names a state token the shell does not define', async () => {
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   // Prose mentions these names to explain them; only declarations count.
   const rules = css.replace(/\/\*[\s\S]*?\*\//g, '')
   for (const name of ['state-success', 'state-danger', 'state-warning']) {
@@ -1434,7 +1434,7 @@ test('no rule names a state token the shell does not define', async () => {
  * even when the shell is not there to answer.
  */
 test('every dot names a token that exists, and falls back to a colour', async () => {
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   const runDots = css.slice(css.indexOf('.live {'), css.indexOf('.goal {'))
   const stepDots = css.slice(css.indexOf('.stepDot_success'), css.indexOf('.attention {'))
   const outcomes = css.slice(css.indexOf('.outcome_done'), css.indexOf('.artifactRow'))
@@ -1495,7 +1495,7 @@ test('every dot names a token that exists, and falls back to a colour', async ()
  * is the intended reading and not a hole.
  */
 test('every step is striped, and the stripe names its kind', async () => {
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   const stripes = css.slice(css.indexOf('.kind_action'), css.indexOf('.defnHead {'))
   // Work, a person, an ending: the three that carry a hue.
   assert.match(stripes, /\.kind_action \{[^}]*--dsw-alias-state-business-primary/)
@@ -1526,7 +1526,7 @@ test('every step is striped, and the stripe names its kind', async () => {
   // The colours only reach a row if the kind reaches the class name. An
   // allow-list here was what dropped `terminal` and `join`: the stylesheet
   // could name every kind and they would still render unstyled.
-  const tsx = await readFile(join(clientDir, 'OrbitWorkflowDetail.tsx'), 'utf8')
+  const tsx = await readFile(join(clientDir, 'PromptaFlowWorkflowDetail.tsx'), 'utf8')
   assert.match(tsx, /styles\[`kind_\$\{step\.kind\}`\]/)
   assert.doesNotMatch(tsx, /ACCENTED/)
 })
@@ -1540,14 +1540,14 @@ test('every step is striped, and the stripe names its kind', async () => {
  * id for whoever wants it.
  */
 test('a History row shows the request, folded at two lines', async () => {
-  const rows = sources[names.indexOf('OrbitRunRow.tsx')]
-  const row = rows.slice(rows.indexOf('export function OrbitRunListRow'))
+  const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
+  const row = rows.slice(rows.indexOf('export function PromptaFlowRunListRow'))
   const body = row.slice(0, row.indexOf('\n}'))
   assert.match(body, /styles\.listPrompt/)
   assert.match(body, /run\.prompt \? /, 'a row is better short than padded with an empty line')
   assert.doesNotMatch(body, /run\.workflow/)
 
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   const rule = css.slice(css.indexOf('.listPrompt {'), css.indexOf('\n}', css.indexOf('.listPrompt {')))
   // Two lines, because a request is often a paragraph and a row that grew with
   // it would push the rest of the list off the page.
@@ -1571,7 +1571,7 @@ test('a History row shows the request, folded at two lines', async () => {
  * the same way, so one arrow means one thing across the panel.
  */
 test('the request unfolds from inside its own card, by an arrow', async () => {
-  const rows = sources[names.indexOf('OrbitRunRow.tsx')]
+  const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
   const fn = rows.slice(rows.indexOf('function FoldedText'))
   const body = fn.slice(0, fn.indexOf('\n}'))
   // The toggle is nested in the card, not a sibling of it.
@@ -1579,7 +1579,7 @@ test('the request unfolds from inside its own card, by an arrow', async () => {
   assert.ok(card > 0 && card < body.indexOf('styles.goalPromptToggle'))
   assert.doesNotMatch(body, /<>/, 'the card replaced the fragment that held them apart')
   assert.match(body, /<IconChevronDownOutline14/)
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   // Points down to open, up to close — the same turn a step disclosure makes.
   assert.match(css, /\.goalPromptChevronOpen \{ transform: rotate\(180deg\)/)
   assert.match(css, /\.stepChevronOpen \{ transform: rotate\(180deg\)/)
@@ -1598,12 +1598,12 @@ test('the request unfolds from inside its own card, by an arrow', async () => {
  * the same gesture meaning two things on one page. They are one widget now.
  */
 test('a step console and a request are the same folded block', async () => {
-  const rows = sources[names.indexOf('OrbitRunRow.tsx')]
+  const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
   assert.match(rows, /<FoldedText t=\{t\} text=\{text\} lines=\{OUTPUT_LINES\}/)
   assert.match(rows, /<FoldedText t=\{t\} text=\{run\.prompt\} lines=\{PROMPT_LINES\}/)
   // One implementation, or the two drift the moment either is restyled.
   assert.equal((rows.match(/function FoldedText/g) ?? []).length, 1)
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   // And the scroll box it replaced is gone, not merely unused.
   assert.equal(css.includes('.output {'), false)
 })
@@ -1617,7 +1617,7 @@ test('a step console and a request are the same folded block', async () => {
  * family — so it follows the theme, which a colour mixed here would not.
  */
 test('a Run\'s controls are highlighted and centred under its request', async () => {
-  const rows = sources[names.indexOf('OrbitRunRow.tsx')]
+  const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
   const fn = rows.slice(rows.indexOf('function RunControls'))
   const body = fn.slice(0, fn.indexOf('\n}'))
   assert.match(body, /styles\.runActions/)
@@ -1627,7 +1627,7 @@ test('a Run\'s controls are highlighted and centred under its request', async ()
   assert.match(cancel, /variant="primary"/)
   assert.doesNotMatch(cancel, /variant="outline"/)
 
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   assert.match(css, /\.runActions \{[^}]*justify-content: center/)
   // The step's own reconciliation buttons keep the left edge they share with
   // that step's text: they answer a question inside a step, not about the Run.
@@ -1644,7 +1644,7 @@ test('a Run\'s controls are highlighted and centred under its request', async ()
  * question was asked. All of that is in the interrupt already.
  */
 test('an approval is two buttons, and anything else still takes an answer', async () => {
-  const rows = sources[names.indexOf('OrbitRunRow.tsx')]
+  const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
   const fn = rows.slice(rows.indexOf('function RunControls'))
   const body = fn.slice(0, fn.indexOf('\n}'))
   // Chosen from what the Run is actually stopped on, not assumed.
@@ -1674,7 +1674,7 @@ test('an approval is two buttons, and anything else still takes an answer', asyn
  * own colour, which is to say no card at all.
  */
 test('a result sits on the same card as every other quoted block', async () => {
-  const css = await readFile(join(clientDir, 'OrbitPanel.module.css'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
   const card = /background: var\(--dsw-alias-bg-module-platform, [^)]*\)[^;]*;/
   for (const rule of ['.result {', '.goalPromptCard {', '.artifactText {']) {
     const block = css.slice(css.indexOf(rule), css.indexOf('\n}', css.indexOf(rule)))

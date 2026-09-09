@@ -13,7 +13,7 @@ node must then resolve to a `BoundHandler` with the exact name, version, and
 manifest fingerprint recorded in the IR.
 
 ```python
-from orbit.workflow.langgraph_runtime import (
+from promptaflow.workflow.langgraph_runtime import (
     BoundHandler,
     LangGraphHandlerRegistry,
     compile_generated_workflow,

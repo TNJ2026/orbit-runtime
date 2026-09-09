@@ -125,24 +125,13 @@ class WorkflowCliTests(unittest.TestCase):
             output = self.run_cli("serve", "--project-root", str(workspace))
 
         gate.assert_called_once_with(
-            None, acknowledged=False, project_root=workspace.resolve(),
+            None, project_root=workspace.resolve(),
         )
         register.assert_called_once_with(
             "http://127.0.0.1:8848", workspace.resolve(),
         )
         self.assertIn("Hub already running", output)
         self.assertIn(registration["ui_url"], output)
-
-    def test_an_old_hub_child_launch_is_translated_to_the_internal_runtime(self) -> None:
-        with (
-            patch.dict("os.environ", {"ORBIT_HUB_CHILD": "1"}),
-            patch("sys.argv", ["promptaflow", "serve", "--port", "0"]),
-            patch("promptaflow.__main__._serve_runtime") as serve_runtime,
-        ):
-            main()
-
-        self.assertEqual("_runtime", serve_runtime.call_args.args[0].command)
-        self.assertEqual(0, serve_runtime.call_args.args[0].port)
 
     def test_existing_hub_registration_uses_its_internal_route_then_starts_ui(self) -> None:
         from promptaflow.__main__ import _register_running_hub
@@ -275,7 +264,7 @@ class WorkflowCliTests(unittest.TestCase):
 
         # An explicit --db is self-contained, in every command alike. A
         # sibling file only this command knew about is what made a Workflow
-        # published with `orbit workflow publish --db X` invisible in the UI
+        # published with `promptaflow workflow publish --db X` invisible in the UI
         # served from the same X.
         self.assertEqual(
             self.db, create_app.call_args.kwargs["workflow_db_path"],
@@ -571,9 +560,9 @@ class WorkflowLibraryResolutionTests(unittest.TestCase):
                 self.assertFalse(hasattr(self.parse(*command), "ui_mode"))
 
     def test_mcp_accepts_an_explicit_project_root(self) -> None:
-        args = self.parse("mcp", "--project-root", "/tmp/orbit-workspace")
+        args = self.parse("mcp", "--project-root", "/tmp/promptaflow-workspace")
 
-        self.assertEqual("/tmp/orbit-workspace", args.project_root)
+        self.assertEqual("/tmp/promptaflow-workspace", args.project_root)
 
     def test_workflow_commands_accept_a_workspace_but_use_the_shared_catalog(self) -> None:
         """The Workspace selects runtime state, never a private definition DB."""

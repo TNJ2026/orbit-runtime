@@ -362,7 +362,7 @@ class VisualCaptureCase(unittest.TestCase):
                 )
             if url.startswith("http"):
                 context.add_init_script(
-                    f"localStorage.setItem('orbit.theme', {json.dumps(theme)})"
+                    f"localStorage.setItem('promptaflow.theme', {json.dumps(theme)})"
                 )
             page = context.new_page()
             page.goto(url)

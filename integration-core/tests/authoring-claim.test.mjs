@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 
 import {
   CLAIM_CLIENT, CLAIM_RETRY_MS, CLAIM_WAIT_SECONDS, answerFrom,
-  authoringClientForSession, claimOnce, isUnknownToolError,
+  authoringClientForSession, claimOnce,
 } from '../lib/authoring-claim.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -26,32 +26,17 @@ function deps(over = {}) {
   }, seen]
 }
 
-test('the name and the wait are the ones Orbit offers this Host under', () => {
+test('the name and the wait are the ones PromptaFlow offers this Host under', () => {
   assert.equal(CLAIM_CLIENT, 'harness')
   assert.ok(CLAIM_WAIT_SECONDS >= 30, 'waiting is the point; a short poll is just asking again')
 })
 
-test('each Harness Session has a stable private Orbit writer address', () => {
+test('each Harness Session has a stable private PromptaFlow writer address', () => {
   const first = authoringClientForSession('session:first/unsafe')
   assert.equal(first, authoringClientForSession('session:first/unsafe'))
   assert.notEqual(first, authoringClientForSession('session:second/unsafe'))
   assert.match(first, /^route\.harness\.[a-f0-9]{24}$/)
   assert.ok(first.length <= 64)
-})
-
-test('only the named missing compatibility tool is ignored', () => {
-  assert.equal(isUnknownToolError(
-    new Error('Error: unknown tool register_authoring_client'),
-    'register_authoring_client',
-  ), true)
-  assert.equal(isUnknownToolError(
-    new Error('not authorized to call register_authoring_client'),
-    'register_authoring_client',
-  ), false)
-  assert.equal(isUnknownToolError(
-    new Error('unknown tool generate_workflow'),
-    'register_authoring_client',
-  ), false)
 })
 
 /**
@@ -68,7 +53,7 @@ test('a wait never outlasts the transport that carries it', () => {
   // Read out of the Gateway rather than imported: this module is loaded as
   // source, and a value import would have to resolve out of it. The number is
   // what matters, and reading it is what stops the two from drifting apart.
-  const found = /export const ORBIT_RPC_TIMEOUT_MS = ([0-9_]+)/.exec(gateway)
+  const found = /export const PROMPTAFLOW_RPC_TIMEOUT_MS = ([0-9_]+)/.exec(gateway)
   assert.ok(found, 'the Gateway no longer names its RPC ceiling')
   const ceiling = Number(found[1].replaceAll('_', ''))
   assert.ok(CLAIM_WAIT_SECONDS * 1_000 < ceiling,
@@ -76,7 +61,7 @@ test('a wait never outlasts the transport that carries it', () => {
   // With room either side for the round trip, not scraping the ceiling.
   assert.ok(CLAIM_WAIT_SECONDS * 1_000 <= ceiling - 10_000)
   // And the Gateway must still be the thing that enforces it.
-  assert.match(gateway, /controller\.abort\(\), ORBIT_RPC_TIMEOUT_MS/)
+  assert.match(gateway, /controller\.abort\(\), PROMPTAFLOW_RPC_TIMEOUT_MS/)
 })
 
 test('backing off from a broken Runtime is not the same clock as waiting', () => {
@@ -101,8 +86,8 @@ test('an expired wait is the queue working, not a failure', async () => {
   assert.deepEqual(seen.reported, [])
 })
 
-test('whatever the model says is submitted; Orbit owns the judging', async () => {
-  // A chatty answer costs a round — Orbit compiles it and re-issues the
+test('whatever the model says is submitted; PromptaFlow owns the judging', async () => {
+  // A chatty answer costs a round — PromptaFlow compiles it and re-issues the
   // request with the compiler's findings. Judging it here would be a second,
   // worse copy of that validator.
   const [d, seen] = deps({ ask: async () => 'Sure! Here you go:\n```json\n{}\n```' })
@@ -162,7 +147,7 @@ test('thinking and tool calls are not the answer', () => {
     text('{"dsl_version":"1.3"}'),
   )]
   assert.equal(answerFrom(events, 0), '{"dsl_version":"1.3"}',
-    'handing Orbit the working-out wrapped around the document would fail to compile')
+    'handing PromptaFlow the working-out wrapped around the document would fail to compile')
 })
 
 test('a turn that produced no text reads as no answer', () => {

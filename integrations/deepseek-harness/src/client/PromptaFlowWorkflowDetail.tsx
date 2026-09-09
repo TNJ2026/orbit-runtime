@@ -3,13 +3,13 @@
 
 import { useEffect, useState } from 'react'
 import { panelError, type PanelError } from '@promptaflow/integration-core'
-import type { OrbitRunRow as RunRowData, WorkflowNode, WorkflowSummary } from '@promptaflow/integration-core'
-import styles from './OrbitPanel.module.css'
-import { BackButton, OrbitRunListRow, PanelErrorText } from './OrbitRunRow.tsx'
-import { OrbitWorkflowGraph, type WorkflowGraph } from './OrbitWorkflowGraph.tsx'
-import type { OrbitLocaleKey } from './locales.ts'
+import type { PromptaFlowRunRow as RunRowData, WorkflowNode, WorkflowSummary } from '@promptaflow/integration-core'
+import styles from './PromptaFlowPanel.module.css'
+import { BackButton, PromptaFlowRunListRow, PanelErrorText } from './PromptaFlowRunRow.tsx'
+import { PromptaFlowWorkflowGraph, type WorkflowGraph } from './PromptaFlowWorkflowGraph.tsx'
+import type { PromptaFlowLocaleKey } from './locales.ts'
 
-type Translate = (key: OrbitLocaleKey, values?: Record<string, string | number>) => string
+type Translate = (key: PromptaFlowLocaleKey, values?: Record<string, string | number>) => string
 type HostCall = <T>(action: string, args: unknown[], signal: AbortSignal) => Promise<T>
 
 /** The kinds that carry work, and so are the ones a missing prompt is news about. */
@@ -43,7 +43,7 @@ function StepRow({ t, step }: { t: Translate; step: WorkflowNode }) {
   )
 }
 
-export interface OrbitWorkflowDetailProps {
+export interface PromptaFlowWorkflowDetailProps {
   call: HostCall
   t: Translate
   sessionId: string
@@ -57,8 +57,8 @@ export interface OrbitWorkflowDetailProps {
   onOpenRun: (runId: string) => void
 }
 
-export function OrbitWorkflowDetail(
-  { call, t, sessionId, workflow, runs, onBack, onNewGoal, onModify, onDelete, onOpenRun }: OrbitWorkflowDetailProps,
+export function PromptaFlowWorkflowDetail(
+  { call, t, sessionId, workflow, runs, onBack, onNewGoal, onModify, onDelete, onOpenRun }: PromptaFlowWorkflowDetailProps,
 ) {
   const ran = runs.filter(run => run.workflow.startsWith(`${workflow.workflow_id}@`))
   const [steps, setSteps] = useState<readonly WorkflowNode[] | null>(null)
@@ -110,7 +110,7 @@ export function OrbitWorkflowDetail(
         </div>
         {view === 'graph'
           ? graph?.nodes?.length
-            ? <OrbitWorkflowGraph graph={graph} />
+            ? <PromptaFlowWorkflowGraph graph={graph} />
             : <p className={styles.empty}>{t('noWorkflowGraph')}</p>
           : <div className={styles.workflowDefinitionPanel}>{steps.map(step => <StepRow key={step.node_id} t={t} step={step} />)}</div>}
       </> : null}
@@ -150,7 +150,7 @@ export function OrbitWorkflowDetail(
       <div className={styles.sectionLabel}>{t('factRuns', { total: ran.length })}</div>
       {ran.length
         ? ran.map(run => (
-          <OrbitRunListRow key={run.runId} t={t} run={run} onOpen={() => onOpenRun(run.runId)} />
+          <PromptaFlowRunListRow key={run.runId} t={t} run={run} onOpen={() => onOpenRun(run.runId)} />
         ))
         : <p className={styles.empty}>{t('neverRun')}</p>}
     </div>

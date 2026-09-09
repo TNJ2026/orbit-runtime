@@ -11,7 +11,6 @@ from .projects import (
     DEFAULT_STATE_ROOT,
     DEFAULT_WORKFLOW_LIBRARY_PATH,
     RUNTIME_DB_NAME,
-    legacy_database_candidates,
     list_projects,
     project_db_path,
     public_workflow_db_path,
@@ -21,7 +20,6 @@ from .projects import (
     resolve_project_root,
     server_url,
     upsert_project,
-    warn_about_legacy_database,
 )
 from .runtime_ownership import RuntimeOwnership, RuntimeOwnershipError
 
@@ -30,7 +28,6 @@ __all__ = [
     "DEFAULT_STATE_ROOT",
     "DEFAULT_WORKFLOW_LIBRARY_PATH",
     "RUNTIME_DB_NAME",
-    "legacy_database_candidates",
     "list_projects",
     "project_db_path",
     "public_workflow_db_path",
@@ -40,7 +37,6 @@ __all__ = [
     "resolve_project_root",
     "server_url",
     "upsert_project",
-    "warn_about_legacy_database",
     "RuntimeOwnership",
     "RuntimeOwnershipError",
 ]

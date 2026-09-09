@@ -1,13 +1,13 @@
-import type { OrbitSessionEvent, RuntimeEventPage, StepSummary, WorkspaceRef } from './types.js'
+import type { PromptaFlowSessionEvent, RuntimeEventPage, StepSummary, WorkspaceRef } from './types.js'
 import { RUN_EVENT_TYPES } from './types.js'
-import { OrbitGateway } from './gateway.js'
+import { PromptaFlowGateway } from './gateway.js'
 
-export interface OrbitEventSink { append(event: OrbitSessionEvent): void | Promise<void> }
-export interface OrbitCursorStore { load(workspaceId: string, sessionId: string): number | undefined | Promise<number | undefined>; save(workspaceId: string, sessionId: string, position: number): void | Promise<void> }
+export interface PromptaFlowEventSink { append(event: PromptaFlowSessionEvent): void | Promise<void> }
+export interface PromptaFlowCursorStore { load(workspaceId: string, sessionId: string): number | undefined | Promise<number | undefined>; save(workspaceId: string, sessionId: string, position: number): void | Promise<void> }
 
-export interface StoredOrbitEvent { type: string; data: unknown }
+export interface StoredPromptaFlowEvent { type: string; data: unknown }
 
-export function restoredBridgeState(events: readonly StoredOrbitEvent[]): { position: number; knownRuns: Set<string> } {
+export function restoredBridgeState(events: readonly StoredPromptaFlowEvent[]): { position: number; knownRuns: Set<string> } {
   const prior = events.flatMap(event => {
     if (!RUN_EVENT_TYPES.includes(event.type)) return []
     if (event.data === null || typeof event.data !== 'object' || Array.isArray(event.data)) return []
@@ -34,7 +34,7 @@ export interface BridgeRetryOptions {
    * is durably recorded here, and that record is the only thing standing
    * between a transient failure and a second announcement of the same Run.
    */
-  events: () => readonly StoredOrbitEvent[]
+  events: () => readonly StoredPromptaFlowEvent[]
   attempt: (knownRuns: Set<string>) => Promise<void>
   onWaiting: (message: string) => void
   signal: AbortSignal
@@ -67,10 +67,10 @@ export async function bridgeWithRetry(options: BridgeRetryOptions): Promise<void
 
 const TERMINAL = new Set(['completed', 'failed', 'cancelled', 'unknown'])
 
-export class OrbitSessionBridge {
-  constructor(private readonly gateway: OrbitGateway, private readonly cursor: OrbitCursorStore, private readonly intervalMs = 500) {}
+export class PromptaFlowSessionBridge {
+  constructor(private readonly gateway: PromptaFlowGateway, private readonly cursor: PromptaFlowCursorStore, private readonly intervalMs = 500) {}
 
-  async run(workspace: WorkspaceRef, sessionId: string, sink: OrbitEventSink, signal: AbortSignal, knownRuns: Iterable<string> = []): Promise<void> {
+  async run(workspace: WorkspaceRef, sessionId: string, sink: PromptaFlowEventSink, signal: AbortSignal, knownRuns: Iterable<string> = []): Promise<void> {
     const release = await this.gateway.acquire(workspace)
     try {
       const known = new Set(knownRuns)

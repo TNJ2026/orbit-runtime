@@ -10,7 +10,7 @@ const bundle = resolve(here, '..')
 const installSpec = process.env.DSH_BUNDLE_SPEC || bundle
 const dsh = process.env.DSH_BIN || (process.platform === 'win32' ? 'dsh.cmd' : 'dsh')
 const dshPrefix = process.env.DSH_BIN_ARGS ? JSON.parse(process.env.DSH_BIN_ARGS) : []
-const home = await mkdtemp(resolve(tmpdir(), 'orbit-dsh-profile-'))
+const home = await mkdtemp(resolve(tmpdir(), 'promptaflow-dsh-profile-'))
 const environment = { ...process.env, DSH_HOME: home }
 let web
 

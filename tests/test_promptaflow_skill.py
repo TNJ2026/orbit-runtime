@@ -133,11 +133,21 @@ class PromptaflowSkillCardRoutingTests(unittest.TestCase):
             "PromptaFlow goal execution", "PromptaFlow goals", "Codex", "DeepSeek Harness",
             "WorkBuddy", "open_promptaflow_dashboard", "open_promptaflow_goals",
             "generate_workflow", "start_run", "/promptaflow", "/promptaflow-workflows",
-            "orbit_list_workflows", "orbit_start_run", "list_workspaces",
+            "promptaflow_list_workflows", "promptaflow_start_run", "list_workspaces",
             "select_workspace", "Copyable Chinese prompt",
         ):
             self.assertIn(marker, guide)
         self.assertIn("renders **no PromptaFlow MCP App cards**", guide)
+
+    def test_workbuddy_registration_names_follow_the_connector_name(self) -> None:
+        for path in (
+            ROOT / "reference" / "hosts.md",
+            ROOT / "reference" / "post-install-usage.md",
+            ROOT / "reference" / "using-from-other-agent-apps.md",
+        ):
+            text = path.read_text(encoding="utf-8")
+            self.assertIn("promptaflow", text)
+            self.assertIn("workbuddy-third-party:custom-mcp:promptaflow", text)
 
 
 if __name__ == "__main__":

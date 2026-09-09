@@ -8,7 +8,7 @@ from typing import Any, Mapping
 from ..domain.serialization import freeze_json
 
 
-DSL_SCHEMA_ID = "orbit://workflow/dsl/1.3"
+DSL_SCHEMA_ID = "promptaflow://workflow/dsl/1.3"
 # Public because a generator that asks a model for an id has to state the
 # grammar it will be validated against; two copies of it would drift.
 ID_PATTERN = r"^[a-zA-Z][a-zA-Z0-9_.-]{0,127}$"

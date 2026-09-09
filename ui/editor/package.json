@@ -1,5 +1,5 @@
 {
-  "name": "orbit-workflow-viewer",
+  "name": "promptaflow-workflow-viewer",
   "private": true,
   "type": "module",
   "scripts": {

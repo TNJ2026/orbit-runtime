@@ -5,7 +5,7 @@
 | | |
 | --- | --- |
 | 接入方式 | 自定义连接器，HTTP 直连 Hub |
-| 注册名 | `orbit`，以及 `workbuddy-third-party:custom-mcp:orbit` |
+| 注册名 | `promptaflow`，以及 `workbuddy-third-party:custom-mcp:promptaflow` |
 | 是否绘制 PromptaFlow 卡片 | 是 |
 | 事件工具 | Runtime 的 `list_runtime_events` |
 
@@ -70,7 +70,7 @@ promptaflow runtimes --json
 
 | 字段 | 值 |
 | --- | --- |
-| 名称 | `PromptaFlow` |
+| 名称 | `promptaflow` |
 | MCP URL | `http://127.0.0.1:8848/mcp` |
 | 传输方式 | Streamable HTTP |
 | 认证 | 无 |
@@ -80,7 +80,7 @@ promptaflow runtimes --json
 
 ### 5. 验证连接
 
-1. 确认 WorkBuddy 显示 `PromptaFlow` 连接器提供的工具。
+1. 确认 WorkBuddy 显示 `promptaflow` 连接器提供的工具。
 2. 让它调用 `list_workspaces`。
 3. 如果返回多个 Workspace，用 `select_workspace` 选择目标项；绝不要猜路径。
 4. 让它显示 PromptaFlow 工作流或打开 PromptaFlow，确认卡片能够渲染。
@@ -120,8 +120,8 @@ WorkBuddy 会挂载 PromptaFlow 的卡片，而**每张挂载的卡片都会开�
 
 ## 为什么它有两个名字
 
-WorkBuddy 从连接器设置里自报 `workbuddy-third-party:custom-mcp:orbit`，而连接器被加载进
-某个 agent 之后自报的是朴素的 `orbit`，所以同一个 App 会因为「是它自己的哪条路径发起的调用」
+WorkBuddy 从连接器设置里自报 `workbuddy-third-party:custom-mcp:promptaflow`，而连接器被加载进
+某个 agent 之后自报的是朴素的 `promptaflow`，所以同一个 App 会因为「是它自己的哪条路径发起的调用」
 而以两个名字出现。两个都不遮蔽已发现的 CLI，所以两个都不会被拒 —— 这正是 `-app` 后缀存在
 的那条规则，而 WorkBuddy 是那个说明「规则是关于 Agent 而不是关于整洁」的例外。
 
@@ -161,7 +161,7 @@ WorkBuddy 从 MCP 服务器的初始化指令里收到这条规则：第一个�
 
 ## 示例：生成专家的提示词
 
-`PromptaFlow` 连接器验证可用后，把下面的范文交给 WorkBuddy，即可生成一个可复用的专家，不必在
+`promptaflow` 连接器验证可用后，把下面的范文交给 WorkBuddy，即可生成一个可复用的专家，不必在
 每次对话中重复编排规则：
 
 ```text

@@ -102,7 +102,7 @@ class WorkspaceRegistryTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            with mock.patch.dict(os.environ, {"ORBIT_HUB_ROOT": str(root)}):
+            with mock.patch.dict(os.environ, {"PROMPTAFLOW_HUB_ROOT": str(root)}):
                 self.assertEqual(root / "workspaces.json", WorkspaceRegistry().path)
             self.assertNotEqual(root / "workspaces.json", WorkspaceRegistry().path)
 
@@ -311,7 +311,7 @@ class ProjectAccessGrantTests(unittest.TestCase):
                 env={
                     "PYTHONPATH": str(repository / "src"),
                     "PATH": "/usr/bin:/bin",
-                    "ORBIT_HUB_ROOT": str(hub_root),
+                    "PROMPTAFLOW_HUB_ROOT": str(hub_root),
                 },
             )
             self.assertEqual(0, result.returncode, result.stderr)
@@ -657,7 +657,7 @@ class HubHttpTests(unittest.TestCase):
             def list(self):
                 return [{
                     "workspace_id": "project-a", "name": "PromptaFlow Project",
-                    "path": "/projects/orbit", "kind": "registered",
+                    "path": "/projects/promptaflow", "kind": "registered",
                 }]
 
             def select(self, **selection):

@@ -308,7 +308,7 @@ class OccupancyRegressions(unittest.TestCase):
 class FileBackupRegressions(unittest.TestCase):
     def points(self, root):
         (root / "data").write_bytes(b"original\x00")
-        return FileBackupRecoveryPoints(root, root / ".orbit", min_free_bytes=0)
+        return FileBackupRecoveryPoints(root, root / ".promptaflow", min_free_bytes=0)
 
     def test_protect_matching_nothing_at_all_refuses(self):
         with tempfile.TemporaryDirectory() as tmp:

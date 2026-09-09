@@ -1,20 +1,9 @@
-"""M1A: project discovery, runtime database paths and the legacy sentinel.
-
-Replaces `tests/test_project_index.py` (disposition: rewrite @ M1A) and pins
-the migration rules that the plan's M1A gate calls out:
-
-* a fresh project only ever produces `runtime.db`;
-* a pre-migration database triggers exactly one warning and is never opened;
-* `orbit serve`, `orbit workflow publish` and `orbit db check` agree on the
-  default path.
-"""
+"""Project discovery, runtime database paths and project indexing."""
 
 from __future__ import annotations
 
-import builtins
 import json
 from pathlib import Path
-import sqlite3
 import tempfile
 import unittest
 from unittest import mock
@@ -49,16 +38,7 @@ class ProjectResolutionTests(unittest.TestCase):
             self.root / ".promptaflow", projects.project_state_dir(self.root),
         )
 
-    def test_an_existing_orbit_state_dir_is_kept_rather_than_renamed(self) -> None:
-        """A directory inside the user's repository is read, never moved."""
-
-        (self.root / ".orbit").mkdir()
-        self.assertEqual(
-            self.root / ".orbit", projects.project_state_dir(self.root),
-        )
-
-    def test_the_current_name_wins_when_both_are_present(self) -> None:
-        (self.root / ".orbit").mkdir()
+    def test_an_existing_promptaflow_state_dir_is_used(self) -> None:
         (self.root / ".promptaflow").mkdir()
         self.assertEqual(
             self.root / ".promptaflow", projects.project_state_dir(self.root),
@@ -102,76 +82,6 @@ class RuntimeDatabasePathTests(unittest.TestCase):
             projects.project_db_path(self.root, base_dir=self.state),
             projects.project_db_path(self.root, base_dir=self.state),
         )
-
-    def setUp(self) -> None:
-        self.temp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
-        self.root = Path(self.temp.name).resolve()
-        (self.root / "pyproject.toml").write_text("[project]\n", encoding="utf-8")
-        self.state = self.root / "state"
-        self.legacy = (
-            projects.project_db_dir(self.root, base_dir=self.state) / "messages.db"
-        )
-
-    def tearDown(self) -> None:
-        self.temp.cleanup()
-
-    def _create_legacy_database(self) -> None:
-        self.legacy.parent.mkdir(parents=True, exist_ok=True)
-        connection = sqlite3.connect(self.legacy)
-        connection.execute("CREATE TABLE tasks (id INTEGER PRIMARY KEY)")
-        connection.commit()
-        connection.close()
-
-    def test_silent_when_no_legacy_database_exists(self) -> None:
-        messages: list[str] = []
-        warned = projects.warn_about_legacy_database(
-            self.root, base_dir=self.state, emit=messages.append
-        )
-        self.assertFalse(warned)
-        self.assertEqual([], messages)
-
-    def test_warns_once_and_refuses_to_import(self) -> None:
-        self._create_legacy_database()
-        messages: list[str] = []
-        warned = projects.warn_about_legacy_database(
-            self.root, base_dir=self.state, emit=messages.append
-        )
-        self.assertTrue(warned)
-        self.assertEqual(1, len(messages))
-        text = messages[0]
-        self.assertIn(str(self.legacy), text)
-        self.assertIn("NOT imported", text)
-        # An import/copy hint would resurrect the dual-state problem the
-        # cutover exists to remove.
-        for forbidden in ("--db", "cp ", "import it", "migrate it"):
-            self.assertNotIn(forbidden, text)
-
-    def test_warning_path_never_opens_the_database(self) -> None:
-        self._create_legacy_database()
-        opened: list[object] = []
-        real_open = builtins.open
-
-        def tracking_open(*args, **kwargs):
-            opened.append(args[0] if args else None)
-            return real_open(*args, **kwargs)
-
-        with mock.patch("sqlite3.connect", side_effect=AssertionError("opened db")):
-            with mock.patch.object(builtins, "open", tracking_open):
-                projects.warn_about_legacy_database(
-                    self.root, base_dir=self.state, emit=lambda _: None
-                )
-        self.assertNotIn(self.legacy, [Path(item) for item in opened if item])
-
-    def test_candidates_report_only_existing_paths(self) -> None:
-        self.assertEqual(
-            (), projects.legacy_database_candidates(self.root, base_dir=self.state)
-        )
-        self._create_legacy_database()
-        self.assertEqual(
-            (self.legacy,),
-            projects.legacy_database_candidates(self.root, base_dir=self.state),
-        )
-
 
 class ProjectIndexTests(unittest.TestCase):
     def setUp(self) -> None:

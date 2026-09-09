@@ -13,7 +13,7 @@ tool opens each, is in [the cards](../cards.md).
 | Host | How it reaches PromptaFlow | Registers as | Draws the card |
 | --- | --- | --- | --- |
 | [Codex app](./codex-app.md) | bundled plugin, stdio proxy → Hub | `codex-app` | yes |
-| [WorkBuddy](./workbuddy.md) | custom connector, HTTP straight at the Hub | `orbit`, and `workbuddy-third-party:custom-mcp:orbit` | yes |
+| [WorkBuddy](./workbuddy.md) | custom connector, HTTP straight at the Hub | `promptaflow`, and `workbuddy-third-party:custom-mcp:promptaflow` | yes |
 | [DeepSeek Harness](./deepseek-harness.md) | Host Profile Bundle with its own Gateway and panel | per-Session `harness:session:*` actor | its own panel |
 | [Any other MCP App](./other-apps.md) | stdio proxy | its own stable name | host-dependent |
 

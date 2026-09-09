@@ -13,7 +13,7 @@ from .schemas import SchemaValidationError
 from .serialization import freeze_json, to_primitive
 
 
-IR_SCHEMA_ID = "orbit://workflow/ir/1.3"
+IR_SCHEMA_ID = "promptaflow://workflow/ir/1.3"
 
 
 def _array(ref: str) -> dict[str, Any]:

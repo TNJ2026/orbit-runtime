@@ -23,19 +23,13 @@ export function authoringClientForSession(sessionId: string): string {
   return `route.${CLAIM_CLIENT}.${digest}`
 }
 
-/** Whether an older Runtime is specifically missing one optional MCP tool. */
-export function isUnknownToolError(error: unknown, tool: string): boolean {
-  const escaped = tool.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return new RegExp(`unknown tool[ "']*${escaped}(?:[ "']|$)`, 'iu').test(String(error))
-}
-
 /**
  * How long one wait parks for.
  *
  * Long, because waiting is the point: the queue wakes it the moment work
  * arrives, and a short poll only means asking more often for the same silence.
  * But bounded by the transport, which gives up on any call at
- * `ORBIT_RPC_TIMEOUT_MS` in `gateway.ts` — a wait that outlasts it is not a
+ * `PROMPTAFLOW_RPC_TIMEOUT_MS` in `gateway.ts` — a wait that outlasts it is not a
  * longer wait, it is an aborted request that takes this Host off the queue and
  * reports a timeout of its own making. The margin is for the round trip either
  * side of the park.

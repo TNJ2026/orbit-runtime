@@ -1073,7 +1073,7 @@ class WorkflowAuthoringService:
                 ),
                 "asking_for_it": (
                     "End the node's config.prompt with: 'If you completed the "
-                    "task, print ORBIT_TASK_OK on its own line at the very "
+                    "task, print PROMPTAFLOW_TASK_OK on its own line at the very "
                     "end. If anything blocked you, do not print it — say what "
                     "blocked you instead.'"
                 ),
@@ -1083,7 +1083,7 @@ class WorkflowAuthoringService:
                         {"op": "call", "name": "exists",
                          "args": [{"op": "ref", "path": "source.<port>.text"}]},
                         {"op": "in",
-                         "left": {"op": "literal", "value": "ORBIT_TASK_OK"},
+                         "left": {"op": "literal", "value": "PROMPTAFLOW_TASK_OK"},
                          "right": {"op": "ref", "path": "source.<port>.text"}},
                     ],
                 },

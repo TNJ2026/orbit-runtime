@@ -1648,7 +1648,7 @@ class WorkflowDraftApiTests(ApiTestCase):
                 time.sleep(0.01)
 
         self.assertTrue(prompts)
-        self.assertNotIn("ORBIT_SINGLE_AGENT", prompts[0])
+        self.assertNotIn("PROMPTAFLOW_SINGLE_AGENT", prompts[0])
         self.assertIn("use several specialist agents", prompts[0])
 
     def test_authoring_job_keeps_the_agent_cli_console(self) -> None:

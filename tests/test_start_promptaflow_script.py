@@ -17,17 +17,17 @@ class StartPromptaflowScriptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture = root / "arguments.txt"
-            fake_orbit = root / "promptaflow"
-            fake_orbit.write_text(
-                "#!/bin/sh\nprintf '%s\\n' \"$@\" >> \"$ORBIT_TEST_CAPTURE\"\n"
-                "printf '%s\\n' '---' >> \"$ORBIT_TEST_CAPTURE\"\n",
+            fake_promptaflow = root / "promptaflow"
+            fake_promptaflow.write_text(
+                "#!/bin/sh\nprintf '%s\\n' \"$@\" >> \"$PROMPTAFLOW_TEST_CAPTURE\"\n"
+                "printf '%s\\n' '---' >> \"$PROMPTAFLOW_TEST_CAPTURE\"\n",
                 encoding="utf-8",
             )
-            fake_orbit.chmod(0o755)
+            fake_promptaflow.chmod(0o755)
             environment = {
                 **os.environ,
-                "PROMPTAFLOW_CLI": str(fake_orbit),
-                "ORBIT_TEST_CAPTURE": str(capture),
+                "PROMPTAFLOW_CLI": str(fake_promptaflow),
+                "PROMPTAFLOW_TEST_CAPTURE": str(capture),
             }
             environment.pop("PROMPTAFLOW_AGENT_APP_WORKSPACE", None)
 
@@ -54,16 +54,16 @@ class StartPromptaflowScriptTests(unittest.TestCase):
             workspace = root / "workspace"
             workspace.mkdir()
             capture = root / "arguments.txt"
-            fake_orbit = root / "promptaflow"
-            fake_orbit.write_text(
-                "#!/bin/sh\nprintf '%s\\n' \"$@\" >> \"$ORBIT_TEST_CAPTURE\"\nprintf '%s\\n' '---' >> \"$ORBIT_TEST_CAPTURE\"\n",
+            fake_promptaflow = root / "promptaflow"
+            fake_promptaflow.write_text(
+                "#!/bin/sh\nprintf '%s\\n' \"$@\" >> \"$PROMPTAFLOW_TEST_CAPTURE\"\nprintf '%s\\n' '---' >> \"$PROMPTAFLOW_TEST_CAPTURE\"\n",
                 encoding="utf-8",
             )
-            fake_orbit.chmod(0o755)
+            fake_promptaflow.chmod(0o755)
             environment = {
                 **os.environ,
-                "PROMPTAFLOW_CLI": str(fake_orbit),
-                "ORBIT_TEST_CAPTURE": str(capture),
+                "PROMPTAFLOW_CLI": str(fake_promptaflow),
+                "PROMPTAFLOW_TEST_CAPTURE": str(capture),
             }
             environment.pop("PROMPTAFLOW_AGENT_APP_WORKSPACE", None)
 
@@ -90,7 +90,7 @@ class StartPromptaflowScriptTests(unittest.TestCase):
 
     def test_nonexistent_project_path_fails_before_starting_uv(self):
         result = subprocess.run(
-            ["bash", str(SCRIPT), "/definitely/missing/orbit-project"],
+            ["bash", str(SCRIPT), "/definitely/missing/promptaflow-project"],
             cwd=ROOT,
             text=True,
             capture_output=True,
@@ -115,22 +115,22 @@ class StartPromptaflowScriptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture = root / "arguments.txt"
-            fake_orbit = root / "promptaflow"
-            fake_orbit.write_text(
-                "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$ORBIT_TEST_CAPTURE\"\n"
-                "printf '%s\\n' \"$ORBIT_SOURCE_ROOT\" > \"$ORBIT_TEST_ROOT_CAPTURE\"\n",
+            fake_promptaflow = root / "promptaflow"
+            fake_promptaflow.write_text(
+                "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$PROMPTAFLOW_TEST_CAPTURE\"\n"
+                "printf '%s\\n' \"$PROMPTAFLOW_SOURCE_ROOT\" > \"$PROMPTAFLOW_TEST_ROOT_CAPTURE\"\n",
                 encoding="utf-8",
             )
-            fake_orbit.chmod(0o755)
+            fake_promptaflow.chmod(0o755)
             root_capture = root / "source-root.txt"
 
             result = subprocess.run(
                 ["bash", str(SCRIPT), "--hub-service"], cwd=ROOT,
                 env={
                     **os.environ,
-                    "PROMPTAFLOW_CLI": str(fake_orbit),
-                    "ORBIT_TEST_CAPTURE": str(capture),
-                    "ORBIT_TEST_ROOT_CAPTURE": str(root_capture),
+                    "PROMPTAFLOW_CLI": str(fake_promptaflow),
+                    "PROMPTAFLOW_TEST_CAPTURE": str(capture),
+                    "PROMPTAFLOW_TEST_ROOT_CAPTURE": str(root_capture),
                 },
                 text=True, capture_output=True, check=False,
             )

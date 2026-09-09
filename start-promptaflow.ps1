@@ -18,15 +18,9 @@ $ErrorActionPreference = "Stop"
 
 $promptaflowSourceRoot = [System.IO.Path]::GetFullPath($PSScriptRoot)
 $env:PROMPTAFLOW_SOURCE_ROOT = $promptaflowSourceRoot
-# Both names, matching the POSIX launcher: a Runtime from before the rename
-# reads the old one.
-$env:ORBIT_SOURCE_ROOT = $promptaflowSourceRoot
 
 function Resolve-PromptaflowCommand {
-    # `ORBIT_CLI` is what an Agent App manifest written before the rename
-    # still exports; the new name wins when both are set.
     $cli = $env:PROMPTAFLOW_CLI
-    if (-not $cli) { $cli = $env:ORBIT_CLI }
     if ($cli) {
         $explicit = Get-Command -Name $cli -ErrorAction SilentlyContinue
         if ($null -eq $explicit) {
@@ -129,7 +123,7 @@ try {
         # Explicit rather than `??`: the .cmd wrapper launches Windows
         # PowerShell 5.1, which fails to parse that operator at all.
         $workspaceInput = $env:PROMPTAFLOW_AGENT_APP_WORKSPACE
-        if (-not $workspaceInput) { $workspaceInput = $env:ORBIT_AGENT_APP_WORKSPACE }
+        if (-not $workspaceInput) { $workspaceInput = $env:PROMPTAFLOW_AGENT_APP_WORKSPACE }
         if ($workspaceInput) {
             $workspace = (Resolve-Path -LiteralPath $workspaceInput).Path
             $arguments += @("--workspace", $workspace)

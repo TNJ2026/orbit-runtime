@@ -266,7 +266,7 @@ def start_execution_worker(
             tuple(registrations), str(state / "langgraph-runs.sqlite3"),
             str(state / "artifacts"), dict(secret_values or {}), authkey, child,
         ),
-        name="orbit-execution-worker",
+        name="promptaflow-execution-worker",
         daemon=True,
     )
     process.start()

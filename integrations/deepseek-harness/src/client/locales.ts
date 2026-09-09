@@ -1,6 +1,6 @@
 /** Panel copy, registered with the Harness locale service. */
 
-export const ORBIT_LOCALE_NAMESPACE = 'promptaflow'
+export const PROMPTAFLOW_LOCALE_NAMESPACE = 'promptaflow'
 
 export const en = {
   title: 'PromptaFlow',
@@ -42,7 +42,7 @@ export const en = {
   errHostGone: 'This page has lost the app behind it. Restart it, then reload.',
   errNoRuntime: 'PromptaFlow is not running for this Workspace. Reopen the panel to start it.',
   errStartFailed: 'PromptaFlow would not start here. Hover for what it said on the way out.',
-  errDiscoveryFailed: 'The orbit command did not answer properly. Check that it is installed and on PATH.',
+  errDiscoveryFailed: 'The promptaflow command did not answer properly. Check that it is installed and on PATH.',
   errRuntimeAddress: 'PromptaFlow is running but published no address this panel can use.',
   errRuntimeConflict: 'More than one PromptaFlow Runtime claims this Workspace. Stop the extra one.',
   errNoWorkspace: 'This Session has no project folder open, so there is nothing for PromptaFlow to work on.',
@@ -147,7 +147,7 @@ export const zh = {
   errHostGone: '这个页面背后的服务已经停止。重启它，然后刷新页面。',
   errNoRuntime: 'PromptaFlow 没有在这个 Workspace 上运行。重新打开面板会启动它。',
   errStartFailed: 'PromptaFlow 在这里启动失败了。把鼠标移上去可以看到它退出前说了什么。',
-  errDiscoveryFailed: 'orbit 命令没有正常返回。检查它是否已安装、是否在 PATH 中。',
+  errDiscoveryFailed: 'promptaflow 命令没有正常返回。检查它是否已安装、是否在 PATH 中。',
   errRuntimeAddress: 'PromptaFlow 在运行，但没有公布面板可以使用的地址。',
   errRuntimeConflict: '有多个 PromptaFlow 运行时都声称管理这个 Workspace。请停掉多余的那个。',
   errNoWorkspace: '当前会话没有打开项目目录，PromptaFlow 没有可以工作的对象。',
@@ -212,4 +212,4 @@ export const zh = {
 
 } as const
 
-export type OrbitLocaleKey = keyof typeof en
+export type PromptaFlowLocaleKey = keyof typeof en

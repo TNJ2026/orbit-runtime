@@ -57,7 +57,7 @@ def run_codex(request: Mapping[str, Any], *, executable: str | None = None) -> M
     effects = str(config.get("effects", "read"))
     sandbox = "workspace-write" if effects == "write" else "read-only"
     timeout = int(config.get("max_wall_seconds", 1800))
-    with tempfile.TemporaryDirectory(prefix="orbit-codex-agent-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="promptaflow-codex-agent-") as temporary:
         root = Path(temporary)
         schema = root / "result-schema.json"
         answer = root / "answer.json"

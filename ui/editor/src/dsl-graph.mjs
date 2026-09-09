@@ -27,7 +27,7 @@ export const DEPTH_WIDTH = 320;
  *
  * Deterministic and cycle-safe: a back edge is ignored for depth (following it
  * would not terminate), so a loop draws as the forward flow it decorates. This
- * mirrors what `orbit.workflow.api.graph_layout` computes server-side, so a
+ * mirrors what `promptaflow.workflow.api.graph_layout` computes server-side, so a
  * definition looks the same before and after it has been published.
  */
 export function layout(document) {

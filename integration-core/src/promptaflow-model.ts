@@ -15,11 +15,11 @@ export { isLive }
 export { goalRuns, progressOf, type RunProgress } from './run-progress.js'
 
 /** Cadence while a Run is moving. */
-export const ORBIT_POLL_MS = 2_000
+export const PROMPTAFLOW_POLL_MS = 2_000
 /** Cadence while nothing is. A resident panel costs nothing when idle. */
-export const ORBIT_IDLE_MS = 15_000
+export const PROMPTAFLOW_IDLE_MS = 15_000
 
-export interface OrbitRunRow {
+export interface PromptaFlowRunRow {
   readonly runId: string
   readonly goal: string
   readonly workflow: string
@@ -109,7 +109,7 @@ export function approvalValue(
   }
 }
 
-export function toRow(run: RunDto, workflowName?: string): OrbitRunRow {
+export function toRow(run: RunDto, workflowName?: string): PromptaFlowRunRow {
   return {
     runId: run.run_id,
     goal: run.goal || run.run_id,
@@ -240,7 +240,7 @@ function strip(value: unknown, into: string[]): unknown {
 export function artifactHref(sessionId: string, artifactId: string): string {
   if (!sessionId || !artifactId) return ''
   const query = new URLSearchParams({ session: sessionId, id: artifactId })
-  return `/plugins/dsh-orbit/artifact?${query.toString()}`
+  return `/plugins/dsh-promptaflow/artifact?${query.toString()}`
 }
 
 /** The short name an Artifact is offered under: its id without the kind. */
@@ -250,8 +250,8 @@ export function artifactLabel(artifactId: string): string {
 }
 
 /** How soon to ask again, given what the last answer contained. */
-export function nextInterval(rows: readonly OrbitRunRow[]): number {
-  return rows.some(row => row.live) ? ORBIT_POLL_MS : ORBIT_IDLE_MS
+export function nextInterval(rows: readonly PromptaFlowRunRow[]): number {
+  return rows.some(row => row.live) ? PROMPTAFLOW_POLL_MS : PROMPTAFLOW_IDLE_MS
 }
 
 /** Newest first, with anything still running ahead of anything finished.
@@ -260,7 +260,7 @@ export function nextInterval(rows: readonly OrbitRunRow[]): number {
  * what is happening now — so recency alone would bury a running Run under a
  * pile of Runs that already have their answer.
  */
-export function orderRows(rows: readonly OrbitRunRow[]): OrbitRunRow[] {
+export function orderRows(rows: readonly PromptaFlowRunRow[]): PromptaFlowRunRow[] {
   return [...rows].sort((a, b) => {
     if (a.live !== b.live) return a.live ? -1 : 1
     return a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0
@@ -268,7 +268,7 @@ export function orderRows(rows: readonly OrbitRunRow[]): OrbitRunRow[] {
 }
 
 /** A one-line count for the collapsed badge. */
-export function summarise(rows: readonly OrbitRunRow[]): { live: number; total: number } {
+export function summarise(rows: readonly PromptaFlowRunRow[]): { live: number; total: number } {
   return { live: rows.filter(row => row.live).length, total: rows.length }
 }
 
@@ -294,7 +294,7 @@ export function stepDotState(status: string): 'success' | 'error' | 'skipped' | 
   return 'ongoing'
 }
 
-export interface OrbitStepRow {
+export interface PromptaFlowStepRow {
   readonly nodeId: string
   readonly label: string
   readonly status: string
@@ -303,7 +303,7 @@ export interface OrbitStepRow {
   readonly delegationId?: string
 }
 
-export function toStepRow(step: StepSummary): OrbitStepRow {
+export function toStepRow(step: StepSummary): PromptaFlowStepRow {
   return {
     nodeId: step.node_id,
     label: labelOf(step),
@@ -338,6 +338,6 @@ export function mergeChunks(
  * fails, and one offered at a stale revision is worse — it succeeds against a
  * Run the reader was not looking at.
  */
-export function commandRevision(row: OrbitRunRow, command: string): number | undefined {
+export function commandRevision(row: PromptaFlowRunRow, command: string): number | undefined {
   return row.commands.find(item => item.command === command)?.expected_version
 }

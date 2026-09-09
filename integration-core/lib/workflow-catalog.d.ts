@@ -1,6 +1,6 @@
 /** What can be run here, kept ready for the model to be told without asking.
  *
- * The Agent has `orbit_list_workflows`, but a tool it must call first cannot
+ * The Agent has `promptaflow_list_workflows`, but a tool it must call first cannot
  * help with the turn where someone says "clean this up" — by then the model has
  * already had to decide whether PromptaFlow is even relevant. Naming the Workflows in
  * the prompt turns that decision into a reading.

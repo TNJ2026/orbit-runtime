@@ -46,7 +46,7 @@ class EnsuredApp:
 # loop for the whole readiness deadline.
 _RELAUNCH_BACKOFF_SECONDS = 0.2
 _RELAUNCH_BACKOFF_CEILING = 2.0
-_RUNTIME_DISCOVERY_NAMES = frozenset({"promptaflow", "orbit-runtime"})
+_RUNTIME_DISCOVERY_NAMES = frozenset({"promptaflow"})
 
 
 def default_state_root() -> Path:

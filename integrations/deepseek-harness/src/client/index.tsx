@@ -18,15 +18,15 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 // Type-only: the slot registry seat on ClientContext, owned by the renderer.
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import { OrbitPanel } from './OrbitPanel.tsx'
-import { ORBIT_LOCALE_NAMESPACE, en, zh, type OrbitLocaleKey } from './locales.ts'
+import { PromptaFlowPanel } from './PromptaFlowPanel.tsx'
+import { PROMPTAFLOW_LOCALE_NAMESPACE, en, zh, type PromptaFlowLocaleKey } from './locales.ts'
 import { panelError } from '@promptaflow/integration-core'
 import { caretToEnd } from './composer-caret.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     /** PromptaFlow resident panel copy. */
-    promptaflow: OrbitLocaleKey
+    promptaflow: PromptaFlowLocaleKey
   }
 }
 
@@ -36,17 +36,17 @@ const GENERATE_COMMAND = 'promptaflow-generate'
 
 interface InputTriggerRegistry { registerSource(source: Record<string, unknown>): () => void }
 type SubmitResult = { kind: 'success'; text?: string } | { kind: 'error'; text: string }
-type Translate = (key: OrbitLocaleKey, values?: Record<string, string | number>) => string
+type Translate = (key: PromptaFlowLocaleKey, values?: Record<string, string | number>) => string
 
 /** `/promptaflow` folds the resident panel; it never opens a second one. */
-function registerOrbitSlashSource(ctx: ClientContext, t: Translate): void {
+function registerPromptaFlowSlashSource(ctx: ClientContext, t: Translate): void {
   const inputTriggers = ctx.get('inputTriggers') as unknown as InputTriggerRegistry | undefined
   if (!inputTriggers) throw new Error('PromptaFlow /promptaflow requires the Harness inputTriggers service')
   const claim = () => ({
     token: `/${PANEL_COMMAND}`,
     submit: async (args: string): Promise<SubmitResult> => {
       if (args.trim()) return { kind: 'error', text: '/promptaflow takes no argument; it shows or hides the PromptaFlow panel' }
-      window.dispatchEvent(new Event('orbit:toggle-panel'))
+      window.dispatchEvent(new Event('promptaflow:toggle-panel'))
       return { kind: 'success' }
     },
   })
@@ -73,7 +73,7 @@ function registerOrbitSlashSource(ctx: ClientContext, t: Translate): void {
       clipboardText: (ref: string) => `${MARK_OPEN}${ref}${MARK_CLOSE}`,
       serialize: async (ref: string) => ref,
     },
-  }), 'orbit: slash command folding the panel')
+  }), 'promptaflow: slash command folding the panel')
 }
 
 interface SelectOption { readonly id: string; readonly label: string; readonly detail?: string }
@@ -95,7 +95,7 @@ function registerGenerateSlashSource(ctx: ClientContext, t: Translate): void {
       // The Workflows tab, because that is where the job appears and where the
       // Workflow it publishes will land. Before the call: writing one takes a
       // while, and the panel is the only place that says it started.
-      showOrbitPanel('workflows')
+      showPromptaFlowPanel('workflows')
       try {
         await hostCall<unknown>(
           'generateWorkflowForSession', [session.sessionId, prompt], new AbortController().signal,
@@ -124,7 +124,7 @@ function registerGenerateSlashSource(ctx: ClientContext, t: Translate): void {
     matchEnter: async (session: SessionContext, line: string) =>
       new RegExp(`^/${GENERATE_COMMAND}(?:\\s|$)`, 'u').test(line.trim())
         ? { claim: claim(session) } : undefined,
-  }), 'orbit: slash command generating a workflow')
+  }), 'promptaflow: slash command generating a workflow')
 }
 interface SessionInput {
   setDraft(text: string): void
@@ -178,7 +178,7 @@ function writeWorkflowDraft(
 /**
  * Bring the panel out, wherever it was put.
  *
- * Distinct from `orbit:toggle-panel`, which flips: a command that toggles is a
+ * Distinct from `promptaflow:toggle-panel`, which flips: a command that toggles is a
  * command that hides the panel for anyone who already had it open. This one
  * only ever shows, so running an PromptaFlow command twice is not a way to lose
  * sight of what it did.
@@ -188,8 +188,8 @@ function writeWorkflowDraft(
  * hidden panel has reported nothing. Called before the work rather than after
  * it, so a failure is met by an open panel too.
  */
-function showOrbitPanel(tab?: 'workflows'): void {
-  window.dispatchEvent(new CustomEvent('orbit:show-panel', {
+function showPromptaFlowPanel(tab?: 'workflows'): void {
+  window.dispatchEvent(new CustomEvent('promptaflow:show-panel', {
     detail: tab === undefined ? {} : { tab },
   }))
 }
@@ -213,7 +213,7 @@ interface CommandUi {
 }
 
 async function hostCall<T>(action: string, args: unknown[], signal: AbortSignal): Promise<T> {
-  const response = await fetch('/plugins/dsh-orbit/api', {
+  const response = await fetch('/plugins/dsh-promptaflow/api', {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ action, args }), signal,
   })
@@ -246,7 +246,7 @@ function registerWorkflowPopup(ctx: ClientContext, t: Translate): void {
         // panel's tab as well would move something the person did not ask to
         // have moved. What they need is for the panel to be on screen when the
         // Run they are about to describe starts reporting.
-        showOrbitPanel()
+        showPromptaFlowPanel()
         // `startIfMissing`, because typing the command is the asking. The
         // panel starts a Runtime when it is expanded and `/promptaflow-generate`
         // starts one to write into; this list was the one entry point that
@@ -302,26 +302,26 @@ function registerWorkflowPopup(ctx: ClientContext, t: Translate): void {
         caretToEnd(input.state.getSnapshot().draft)
       },
     },
-  }), 'orbit: workflow popup')
+  }), 'promptaflow: workflow popup')
 }
 
 export const inject = ['inputTriggers', 'slots', 'locale', 'commandUi', 'conversation', 'sessions']
 
 export function apply(ctx: ClientContext): void {
   ctx.effect(
-    () => ctx.locale.register(ORBIT_LOCALE_NAMESPACE, { zh, en }),
-    'orbit: dictionaries',
+    () => ctx.locale.register(PROMPTAFLOW_LOCALE_NAMESPACE, { zh, en }),
+    'promptaflow: dictionaries',
   )
   // Bound once: the reference is stable per namespace and reads the active
   // locale at call time, so a menu built outside any component still speaks
   // the language the shell is in.
-  const t = ctx.locale.bind(ORBIT_LOCALE_NAMESPACE)
-  registerOrbitSlashSource(ctx, t)
+  const t = ctx.locale.bind(PROMPTAFLOW_LOCALE_NAMESPACE)
+  registerPromptaFlowSlashSource(ctx, t)
   registerGenerateSlashSource(ctx, t)
   registerWorkflowPopup(ctx, t)
   const Panel = ({ t, useSessions }: PropsLocale<'promptaflow'> & {
     useSessions: <T>(selector: (state: { current?: string }) => T) => T
-  }) => <OrbitPanel
+  }) => <PromptaFlowPanel
     t={t}
     useSessions={useSessions}
     onSelectWorkflow={(workflow, sessionId) => writeWorkflowDraft(ctx, t, workflow, sessionId)}
@@ -338,9 +338,9 @@ export function apply(ctx: ClientContext): void {
   />
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({
     name: 'shell.overlay',
-    id: 'orbit-runs',
+    id: 'promptaflow-runs',
     order: 80,
     label: 'PromptaFlow runs',
-    locale: ORBIT_LOCALE_NAMESPACE,
+    locale: PROMPTAFLOW_LOCALE_NAMESPACE,
   }, Panel))
 }

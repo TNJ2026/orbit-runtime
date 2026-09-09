@@ -52,7 +52,7 @@ def echoing_marker(body: str) -> str:
     return f"""
 import re, sys
 _seen = " ".join(sys.argv[1:])
-_found = re.search(r"ORBIT_RESULT_COMPLETE_[0-9a-f]+", _seen)
+_found = re.search(r"PROMPTAFLOW_RESULT_COMPLETE_[0-9a-f]+", _seen)
 MARKER = _found.group(0) if _found else "MARKER_NEVER_SENT"
 {body}
 """
@@ -170,7 +170,7 @@ class PromptTransportTests(unittest.TestCase):
         client = self.client(
             echoing_marker(
                 "print('here is the protocol PromptaFlow gave me:')\n"
-                "print('ORBIT_RESULT_COMPLETE')\n"
+                "print('PROMPTAFLOW_RESULT_COMPLETE')\n"
                 "print('and here is the rest of the answer')\n"
                 "print(MARKER)"
             ),
@@ -179,7 +179,7 @@ class PromptTransportTests(unittest.TestCase):
 
         answer = self.call(client)
         self.assertIn("and here is the rest of the answer", answer)
-        self.assertIn("ORBIT_RESULT_COMPLETE", answer)
+        self.assertIn("PROMPTAFLOW_RESULT_COMPLETE", answer)
 
     def test_the_attempt_decides_the_token(self) -> None:
         """Two attempts, two tokens, each derived and not drawn at random."""

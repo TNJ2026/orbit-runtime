@@ -7,10 +7,10 @@ import { el, svgEl } from "../components/dom.js";
  * between them. `test_ui_assets` holds the two copies to the same strings.
  */
 const VIEWER = {
-  ready: "orbit-viewer-ready",
-  graph: "orbit-viewer-graph",
-  nodeClick: "orbit-viewer-node-click",
-  theme: "orbit-viewer-theme",
+  ready: "promptaflow-viewer-ready",
+  graph: "promptaflow-viewer-graph",
+  nodeClick: "promptaflow-viewer-node-click",
+  theme: "promptaflow-viewer-theme",
 };
 
 /** The published graph, drawn by the editor's canvas in a frame.

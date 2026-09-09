@@ -82,7 +82,7 @@ test('read-only panel state can resolve a persisted Harness Session', () => {
   }
   // `exportArtifact` is on this side of the line: it writes a file into the
   // person's Downloads folder, which is an act on the machine rather than a
-  // projection of what Orbit holds.
+  // projection of what PromptaFlow holds.
   for (const remote of [
     'runCommand', 'reconcileStep', 'stopRuntime', 'exportArtifact',
   ]) {

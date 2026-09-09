@@ -1889,7 +1889,11 @@ export function createViews(context) {
       // Several writers may be available; the author can choose one and the
       // Runtime's default is selected initially.
       let writerAgent = defaultGenerationAgent();
-      const generationUnavailable = !writerAgent;
+      // An empty Agent list means the Runtime has one unnamed injected writer;
+      // the request deliberately omits `agent` and uses that default. Only the
+      // capability flag says generation is unavailable.
+      const generationUnavailable =
+        shellFacts?.capabilities?.workflow_generation?.available !== true;
       const instruction = el("textarea", {
         id: "generateInstruction", required: "required", maxlength: "4000",
         disabled: activeGeneration ? "disabled" : null,

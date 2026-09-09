@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 import {
-  ORBIT_IDLE_MS, ORBIT_POLL_MS, commandRevision, dotState, goalRuns, isLive, mergeChunks,
+  PROMPTAFLOW_IDLE_MS, PROMPTAFLOW_POLL_MS, commandRevision, dotState, goalRuns, isLive, mergeChunks,
   approvalValue, artifactHref, artifactLabel, nextInterval, orderRows, outputText,
   progressOf, promptText, resultOutcome, resultText, stepDotState, summarise, toInterrupts,
   toRow, toStepRow,
-} from '../lib/orbit-model.js'
+} from '../lib/promptaflow-model.js'
 
 const run = (over = {}) => ({
   run_id: 'r', goal: 'g', workflow_id: 'wf', workflow_version: 1,
@@ -26,9 +26,9 @@ test('only a settled outcome stops a Run counting as live', () => {
 })
 
 test('the cadence follows the work, not the clock', () => {
-  assert.equal(nextInterval([toRow(run({ status: 'running' }))]), ORBIT_POLL_MS)
-  assert.equal(nextInterval([toRow(run({ status: 'completed' }))]), ORBIT_IDLE_MS)
-  assert.equal(nextInterval([]), ORBIT_IDLE_MS, 'an empty Workspace is idle, not urgent')
+  assert.equal(nextInterval([toRow(run({ status: 'running' }))]), PROMPTAFLOW_POLL_MS)
+  assert.equal(nextInterval([toRow(run({ status: 'completed' }))]), PROMPTAFLOW_IDLE_MS)
+  assert.equal(nextInterval([]), PROMPTAFLOW_IDLE_MS, 'an empty Workspace is idle, not urgent')
 })
 
 test('running Runs come first, then the most recently touched', () => {
@@ -105,14 +105,14 @@ test('output pages merge without duplicating or reordering a chunk', () => {
   assert.equal(outputText(page([3, 1, 2])), '1;2;3;', 'a page out of order still reads in order')
 })
 
-test('a command is offered only at the revision Orbit advertises it for', () => {
+test('a command is offered only at the revision PromptaFlow advertises it for', () => {
   const row = toRow(run({
     revision: 7,
     allowed_commands: [{ command: 'langgraph_run.cancel', expected_version: 7 }],
   }))
   assert.equal(commandRevision(row, 'langgraph_run.cancel'), 7)
   assert.equal(commandRevision(row, 'langgraph_run.resume'), undefined,
-    'a command Orbit did not advertise has no revision to act at')
+    'a command PromptaFlow did not advertise has no revision to act at')
   assert.equal(commandRevision(toRow(run()), 'langgraph_run.cancel'), undefined)
 })
 
@@ -326,12 +326,12 @@ test('something merely shaped like an id is not one', () => {
 })
 
 test('an artifact is opened through the Host, as the Session that owns it', () => {
-  // Not Orbit's own address. Artifacts belong to the actor that produced them,
+  // Not PromptaFlow's own address. Artifacts belong to the actor that produced them,
   // a browser on loopback is `local`, and a Run this panel started belongs to
-  // `harness:session:<id>` — so Orbit's URL 404s for every Artifact this
-  // Harness ever made, and so does Orbit's own UI.
+  // `harness:session:<id>` — so PromptaFlow's URL 404s for every Artifact this
+  // Harness ever made, and so does PromptaFlow's own UI.
   const href = artifactHref('session-81b8c40d', ART)
-  assert.equal(href.startsWith('/plugins/dsh-orbit/artifact?'), true)
+  assert.equal(href.startsWith('/plugins/dsh-promptaflow/artifact?'), true)
   const query = new URLSearchParams(href.slice(href.indexOf('?') + 1))
   assert.equal(query.get('session'), 'session-81b8c40d')
   assert.equal(query.get('id'), ART, 'the id survives being put through a query string')

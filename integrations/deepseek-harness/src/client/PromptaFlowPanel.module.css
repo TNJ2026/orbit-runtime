@@ -1,5 +1,5 @@
 /* Every colour is a Harness alias token: the panel is a Harness surface that
-   happens to be about Orbit, so it follows the shell's theme rather than
+   happens to be about PromptaFlow, so it follows the shell's theme rather than
    carrying an opinion of its own. */
 
 /* Every box inside the panel counts its padding within its width.
@@ -113,10 +113,10 @@
   border: 2px solid var(--dsw-alias-border-l3, rgb(128 128 128 / 16%));
   border-top-color: var(--dsw-alias-state-business-primary, Highlight);
   border-radius: 50%;
-  animation: orbit-spin .7s linear infinite;
+  animation: promptaflow-spin .7s linear infinite;
 }
 
-/* Collapsed, only Orbit's mark remains — against the right edge, halfway down.
+/* Collapsed, only PromptaFlow's mark remains — against the right edge, halfway down.
  *
  * Centred by margin rather than by `translateY(-50%)`: the hover lift owns
  * `transform`, and a transform used for placement would be cancelled by it the
@@ -141,14 +141,14 @@
   pointer-events: auto;
 }
 .badge:hover { transform: translateY(-1px); }
-.orbitMark { width: 30px; height: 30px; }
-.orbitBackground { fill: var(--dsw-alias-label-primary); }
-.orbitRing {
+.promptaflowMark { width: 30px; height: 30px; }
+.promptaflowBackground { fill: var(--dsw-alias-label-primary); }
+.promptaflowRing {
   fill: none;
   stroke: var(--dsw-alias-bg-layer-1, Canvas);
   stroke-width: 6;
 }
-.orbitSatellite { fill: var(--dsw-alias-state-business-primary, Highlight); }
+.promptaflowSatellite { fill: var(--dsw-alias-state-business-primary, Highlight); }
 
 .resize {
   position: absolute;
@@ -235,8 +235,8 @@
 /* Spinning while the poll is out, so a refresh that finds nothing new still
    shows it was asked. A press with no visible answer reads as a dead button. */
 .iconButton:disabled { cursor: default; }
-.iconButton:disabled svg { animation: orbit-spin .7s linear infinite; }
-@keyframes orbit-spin { to { transform: rotate(360deg); } }
+.iconButton:disabled svg { animation: promptaflow-spin .7s linear infinite; }
+@keyframes promptaflow-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
   .iconButton:disabled svg, .connectSpinner { animation: none; opacity: .45; }
 }
@@ -306,7 +306,7 @@
 .catalogRow > code { flex: 0 1 auto; }
 
 /* The Runtime's own four pages, in its own order: the tab strip sits under the
-   title and above the list, which is where Orbit puts it too. */
+   title and above the list, which is where PromptaFlow puts it too. */
 .tabs {
   display: flex;
   flex: 0 0 auto;
@@ -332,7 +332,7 @@
   font-weight: 600;
 }
 
-/* Orbit's Agent identity tile, scaled to the resident panel's single column. */
+/* PromptaFlow's Agent identity tile, scaled to the resident panel's single column. */
 .agentsGrid { display: grid; gap: 10px; padding: 10px 12px; }
 .agentCard {
   display: grid;
@@ -602,14 +602,14 @@
 
 /* The authoring stages, threaded like a Goal's steps — the same ladder for
    the same kind of fact, so a reader who has learned one has learned both. */
-.authoringStages { --orbit-step-line: 26px; padding: 2px 0 6px; }
+.authoringStages { --promptaflow-step-line: 26px; padding: 2px 0 6px; }
 .authoringStages .stepDisclosure { position: relative; }
 .authoringStages .stepDisclosure::before {
   content: '';
   position: absolute;
   top: 0;
   bottom: 0;
-  left: var(--orbit-step-line);
+  left: var(--promptaflow-step-line);
   width: 1px;
   margin-left: -0.5px;
   background: var(--dsw-alias-label-tertiary, rgb(128 128 128 / 70%));
@@ -643,7 +643,7 @@
 .outcome_ongoing { color: var(--dsw-alias-state-business-primary, rgb(103 158 254)); }
 
 /* What it produced, as doors rather than as hashes. Reading an Artifact is
-   Orbit's job — this panel never fetches one — so what a reader gets is a link
+   PromptaFlow's job — this panel never fetches one — so what a reader gets is a link
    and the browser does the rest. */
 .artifactRow { display: grid; gap: 4px; }
 /* An Artifact small enough to be the answer is shown as the answer, in the
@@ -743,14 +743,14 @@ a.artifact:hover { text-decoration: underline; }
  * 26px is where the dot's centre is: the row's 22px left padding plus half of
  * an 8px dot. Kept as a variable so the two cannot drift apart silently.
  */
-.goalSteps { --orbit-step-line: 26px; }
+.goalSteps { --promptaflow-step-line: 26px; }
 .goalSteps .stepDisclosure { position: relative; }
 .goalSteps .stepDisclosure::before {
   content: '';
   position: absolute;
   top: 0;
   bottom: 0;
-  left: var(--orbit-step-line);
+  left: var(--promptaflow-step-line);
   width: 1px;
   margin-left: -0.5px;
   /* Not the divider token the rest of the panel uses. `--dsw-alias-line-normal`
@@ -1034,7 +1034,7 @@ a.artifact:hover { text-decoration: underline; }
 }
 .defnNoPrompt { color: var(--dsw-alias-label-tertiary, GrayText); font-style: italic; }
 
-/* A workflow's shape, at panel scale: Orbit's card draws the same chain at
+/* A workflow's shape, at panel scale: PromptaFlow's card draws the same chain at
    24px, which here would leave no room for the name it belongs to. */
 .shape { display: flex; align-items: center; margin-top: 5px; }
 .shapeNode {

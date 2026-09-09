@@ -88,14 +88,12 @@ class ManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ManifestError, "loopback"):
             load_manifest(path)
 
-    def test_manifest_accepts_runtime_discovery_names(self) -> None:
-        for discovery in ("promptaflow", "orbit-runtime"):
-            with self.subTest(discovery=discovery):
-                path = write_manifest(self.root)
-                payload = json.loads(path.read_text(encoding="utf-8"))
-                payload["service"]["discovery"] = discovery
-                path.write_text(json.dumps(payload), encoding="utf-8")
-                self.assertEqual(discovery, load_manifest(path).service.discovery)
+    def test_manifest_accepts_promptaflow_runtime_discovery(self) -> None:
+        path = write_manifest(self.root)
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload["service"]["discovery"] = "promptaflow"
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        self.assertEqual("promptaflow", load_manifest(path).service.discovery)
 
 
 class _Process:
@@ -269,7 +267,7 @@ class HostTests(unittest.TestCase):
         self.assertTrue((ensured.state_dir / "pid.json").exists())
 
     def test_workspace_scope_without_a_path_creates_and_uses_the_default(self) -> None:
-        default = self.root / "home" / ".orbit" / "workspaces" / "default"
+        default = self.root / "home" / ".promptaflow" / "workspaces" / "default"
         health = iter((False, False, True))
         launches = []
         host = AgentAppHost(
@@ -713,10 +711,10 @@ class HostHelperTests(unittest.TestCase):
 
     def test_the_default_workspace_can_be_overridden(self) -> None:
         with mock.patch.dict(
-            "os.environ", {"PROMPTAFLOW_DEFAULT_WORKSPACE": "~/orbit-default"}, clear=False,
+            "os.environ", {"PROMPTAFLOW_DEFAULT_WORKSPACE": "~/promptaflow-default"}, clear=False,
         ):
             self.assertEqual(
-                Path("~/orbit-default").expanduser().resolve(),
+                Path("~/promptaflow-default").expanduser().resolve(),
                 host_module.default_workspace(),
             )
 

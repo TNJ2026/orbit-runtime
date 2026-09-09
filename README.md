@@ -90,7 +90,7 @@ draws PromptaFlow's cards. **[Each has its own page.](./docs/hosts/README.md)**
 | Host | How it reaches PromptaFlow | Registers as | Draws the card |
 | --- | --- | --- | --- |
 | [Codex app](./docs/hosts/codex-app.md) | bundled plugin, stdio proxy → Hub | `codex-app` | yes |
-| [WorkBuddy](./docs/hosts/workbuddy.md) | custom connector, HTTP straight at the Hub | `promptaflow`, and `workbuddy-third-party:custom-mcp:orbit` | yes |
+| [WorkBuddy](./docs/hosts/workbuddy.md) | custom connector, HTTP straight at the Hub | `promptaflow`, and `workbuddy-third-party:custom-mcp:promptaflow` | yes |
 | [DeepSeek Harness](./docs/hosts/deepseek-harness.md) | Host Profile Bundle with its own Gateway and panel | per-Session `harness:session:*` actor | its own panel |
 | [Any other MCP App](./docs/hosts/other-apps.md) | stdio proxy | its own stable name | host-dependent |
 

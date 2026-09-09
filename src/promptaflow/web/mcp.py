@@ -40,8 +40,8 @@ from .api_v1 import (
 from ..workflow.application.authoring_job_service import authoring_is_active
 from .run_projection import langgraph_run_dto
 from .mcp_app import (
-    ORBIT_AUTHORING_URI, ORBIT_DASHBOARD_MIME_TYPE, ORBIT_DASHBOARD_URI,
-    ORBIT_GOALS_URI, ORBIT_MCP_APP_RESOURCES, ORBIT_RUN_URI, ORBIT_WORKFLOWS_URI,
+    PROMPTAFLOW_AUTHORING_URI, PROMPTAFLOW_DASHBOARD_MIME_TYPE, PROMPTAFLOW_DASHBOARD_URI,
+    PROMPTAFLOW_GOALS_URI, PROMPTAFLOW_MCP_APP_RESOURCES, PROMPTAFLOW_RUN_URI, PROMPTAFLOW_WORKFLOWS_URI,
 )
 
 PROTOCOL_VERSION = "2025-06-18"
@@ -209,15 +209,6 @@ def _failure(request_id: Any, code: int, message: str) -> dict[str, Any]:
 # until that is known, this stays at one tool.
 SUMMARISED_TOOLS = {"list_workflows"}
 
-# Tool names are public protocol surface.  Keep accepting the two names that
-# were advertised before the product rename, without putting them back in the
-# catalogue returned to new clients.
-LEGACY_TOOL_NAMES = {
-    "open_orbit_dashboard": "open_promptaflow_dashboard",
-    "open_orbit_goals": "open_promptaflow_goals",
-}
-
-
 def _summary(payload: Any) -> str:
     """What the card is showing, in a sentence, and where the values are."""
 
@@ -345,7 +336,7 @@ def build_mcp_dispatcher(
             ),
             "scope": READ_SCOPE,
             "inputSchema": {"type": "object", "properties": {}},
-            "_meta": _ui_tool_meta(ORBIT_DASHBOARD_URI),
+            "_meta": _ui_tool_meta(PROMPTAFLOW_DASHBOARD_URI),
         },
         {
             "name": "open_promptaflow_goals",
@@ -355,7 +346,7 @@ def build_mcp_dispatcher(
             ),
             "scope": READ_SCOPE,
             "inputSchema": {"type": "object", "properties": {}},
-            "_meta": _ui_tool_meta(ORBIT_GOALS_URI),
+            "_meta": _ui_tool_meta(PROMPTAFLOW_GOALS_URI),
         },
         # -- discovery ----------------------------------------------------
         # `start_run` needs a workflow_id, and until now nothing over MCP could
@@ -382,7 +373,7 @@ def build_mcp_dispatcher(
                     },
                 },
             },
-            "_meta": _ui_tool_meta(ORBIT_WORKFLOWS_URI),
+            "_meta": _ui_tool_meta(PROMPTAFLOW_WORKFLOWS_URI),
         },
         {
             "name": "get_workflow_definition",
@@ -400,7 +391,7 @@ def build_mcp_dispatcher(
             # The definition is a view inside the workflow-list App. Binding
             # the read to that same resource lets the mounted card call it;
             # there is deliberately no separate workflow-detail resource.
-            "_meta": _ui_tool_meta(ORBIT_WORKFLOWS_URI),
+            "_meta": _ui_tool_meta(PROMPTAFLOW_WORKFLOWS_URI),
         },
         {
             "name": "inspect_workflows",
@@ -486,7 +477,7 @@ def build_mcp_dispatcher(
                 },
                 "required": ["prompt", "idempotency_key"],
             },
-            "_meta": _ui_tool_meta(ORBIT_AUTHORING_URI),
+            "_meta": _ui_tool_meta(PROMPTAFLOW_AUTHORING_URI),
         },
         {
             "name": "modify_workflow",
@@ -770,7 +761,7 @@ def build_mcp_dispatcher(
                     },
                     "required": ["workflow_id", "idempotency_key"],
                 },
-                "_meta": _ui_tool_meta(ORBIT_RUN_URI),
+                "_meta": _ui_tool_meta(PROMPTAFLOW_RUN_URI),
             },
             {
                 "name": "resume_run",
@@ -1049,12 +1040,9 @@ def build_mcp_dispatcher(
         if name == "get_capabilities":
             return {
                 "promptaflow_version": __version__,
-                # Kept alongside: an Agent App built against the old key reads
-                # this to decide what it may call.
-                "orbit_version": __version__,
-                "integration_protocol": "orbit-harness/1",
+                "integration_protocol": "promptaflow-harness/2",
                 "integration_protocols": [
-                    "orbit-harness/1", "orbit-app-delegation/1",
+                    "promptaflow-harness/2", "promptaflow-app-delegation/1",
                 ],
                 "mcp_protocol": PROTOCOL_VERSION,
                 "event_schemas": ["langgraph_run/1", "langgraph_node/1"],
@@ -1610,13 +1598,13 @@ def build_mcp_dispatcher(
                     "uri": resource["uri"],
                     "name": resource["name"],
                     "description": resource["description"],
-                    "mimeType": ORBIT_DASHBOARD_MIME_TYPE,
+                    "mimeType": PROMPTAFLOW_DASHBOARD_MIME_TYPE,
                     "_meta": {
                         "ui": {"prefersBorder": resource["prefers_border"]},
                         "openai/widgetPrefersBorder": resource["prefers_border"],
                     },
                 }
-                for resource in ORBIT_MCP_APP_RESOURCES
+                for resource in PROMPTAFLOW_MCP_APP_RESOURCES
             ]})
         # Declared `resources`, so a client is entitled to ask how they are
         # addressed. PromptaFlow's are five fixed `ui://` documents with nothing
@@ -1629,7 +1617,7 @@ def build_mcp_dispatcher(
         if method == "resources/read":
             resource = next(
                 (
-                    item for item in ORBIT_MCP_APP_RESOURCES
+                    item for item in PROMPTAFLOW_MCP_APP_RESOURCES
                     if item["uri"] == params.get("uri")
                 ),
                 None,
@@ -1638,7 +1626,7 @@ def build_mcp_dispatcher(
                 return _failure(request_id, INVALID_PARAMS, "unknown resource")
             return _result(request_id, {"contents": [{
                 "uri": resource["uri"],
-                "mimeType": ORBIT_DASHBOARD_MIME_TYPE,
+                "mimeType": PROMPTAFLOW_DASHBOARD_MIME_TYPE,
                 "text": resource["html"],
                 "_meta": {
                     "ui": {"prefersBorder": resource["prefers_border"]},
@@ -1649,11 +1637,7 @@ def build_mcp_dispatcher(
             return _failure(request_id, METHOD_NOT_FOUND, f"unknown method {method}")
 
         requested_name = str(params.get("name", ""))
-        # A client calls the name it discovered, and a tool list read before an
-        # upgrade can outlive that upgrade.  Resolve legacy names before the
-        # advertised-tool and authorisation checks so they retain the exact
-        # contract and scope of their current counterparts.
-        name = LEGACY_TOOL_NAMES.get(requested_name, requested_name)
+        name = requested_name
         tool = by_name.get(name)
         if tool is None:
             return _failure(request_id, INVALID_PARAMS, f"unknown tool {requested_name}")
@@ -1895,11 +1879,8 @@ def _stdio_actor(message, default: str, prefix: str | None) -> str:
         return default
     params = message.get("params")
     meta = params.get("_meta") if isinstance(params, Mapping) else None
-    # A Gateway built before the rename still sends `orbit/actor`, and the
-    # bundle version is pinned per install — so an old client reaching a new
-    # Runtime is the ordinary case during an upgrade, not an edge one.
     if isinstance(meta, Mapping):
-        candidate = meta.get("promptaflow/actor", meta.get("orbit/actor"))
+        candidate = meta.get("promptaflow/actor")
     else:
         candidate = None
     if candidate is None:

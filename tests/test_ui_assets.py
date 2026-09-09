@@ -358,7 +358,7 @@ class AccessibilityTests(unittest.TestCase):
         )
 
     def messages(self, text: str) -> set[str]:
-        return set(re.findall(r'"(orbit-viewer-[a-z-]+)"', text))
+        return set(re.findall(r'"(promptaflow-viewer-[a-z-]+)"', text))
 
     def test_both_ends_name_the_same_messages(self) -> None:
         page = (ASSETS / "workflow" / "definition-views.js").read_text(
@@ -367,8 +367,8 @@ class AccessibilityTests(unittest.TestCase):
         canvas = (EDITOR_SOURCE / "catalog-graph.mjs").read_text(encoding="utf-8")
         self.assertEqual(
             {
-                "orbit-viewer-ready", "orbit-viewer-graph",
-                "orbit-viewer-node-click", "orbit-viewer-theme",
+                "promptaflow-viewer-ready", "promptaflow-viewer-graph",
+                "promptaflow-viewer-node-click", "promptaflow-viewer-theme",
             },
             self.messages(page),
         )

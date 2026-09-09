@@ -32,7 +32,7 @@ class BackgroundAgentWorkerTests(unittest.TestCase):
         from promptaflow.__main__ import build_parser
 
         with mock.patch.dict(
-            "os.environ", {"ORBIT_BACKGROUND_AGENT_BACKEND": "codex"}, clear=False,
+            "os.environ", {"PROMPTAFLOW_BACKGROUND_AGENT_BACKEND": "codex"}, clear=False,
         ):
             args = build_parser().parse_args(["hub", "serve"])
         self.assertEqual("codex", args.background_agent_backend)

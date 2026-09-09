@@ -27,7 +27,7 @@ def _object_schema(required: list[str], properties: dict[str, Any]) -> dict[str,
 
 COMMAND_ENVELOPE_SCHEMA: Mapping[str, Any] = MappingProxyType(
     {
-        "$id": "orbit://workflow/contracts/command-envelope/1.0",
+        "$id": "promptaflow://workflow/contracts/command-envelope/1.0",
         "type": "object",
         "additionalProperties": False,
         "required": [
@@ -57,7 +57,7 @@ COMMAND_ENVELOPE_SCHEMA: Mapping[str, Any] = MappingProxyType(
 
 EVENT_ENVELOPE_SCHEMA: Mapping[str, Any] = MappingProxyType(
     {
-        "$id": "orbit://workflow/contracts/event-envelope/1.0",
+        "$id": "promptaflow://workflow/contracts/event-envelope/1.0",
         "type": "object",
         "additionalProperties": False,
         "required": [

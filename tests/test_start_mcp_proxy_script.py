@@ -16,17 +16,17 @@ class StartMcpProxyScriptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture = root / "capture.txt"
-            fake_orbit = root / "promptaflow"
-            fake_orbit.write_text(
-                "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$ORBIT_TEST_CAPTURE\"\n",
+            fake_promptaflow = root / "promptaflow"
+            fake_promptaflow.write_text(
+                "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$PROMPTAFLOW_TEST_CAPTURE\"\n",
                 encoding="utf-8",
             )
-            fake_orbit.chmod(0o755)
+            fake_promptaflow.chmod(0o755)
             environment = {
                 "HOME": str(root),
                 "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
-                "ORBIT_TEST_CAPTURE": str(capture),
-                "PROMPTAFLOW_CLI": str(fake_orbit),
+                "PROMPTAFLOW_TEST_CAPTURE": str(capture),
+                "PROMPTAFLOW_CLI": str(fake_promptaflow),
             }
 
             result = subprocess.run(
@@ -46,20 +46,20 @@ class StartMcpProxyScriptTests(unittest.TestCase):
             workspace = root / "workspace"
             workspace.mkdir()
             capture = root / "capture.txt"
-            fake_orbit = root / "promptaflow"
-            fake_orbit.write_text(
+            fake_promptaflow = root / "promptaflow"
+            fake_promptaflow.write_text(
                 "#!/bin/sh\n"
-                "printf 'path=%s\\n' \"$PATH\" > \"$ORBIT_TEST_CAPTURE\"\n"
-                "printf '%s\\n' \"$@\" >> \"$ORBIT_TEST_CAPTURE\"\n",
+                "printf 'path=%s\\n' \"$PATH\" > \"$PROMPTAFLOW_TEST_CAPTURE\"\n"
+                "printf '%s\\n' \"$@\" >> \"$PROMPTAFLOW_TEST_CAPTURE\"\n",
                 encoding="utf-8",
             )
-            fake_orbit.chmod(0o755)
+            fake_promptaflow.chmod(0o755)
             environment = {
                 "HOME": str(root),
                 "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
                 "PROMPTAFLOW_AGENT_APP_WORKSPACE": str(workspace),
-                "ORBIT_TEST_CAPTURE": str(capture),
-                "PROMPTAFLOW_CLI": str(fake_orbit),
+                "PROMPTAFLOW_TEST_CAPTURE": str(capture),
+                "PROMPTAFLOW_CLI": str(fake_promptaflow),
             }
 
             result = subprocess.run(

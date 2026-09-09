@@ -46,10 +46,10 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
         self.assertIn("['hub', 'register', workspaceRoot]", gateway)
         self.assertIn("/workspaces/${workspaceId}/mcp", gateway)
         self.assertIn("process.env.PROMPTAFLOW_HUB_URL", gateway)
-        self.assertIn("process.env.ORBIT_HUB_URL", gateway)
+        self.assertIn("process.env.PROMPTAFLOW_HUB_URL", gateway)
         self.assertIn("'x-promptaflow-actor': actor", gateway)
         self.assertIn("process.env.PROMPTAFLOW_RUNTIME_ROOT", gateway)
-        self.assertIn("process.env.ORBIT_RUNTIME_ROOT", gateway)
+        self.assertIn("process.env.PROMPTAFLOW_RUNTIME_ROOT", gateway)
         self.assertNotIn("'mcp', '--transport'", gateway)
         self.assertIn("@Remote('getRuntime')", remote)
         self.assertIn("@Remote('executeCommand')", remote)
@@ -69,13 +69,13 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
     def test_no_promptaflow_event_type_is_written_into_a_Session_log(self) -> None:
         """The Harness refuses a log carrying a type it does not know.
 
-        `orbit/run-started` and its siblings are not in the Harness's own event
+        `promptaflow/run-started` and its siblings are not in the Harness's own event
         vocabulary, and `Session.append` offers no way to set the envelope's
         `ignorable` marker — the one thing that lets a reader skip an
         unrecognized type. Writing them made every Session that ran a Workflow
         unreadable on reload:
 
-            contains event type "orbit/run-started" (seq 964) unknown to this
+            contains event type "promptaflow/run-started" (seq 964) unknown to this
             harness and not marked ignorable; refusing to interpret the log
 
         So the Bridge is not started. What guards that is the call site, not
@@ -107,7 +107,7 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
         bridge = (CORE / "src" / "session-bridge.ts").read_text(encoding="utf-8")
         self.assertIn("list_runtime_events", bridge)
         self.assertIn("sourcePosition", bridge)
-        self.assertIn("orbit/run-started", (CORE / "src" / "types.ts").read_text(encoding="utf-8"))
+        self.assertIn("promptaflow/run-started", (CORE / "src" / "types.ts").read_text(encoding="utf-8"))
         self.assertFalse((BUNDLE / "src" / "run-card.ts").exists())
 
     def test_the_panel_stops_where_promptaflows_own_UI_begins(self) -> None:
@@ -118,7 +118,7 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
         data here is how a panel becomes a second PromptaFlow.
 
         Authoring sits on the boundary rather than beyond it, and the line is
-        between asking and editing. `/orbit-generate` starts a job and the
+        between asking and editing. `/promptaflow-generate` starts a job and the
         Workflows page follows it, because a job somebody started from this
         input box is news about this Workspace. Changing a published Workflow
         is the other thing: that is the authoring surface, PromptaFlow draws all of
@@ -129,7 +129,7 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
         code = "\n".join(path.read_text(encoding="utf-8") for path in client)
         self.assertIn("shell.overlay", code)
         self.assertIn("getPanelState", code)
-        self.assertIn("--dsw-alias-", (BUNDLE / "src" / "client" / "OrbitPanel.module.css").read_text(encoding="utf-8"))
+        self.assertIn("--dsw-alias-", (BUNDLE / "src" / "client" / "PromptaFlowPanel.module.css").read_text(encoding="utf-8"))
         # The one authoring entrance, and it is Session-scoped: the panel never
         # names a Workspace, so a command that could start a job anywhere would
         # be a capability the rest of this surface deliberately does not have.
@@ -148,25 +148,25 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
 
     def test_agent_tools_use_independent_runtime_mcp(self) -> None:
         remote = (BUNDLE / "src" / "index.ts").read_text(encoding="utf-8")
-        tools = (BUNDLE / "src" / "orbit-tools.ts").read_text(encoding="utf-8")
+        tools = (BUNDLE / "src" / "promptaflow-tools.ts").read_text(encoding="utf-8")
         manifest = json.loads((BUNDLE / "package.json").read_text(encoding="utf-8"))
         # Built on the Gateway, which is the point — the model's tools reach the
         # Runtime's own MCP rather than borrowing the Host's Session remotes.
         self.assertRegex(
-            remote, r"new OrbitToolBridge\(ctx, this\.gateway[\s\S]{0,200}?\)\.register\(\)",
+            remote, r"new PromptaFlowToolBridge\(ctx, this\.gateway[\s\S]{0,200}?\)\.register\(\)",
         )
         # A job the model starts is told to the panel as it starts, so a person
         # watching does not have to wait for the Agent's next turn to see it.
         self.assertIn("watchAuthoring", remote)
         self.assertIn("this.watch(workspace", tools)
         # Quoted, so a name survives here only as a declaration. The tools
-        # describe each other by name — "poll orbit_get_authoring_job" — and a
+        # describe each other by name — "poll promptaflow_get_authoring_job" — and a
         # bare substring is satisfied by that prose long after the tool it
         # names has gone.
         for name in (
-            "orbit_list_workflows", "orbit_list_runs", "orbit_inspect_run",
-            "orbit_start_run", "orbit_cancel_run", "orbit_resume_run",
-            "orbit_generate_workflow", "orbit_get_authoring_job",
+            "promptaflow_list_workflows", "promptaflow_list_runs", "promptaflow_inspect_run",
+            "promptaflow_start_run", "promptaflow_cancel_run", "promptaflow_resume_run",
+            "promptaflow_generate_workflow", "promptaflow_get_authoring_job",
         ):
             self.assertIn(f"'{name}'", tools)
         self.assertIn("exec.agent?.session", tools)
@@ -201,7 +201,7 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
             "beginWorkflowSelection", "getPendingWorkflowSelection",
         ):
             self.assertNotIn(gone, remote)
-        self.assertFalse((BUNDLE / "src" / "orbit-command.ts").exists())
+        self.assertFalse((BUNDLE / "src" / "promptaflow-command.ts").exists())
 
         built_client = (BUNDLE / "lib" / "client.js").read_text(encoding="utf-8")
         self.assertIn("window.__ModuleLoader__.load({", built_client)

@@ -64,7 +64,7 @@ export function humanSubmitDialog(context, allowed, siblings = []) {
             reportError(error);
             if (error.requiresRefresh) {
               dialog.close();
-              window.dispatchEvent(new Event("orbit:refresh"));
+              window.dispatchEvent(new Event("promptaflow:refresh"));
             }
           }
         },

@@ -19,11 +19,11 @@
  * will ever see. A host supplies the wording — `errNoRuntime` reads differently
  * in a panel and in a terminal — and must supply it for every key.
  */
-export declare const ORBIT_ERROR_KEYS: readonly ["errAborted", "errArtifactTooLarge", "errAuthoringActive", "errDiscoveryFailed", "errGoalActive", "errHostGone", "errImageOnly", "errNoAgent", "errNoAnswer", "errNoRuntime", "errNoSession", "errNoWorkspace", "errNotAllowed", "errPromptLength", "errProtocol", "errRequestTooLarge", "errRunElsewhere", "errRunGone", "errRunMoved", "errRuntimeAddress", "errRuntimeConflict", "errStartFailed", "errStopRefused", "errTimeout", "errUnknown", "errUnreachable", "errVersionMismatch", "errWorkflowDeleted", "errWorkflowGone", "errWorkspaceMismatch"];
-export type OrbitErrorKey = (typeof ORBIT_ERROR_KEYS)[number];
+export declare const PROMPTAFLOW_ERROR_KEYS: readonly ["errAborted", "errArtifactTooLarge", "errAuthoringActive", "errDiscoveryFailed", "errGoalActive", "errHostGone", "errImageOnly", "errNoAgent", "errNoAnswer", "errNoRuntime", "errNoSession", "errNoWorkspace", "errNotAllowed", "errPromptLength", "errProtocol", "errRequestTooLarge", "errRunElsewhere", "errRunGone", "errRunMoved", "errRuntimeAddress", "errRuntimeConflict", "errStartFailed", "errStopRefused", "errTimeout", "errUnknown", "errUnreachable", "errVersionMismatch", "errWorkflowDeleted", "errWorkflowGone", "errWorkspaceMismatch"];
+export type PromptaFlowErrorKey = (typeof PROMPTAFLOW_ERROR_KEYS)[number];
 export interface PanelError {
     /** The sentence to show. */
-    readonly key: OrbitErrorKey;
+    readonly key: PromptaFlowErrorKey;
     /** What it was that failed, when the sentence has a place for it. */
     readonly values?: Record<string, string | number>;
     /** The original text, for a tooltip and for quoting into a bug report. */

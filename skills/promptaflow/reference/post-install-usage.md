@@ -64,12 +64,12 @@ as Harness native surfaces, never as the five MCP cards.
 | --- | --- | --- |
 | Open or focus the resident PromptaFlow panel | `/promptaflow` | `打开 PromptaFlow 面板` |
 | Open the workflow picker and insert a workflow reference chip | `/promptaflow-workflows` | `选择一个 PromptaFlow 工作流` |
-| List workflows for the Agent | `orbit_list_workflows` | `列出当前 Workspace 的 PromptaFlow 工作流` |
-| List Runs | `orbit_list_runs` | `列出我最近的 PromptaFlow 运行` |
-| Inspect one Run | `orbit_inspect_run` | `查看 PromptaFlow 运行 run:<id>` |
-| Start a Run | `orbit_start_run` | `用工作流 workflow:<id> 执行目标：<目标原文>` |
-| Cancel a Run | `orbit_cancel_run` after re-reading current state | `取消 PromptaFlow 运行 run:<id>` |
-| Resume an interrupted Run | `orbit_resume_run` with current revision and declared output | `继续 PromptaFlow 运行 run:<id>，审批结果为通过` |
+| List workflows for the Agent | `promptaflow_list_workflows` | `列出当前 Workspace 的 PromptaFlow 工作流` |
+| List Runs | `promptaflow_list_runs` | `列出我最近的 PromptaFlow 运行` |
+| Inspect one Run | `promptaflow_inspect_run` | `查看 PromptaFlow 运行 run:<id>` |
+| Start a Run | `promptaflow_start_run` | `用工作流 workflow:<id> 执行目标：<目标原文>` |
+| Cancel a Run | `promptaflow_cancel_run` after re-reading current state | `取消 PromptaFlow 运行 run:<id>` |
+| Resume an interrupted Run | `promptaflow_resume_run` with current revision and declared output | `继续 PromptaFlow 运行 run:<id>，审批结果为通过` |
 
 The resident panel contains Goals, Workflows, History, and Agents pages. It can
 inspect steps and outputs and handle cancel, resume, and human decisions, but it
@@ -101,8 +101,8 @@ plugin or stdio proxy; configure a custom Streamable HTTP connector named
 | Show recent goals | `open_promptaflow_goals` | `打开 PromptaFlow 目标列表` |
 | Handle current-App Agent steps | `claim_delegation`, `renew_delegation`, `checkpoint_delegation`, `complete_delegation` | `使用 current_app 模式运行，并在本对话中处理所有 Agent 步骤` |
 
-WorkBuddy may register as `orbit` or
-`workbuddy-third-party:custom-mcp:orbit`; use the stable name the active
+WorkBuddy may register as `promptaflow` or
+`workbuddy-third-party:custom-mcp:promptaflow`; use the stable name the active
 connector reports and never shadow a discovered CLI. Each mounted card opens
 its own MCP session, so mount a card only when the user asked to see it.
 

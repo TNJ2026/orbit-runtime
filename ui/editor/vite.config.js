@@ -4,7 +4,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 // The build lands inside the Python package, and the result is committed.
-// Someone installing orbit with pip has no node and no way to run this, so the
+// Someone installing promptaflow with pip has no node and no way to run this, so the
 // wheel has to ship the viewer already built; hatchling includes every
 // non-ignored file under src/promptaflow, which is what puts it there.
 export default defineConfig({

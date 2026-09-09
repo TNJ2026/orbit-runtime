@@ -8,7 +8,7 @@ export interface GatewayDiagnostics {
     lastConnectedAt?: string;
     lastTransportError?: string;
 }
-/** Connect Harness to Orbit over HTTP MCP; explicit UI entry may start it. */
+/** Connect Harness to PromptaFlow over HTTP MCP; explicit UI entry may start it. */
 /**
  * How long any one MCP call may take before the transport gives up on it.
  *
@@ -17,8 +17,8 @@ export interface GatewayDiagnostics {
  * does not extend the call: it aborts here, the request is cancelled at the
  * Runtime, and the caller is told about a timeout it chose for itself.
  */
-export declare const ORBIT_RPC_TIMEOUT_MS = 60000;
-export declare class OrbitGateway {
+export declare const PROMPTAFLOW_RPC_TIMEOUT_MS = 60000;
+export declare class PromptaFlowGateway {
     private readonly command;
     private readonly commandPrefix;
     private readonly fetchImpl;
@@ -47,7 +47,7 @@ export declare class OrbitGateway {
     /** Stable Hub UI namespace for this Workspace. */
     uiUrl(workspace: WorkspaceRef): Promise<string>;
     /**
-     * Read the same durable attempt totals as Orbit's Agent page.
+     * Read the same durable attempt totals as PromptaFlow's Agent page.
      *
      * This HTTP projection also keeps a newly upgraded Harness compatible with
      * a Runtime process started before `list_agents` grew the aggregate fields.
@@ -72,7 +72,7 @@ export declare class OrbitGateway {
     private runtimeFor;
     private connect;
     private registerWorkspace;
-    private runOrbit;
+    private runPromptaFlow;
     private startHub;
     private discover;
     private rpc;

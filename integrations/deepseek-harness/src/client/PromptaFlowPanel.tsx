@@ -4,34 +4,34 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { IconChevronDownOutline14, IconCloseOutline16, IconPanelLeftOutline16, IconRefreshOutline16, IconShareOutline16, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
 import { authoringProgress, isProgressMarker, panelError, type PanelError } from '@promptaflow/integration-core'
 import type { AgentSummary, AuthoringOutputChunk, AuthoringOutputPage, AuthoringSummary, RunDto, StepSummary, WorkflowSummary } from '@promptaflow/integration-core'
-import styles from './OrbitPanel.module.css'
+import styles from './PromptaFlowPanel.module.css'
 import {
   DEFAULT_PANEL_LAYOUT, PANEL_STORAGE_KEY, dragPanel, placePanel, readLayout,
   resizePanel, type PanelBounds, type PanelLayout,
 } from './panel-geometry.ts'
 import {
-  ORBIT_IDLE_MS, ORBIT_POLL_MS, goalRuns, nextInterval, orderRows, stepDotState, summarise,
-  toRow, type OrbitRunRow as RunRowData,
+  PROMPTAFLOW_IDLE_MS, PROMPTAFLOW_POLL_MS, goalRuns, nextInterval, orderRows, stepDotState, summarise,
+  toRow, type PromptaFlowRunRow as RunRowData,
 } from '@promptaflow/integration-core'
-import type { OrbitLocaleKey } from './locales.ts'
-import { OrbitRunDetail, OrbitRunGoalCard, OrbitRunListRow, PanelErrorText } from './OrbitRunRow.tsx'
-import { OrbitWorkflowDetail } from './OrbitWorkflowDetail.tsx'
+import type { PromptaFlowLocaleKey } from './locales.ts'
+import { PromptaFlowRunDetail, PromptaFlowRunGoalCard, PromptaFlowRunListRow, PanelErrorText } from './PromptaFlowRunRow.tsx'
+import { PromptaFlowWorkflowDetail } from './PromptaFlowWorkflowDetail.tsx'
 
-type Translate = (key: OrbitLocaleKey, values?: Record<string, string | number>) => string
+type Translate = (key: PromptaFlowLocaleKey, values?: Record<string, string | number>) => string
 
 /** PromptaFlow's ring-and-satellite mark, kept inline so the folded control is self-contained. */
-function OrbitMark() {
+function PromptaFlowMark() {
   return (
-    <svg className={styles.orbitMark} viewBox="0 0 64 64" aria-hidden="true">
-      <circle className={styles.orbitBackground} cx="32" cy="32" r="32" />
-      <circle className={styles.orbitRing} cx="32" cy="32" r="18" />
-      <circle className={styles.orbitSatellite} cx="48" cy="22" r="6" />
+    <svg className={styles.promptaflowMark} viewBox="0 0 64 64" aria-hidden="true">
+      <circle className={styles.promptaflowBackground} cx="32" cy="32" r="32" />
+      <circle className={styles.promptaflowRing} cx="32" cy="32" r="18" />
+      <circle className={styles.promptaflowSatellite} cx="48" cy="22" r="6" />
     </svg>
   )
 }
 
 async function hostCall<T>(action: string, args: unknown[], signal: AbortSignal): Promise<T> {
-  const response = await fetch('/plugins/dsh-orbit/api', {
+  const response = await fetch('/plugins/dsh-promptaflow/api', {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ action, args }), signal,
   })
@@ -244,7 +244,7 @@ function AuthoringRow({ t, job, sessionId }: { t: Translate; job: AuthoringSumma
   )
 }
 
-export interface OrbitPanelProps {
+export interface PromptaFlowPanelProps {
   t: Translate
   /** `shell.overlay` is root-scoped: it hands over the session *store*, never
    *  a session id. Reading `current` from it is the only way this panel knows
@@ -257,7 +257,7 @@ export interface OrbitPanelProps {
   onDeleteWorkflow: (workflow: WorkflowSummary, sessionId: string) => Promise<void>
 }
 
-export function OrbitPanel({ t, useSessions, onSelectWorkflow, onEditWorkflow, onDeleteWorkflow }: OrbitPanelProps) {
+export function PromptaFlowPanel({ t, useSessions, onSelectWorkflow, onEditWorkflow, onDeleteWorkflow }: PromptaFlowPanelProps) {
   const sessionId = useSessions(state => state.current)
   const [layout, setLayout] = useState<PanelLayout>(() => {
     try { return readLayout(localStorage.getItem(PANEL_STORAGE_KEY)) } catch { return DEFAULT_PANEL_LAYOUT }
@@ -307,8 +307,8 @@ export function OrbitPanel({ t, useSessions, onSelectWorkflow, onEditWorkflow, o
         ? { ...readLayoutSafely(layout), dismissed: false, collapsed: false }
         : { ...readLayoutSafely(layout), collapsed: !layout.collapsed },
     )
-    window.addEventListener('orbit:toggle-panel', toggle)
-    return () => window.removeEventListener('orbit:toggle-panel', toggle)
+    window.addEventListener('promptaflow:toggle-panel', toggle)
+    return () => window.removeEventListener('promptaflow:toggle-panel', toggle)
   }, [layout, update])
 
   useEffect(() => {
@@ -319,8 +319,8 @@ export function OrbitPanel({ t, useSessions, onSelectWorkflow, onEditWorkflow, o
         setSelected(null); setSelectedFlow(null); setTab('workflows')
       }
     }
-    window.addEventListener('orbit:show-panel', show)
-    return () => window.removeEventListener('orbit:show-panel', show)
+    window.addEventListener('promptaflow:show-panel', show)
+    return () => window.removeEventListener('promptaflow:show-panel', show)
   }, [layout, update])
 
   // One poll loop, its cadence decided by the last answer: fast while a Run is
@@ -384,7 +384,7 @@ export function OrbitPanel({ t, useSessions, onSelectWorkflow, onEditWorkflow, o
         )
         timer = setTimeout(
           () => { void tick() },
-          layout.collapsed ? ORBIT_IDLE_MS : authoringLive ? ORBIT_POLL_MS : nextInterval(next),
+          layout.collapsed ? PROMPTAFLOW_IDLE_MS : authoringLive ? PROMPTAFLOW_POLL_MS : nextInterval(next),
         )
       } catch (reason) {
         if (controller.signal.aborted) return
@@ -421,7 +421,7 @@ export function OrbitPanel({ t, useSessions, onSelectWorkflow, onEditWorkflow, o
         onClick={() => update({ ...layout, collapsed: false })}
         aria-label={t('expand')}
       >
-        <OrbitMark />
+        <PromptaFlowMark />
       </button>
     )
   }
@@ -562,12 +562,12 @@ export function OrbitPanel({ t, useSessions, onSelectWorkflow, onEditWorkflow, o
       </nav>
       <div className={styles.body}>
         {chosen !== undefined && sessionId !== undefined ? (
-          <OrbitRunDetail
+          <PromptaFlowRunDetail
             call={hostCall} t={t} sessionId={sessionId} run={chosen}
             onBack={() => setSelected(null)}
           />
         ) : chosenFlow !== undefined && sessionId !== undefined ? (
-          <OrbitWorkflowDetail
+          <PromptaFlowWorkflowDetail
             call={hostCall} t={t} sessionId={sessionId}
             workflow={chosenFlow} runs={rows ?? []}
             onBack={() => setSelectedFlow(null)}
@@ -587,7 +587,7 @@ export function OrbitPanel({ t, useSessions, onSelectWorkflow, onEditWorkflow, o
 
         {!connecting && error === null && rows !== null && sessionId !== undefined && tab === 'goal' ? (
           goal.length ? goal.map(row => (
-            <OrbitRunGoalCard
+            <PromptaFlowRunGoalCard
               key={row.runId} call={hostCall} t={t} sessionId={sessionId}
               run={row} steps={steps[row.runId]}
               // A person ruling on a step changes the step list this page is
@@ -600,7 +600,7 @@ export function OrbitPanel({ t, useSessions, onSelectWorkflow, onEditWorkflow, o
 
         {!connecting && error === null && rows !== null && tab === 'history' ? (
           settled.length ? settled.map(row => (
-            <OrbitRunListRow key={row.runId} t={t} run={row} onOpen={() => setSelected(row.runId)} />
+            <PromptaFlowRunListRow key={row.runId} t={t} run={row} onOpen={() => setSelected(row.runId)} />
           )) : <p className={styles.empty}>{t('emptyHistory')}</p>
         ) : null}
 
