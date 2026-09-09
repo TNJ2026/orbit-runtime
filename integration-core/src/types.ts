@@ -38,7 +38,18 @@ export interface IntegrationDiagnostics { generated_at: string; workspace_id: st
 export interface ArtifactContent { artifact: ArtifactSummary; encoding: 'base64'; content: string }
 export interface RuntimeEventHint { position: number; run_id: string; event_type: string; revision: number; occurred_at: string; node_id?: string; attempt_id?: string }
 export interface RuntimeEventPage { events: RuntimeEventHint[]; next_position: number }
-export interface OrbitRunStarted { type: 'orbit/run-started'; sourcePosition: number; runId: string; workspaceId: string; goal: string; workflowId: string; workflowVersion: number; revision: number; status: string; createdAt: string }
-export interface OrbitRunCheckpoint { type: 'orbit/run-checkpoint'; sourcePosition: number; runId: string; revision: number; status: string; currentSteps: StepSummary[]; stepCounts: Record<string, number>; artifactCount: number; updatedAt: string }
-export interface OrbitRunEnded { type: 'orbit/run-ended'; sourcePosition: number; runId: string; revision: number; status: string; resultSummary?: string; errorSummary?: string; artifactCount: number; updatedAt: string }
+export interface OrbitRunStarted { type: 'promptaflow/run-started'; sourcePosition: number; runId: string; workspaceId: string; goal: string; workflowId: string; workflowVersion: number; revision: number; status: string; createdAt: string }
+export interface OrbitRunCheckpoint { type: 'promptaflow/run-checkpoint'; sourcePosition: number; runId: string; revision: number; status: string; currentSteps: StepSummary[]; stepCounts: Record<string, number>; artifactCount: number; updatedAt: string }
+export interface OrbitRunEnded { type: 'promptaflow/run-ended'; sourcePosition: number; runId: string; revision: number; status: string; resultSummary?: string; errorSummary?: string; artifactCount: number; updatedAt: string }
 export type OrbitSessionEvent = OrbitRunStarted | OrbitRunCheckpoint | OrbitRunEnded
+/**
+ * Event types this bridge recognises when it reads a Session back.
+ *
+ * A Session log written before the rename is durable data in the user's own
+ * store: the `orbit/` spellings are never written again, and must never stop
+ * being read, or a resumed Session loses every Run it already knew about.
+ */
+export const RUN_EVENT_TYPES: readonly string[] = [
+  'promptaflow/run-started', 'promptaflow/run-checkpoint', 'promptaflow/run-ended',
+  'orbit/run-started', 'orbit/run-checkpoint', 'orbit/run-ended',
+]

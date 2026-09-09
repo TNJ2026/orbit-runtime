@@ -219,7 +219,7 @@ export interface RuntimeEventPage {
     next_position: number;
 }
 export interface OrbitRunStarted {
-    type: 'orbit/run-started';
+    type: 'promptaflow/run-started';
     sourcePosition: number;
     runId: string;
     workspaceId: string;
@@ -231,7 +231,7 @@ export interface OrbitRunStarted {
     createdAt: string;
 }
 export interface OrbitRunCheckpoint {
-    type: 'orbit/run-checkpoint';
+    type: 'promptaflow/run-checkpoint';
     sourcePosition: number;
     runId: string;
     revision: number;
@@ -242,7 +242,7 @@ export interface OrbitRunCheckpoint {
     updatedAt: string;
 }
 export interface OrbitRunEnded {
-    type: 'orbit/run-ended';
+    type: 'promptaflow/run-ended';
     sourcePosition: number;
     runId: string;
     revision: number;
@@ -253,4 +253,12 @@ export interface OrbitRunEnded {
     updatedAt: string;
 }
 export type OrbitSessionEvent = OrbitRunStarted | OrbitRunCheckpoint | OrbitRunEnded;
+/**
+ * Event types this bridge recognises when it reads a Session back.
+ *
+ * A Session log written before the rename is durable data in the user's own
+ * store: the `orbit/` spellings are never written again, and must never stop
+ * being read, or a resumed Session loses every Run it already knew about.
+ */
+export declare const RUN_EVENT_TYPES: readonly string[];
 //# sourceMappingURL=types.d.ts.map

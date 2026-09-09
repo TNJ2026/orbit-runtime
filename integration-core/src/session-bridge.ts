@@ -1,4 +1,5 @@
 import type { OrbitSessionEvent, RuntimeEventPage, StepSummary, WorkspaceRef } from './types.js'
+import { RUN_EVENT_TYPES } from './types.js'
 import { OrbitGateway } from './gateway.js'
 
 export interface OrbitEventSink { append(event: OrbitSessionEvent): void | Promise<void> }
@@ -8,7 +9,7 @@ export interface StoredOrbitEvent { type: string; data: unknown }
 
 export function restoredBridgeState(events: readonly StoredOrbitEvent[]): { position: number; knownRuns: Set<string> } {
   const prior = events.flatMap(event => {
-    if (event.type !== 'orbit/run-started' && event.type !== 'orbit/run-checkpoint' && event.type !== 'orbit/run-ended') return []
+    if (!RUN_EVENT_TYPES.includes(event.type)) return []
     if (event.data === null || typeof event.data !== 'object' || Array.isArray(event.data)) return []
     const data = event.data as { runId?: unknown; sourcePosition?: unknown }
     const runId = typeof data.runId === 'string' ? data.runId : ''
@@ -84,16 +85,16 @@ export class OrbitSessionBridge {
           const run = await this.gateway.run(workspace, sessionId, runId)
           const steps = await this.gateway.call(workspace, sessionId, 'get_run_steps', { run_id: runId }) as { steps: StepSummary[] }
           if (!known.has(runId)) {
-            await sink.append({ type: 'orbit/run-started', sourcePosition, runId, workspaceId: workspace.id, goal: run.goal, workflowId: run.workflow_id, workflowVersion: run.workflow_version, revision: run.revision, status: run.status, createdAt: run.created_at })
+            await sink.append({ type: 'promptaflow/run-started', sourcePosition, runId, workspaceId: workspace.id, goal: run.goal, workflowId: run.workflow_id, workflowVersion: run.workflow_version, revision: run.revision, status: run.status, createdAt: run.created_at })
             known.add(runId)
           }
           const counts: Record<string, number> = {}
           for (const step of steps.steps) counts[step.status] = (counts[step.status] ?? 0) + 1
           if (TERMINAL.has(run.status)) {
-            await sink.append({ type: 'orbit/run-ended', sourcePosition, runId, revision: run.revision, status: run.status, artifactCount: run.artifact_count, updatedAt: run.updated_at })
+            await sink.append({ type: 'promptaflow/run-ended', sourcePosition, runId, revision: run.revision, status: run.status, artifactCount: run.artifact_count, updatedAt: run.updated_at })
             known.add(runId)
           } else {
-            await sink.append({ type: 'orbit/run-checkpoint', sourcePosition, runId, revision: run.revision, status: run.status, currentSteps: steps.steps, stepCounts: counts, artifactCount: run.artifact_count, updatedAt: run.updated_at })
+            await sink.append({ type: 'promptaflow/run-checkpoint', sourcePosition, runId, revision: run.revision, status: run.status, currentSteps: steps.steps, stepCounts: counts, artifactCount: run.artifact_count, updatedAt: run.updated_at })
           }
         }
         position = page.next_position

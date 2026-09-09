@@ -61,7 +61,7 @@ test('concurrent sessions reuse one Hub workspace connection', async t => {
   assert.equal((await gateway.call(runtime.workspace, 'one', 'inspect_run', {})).run_id, 'run:1')
   assert.equal(runtime.calls(), 3)
   assert.equal(runtime.lastActor(), 'harness:session:one')
-  assert.deepEqual(runtime.lastMessage().params._meta['orbit/workspace'], {
+  assert.deepEqual(runtime.lastMessage().params._meta['promptaflow/workspace'], {
     id: 'workspace:compatible', canonicalPath: runtime.workspace.canonicalPath,
   })
   assert.equal(gateway.diagnostics().discoveryAttempts, 2)

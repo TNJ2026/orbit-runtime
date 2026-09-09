@@ -14,14 +14,14 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-ORBIT_DASHBOARD_URI = "ui://orbit/current-task-v51.html"
+ORBIT_DASHBOARD_URI = "ui://promptaflow/current-task-v51.html"
 ORBIT_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-ORBIT_WORKFLOWS_URI = "ui://orbit/workflows-v26.html"
-ORBIT_AUTHORING_URI = "ui://orbit/workflow-authoring-v15.html"
-ORBIT_RUN_URI = "ui://orbit/goal-run-v21.html"
-ORBIT_GOALS_URI = "ui://orbit/goals-v15.html"
+ORBIT_WORKFLOWS_URI = "ui://promptaflow/workflows-v26.html"
+ORBIT_AUTHORING_URI = "ui://promptaflow/workflow-authoring-v15.html"
+ORBIT_RUN_URI = "ui://promptaflow/goal-run-v21.html"
+ORBIT_GOALS_URI = "ui://promptaflow/goals-v15.html"
 
 # The mark the full Orbit UI shows in its own top-left corner — the same
 # geometry as `workflow-ui/index.html`'s `.brand-mark`, not the favicon the

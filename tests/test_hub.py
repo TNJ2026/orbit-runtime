@@ -488,7 +488,7 @@ class HubHttpTests(unittest.TestCase):
                 "jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {},
             })
 
-        self.assertEqual("orbit", response.json()["result"]["serverInfo"]["name"])
+        self.assertEqual("promptaflow", response.json()["result"]["serverInfo"]["name"])
         self.assertIn(
             "list_delegations", response.json()["result"]["instructions"],
         )

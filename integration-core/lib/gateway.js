@@ -103,8 +103,11 @@ export class OrbitGateway {
         try {
             envelope = await this.rpc(runtime, 'tools/call', {
                 name, arguments: args, _meta: {
+                    // Both spellings while Runtimes older than the rename are still
+                    // installed: the pinned bundle and the Runtime upgrade separately.
+                    'promptaflow/actor': actor,
                     'orbit/actor': actor,
-                    'orbit/workspace': {
+                    'promptaflow/workspace': {
                         id: workspace.id,
                         canonicalPath: key,
                         ...(workspace.repositoryId ? { repositoryId: workspace.repositoryId } : {}),
@@ -394,7 +397,7 @@ export class OrbitGateway {
     }
     actorFrom(params) {
         const meta = params._meta;
-        const actor = meta?.['orbit/actor'];
+        const actor = meta?.['promptaflow/actor'] ?? meta?.['orbit/actor'];
         return typeof actor === 'string' ? actor : undefined;
     }
     async callRaw(runtime, name, args) {

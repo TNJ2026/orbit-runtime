@@ -676,9 +676,10 @@ export class OrbitRemoteService extends TypertRemoteService {
     const bridge = new OrbitSessionBridge(this.gateway, cursor)
     await bridge.run(workspace, String(session.id), {
       append: async event => {
-        if (event.type === 'orbit/run-started') { const { type: _type, ...data } = event; session.append('orbit/run-started', data) }
-        else if (event.type === 'orbit/run-checkpoint') { const { type: _type, ...data } = event; session.append('orbit/run-checkpoint', data) }
-        else { const { type: _type, ...data } = event; session.append('orbit/run-ended', data) }
+        // The event carries its own type; naming each one again here is what
+        // let the two spellings drift apart during the rename.
+        const { type, ...data } = event
+        session.append(type, data)
         await this.hostSessions.flush(session)
       },
     }, signal, knownRuns)

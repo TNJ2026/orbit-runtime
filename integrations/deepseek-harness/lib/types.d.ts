@@ -220,7 +220,7 @@ interface RuntimeEventPage {
   next_position: number;
 }
 interface OrbitRunStarted {
-  type: 'orbit/run-started';
+  type: 'promptaflow/run-started';
   sourcePosition: number;
   runId: string;
   workspaceId: string;
@@ -232,7 +232,7 @@ interface OrbitRunStarted {
   createdAt: string;
 }
 interface OrbitRunCheckpoint {
-  type: 'orbit/run-checkpoint';
+  type: 'promptaflow/run-checkpoint';
   sourcePosition: number;
   runId: string;
   revision: number;
@@ -243,7 +243,7 @@ interface OrbitRunCheckpoint {
   updatedAt: string;
 }
 interface OrbitRunEnded {
-  type: 'orbit/run-ended';
+  type: 'promptaflow/run-ended';
   sourcePosition: number;
   runId: string;
   revision: number;
@@ -254,5 +254,13 @@ interface OrbitRunEnded {
   updatedAt: string;
 }
 type OrbitSessionEvent = OrbitRunStarted | OrbitRunCheckpoint | OrbitRunEnded;
+/**
+ * Event types this bridge recognises when it reads a Session back.
+ *
+ * A Session log written before the rename is durable data in the user's own
+ * store: the `orbit/` spellings are never written again, and must never stop
+ * being read, or a resumed Session loses every Run it already knew about.
+ */
+declare const RUN_EVENT_TYPES: readonly string[];
 //#endregion
-export { AgentSummary, ArtifactContent, ArtifactSummary, AuthoringJob, AuthoringOutputChunk, AuthoringOutputPage, AuthoringSummary, EdgeSummary, GenerateAndRunOptions, GenerateAndRunResult, ImportedArtifact, IntegrationDiagnostics, OrbitCommandRequest, OrbitRunCheckpoint, OrbitRunEnded, OrbitRunStarted, OrbitSessionEvent, OutputChunk, OutputPage, RunDto, RunGraph, RuntimeEventHint, RuntimeEventPage, RuntimeSummary, StepSummary, WorkflowNode, WorkflowSummary, WorkspaceRef };
+export { AgentSummary, ArtifactContent, ArtifactSummary, AuthoringJob, AuthoringOutputChunk, AuthoringOutputPage, AuthoringSummary, EdgeSummary, GenerateAndRunOptions, GenerateAndRunResult, ImportedArtifact, IntegrationDiagnostics, OrbitCommandRequest, OrbitRunCheckpoint, OrbitRunEnded, OrbitRunStarted, OrbitSessionEvent, OutputChunk, OutputPage, RUN_EVENT_TYPES, RunDto, RunGraph, RuntimeEventHint, RuntimeEventPage, RuntimeSummary, StepSummary, WorkflowNode, WorkflowSummary, WorkspaceRef };

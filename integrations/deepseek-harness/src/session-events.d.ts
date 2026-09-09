@@ -12,6 +12,11 @@ import type {
 
 declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
+    'promptaflow/run-started': Omit<OrbitRunStarted, 'type'>
+    'promptaflow/run-checkpoint': Omit<OrbitRunCheckpoint, 'type'>
+    'promptaflow/run-ended': Omit<OrbitRunEnded, 'type'>
+    // Written by every build before the rename, and still in the Session logs
+    // those builds produced. Declared so reading one is typed, never written.
     'orbit/run-started': Omit<OrbitRunStarted, 'type'>
     'orbit/run-checkpoint': Omit<OrbitRunCheckpoint, 'type'>
     'orbit/run-ended': Omit<OrbitRunEnded, 'type'>

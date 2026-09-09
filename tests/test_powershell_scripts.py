@@ -189,7 +189,7 @@ class PowerShellScriptTests(unittest.TestCase):
         )
         command = manifest["service"]["command"]
 
-        self.assertEqual("orbit", loaded.app_id)
+        self.assertEqual("promptaflow", loaded.app_id)
         self.assertEqual("powershell.exe", command[0])
         self.assertIn("{manifest_dir}/start-orbit.ps1", command)
         self.assertEqual("-HubService", command[-1])
@@ -202,7 +202,7 @@ class PowerShellScriptTests(unittest.TestCase):
 
     def test_codex_mcp_config_uses_the_cross_platform_launcher(self):
         config = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
-        server = config["mcpServers"]["orbit"]
+        server = config["mcpServers"]["promptaflow"]
 
         self.assertEqual("uv", server["command"])
         self.assertEqual(

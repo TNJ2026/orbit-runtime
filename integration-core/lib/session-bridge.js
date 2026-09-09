@@ -1,6 +1,7 @@
+import { RUN_EVENT_TYPES } from './types.js';
 export function restoredBridgeState(events) {
     const prior = events.flatMap(event => {
-        if (event.type !== 'orbit/run-started' && event.type !== 'orbit/run-checkpoint' && event.type !== 'orbit/run-ended')
+        if (!RUN_EVENT_TYPES.includes(event.type))
             return [];
         if (event.data === null || typeof event.data !== 'object' || Array.isArray(event.data))
             return [];
@@ -68,18 +69,18 @@ export class OrbitSessionBridge {
                     const run = await this.gateway.run(workspace, sessionId, runId);
                     const steps = await this.gateway.call(workspace, sessionId, 'get_run_steps', { run_id: runId });
                     if (!known.has(runId)) {
-                        await sink.append({ type: 'orbit/run-started', sourcePosition, runId, workspaceId: workspace.id, goal: run.goal, workflowId: run.workflow_id, workflowVersion: run.workflow_version, revision: run.revision, status: run.status, createdAt: run.created_at });
+                        await sink.append({ type: 'promptaflow/run-started', sourcePosition, runId, workspaceId: workspace.id, goal: run.goal, workflowId: run.workflow_id, workflowVersion: run.workflow_version, revision: run.revision, status: run.status, createdAt: run.created_at });
                         known.add(runId);
                     }
                     const counts = {};
                     for (const step of steps.steps)
                         counts[step.status] = (counts[step.status] ?? 0) + 1;
                     if (TERMINAL.has(run.status)) {
-                        await sink.append({ type: 'orbit/run-ended', sourcePosition, runId, revision: run.revision, status: run.status, artifactCount: run.artifact_count, updatedAt: run.updated_at });
+                        await sink.append({ type: 'promptaflow/run-ended', sourcePosition, runId, revision: run.revision, status: run.status, artifactCount: run.artifact_count, updatedAt: run.updated_at });
                         known.add(runId);
                     }
                     else {
-                        await sink.append({ type: 'orbit/run-checkpoint', sourcePosition, runId, revision: run.revision, status: run.status, currentSteps: steps.steps, stepCounts: counts, artifactCount: run.artifact_count, updatedAt: run.updated_at });
+                        await sink.append({ type: 'promptaflow/run-checkpoint', sourcePosition, runId, revision: run.revision, status: run.status, currentSteps: steps.steps, stepCounts: counts, artifactCount: run.artifact_count, updatedAt: run.updated_at });
                     }
                 }
                 position = page.next_position;

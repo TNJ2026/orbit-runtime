@@ -8,6 +8,18 @@ const run = {
   revision: 2, status: 'running', artifact_count: 0, created_at: 'created', updated_at: 'updated',
 }
 
+test('a Session log written under either name restores the same state', () => {
+  const state = restoredBridgeState([
+    { type: 'orbit/run-started', data: { sourcePosition: 3, runId: 'run:legacy' } },
+    { type: 'promptaflow/run-checkpoint', data: { sourcePosition: 8, runId: 'run:current' } },
+  ])
+  assert.equal(state.position, 8)
+  assert.deepEqual([...state.knownRuns].sort(), ['run:current', 'run:legacy'])
+})
+
+// The fixture below deliberately keeps the pre-rename spelling: it is what
+// every Session log written before this release actually contains, and it
+// must keep restoring for as long as those logs exist.
 test('restores cursor and known Runs only from durable Orbit events', () => {
   const state = restoredBridgeState([
     { type: 'user/message', data: { sourcePosition: 999, runId: 'foreign' } },
@@ -57,7 +69,7 @@ test('bridge emits one start plus checkpoint, saves cursor and releases on abort
     save: (_workspace, _session, position) => { saved.push(position); controller.abort() },
   }, 1)
   await bridge.run({ id: 'w', canonicalPath: '/workspace' }, 's', { append: event => { appended.push(event) } }, controller.signal)
-  assert.deepEqual(appended.map(event => event.type), ['orbit/run-started', 'orbit/run-checkpoint'])
+  assert.deepEqual(appended.map(event => event.type), ['promptaflow/run-started', 'promptaflow/run-checkpoint'])
   assert.deepEqual(saved, [4])
   assert.equal(released, true)
 })
@@ -75,7 +87,7 @@ test('known Run suppresses duplicate start and terminal events publish immediate
   }
   const bridge = new OrbitSessionBridge(gateway, { load: () => 4, save: () => { controller.abort() } }, 1)
   await bridge.run({ id: 'w', canonicalPath: '/workspace' }, 's', { append: event => { appended.push(event) } }, controller.signal, ['run:1'])
-  assert.deepEqual(appended.map(event => event.type), ['orbit/run-ended'])
+  assert.deepEqual(appended.map(event => event.type), ['promptaflow/run-ended'])
 })
 
 test('a retry re-reads the Session, so an announced Run is not announced twice', async () => {

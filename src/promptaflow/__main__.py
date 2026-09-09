@@ -1093,7 +1093,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     mcp_cmd.add_argument(
         "--actor-prefix", default=None,
-        help="Trust per-call _meta orbit/actor values under this prefix",
+        help="Trust per-call _meta promptaflow/actor values under this prefix",
     )
 
     runtimes_cmd = sub.add_parser(

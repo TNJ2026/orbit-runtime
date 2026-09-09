@@ -486,8 +486,9 @@ var OrbitGateway = class {
 				name,
 				arguments: args,
 				_meta: {
+					"promptaflow/actor": actor,
 					"orbit/actor": actor,
-					"orbit/workspace": {
+					"promptaflow/workspace": {
 						id: workspace.id,
 						canonicalPath: key,
 						...workspace.repositoryId ? { repositoryId: workspace.repositoryId } : {},
@@ -797,7 +798,8 @@ var OrbitGateway = class {
 		}
 	}
 	actorFrom(params) {
-		const actor = params._meta?.["orbit/actor"];
+		const meta = params._meta;
+		const actor = meta?.["promptaflow/actor"] ?? meta?.["orbit/actor"];
 		return typeof actor === "string" ? actor : void 0;
 	}
 	async callRaw(runtime, name, args) {
@@ -877,7 +879,7 @@ var OrbitSessionBridge = class {
 					const steps = await this.gateway.call(workspace, sessionId, "get_run_steps", { run_id: runId });
 					if (!known.has(runId)) {
 						await sink.append({
-							type: "orbit/run-started",
+							type: "promptaflow/run-started",
 							sourcePosition,
 							runId,
 							workspaceId: workspace.id,
@@ -894,7 +896,7 @@ var OrbitSessionBridge = class {
 					for (const step of steps.steps) counts[step.status] = (counts[step.status] ?? 0) + 1;
 					if (TERMINAL.has(run.status)) {
 						await sink.append({
-							type: "orbit/run-ended",
+							type: "promptaflow/run-ended",
 							sourcePosition,
 							runId,
 							revision: run.revision,
@@ -904,7 +906,7 @@ var OrbitSessionBridge = class {
 						});
 						known.add(runId);
 					} else await sink.append({
-						type: "orbit/run-checkpoint",
+						type: "promptaflow/run-checkpoint",
 						sourcePosition,
 						runId,
 						revision: run.revision,
@@ -2233,16 +2235,8 @@ var OrbitRemoteService = (() => {
 		*/
 		async bridgeSession(workspace, session, cursor, signal, knownRuns = []) {
 			await new OrbitSessionBridge(this.gateway, cursor).run(workspace, String(session.id), { append: async (event) => {
-				if (event.type === "orbit/run-started") {
-					const { type: _type, ...data } = event;
-					session.append("orbit/run-started", data);
-				} else if (event.type === "orbit/run-checkpoint") {
-					const { type: _type, ...data } = event;
-					session.append("orbit/run-checkpoint", data);
-				} else {
-					const { type: _type, ...data } = event;
-					session.append("orbit/run-ended", data);
-				}
+				const { type, ...data } = event;
+				session.append(type, data);
 				await this.hostSessions.flush(session);
 			} }, signal, knownRuns);
 		}

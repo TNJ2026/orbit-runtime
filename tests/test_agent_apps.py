@@ -958,7 +958,7 @@ class OrbitMcpProxyStartupTests(unittest.TestCase):
 
     def test_repository_mcp_config_uses_a_cross_platform_command(self) -> None:
         config = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
-        server = config["mcpServers"]["orbit"]
+        server = config["mcpServers"]["promptaflow"]
 
         self.assertEqual("uv", server["command"])
         self.assertEqual(

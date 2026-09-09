@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "orbit": {
+    "promptaflow": {
       "command": "uv",
       "args": [
         "run",

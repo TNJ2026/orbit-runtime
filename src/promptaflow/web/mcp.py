@@ -45,7 +45,7 @@ from .mcp_app import (
 )
 
 PROTOCOL_VERSION = "2025-06-18"
-SERVER_INFO = {"name": "orbit", "version": "1.0"}
+SERVER_INFO = {"name": "promptaflow", "version": "1.0"}
 
 # JSON-RPC reserved codes; -32001 is our application-level refusal.
 INVALID_REQUEST = -32600
@@ -1879,7 +1879,13 @@ def _stdio_actor(message, default: str, prefix: str | None) -> str:
         return default
     params = message.get("params")
     meta = params.get("_meta") if isinstance(params, Mapping) else None
-    candidate = meta.get("orbit/actor") if isinstance(meta, Mapping) else None
+    # A Gateway built before the rename still sends `orbit/actor`, and the
+    # bundle version is pinned per install — so an old client reaching a new
+    # Runtime is the ordinary case during an upgrade, not an edge one.
+    if isinstance(meta, Mapping):
+        candidate = meta.get("promptaflow/actor", meta.get("orbit/actor"))
+    else:
+        candidate = None
     if candidate is None:
         return default
     if (
