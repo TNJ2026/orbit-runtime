@@ -42,6 +42,16 @@ def version_runner(text="tool 1.2.3", code=0):
     return lambda *a, **k: SimpleNamespace(returncode=code, stdout=text, stderr="")
 
 
+def probing_runner(version="tool 1.2.3", help_text="", help_code=0):
+    def run(argv, **_kwargs):
+        if argv[-1] == "--help":
+            return SimpleNamespace(
+                returncode=help_code, stdout=help_text, stderr="",
+            )
+        return SimpleNamespace(returncode=0, stdout=version, stderr="")
+    return run
+
+
 class ProbeTests(unittest.TestCase):
     def test_a_name_that_is_not_a_bare_program_never_runs_anything(self) -> None:
         """The injection cases, refused before `which` is consulted."""
@@ -62,6 +72,49 @@ class ProbeTests(unittest.TestCase):
         )
         self.assertTrue(probe.on_path)
         self.assertEqual("0.86.1", probe.version)
+
+    def test_a_probe_prefers_the_strongest_advertised_permission_profile(self) -> None:
+        probe = probe_executable(
+            "agentx", specs=(), which=which_for({"agentx"}),
+            runner=probing_runner(help_text="""
+                --yolo
+                --dangerously-bypass-approvals-and-sandbox
+                --dangerously-bypass-hook-trust
+            """),
+        )
+
+        self.assertTrue(probe.help_checked)
+        self.assertEqual((
+            "--dangerously-bypass-approvals-and-sandbox",
+            "--dangerously-bypass-hook-trust",
+        ), probe.permission_args)
+
+    def test_a_probe_recognises_yolo_without_accepting_arbitrary_help_args(self) -> None:
+        probe = probe_executable(
+            "agentx", specs=(), which=which_for({"agentx"}),
+            runner=probing_runner(help_text="--yolo  --delete-everything"),
+        )
+
+        self.assertEqual(("--yolo",), probe.permission_args)
+
+    def test_a_probe_prefers_gemini_s_current_approval_mode_form(self) -> None:
+        probe = probe_executable(
+            "agentx", specs=(), which=which_for({"agentx"}),
+            runner=probing_runner(
+                help_text="--approval-mode <MODE> default auto_edit yolo plan --yolo",
+            ),
+        )
+
+        self.assertEqual(("--approval-mode=yolo",), probe.permission_args)
+
+    def test_a_failed_help_probe_does_not_guess_a_permission_argument(self) -> None:
+        probe = probe_executable(
+            "agentx", specs=(), which=which_for({"agentx"}),
+            runner=probing_runner(help_text="--yolo", help_code=2),
+        )
+
+        self.assertFalse(probe.help_checked)
+        self.assertEqual((), probe.permission_args)
 
     def test_a_probe_never_hands_back_the_resolved_path(self) -> None:
         """The one fact the bare-program-name rule exists to withhold."""
@@ -176,6 +229,7 @@ class PatchTests(unittest.TestCase):
             for relative in (
                 "src/orbit/workflow/catalogs/agent_discovery.py",
                 "src/orbit/workflow/catalogs/agent_proposal.py",
+                "src/orbit/workflow/cli_environment.py",
                 "src/orbit/web/app.py",
                 "src/orbit/web/api_v1/__init__.py",
                 "src/orbit/web/api_v1/agent_proposals.py",
@@ -205,8 +259,18 @@ class PatchTests(unittest.TestCase):
                 # of it the clone imported this repository's allowlist and the
                 # patched assertions failed against an allowlist the patch had
                 # never touched.
-                env={"PATH": "/usr/bin:/bin", "HOME": str(work),
-                     "PYTHONPATH": str(work / "src")},
+                env={
+                    **{
+                        name: os.environ[name]
+                        for name in (
+                            "PATH", "SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT",
+                        )
+                        if name in os.environ
+                    },
+                    "HOME": str(work), "USERPROFILE": str(work),
+                    "USER": "orbit-test", "LOGNAME": "orbit-test",
+                    "PYTHONPATH": str(work / "src"),
+                },
             )
             self.assertIn("OK", checked.stderr, checked.stderr[-2000:])
 
@@ -229,6 +293,31 @@ class PatchTests(unittest.TestCase):
         # *adds* is the claim under test.
         self.assertEqual([], [line for line in added if "AgentInvocation" in line])
         self.assertFalse(AgentCliSpec("aider", "aider").runtime_compatible)
+
+    def test_detected_permissions_are_applied_to_a_reviewed_invocation(self) -> None:
+        from orbit.workflow.catalogs import agent_proposal
+
+        sample = propose(
+            ["aider"], specs=(), which=which_for({"aider"}),
+            runner=probing_runner(
+                version="aider 0.86.1", help_text="--yolo",
+            ),
+        )
+        with mock.patch.dict(
+            agent_proposal._REVIEWED_INVOCATIONS,
+            {"aider": AgentInvocation(prompt_flag="-p")}, clear=False,
+        ):
+            patch = render_patch(sample, root=ROOT)
+
+        added = [
+            line for line in patch.splitlines()
+            if line.startswith("+") and not line.startswith("+++")
+        ]
+        self.assertTrue(any(
+            "AgentInvocation(args=('--yolo',), prompt_flag='-p')" in line
+            for line in added
+        ))
+        self.assertIn('+                "aider": (\'--yolo\',),', added)
 
     def test_apply_patch_accepts_only_the_two_reviewed_files(self) -> None:
         with self.assertRaisesRegex(ValueError, "unexpected files"):

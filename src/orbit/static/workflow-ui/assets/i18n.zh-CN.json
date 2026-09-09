@@ -158,6 +158,7 @@
   "generate.instruction": "描述这个工作流",
   "generate.instructionPh": "例如：先转换输入，再交运维审批，通过后结束",
   "generate.lengthHint": "最多 {count} 个字符",
+  "generate.unavailable": "未检测到可用的 Agent CLI，也没有已注册的 Agent App。请先添加或连接 Agent，再生成工作流。",
   "generate.executionAgent": "运行任务的 Agent",
   "generate.connectedAgent": "当前连接的 Agent",
   "generate.connectedAgent.none": "没有可用的 Agent",

@@ -11,6 +11,7 @@ from dataclasses import replace
 import json
 from pathlib import Path
 import shutil
+import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -88,16 +89,23 @@ class SpecValidationTests(unittest.TestCase):
         the fix and also a real widening, which is why the set is written down
         here and not left to whoever next edits the allowlist.
 
-        Codex is confined rather than trusted: it has a sandbox of its own and
-        keeps enforcing it over the workspace. The rest were probed writing a
-        file without being asked, so they are given nothing.
+        These are deliberately the maximum unattended modes the installed CLI
+        advertised. The Runtime's workspace/process isolation is the remaining
+        boundary.
         """
 
         settings = {
             spec.name: tuple(
                 argument for argument in (spec.invocation.args if spec.invocation else ())
                 if "permission" in argument or "sandbox" in argument
-                or argument == "workspace-write"
+                or argument in {
+                    "--dangerously-bypass-approvals-and-sandbox",
+                    "--dangerously-bypass-hook-trust", "--yolo",
+                    "--approval-mode=yolo",
+                    "bypassPermissions", "danger-full-access", "never",
+                    "--trust-all-tools", "--yes-always", "--auto-approve",
+                    "--full-auto",
+                }
             )
             for spec in TRUSTED_AGENT_CLIS
         }
@@ -105,16 +113,14 @@ class SpecValidationTests(unittest.TestCase):
             {
                 "claude": ("--dangerously-skip-permissions",),
                 "antigravity": ("--dangerously-skip-permissions",),
-                "codex": ("--sandbox", "workspace-write"),
+                "codex": (
+                    "--dangerously-bypass-approvals-and-sandbox",
+                    "--dangerously-bypass-hook-trust",
+                ),
                 # Probed writing a file with no prompt of their own, so there
                 # is nothing here to waive.
                 "hermes": (), "pi": (), "opencode": (),
-                # Not probed: no Gemini CLI was installed where this was
-                # settled. Its `--skip-trust` waives directory trust and not
-                # the tool prompt, so it may well need a setting — but this
-                # file's rule is that an invocation is what a CLI was seen to
-                # accept, never what its help text claims.
-                "gemini": (),
+                "gemini": ("--approval-mode=yolo",),
                 # Not probed: no invocation is proposed either, so
                 # there is no prompt to waive yet.
                 "kimi": (),
@@ -308,6 +314,23 @@ class DiscoveryTests(unittest.TestCase):
             "LOGNAME": "operator",
         }, environment)
 
+    def test_trusted_cli_environment_keeps_windows_command_bootstrap(self) -> None:
+        environment = trusted_cli_environment({
+            "PATH": r"C:\\tools", "HOME": r"C:\\Users\\operator",
+            "USER": "operator", "LOGNAME": "operator",
+            "SYSTEMROOT": r"C:\\Windows",
+            "COMSPEC": r"C:\\Windows\\System32\\cmd.exe",
+            "PATHEXT": ".COM;.EXE;.BAT;.CMD",
+            "OPENAI_API_KEY": "must-not-leak",
+        })
+
+        self.assertEqual(r"C:\\Windows", environment["SYSTEMROOT"])
+        self.assertEqual(
+            r"C:\\Windows\\System32\\cmd.exe", environment["COMSPEC"],
+        )
+        self.assertEqual(".COM;.EXE;.BAT;.CMD", environment["PATHEXT"])
+        self.assertNotIn("OPENAI_API_KEY", environment)
+
     def test_only_installed_clis_are_reported(self) -> None:
         found = discover_agent_clis(
             TRUSTED_AGENT_CLIS,
@@ -362,9 +385,7 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(["/usr/local/bin/claude", "--version"], seen["argv"])
         # No inherited credentials in a probe; USER/LOGNAME are OS identity,
         # required by Keychain-backed CLIs rather than provider tokens.
-        self.assertEqual(
-            {"PATH", "HOME", "USER", "LOGNAME"}, set(seen["env"])
-        )
+        self.assertEqual(set(trusted_cli_environment()), set(seen["env"]))
 
 
 class ManifestTests(unittest.TestCase):
@@ -569,7 +590,7 @@ class RegistrationTests(unittest.TestCase):
         # sealing, and TrustedCliAgentClient refuses a CLI that is not on PATH.
         # That check is the point — a registry must not seal around a handler
         # that cannot run — so the fixture satisfies it rather than mocking it.
-        self.executable = shutil.which("true") or "/usr/bin/true"
+        self.executable = shutil.which("true") or sys.executable
         self.agent = DiscoveredAgent(CLAUDE, self.executable, "2.1.3")
 
     def tearDown(self) -> None:

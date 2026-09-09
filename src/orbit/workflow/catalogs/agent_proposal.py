@@ -5,14 +5,15 @@ somebody reviews the edit. This module exists so the tedious half of that —
 working out whether a program is even here, and what it calls itself — can be
 done for them, without the answer ever becoming an executable on its own.
 
-The output is a tightly scoped patch. Known, previously exercised invocation
-profiles may be restored automatically; unknown CLIs remain detection-only
-until their invocation receives a code review.
+The output is a tightly scoped patch. The candidate's help text is checked for
+one of Orbit's code-owned maximum-permission profiles. Known, previously
+exercised invocation profiles receive that profile automatically; unknown CLIs
+remain detection-only until their prompt transport receives a code review.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import difflib
 import os
 from pathlib import Path
@@ -21,7 +22,8 @@ import shutil
 import subprocess
 
 from .agent_discovery import (
-    TRUSTED_AGENT_CLIS, AgentCliSpec, CandidateProbe, probe_executable,
+    TRUSTED_AGENT_CLIS, AgentCliSpec, AgentInvocation, CandidateProbe,
+    probe_executable,
 )
 
 
@@ -70,8 +72,8 @@ def source_checkout_root(configured: Path | str | None = None) -> Path | None:
 
 # Invocation profiles that were already exercised against the named CLI.
 # Unknown CLIs remain detection-only until somebody reviews their invocation.
-_REVIEWED_INVOCATIONS = {
-    "kimi": 'invocation=AgentInvocation(prompt_flag="-p")',
+_REVIEWED_INVOCATIONS: dict[str, AgentInvocation] = {
+    "kimi": AgentInvocation(prompt_flag="-p"),
 }
 
 
@@ -132,7 +134,40 @@ def _judge(probe: CandidateProbe) -> tuple[str, str]:
             "it is installed, but its version flag produced no version — "
             "an unpinned build cannot be registered",
         )
-    return "proposable", f"installed and reporting version {probe.version}"
+    permission_detail = (
+        "maximum-permission arguments detected: " + " ".join(probe.permission_args)
+        if probe.permission_args else
+        "help checked; no reviewed maximum-permission argument was advertised"
+        if probe.help_checked else
+        "help could not be checked; no permission argument will be assumed"
+    )
+    return (
+        "proposable",
+        f"installed and reporting version {probe.version}; {permission_detail}",
+    )
+
+
+def _reviewed_invocation(proposal: AgentProposal) -> AgentInvocation | None:
+    """Merge detected permissions only into a known prompt transport."""
+
+    invocation = _REVIEWED_INVOCATIONS.get(proposal.probe.executable)
+    if invocation is None:
+        return None
+    args = tuple(dict.fromkeys((*invocation.args, *proposal.probe.permission_args)))
+    return replace(invocation, args=args)
+
+
+def _render_invocation(invocation: AgentInvocation) -> str:
+    fields = []
+    if invocation.args:
+        fields.append(f"args={invocation.args!r}")
+    if invocation.prompt_flag is not None:
+        fields.append(f"prompt_flag={invocation.prompt_flag!r}")
+    if invocation.prompt_positional:
+        fields.append("prompt_positional=True")
+    if invocation.process_timeout_flag is not None:
+        fields.append(f"process_timeout_flag={invocation.process_timeout_flag!r}")
+    return "invocation=AgentInvocation(" + ", ".join(fields) + ")"
 
 
 def render_patch(
@@ -150,23 +185,38 @@ def render_patch(
         return ""
 
     root = Path(root)
-    specs = "".join(
-        f"    # Proposed from a system probe: installed here, reporting version\n"
-        f"    # {item.probe.version}.\n"
-        f'    AgentCliSpec("{item.probe.executable}", "{item.probe.executable}"'
-        f'{", " + _REVIEWED_INVOCATIONS[item.probe.executable] if item.probe.executable in _REVIEWED_INVOCATIONS else ""}),\n'
-        for item in additions
-    )
+    specs = ""
+    for item in additions:
+        invocation = _reviewed_invocation(item)
+        permission_note = (
+            " ".join(item.probe.permission_args) if item.probe.permission_args
+            else "none advertised"
+        )
+        specs += (
+            f"    # Proposed from system probes: version {item.probe.version};\n"
+            f"    # maximum-permission arguments: {permission_note}.\n"
+            f'    AgentCliSpec("{item.probe.executable}", "{item.probe.executable}"'
+            f'{", " + _render_invocation(invocation) if invocation else ""}),\n'
+        )
     reviewed = "".join(
         f'                ("{item.probe.executable}", "{item.probe.executable}"),\n'
         for item in additions
     )
-    permissions = "".join(
-        f"                # Not probed: no invocation is proposed either, so\n"
-        f"                # there is no prompt to waive yet.\n"
-        f'                "{item.probe.executable}": (),\n'
-        for item in additions
-    )
+    permissions = ""
+    for item in additions:
+        invocation = _reviewed_invocation(item)
+        applied = item.probe.permission_args if invocation is not None else ()
+        reason = (
+            "Detected and applied to the reviewed invocation."
+            if applied else
+            "Detected, but no reviewed prompt transport exists yet."
+            if item.probe.permission_args else
+            "No reviewed maximum-permission argument was advertised."
+        )
+        permissions += (
+            f"                # {reason}\n"
+            f'                "{item.probe.executable}": {applied!r},\n'
+        )
 
     return "".join([
         _edit(root, DISCOVERY_FILE, _ALLOWLIST_END,

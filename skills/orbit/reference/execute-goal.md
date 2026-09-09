@@ -64,6 +64,11 @@ adapts only this Run, including every parallel Agent branch.
 3. Call `start_run` with the selected `workflow_id`, the normalized `execution_mode`, `goal` and
    `input`, `wait=false`, and a fresh idempotency key. Include
    `workflow_version` only for a concrete selected version, not `latest`.
+   When the selected definition exposes `goal_binding`, do not synthesize an
+   empty object for its bound input (for example, never send
+   `input: {"prompt": {}}`). Omit that input unless the user supplied a real
+   non-empty value; the Runtime materializes `run.goal` into the declared
+   binding.
    This call opens the dedicated goal-execution MCP App, which shows only this
    run's progress and result. Do not call `open_orbit_dashboard` first unless
    the user separately asked to open Orbit.
@@ -97,8 +102,10 @@ adapts only this Run, including every parallel Agent branch.
    claiming until none is queued. Never wait synchronously for a Run while it
    may be waiting for this same conversation; `start_run(wait=false)` above is
    what prevents that deadlock.
-   For adapted legacy nodes, `request.input.task.instructions` and
-   `original_config` carry the node's authored instructions, and
+   For App delegations carrying the standard task envelope—including native
+   `app.delegate` steps with `config.prompt` and adapted legacy nodes—
+   `request.input.task.instructions` and `original_config` carry the node's
+   authored instructions, and
    `request.input.task.input` carries its assembled inputs. The original
    Handler name is provenance, not a request to invoke that CLI. Return an
    object as `result`; for prose or text artifacts return `{"text": "..."}`.

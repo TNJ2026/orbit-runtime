@@ -23,6 +23,22 @@ from ..domain.versions import DefinitionHash
 _KEY = re.compile(r"^sha256:([0-9a-f]{64})$")
 
 
+def _fsync_directory(directory: Path) -> None:
+    """Flush a directory entry on platforms that support directory handles."""
+
+    # CPython on Windows rejects opening directories through ``os.open`` with
+    # EACCES.  The Blob itself has already been flushed before the atomic
+    # replace, so keep the additional directory durability barrier on POSIX
+    # without turning every successful Windows publish into a failed write.
+    if os.name == "nt":
+        return
+    directory_fd = os.open(directory, os.O_RDONLY)
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+
+
 class BlobIntegrityError(IOError):
     pass
 
@@ -128,9 +144,7 @@ class LocalCASBackend:
             else:
                 os.replace(temporary, final)
             self._fault("after_artifact_rename")
-            directory_fd = os.open(final.parent, os.O_RDONLY)
-            try: os.fsync(directory_fd)
-            finally: os.close(directory_fd)
+            _fsync_directory(final.parent)
             return BlobReceipt(checksum.value, checksum, size)
         finally:
             temporary.unlink(missing_ok=True)

@@ -572,7 +572,7 @@ def _serve_runtime(args) -> None:
     )
     handlers.append(HandlerRegistration(
         APP_DELEGATE_MANIFEST, AppDelegationHandler(delegation_queue),
-        "app.delegate@1.0.0",
+        "app.delegate@1.1.0",
     ))
 
     def request_shutdown() -> None:

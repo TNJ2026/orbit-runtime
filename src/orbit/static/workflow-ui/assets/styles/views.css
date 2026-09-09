@@ -181,6 +181,9 @@ html[data-theme="light"] .console-chunk.stderr { color: var(--text); }
   background: color-mix(in srgb, var(--control-raised) 86%, var(--control-fg)) !important;
   color: var(--control-fg);
 }
+.simplified-workflow-generator-unavailable {
+  margin: -12px 0 0; color: var(--muted-2); font-size: 12px; line-height: 1.5;
+}
 .generate-spark { font-size: 18px; line-height: 1; }
 .workflow-generation-progress { display: grid; gap: 20px; }
 /* State first, and the way to stop it beside the state. */
@@ -1158,6 +1161,10 @@ html[data-theme="light"] .history-goal-meta { color: var(--muted); }
 .view-intro h2 { margin: 5px 0; font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
 .view-intro p { margin: 0; max-width: 68ch; font-size: 13px; }
 .workflow-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.workflow-empty {
+  grid-column: 1 / -1; display: grid; place-items: center; min-height: 168px;
+  color: var(--muted-2); opacity: .7;
+}
 .workflow-card {
   padding: 0; overflow: hidden; display: flex; flex-direction: column;
   min-width: 0; border-radius: var(--radius);
@@ -1480,6 +1487,12 @@ html[data-theme="light"] .history-goal-meta { color: var(--muted); }
    dashboard cards. The route owns the whole content view and each handler is
    one row within it. */
 .agents-list { border-top: 1px solid var(--line-card); }
+.agents-list.is-empty {
+  display: grid; place-items: center; min-height: clamp(240px, 50vh, 480px);
+}
+.agents-empty {
+  color: var(--muted-2); opacity: .65; font-size: 13px; text-align: center;
+}
 .agents-list-head, .agent-row {
   display: grid; grid-template-columns: minmax(220px, 1.5fr) minmax(150px, 1fr) 96px 96px;
   align-items: center; column-gap: 24px;

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pickle
+from types import SimpleNamespace
 import unittest
 
 from orbit.workflow.catalogs import HandlerManifest, InMemoryHandlerCatalog
@@ -13,6 +14,9 @@ from orbit.workflow.domain.schemas import validate_contract
 from orbit.workflow.domain.serialization import to_primitive
 from orbit.workflow.handlers.registry import (
     ExecutionRegistry, HandlerContractMismatchError, HandlerNotAvailableError,
+)
+from orbit.workflow.langgraph_runtime.compiler import (
+    BoundHandler, LangGraphHandlerRegistry,
 )
 
 
@@ -168,6 +172,45 @@ class HandlerRegistryTests(unittest.TestCase):
         self.assertEqual(installed, registry.resolve(
             "agent.codex", "1.1.7", expected_manifest_fingerprint=legacy,
         ))
+
+    def test_a_declared_compatible_contract_fingerprint_still_resolves(self):
+        previous = manifest("1.0.0")
+        current = HandlerManifest(
+            "transform.identity", "1.1.0", ("action",), {}, {},
+            {
+                "type": "object",
+                "properties": {"optional": {"type": "string"}},
+            },
+            ExecutionSafety.REPLAY_SAFE,
+            ResourceProfile(0, 0, 0, 60, 0, "free"),
+            "schema://object/1.0",
+            compatible_fingerprints=(previous.fingerprint,),
+        )
+        registry = ExecutionRegistry()
+        installed = registry.register(current, _Handler(), implementation_id="identity")
+        registry.seal()
+
+        self.assertNotEqual(previous.fingerprint, current.fingerprint)
+        self.assertEqual(installed, registry.resolve(
+            current.name, previous.version,
+            expected_manifest_fingerprint=previous.fingerprint,
+        ))
+
+        bound = BoundHandler(
+            current.name, current.version, current.fingerprint,
+            lambda values, config, context: values,
+            compatible_manifest_fingerprints=frozenset(
+                current.compatible_fingerprints
+            ),
+        )
+        node = SimpleNamespace(
+            id="compatible",
+            handler=SimpleNamespace(
+                name=current.name,
+                manifest_fingerprint=previous.fingerprint,
+            ),
+        )
+        self.assertEqual(bound, LangGraphHandlerRegistry([bound]).resolve(node))
 
 
 class CatalogResolutionTests(unittest.TestCase):

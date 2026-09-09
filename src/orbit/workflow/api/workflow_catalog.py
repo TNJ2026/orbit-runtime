@@ -121,9 +121,10 @@ class WorkflowCatalogReadModelService:
     ) -> dict[str, str] | None:
         """Project the conventional Agent ingress as an explicit UI fact.
 
-        The browser must not guess from a port called ``prompt``.  Orbit owns
-        the built-in ``agent.*`` handler contract, so the catalog can safely
-        advertise when a single object input accepts the Run goal envelope.
+        The browser must not guess from a port name alone. Orbit owns the
+        built-in Agent handler contracts, so the catalog can safely advertise
+        when their conventional object input accepts the Run goal envelope:
+        ``prompt`` for ``agent.*`` and ``task`` for App delegation handlers.
         """
 
         entries = list(ir.get("entry") or ())
@@ -134,25 +135,31 @@ class WorkflowCatalogReadModelService:
             None,
         )
         handler = None if node is None else node.get("handler")
+        if not isinstance(handler, Mapping):
+            return None
+        handler_name = str(handler.get("name", ""))
+        if handler_name.startswith("agent."):
+            input_id = "prompt"
+        elif handler_name in {"app.delegate", "harness.subagent"}:
+            input_id = "task"
+        else:
+            return None
         port = next(
-            (candidate for candidate in inputs if candidate.get("id") == "prompt"),
+            (candidate for candidate in inputs if candidate.get("id") == input_id),
             None,
         )
         if port is None:
             return None
         schema = port.get("schema") or {}
         if (
-            not isinstance(handler, Mapping)
-            or not str(handler.get("name", "")).startswith("agent.")
-            or port.get("id") != "prompt"
-            or schema.get("type") != "object"
+            schema.get("type") != "object"
             or port.get("transport") != "inline"
         ):
             return None
         return {
             "source": "run.goal",
             "node_id": entries[0],
-            "input_id": "prompt",
+            "input_id": input_id,
             "property": "goal",
             "value_shape": "object",
         }

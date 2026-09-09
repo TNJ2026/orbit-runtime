@@ -39,6 +39,27 @@ uv sync --extra dev
 uv run orbit serve
 ```
 
+On Windows, native PowerShell launchers work without Git Bash. The start script
+registers the current workspace; restart and stop act on the Hub and every
+Workspace Runtime they discover:
+
+```bat
+start-orbit.cmd
+restart-orbit.cmd
+stop-orbit.cmd
+```
+
+The `.cmd` entry points run directly from PowerShell, Command Prompt, or
+Explorer without changing the machine's PowerShell execution policy. Use
+`restart-orbit.cmd -DryRun` or `stop-orbit.cmd -DryRun` to inspect the
+processes they would handle without stopping anything.
+
+Pass a path to start another workspace:
+
+```bat
+start-orbit.cmd "D:\Develop\your-project"
+```
+
 The UI is available at `http://127.0.0.1:8848/ui`. That page lists the
 Workspace Runtimes running on this machine and links into each one's UI; it
 starts nothing, so a Workspace whose Runtime is not up does not appear there.

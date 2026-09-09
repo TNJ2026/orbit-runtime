@@ -1,8 +1,11 @@
 from pathlib import Path
 import io
+import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
+from orbit.workflow.artifacts import local_cas
 from orbit.workflow.artifacts.local_cas import BlobIntegrityError, LocalCASBackend
 
 
@@ -62,11 +65,27 @@ class LocalCASBackendTests(unittest.TestCase):
         key = backend.list_blob_keys()[0]
         self.assertEqual(b"abc", backend.read(key))
 
+    def test_directory_fsync_is_skipped_on_windows(self):
+        with (
+            patch.object(local_cas.os, "name", "nt"),
+            patch.object(local_cas.os, "open") as open_directory,
+        ):
+            local_cas._fsync_directory(Path(self.temp.name))
+
+        open_directory.assert_not_called()
+
     def test_symlink_bucket_escape_is_rejected(self):
         receipt = self.backend.write(b"abc", max_size_bytes=3)
         bucket = self.backend._path(receipt.blob_key).parent
         for item in bucket.iterdir(): item.unlink()
         bucket.rmdir()
         outside = Path(self.temp.name) / "outside"; outside.mkdir()
-        bucket.symlink_to(outside, target_is_directory=True)
+        try:
+            bucket.symlink_to(outside, target_is_directory=True)
+        except OSError as exc:
+            if os.name == "nt" and getattr(exc, "winerror", None) == 1314:
+                self.skipTest(
+                    "directory symlinks require Windows Developer Mode or elevation"
+                )
+            raise
         with self.assertRaises(ValueError): self.backend.read(receipt.blob_key)

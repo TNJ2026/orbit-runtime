@@ -494,6 +494,23 @@ class InvocationSpecTests(unittest.TestCase):
             spec.invocation.args,
         )
 
+    def test_codex_uses_its_advertised_maximum_permission_mode(self) -> None:
+        spec = next(item for item in TRUSTED_AGENT_CLIS if item.name == "codex")
+
+        self.assertIn(
+            "--dangerously-bypass-approvals-and-sandbox", spec.invocation.args,
+        )
+        self.assertIn("--dangerously-bypass-hook-trust", spec.invocation.args)
+
+    def test_pi_print_mode_reads_the_prompt_from_stdin(self) -> None:
+        """Large authoring prompts must not cross Windows' argv boundary."""
+
+        spec = next(item for item in TRUSTED_AGENT_CLIS if item.name == "pi")
+
+        self.assertEqual(("-p",), spec.invocation.args)
+        self.assertIsNone(spec.invocation.prompt_flag)
+        self.assertFalse(spec.invocation.prompt_positional)
+
     def test_an_argument_that_is_not_a_plain_token_is_refused(self) -> None:
         for argument in ("$(whoami)", "a b", "; rm -rf /", "`id`", "|tee"):
             with self.subTest(argument=argument):

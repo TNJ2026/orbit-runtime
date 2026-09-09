@@ -439,6 +439,7 @@ def build_routes(ctx) -> list[Route]:
             current = available.get(name)
             contract_matches = current is not None and handler.get("manifest_fingerprint") in {
                 current.fingerprint, current.legacy_fingerprint,
+                *current.compatible_fingerprints,
             }
             # Execution only substitutes Agents whose name is absent.
             fallback = (

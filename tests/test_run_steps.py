@@ -9,6 +9,7 @@ moments it would be easiest to get wrong.
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 from pathlib import Path
 import sqlite3
 import subprocess
@@ -135,6 +136,35 @@ class DerivedStatusTests(unittest.TestCase):
             store, LangGraphHandlerRegistry(bindings),
             run_db_path=self.root / "runs.sqlite3",
             checkpoint_db_path=self.root / "checkpoints.sqlite3",
+        )
+
+    def test_app_delegate_step_exposes_its_authored_prompt(self) -> None:
+        delegate = replace(
+            engine_tests.node("delegate", inputs=("value",), outputs=("value",)),
+            handler=IRHandlerRef("app.delegate", engine_tests.FINGERPRINT),
+            config={
+                "target": "run_initiator",
+                "prompt": "Translate the supplied text into Chinese.",
+            },
+        )
+        ir = engine_tests.workflow(
+            (delegate,), (), entry=("delegate",), terminals=("delegate",),
+            result=("delegate", "value"),
+        )
+        service = self.service(ir, [
+            engine_tests.binding(
+                "app.delegate", lambda values, config, context: dict(values),
+            ),
+        ])
+
+        run = service.start(
+            ir.workflow_id, {"value": "hello"},
+            idempotency_key="app-prompt", actor="local",
+        )
+        step = by_id(service.steps(run.run_id, actor="local"))["delegate"]
+
+        self.assertEqual(
+            "Translate the supplied text into Chinese.", step["prompt"],
         )
 
     def test_a_branch_that_finished_while_another_waits_is_not_called_pending(self) -> None:

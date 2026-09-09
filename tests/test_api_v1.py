@@ -94,6 +94,28 @@ class WorkflowCatalogProjectionTests(unittest.TestCase):
         self.assertEqual("prompt", binding["input_id"])
         self.assertEqual("goal", binding["property"])
 
+    def test_app_agent_object_task_advertises_goal_binding(self) -> None:
+        for handler_name in ("app.delegate", "harness.subagent"):
+            with self.subTest(handler=handler_name):
+                ir = {
+                    "entry": ["develop"],
+                    "nodes": [{
+                        "id": "develop", "kind": "action",
+                        "handler": {"name": handler_name},
+                    }],
+                }
+                inputs = [{
+                    "id": "task", "schema": {"type": "object"},
+                    "transport": "inline",
+                }]
+
+                binding = WorkflowCatalogReadModelService._goal_binding(ir, inputs)
+
+                self.assertEqual("run.goal", binding["source"])
+                self.assertEqual("develop", binding["node_id"])
+                self.assertEqual("task", binding["input_id"])
+                self.assertEqual("goal", binding["property"])
+
     def test_non_agent_input_does_not_advertise_goal_binding(self) -> None:
         ir = {
             "entry": ["transform"],

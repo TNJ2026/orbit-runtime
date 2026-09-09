@@ -32,7 +32,7 @@ class CurrentAppExecutionTests(unittest.TestCase):
         self.queue = DelegationQueue(self.path, require_execution_lease=False)
         self.registration = HandlerRegistration(
             APP_DELEGATE_MANIFEST, AppDelegationHandler(self.queue, poll_seconds=0.005),
-            "app.delegate@1.0.0",
+            "app.delegate@1.1.0",
         )
         self.registry = trusted_handlers([self.registration], attempt_db_path=self.path)
         self.store = SQLiteWorkflowVersionStore(self.root / "workflows.db")

@@ -744,6 +744,23 @@ class WorkflowAuthoringService:
                 + ", ".join(self.agent_cli_handlers)
             )
 
+    @staticmethod
+    def _check_app_delegate_prompts(compiled) -> None:
+        missing = sorted(
+            node.id for node in compiled.ir.nodes
+            if node.handler is not None
+            and node.handler.name == "app.delegate"
+            and not (
+                isinstance(node.config.get("prompt"), str)
+                and node.config["prompt"].strip()
+            )
+        )
+        if missing:
+            raise ValueError(
+                "APP_DELEGATE_PROMPT_MISSING: app.delegate nodes must define "
+                "a non-empty config.prompt: " + ", ".join(missing)
+            )
+
     def ensure_agent(self, agent: str | None) -> str | None:
         """Refuse an unknown name now rather than when the job finally runs.
 
@@ -899,6 +916,7 @@ class WorkflowAuthoringService:
             "human nodes take config{task_kind:'approval', participants:[...], quorum:'any'} and exactly one output.",
             "Use preferred_handler for action nodes when it is set, unless the instruction explicitly requires a different available handler for a distinct role.",
             "When using app.delegate, set config.target to run_initiator. background_pool is not an available Workflow configuration.",
+            "Every app.delegate action must set a non-empty config.prompt that states the instructions for that step. The Runtime presents this prompt to the initiating App as task.instructions; do not rely on the workflow goal alone to describe a later step.",
             "Split a long Agent job with independently meaningful stages into separate action nodes, and connect their declared outputs to the next stage. A completed node is Orbit's durable recovery boundary. Do not hide research, implementation, verification, and reporting inside one monolithic Agent prompt when later stages can consume a persisted result from an earlier node. Keep one node when the work is genuinely atomic; do not create artificial checkpoint-only nodes.",
             "When an output is expected to contain long-form or otherwise substantial text, pass it as an Artifact instead of inline data: keep the handler's port id and schema_id, set transport:'artifact_ref', choose an appropriate text content type and max_size_bytes, and set visibility:'run'. Apply the same Artifact policy to every downstream port carrying that content. Reserve inline transport for short structured values, status, routing, and small summaries.",
             "An edge's two ports must agree on transport, visibility and content types — all three, or the edge is refused. One consequence is worth stating on its own: an Artifact edge and an inline edge can never share a join input port, so a fan-in that mixes long-form and short results needs a port for each kind.",
@@ -1351,6 +1369,7 @@ class WorkflowAuthoringService:
 
         def checks(compiled):
             self._check_agent_cli_preference(compiled)
+            self._check_app_delegate_prompts(compiled)
             self._check_goal_binding(compiled)
             if self._wants_markdown_artifact(instruction):
                 self._check_markdown_artifact(compiled)

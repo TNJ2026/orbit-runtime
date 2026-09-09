@@ -5,6 +5,21 @@ Codex reload the locally developed Orbit plugin. It prepares everything that
 must happen before the user fully quits and reopens Codex. Do not quit, reopen,
 or otherwise control Codex from the active task.
 
+## Execution ownership
+
+Execute every safe step available to the Agent before asking the user to do
+anything. In particular, inspect the workspace, validate the skill and plugin,
+run relevant tests, update the cachebuster, reinstall the plugin, verify the
+installed entry, inspect active Runs, and safely stop the verified old Runtime
+when authorized. Do not turn these Agent-executable steps into commands or a
+tutorial for the user.
+
+Only notify the user when the procedure reaches an action that the Agent must
+not perform: fully quitting and reopening the Host, then starting a new task.
+If an active Run requires permission before the Runtime can be stopped, ask
+only for that permission and continue the remaining Agent-executable work after
+the user answers.
+
 ## Preconditions
 
 1. Resolve the absolute Orbit plugin root from the current workspace. It must
@@ -53,7 +68,9 @@ plugin is reinstalled.
 
 ## Handoff boundary
 
-Stop here. Tell the user that preparation is complete and ask them to:
+Reach this section only after every preceding Agent-executable step has either
+completed successfully or been reported as a concrete blocker. Stop here, tell
+the user that preparation is complete, and ask them to:
 
 1. fully quit Codex, not merely close its window;
 2. reopen Codex; and

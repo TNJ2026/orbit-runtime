@@ -193,8 +193,10 @@ def _bind_goal_input(ir, inputs: Mapping[str, Any], goal: str) -> dict[str, Any]
     Goal-ready Agent workflows expose one inline object input named ``prompt``
     for a local CLI, or ``task`` for App/Harness delegation.
     Callers should not have to duplicate the same text in both ``goal`` and
-    the Handler input merely to satisfy input validation. Explicit ``prompt``
-    or ``task`` input remains authoritative.
+    the Handler input merely to satisfy input validation. Schema-driven
+    clients sometimes materialize a required object port as ``{}``; that is a
+    placeholder, not an explicit Handler input, so bind the goal into it too.
+    Explicit non-empty ``prompt`` or ``task`` input remains authoritative.
     """
 
     bound = dict(inputs)
@@ -209,9 +211,17 @@ def _bind_goal_input(ir, inputs: Mapping[str, Any], goal: str) -> dict[str, Any]
         else None
     )
     port = next((item for item in ir.inputs if item.id == input_id), None)
+    prior = bound.get(input_id) if input_id is not None else None
+    missing_or_empty = (
+        input_id is not None
+        and (
+            input_id not in bound
+            or (isinstance(prior, Mapping) and not prior)
+        )
+    )
     if (
         input_id is not None
-        and input_id not in bound
+        and missing_or_empty
         and port is not None
         and port.data_policy.transport.value == "inline"
     ):

@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import ssl
 import subprocess
 import time
 from typing import Callable, Iterable, Iterator
@@ -71,8 +72,15 @@ def _scope_key(manifest: AgentAppManifest, workspace: Path | None) -> str:
 
 def _health_check(url: str, timeout: float = 1.0) -> bool:
     request = Request(url, method="GET")
+    # urllib's default opener eagerly constructs an HTTPS handler even for a
+    # plain HTTP URL.  On Windows that scans the certificate stores and can
+    # turn a closed-port health check into a long startup stall.  Supplying a
+    # context avoids that scan; it is never used for the HTTP connection.
+    context = None
+    if urlsplit(url).scheme.lower() == "http":
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     try:
-        with urlopen(request, timeout=timeout) as response:
+        with urlopen(request, timeout=timeout, context=context) as response:
             return 200 <= response.status < 400
     except (OSError, URLError):
         return False

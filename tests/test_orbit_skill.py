@@ -100,6 +100,8 @@ class OrbitSkillCardRoutingTests(unittest.TestCase):
         self.assertIn("rebuild, refresh, or reinstall the local Orbit plugin", skill)
         self.assertIn("refresh-codex-plugin.md", skill)
         for marker in (
+            "Execute every safe step available to the Agent",
+            "Do not turn these Agent-executable steps into commands",
             "read_marketplace_name.py",
             "update_plugin_cachebuster.py",
             "codex plugin add orbit@<resolved-marketplace-name>",
@@ -111,6 +113,31 @@ class OrbitSkillCardRoutingTests(unittest.TestCase):
             "start a new task",
         ):
             self.assertIn(marker, procedure)
+
+    def test_post_install_prompts_only_at_host_reload_boundary(self) -> None:
+        guide = (ROOT / "reference" / "post-install-usage.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("Complete every\nAgent-executable refresh step", guide)
+        self.assertIn("Only at the Host reload boundary", guide)
+        self.assertIn("fully quit and reopen Codex", guide)
+
+    def test_post_install_handoff_covers_every_host_and_card(self) -> None:
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        guide = (ROOT / "reference" / "post-install-usage.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("post-install-usage.md", skill)
+        for marker in (
+            "Orbit workspace", "Orbit workflows", "Orbit workflow generation",
+            "Orbit goal execution", "Orbit goals", "Codex", "DeepSeek Harness",
+            "WorkBuddy", "open_orbit_dashboard", "open_orbit_goals",
+            "generate_workflow", "start_run", "/orbit", "/orbit-workflows",
+            "orbit_list_workflows", "orbit_start_run", "list_workspaces",
+            "select_workspace", "Copyable Chinese prompt",
+        ):
+            self.assertIn(marker, guide)
+        self.assertIn("renders **no Orbit MCP App cards**", guide)
 
 
 if __name__ == "__main__":

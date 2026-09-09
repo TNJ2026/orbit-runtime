@@ -56,7 +56,7 @@ HARNESS_SUBAGENT_MANIFEST = HandlerManifest(
 # Harness-specific handler it does not select a provider: the current App is
 # already the provider boundary. The queue remains actor-scoped, so another
 # conversation cannot pick up this conversation's work.
-APP_DELEGATE_MANIFEST = HandlerManifest(
+_APP_DELEGATE_V1_MANIFEST = HandlerManifest(
     "app.delegate", "1.0.0", ("action",),
     {"task": "schema://object/1.0"}, {"result": "schema://object/1.0"},
     {
@@ -79,6 +79,36 @@ APP_DELEGATE_MANIFEST = HandlerManifest(
     ExecutionSafety.UNKNOWN_ON_LEASE_LOSS,
     ResourceProfile(0, 0, 0, 7200, 0, "app-delegate"),
     "schema://object/1.0", ("agent.invoke",), (), True, True,
+)
+
+APP_DELEGATE_MANIFEST = HandlerManifest(
+    "app.delegate", "1.1.0", ("action",),
+    {"task": "schema://object/1.0"}, {"result": "schema://object/1.0"},
+    {
+        "type": "object",
+        "properties": {
+            "target": {
+                "type": "string", "enum": ["run_initiator", "background_pool"],
+            },
+            "pool": {"type": "string", "minLength": 1},
+            "prompt": {"type": "string", "minLength": 1, "maxLength": 4000},
+            "max_wall_seconds": {"type": "integer", "minimum": 1, "maximum": 7200},
+            "effects": {"type": "string", "enum": ["read", "write"]},
+            "isolation_mode": {
+                "type": "string",
+                "enum": ["shared", "exclusive", "worktree", "snapshot"],
+            },
+            "max_concurrency": {"type": "integer", "minimum": 1, "maximum": 1},
+        },
+        "required": ["target"], "additionalProperties": False,
+    },
+    ExecutionSafety.UNKNOWN_ON_LEASE_LOSS,
+    ResourceProfile(0, 0, 0, 7200, 0, "app-delegate"),
+    "schema://object/1.0", ("agent.invoke",), (), True, True,
+    compatible_fingerprints=(
+        _APP_DELEGATE_V1_MANIFEST.fingerprint,
+        _APP_DELEGATE_V1_MANIFEST.legacy_fingerprint,
+    ),
 )
 
 
@@ -899,6 +929,21 @@ class AppDelegationHandler(HarnessSubagentHandler):
                 "original_handler": source["handler"],
                 "original_config": source["config"],
             }}
+        else:
+            prompt = request.config.get("prompt")
+            if isinstance(prompt, str) and prompt.strip():
+                # A natively authored app.delegate uses the same envelope as
+                # a run-local Agent adaptation, so every App host has one
+                # delegation contract to follow.
+                inputs = {"task": {
+                    "input": inputs,
+                    "instructions": prompt,
+                    "original_handler": {
+                        "name": APP_DELEGATE_MANIFEST.name,
+                        "manifest_fingerprint": APP_DELEGATE_MANIFEST.fingerprint,
+                    },
+                    "original_config": request.config,
+                }}
         return PreparedExecution({
             "delegation_id": delegation_id, "actor": str(request.actor),
             "input": inputs, "config": request.config,

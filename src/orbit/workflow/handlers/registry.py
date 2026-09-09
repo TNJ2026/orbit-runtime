@@ -108,6 +108,7 @@ class ExecutionRegistry:
         if expected_manifest_fingerprint is not None and (
             expected_manifest_fingerprint not in {
                 entry.manifest.fingerprint, entry.manifest.legacy_fingerprint,
+                *entry.manifest.compatible_fingerprints,
             }
         ):
             raise HandlerContractMismatchError(

@@ -200,6 +200,7 @@ HANDLER_MANIFEST_SCHEMA = _object_schema(
         "config_schema", "execution_safety", "resource_profile",
         "result_schema_id", "capabilities", "required_secrets",
         "supports_cancel", "supports_recover", "manifest_version",
+        "compatible_fingerprints",
     ],
     {
         "name": {"type": "string", "minLength": 1},
@@ -216,6 +217,9 @@ HANDLER_MANIFEST_SCHEMA = _object_schema(
         "supports_cancel": {"type": "boolean"},
         "supports_recover": {"type": "boolean"},
         "manifest_version": {"enum": ["1.0"]},
+        "compatible_fingerprints": {
+            "type": "array", "items": _HASH,
+        },
     },
 )
 

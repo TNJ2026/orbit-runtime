@@ -39,6 +39,7 @@ from .handlers import HandlerManifest
 
 
 VERSION_PROBE_TIMEOUT_SECONDS = 10
+PERMISSION_PROBE_TIMEOUT_SECONDS = 10
 AGENT_DISCOVERY_CACHE_SECONDS = 300
 AGENT_DISCOVERY_FAILURE_CACHE_SECONDS = 30
 DEFAULT_AGENT_DISCOVERY_CACHE = Path.home() / ".orbit" / "cache" / "agents.json"
@@ -51,6 +52,49 @@ class AgentDiscoveryError(ValueError):
 
 
 _SAFE_ARG = re.compile(r"^-{0,2}[A-Za-z0-9][A-Za-z0-9._:@/=-]*$")
+
+
+def _maximum_permission_args(help_text: str) -> tuple[str, ...]:
+    """Select the strongest reviewed unattended mode advertised by a CLI.
+
+    Help text is evidence only. It may select one of these code-owned
+    profiles, but it can never contribute an arbitrary argument of its own.
+    Profiles are ordered from a complete sandbox/approval bypass down to
+    narrower automatic-approval modes.
+    """
+
+    options = set(re.findall(
+        r"(?<![A-Za-z0-9_-])(--[A-Za-z0-9][A-Za-z0-9-]*)(?![A-Za-z0-9_-])",
+        help_text[:262_144],
+    ))
+    if "--dangerously-bypass-approvals-and-sandbox" in options:
+        selected = ["--dangerously-bypass-approvals-and-sandbox"]
+        if "--dangerously-bypass-hook-trust" in options:
+            selected.append("--dangerously-bypass-hook-trust")
+        return tuple(selected)
+    if "--dangerously-skip-permissions" in options:
+        return ("--dangerously-skip-permissions",)
+    if "--approval-mode" in options and re.search(r"\byolo\b", help_text):
+        return ("--approval-mode=yolo",)
+    if "--yolo" in options:
+        return ("--yolo",)
+    if "--permission-mode" in options and "bypassPermissions" in help_text:
+        return ("--permission-mode", "bypassPermissions")
+    if (
+        "--sandbox" in options
+        and "danger-full-access" in help_text
+        and "--ask-for-approval" in options
+        and re.search(r"\bnever\b", help_text)
+    ):
+        return (
+            "--sandbox", "danger-full-access", "--ask-for-approval", "never",
+        )
+    for option in (
+        "--trust-all-tools", "--yes-always", "--auto-approve", "--full-auto",
+    ):
+        if option in options:
+            return (option,)
+    return ()
 
 
 @dataclass(frozen=True)
@@ -141,41 +185,40 @@ class AgentCliSpec:
 # actually work, or it gets none because it never prompted to begin with —
 # pi, hermes and opencode all write without asking.
 #
-# The two settings are not the same strength, and the weaker one is preferred
-# where a CLI offers it. Codex has a real sandbox of its own, so it is confined
-# to the directory it was given rather than let out of it; Claude and
-# Antigravity have no equivalent lever, so they are trusted outright. Nothing
-# here is an OS boundary — see TrustedCliAgentClient.workspace_root.
+# The user has chosen each CLI's maximum unattended permission mode. Nothing
+# here is an OS boundary — see TrustedCliAgentClient.workspace_root. A CLI
+# sandbox or approval prompt is deliberately not relied upon for isolation.
 TRUSTED_AGENT_CLIS: tuple[AgentCliSpec, ...] = (
     AgentCliSpec("claude", "claude", invocation=AgentInvocation(
         args=("--dangerously-skip-permissions",), prompt_flag="-p",
     )),
     AgentCliSpec("codex", "codex", invocation=AgentInvocation(
-        # workspace-write, not a full bypass: Codex keeps enforcing its own
-        # sandbox and confines the run to the workspace it was handed. Under
-        # the default read-only sandbox every write came back "rejected by
-        # user approval settings", with nobody to ask.
-        args=("exec", "--skip-git-repo-check", "--sandbox", "workspace-write"),
+        # Workflow steps are unattended. The user explicitly chose Codex's
+        # maximum-permission mode; external workspace/process isolation is the
+        # remaining boundary, not Codex's approval UI or sandbox.
+        args=(
+            "exec", "--skip-git-repo-check",
+            "--dangerously-bypass-approvals-and-sandbox",
+            "--dangerously-bypass-hook-trust",
+        ),
         prompt_positional=True,
     )),
     AgentCliSpec("gemini", "gemini", invocation=AgentInvocation(
-        args=("--skip-trust",), prompt_flag="-p",
+        args=("--skip-trust", "--approval-mode=yolo"), prompt_flag="-p",
     )),
     AgentCliSpec("antigravity", "agy", invocation=AgentInvocation(
         args=("--dangerously-skip-permissions",), prompt_flag="-p",
         process_timeout_flag="--print-timeout",
     )),
-    # `pi -p "<prompt>"` is non-interactive print mode, text output by default.
-    # `-p` is a boolean and the prompt is a positional message, but the argv is
-    # identical to the flag form, and pi rejects the `--` fence a positional
-    # spec would add ("Unknown option: --"). Probed against pi 0.81.1.
-    AgentCliSpec("pi", "pi", invocation=AgentInvocation(prompt_flag="-p")),
+    # `pi -p` is non-interactive print mode and reads a piped prompt from
+    # stdin. Keep the prompt out of argv: workflow-authoring context can exceed
+    # the Windows command-line limit. Probed against pi 0.85.1.
+    AgentCliSpec("pi", "pi", invocation=AgentInvocation(args=("-p",))),
     AgentCliSpec("hermes", "hermes", invocation=AgentInvocation(
         # -Q is quiet mode: the final response only, no banner or spinner.
         args=("chat", "-Q"), prompt_flag="-q",
     )),
-    # The only one that reads the prompt from stdin, so the only one whose
-    # prompt never appears in the process list.
+    # Reads the prompt from stdin, so it never appears in the process list.
     AgentCliSpec("opencode", "opencode", invocation=AgentInvocation(args=("run",))),
     # Proposed from a system probe: installed here, reporting version
     # 0.37.2.
@@ -303,7 +346,11 @@ def _installed_candidates(
         resolved = which(base_spec.executable)
         if not resolved:
             continue
-        executable = str(Path(resolved))
+        # Preserve the resolver's spelling.  Normalising a POSIX-looking
+        # path through pathlib on Windows changes its separators, which
+        # also makes injected resolvers/runners disagree about the
+        # executable that was found.
+        executable = str(resolved)
         try:
             stat = Path(executable).stat()
             identity = (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns)
@@ -579,6 +626,26 @@ class CandidateProbe:
     on_path: bool
     version: str | None
     already_trusted: str | None
+    help_checked: bool = False
+    permission_args: tuple[str, ...] = ()
+
+
+def _probe_permissions(executable_path: str, runner) -> tuple[bool, tuple[str, ...]]:
+    """Read ``--help`` and select a code-owned maximum-permission profile."""
+
+    try:
+        completed = runner(
+            [executable_path, "--help"],
+            capture_output=True, text=True,
+            timeout=PERMISSION_PROBE_TIMEOUT_SECONDS,
+            cwd=os.path.expanduser("~"), env=trusted_cli_environment(),
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False, ()
+    if completed.returncode != 0:
+        return False, ()
+    text = f"{completed.stdout}\n{completed.stderr}"
+    return True, _maximum_permission_args(text)
 
 
 def probe_executable(
@@ -588,13 +655,15 @@ def probe_executable(
     which: Callable[[str], str | None] = shutil.which,
     runner=subprocess.run,
 ) -> CandidateProbe:
-    """Look at one proposed program name. Runs its version flag and nothing else.
+    """Look at one proposed program name. Runs version and help probes only.
 
     Where the suggestion came from does not matter — a person typing, a model
     reading their prompt — because this refuses to act on it in every way that
     would matter. The name is held to the same bare-program-name rule the
-    allowlist is, resolution goes through PATH, and the only thing executed is
-    the CLI's own version flag, from a neutral cwd with a bare environment.
+    allowlist is, resolution goes through PATH, and the only things executed
+    are the CLI's own version and help flags, from a neutral cwd with a bare
+    environment. Help output can select only a fixed, code-reviewed permission
+    profile; it can never inject an argument.
 
     Being on PATH is not being trusted, and this function registers nothing.
     Its result feeds a proposal a person reads and merges, which is the only
@@ -612,9 +681,11 @@ def probe_executable(
     resolved = which(candidate.executable)
     if not resolved:
         return CandidateProbe(candidate.executable, None, False, None, covered)
+    version = _probe_version(resolved, candidate, runner)
+    help_checked, permission_args = _probe_permissions(resolved, runner)
     return CandidateProbe(
-        candidate.executable, None, True,
-        _probe_version(resolved, candidate, runner), covered,
+        candidate.executable, None, True, version, covered,
+        help_checked, permission_args,
     )
 
 

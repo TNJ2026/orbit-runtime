@@ -20,8 +20,15 @@ INCLUDE_FILES = (
     "README.md",
     "README.zh-CN.md",
     "agent-app.json",
+    "agent-app.windows.json",
     "pyproject.toml",
+    "restart-orbit.cmd",
+    "restart-orbit.ps1",
+    "start-orbit.cmd",
+    "start-orbit.ps1",
     "start-orbit.sh",
+    "stop-orbit.cmd",
+    "stop-orbit.ps1",
     "uv.lock",
 )
 INCLUDE_DIRS = (".codex-plugin", "scripts", "skills", "src")
@@ -134,7 +141,14 @@ def build(output: Path, version: str | None) -> None:
             (ARCHIVE_ROOT / ".agents/plugins/marketplace.json").as_posix(),
             (PLUGIN_ROOT / ".codex-plugin/plugin.json").as_posix(),
             (PLUGIN_ROOT / ".mcp.json").as_posix(),
+            (PLUGIN_ROOT / "agent-app.windows.json").as_posix(),
+            (PLUGIN_ROOT / "restart-orbit.cmd").as_posix(),
+            (PLUGIN_ROOT / "restart-orbit.ps1").as_posix(),
+            (PLUGIN_ROOT / "start-orbit.cmd").as_posix(),
+            (PLUGIN_ROOT / "start-orbit.ps1").as_posix(),
             (PLUGIN_ROOT / "start-orbit.sh").as_posix(),
+            (PLUGIN_ROOT / "stop-orbit.cmd").as_posix(),
+            (PLUGIN_ROOT / "stop-orbit.ps1").as_posix(),
             (PLUGIN_ROOT / "skills/orbit/SKILL.md").as_posix(),
         }
         missing = required - names

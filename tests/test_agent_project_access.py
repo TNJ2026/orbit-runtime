@@ -318,6 +318,27 @@ class MultiprocessCompatibilityTests(unittest.TestCase):
         restored = pickle.loads(pickle.dumps(grant))
         self.assertEqual(grant.provider.project_root, restored.provider.project_root)
 
+    def test_trusted_cli_agent_client_is_picklable(self) -> None:
+        import pickle
+
+        provider = GitWorkspaceProvider("/tmp/project", "/tmp/state")
+        client = TrustedCliAgentClient(
+            ("agent-cli",), environment={},
+            project_workspace=GitWorktreeGrant(provider),
+            project_root="/tmp/project",
+        )
+
+        restored = pickle.loads(pickle.dumps(client))
+
+        self.assertEqual(("agent-cli",), restored.command)
+        self.assertEqual(client.project_root, restored.project_root)
+        self.assertEqual(
+            provider.project_root,
+            restored.project_workspace.provider.project_root,
+        )
+        self.assertTrue(restored._lock.acquire(blocking=False))  # noqa: SLF001
+        restored._lock.release()  # noqa: SLF001
+
 
 
 class SweepTests(unittest.TestCase):

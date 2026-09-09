@@ -146,6 +146,7 @@ class BoundHandler:
     # the version left the fingerprint still name that older value; accepting
     # it here is what keeps them runnable.
     legacy_manifest_fingerprint: str | None = None
+    compatible_manifest_fingerprints: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
         if not self.name.strip() or not self.version.strip():
@@ -207,7 +208,11 @@ class LangGraphHandlerRegistry:
             raise HandlerBindingError(
                 f"handler not registered: {reference.name}"
             )
-        accepted = {handler.manifest_fingerprint, handler.legacy_manifest_fingerprint}
+        accepted = {
+            handler.manifest_fingerprint,
+            handler.legacy_manifest_fingerprint,
+            *handler.compatible_manifest_fingerprints,
+        }
         if reference.manifest_fingerprint not in accepted:
             raise HandlerBindingError(
                 f"handler manifest mismatch: {reference.name}"

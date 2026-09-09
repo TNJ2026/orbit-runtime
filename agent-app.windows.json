@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "orbit",
+  "scope": "global",
+  "service": {
+    "command": [
+      "powershell.exe",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "{manifest_dir}/start-orbit.ps1",
+      "-HubService"
+    ],
+    "cwd": ".",
+    "environment": [
+      "HOME",
+      "USERPROFILE",
+      "HOMEDRIVE",
+      "HOMEPATH",
+      "APPDATA",
+      "LOCALAPPDATA",
+      "PATH",
+      "PATHEXT",
+      "COMSPEC",
+      "USERNAME",
+      "ORBIT_CLI",
+      "SYSTEMROOT",
+      "WINDIR",
+      "TEMP",
+      "TMP"
+    ],
+    "ready_url": "http://127.0.0.1:8848/health/ready",
+    "timeout_seconds": 60,
+    "discovery": null
+  },
+  "ui": {
+    "url": "http://127.0.0.1:8848/ui/"
+  },
+  "mcp": {
+    "transport": "http-jsonrpc",
+    "url": "http://127.0.0.1:8848/mcp"
+  },
+  "events": {
+    "transport": "websocket",
+    "url": "ws://127.0.0.1:8848/events"
+  }
+}

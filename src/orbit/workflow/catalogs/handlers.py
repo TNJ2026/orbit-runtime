@@ -57,6 +57,9 @@ class HandlerManifest:
     supports_cancel: bool = False
     supports_recover: bool = False
     manifest_version: str = "1.0"
+    # Older contract fingerprints this implementation remains able to honour.
+    # This is migration metadata, not part of the current contract itself.
+    compatible_fingerprints: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.name.strip():
@@ -74,9 +77,16 @@ class HandlerManifest:
         object.__setattr__(self, "config_schema", freeze_json(self.config_schema))
         object.__setattr__(self, "capabilities", tuple(sorted(set(self.capabilities))))
         object.__setattr__(self, "required_secrets", tuple(sorted(set(self.required_secrets))))
+        object.__setattr__(
+            self, "compatible_fingerprints",
+            tuple(sorted(set(self.compatible_fingerprints))),
+        )
         for value in (*self.capabilities, *self.required_secrets):
             if not value.strip():
                 raise ValueError("capability and secret names cannot be empty")
+        for value in self.compatible_fingerprints:
+            if not value.startswith("sha256:"):
+                raise ValueError("compatible handler fingerprint must be sha256")
 
     def __reduce__(self):
         """Carry this manifest to a worker process that cannot fork.
@@ -117,7 +127,7 @@ class HandlerManifest:
 
         payload = {
             key: value for key, value in to_primitive(self).items()
-            if key != "version"
+            if key not in {"version", "compatible_fingerprints"}
         }
         return "sha256:" + hashlib.sha256(canonical_json(payload).encode()).hexdigest()
 
@@ -133,7 +143,11 @@ class HandlerManifest:
         one of them says so in a way that outlives a release.
         """
 
-        return "sha256:" + hashlib.sha256(canonical_json(self).encode()).hexdigest()
+        payload = {
+            key: value for key, value in to_primitive(self).items()
+            if key != "compatible_fingerprints"
+        }
+        return "sha256:" + hashlib.sha256(canonical_json(payload).encode()).hexdigest()
 
 
 def _rebuild_manifest(values: dict[str, Any]) -> HandlerManifest:

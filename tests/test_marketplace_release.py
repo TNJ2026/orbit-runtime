@@ -34,7 +34,14 @@ class MarketplaceReleaseTests(unittest.TestCase):
         self.assertIn("orbit-marketplace/.agents/plugins/marketplace.json", names)
         self.assertIn(root + ".codex-plugin/plugin.json", names)
         self.assertIn(root + ".mcp.json", names)
+        self.assertIn(root + "agent-app.windows.json", names)
+        self.assertIn(root + "restart-orbit.cmd", names)
+        self.assertIn(root + "restart-orbit.ps1", names)
+        self.assertIn(root + "start-orbit.cmd", names)
+        self.assertIn(root + "start-orbit.ps1", names)
         self.assertIn(root + "start-orbit.sh", names)
+        self.assertIn(root + "stop-orbit.cmd", names)
+        self.assertIn(root + "stop-orbit.ps1", names)
         self.assertIn(root + "skills/orbit/SKILL.md", names)
 
 

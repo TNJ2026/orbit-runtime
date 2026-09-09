@@ -75,6 +75,8 @@ def build_routes(ctx) -> list[Route]:
                 "verdict": item.verdict, "detail": item.detail,
                 "version": item.probe.version, "on_path": item.probe.on_path,
                 "already_trusted": item.probe.already_trusted,
+                "help_checked": item.probe.help_checked,
+                "permission_args": list(item.probe.permission_args),
             } for item in proposals],
             "patch": patch, "applied": applied, "restart_required": applied,
         }

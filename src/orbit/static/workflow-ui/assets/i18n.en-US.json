@@ -158,6 +158,7 @@
   "generate.instruction": "Describe the workflow",
   "generate.instructionPh": "e.g. Transform the input, then require an approval from ops before finishing",
   "generate.lengthHint": "Up to {count} characters",
+  "generate.unavailable": "No Agent CLI is available and no Agent App is registered. Add or connect an Agent before generating a workflow.",
   "generate.executionAgent": "Agent that runs the task",
   "generate.connectedAgent": "Connected Agent",
   "generate.connectedAgent.none": "No Agent available",

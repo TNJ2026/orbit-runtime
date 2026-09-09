@@ -22,6 +22,8 @@ from orbit.workflow.authoring import (
 from orbit.workflow.catalogs import (
     HandlerManifest, InMemoryHandlerCatalog, InMemorySchemaCatalog,
 )
+from orbit.workflow.catalogs.agent_discovery import TRUSTED_AGENT_CLIS
+from orbit.workflow.cli_environment import trusted_cli_environment
 from orbit.workflow.domain.durable_execution import ExecutionSafety
 from orbit.workflow.domain.handlers import ResourceProfile
 from orbit.workflow.dsl.schema import ID_PATTERN
@@ -102,12 +104,13 @@ class AuthoringServiceTests(unittest.TestCase):
         facts = authoring._handler_facts_with_ports()
         offered = facts[0]["config_schema"]["properties"]["target"]["enum"]
         self.assertEqual(["run_initiator"], offered)
-        # Runtime compatibility is retained: the registered 1.0 manifest and
-        # its fingerprint are not rewritten just to narrow authoring choices.
+        # Runtime compatibility is retained: the registered manifest is not
+        # rewritten just to narrow authoring choices.
         declared = APP_DELEGATE_MANIFEST.config_schema["properties"]["target"]["enum"]
         self.assertIn("background_pool", declared)
+        self.assertIn("prompt", APP_DELEGATE_MANIFEST.config_schema["properties"])
 
-    def test_app_delegation_is_a_valid_goal_entry_without_an_agent_cli(self) -> None:
+    def test_app_delegation_retries_until_the_step_has_a_prompt(self) -> None:
         document = valid_document()
         document["nodes"][0].update({
             "inputs": [{"id": "task", "schema_id": "schema://object/1.0"}],
@@ -120,11 +123,15 @@ class AuthoringServiceTests(unittest.TestCase):
         ]
         document["edges"][0]["from"]["port"] = "result"
         document["edges"][0]["to"]["port"] = "result"
-        model = ScriptedModel([json.dumps(document)])
+        corrected = json.loads(json.dumps(document))
+        corrected["nodes"][0]["config"]["prompt"] = (
+            "Classify the supplied item into a structured status."
+        )
+        model = ScriptedModel([json.dumps(document), json.dumps(corrected)])
         authoring = WorkflowAuthoringService(
             InMemoryHandlerCatalog([APP_DELEGATE_MANIFEST]), SCHEMAS, model,
             handler_facts=[{
-                "name": "app.delegate", "version": "1.0.0",
+                "name": "app.delegate", "version": APP_DELEGATE_MANIFEST.version,
                 "inputs": {"task": "schema://object/1.0"},
                 "outputs": {"result": "schema://object/1.0"},
                 "config_schema": APP_DELEGATE_MANIFEST.config_schema,
@@ -134,7 +141,8 @@ class AuthoringServiceTests(unittest.TestCase):
 
         outcome = authoring.generate("Classify one item into a structured status")
 
-        self.assertEqual(1, outcome.attempts)
+        self.assertEqual(2, outcome.attempts)
+        self.assertIn("APP_DELEGATE_PROMPT_MISSING", model.prompts[1])
 
     def test_generation_retries_when_goal_cannot_bind_to_one_entry(self) -> None:
         agent_manifest = HandlerManifest(
@@ -233,6 +241,8 @@ class AuthoringServiceTests(unittest.TestCase):
         self.assertIn("explicit back_edge", prompt)
         self.assertIn("durable recovery boundary", prompt)
         self.assertIn("one monolithic Agent prompt", prompt)
+        self.assertIn("Every app.delegate action", prompt)
+        self.assertIn("task.instructions", prompt)
 
     def test_prompt_carries_the_rules_that_were_learned_by_failing(self) -> None:
         """Three constraints a document can satisfy the schema and still break on.
@@ -936,7 +946,27 @@ class CliGeneratorTests(unittest.TestCase):
         self.assertEqual(["gen-cli"], calls["argv"])
         self.assertEqual("the prompt", calls["stdin_text"])
         self.assertIsNone(calls["timeout"])
-        self.assertEqual({"PATH", "HOME", "USER", "LOGNAME"}, set(calls["env"]))
+        self.assertEqual(set(trusted_cli_environment()), set(calls["env"]))
+
+    def test_a_large_pi_prompt_stays_out_of_the_windows_command_line(self) -> None:
+        calls = {}
+
+        def runner(argv, **kwargs):
+            calls.update(kwargs, argv=argv)
+            return FakeOutcome(stdout="answer")
+
+        spec = next(item for item in TRUSTED_AGENT_CLIS if item.name == "pi")
+        prompt = "workflow context\n" * 10_000
+        generator = TrustedCliDslGenerator(
+            [spec.executable, *spec.invocation.args],
+            prompt_flag=spec.invocation.prompt_flag,
+            prompt_positional=spec.invocation.prompt_positional,
+            runner=runner,
+        )
+
+        self.assertEqual("answer", generator(prompt))
+        self.assertEqual(["pi", "-p"], calls["argv"])
+        self.assertEqual(prompt, calls["stdin_text"])
 
     def test_positional_prompt_uses_non_interactive_cli_command(self) -> None:
         calls = {}

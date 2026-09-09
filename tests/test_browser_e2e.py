@@ -2347,6 +2347,57 @@ class GoalHomeTests(BrowserE2ETestCase):
 
         self.assertTrue(page.locator('[data-view="agents"]').is_visible())
 
+    def test_agents_empty_state_is_centered_and_subdued(self) -> None:
+        page = self.open("zh-CN")
+        page.locator('[data-view="agents"]').click()
+
+        empty = page.locator(".agents-list.is-empty .agents-empty")
+        empty.wait_for()
+        empty_box = empty.bounding_box()
+        list_box = page.locator(".agents-list.is-empty").bounding_box()
+        self.assertIsNotNone(empty_box)
+        self.assertIsNotNone(list_box)
+        self.assertAlmostEqual(
+            empty_box["x"] + empty_box["width"] / 2,
+            list_box["x"] + list_box["width"] / 2,
+            delta=1,
+        )
+        self.assertAlmostEqual(
+            empty_box["y"] + empty_box["height"] / 2,
+            list_box["y"] + list_box["height"] / 2,
+            delta=1,
+        )
+        self.assertEqual("0.65", empty.evaluate("node => getComputedStyle(node).opacity"))
+
+
+class WorkflowGenerationUnavailableTests(BrowserE2ETestCase):
+    @classmethod
+    def extra_app_kwargs(cls) -> dict:
+        return {"single_goal_mode": True}
+
+    def test_generation_is_disabled_without_a_cli_or_registered_app(self) -> None:
+        expected = {
+            "zh-CN": "未检测到可用的 Agent CLI，也没有已注册的 Agent App。请先添加或连接 Agent，再生成工作流。",
+            "en-US": "No Agent CLI is available and no Agent App is registered. Add or connect an Agent before generating a workflow.",
+        }
+        for locale, message in expected.items():
+            with self.subTest(locale=locale):
+                page = self.open(locale, "/ui/#/workflows")
+                page.wait_for_selector(".simplified-workflow-generator")
+                self.assertTrue(page.locator("#generateWorkflow").is_disabled())
+                hint = page.locator(".simplified-workflow-generator-unavailable")
+                self.assertEqual(message, hint.inner_text())
+                self.assertTrue(page.evaluate("""
+                    () => {
+                      const button = document.querySelector('#generateWorkflow');
+                      const hint = document.querySelector(
+                        '.simplified-workflow-generator-unavailable'
+                      );
+                      return Boolean(button.compareDocumentPosition(hint)
+                        & Node.DOCUMENT_POSITION_FOLLOWING);
+                    }
+                """))
+
 
 if __name__ == "__main__":
     unittest.main()

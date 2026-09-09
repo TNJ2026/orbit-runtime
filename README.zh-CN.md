@@ -35,6 +35,25 @@ uv sync --extra dev
 uv run orbit serve
 ```
 
+Windows PowerShell 也可以使用原生脚本：启动脚本注册当前工作区，重启和停止脚本会处理
+Hub 及其发现到的全部 Workspace Runtime：
+
+```bat
+start-orbit.cmd
+restart-orbit.cmd
+stop-orbit.cmd
+```
+
+这些 `.cmd` 入口可从 PowerShell、CMD 或资源管理器直接运行，并且不会修改系统的
+PowerShell 执行策略。可以先用 `restart-orbit.cmd -DryRun` 或
+`stop-orbit.cmd -DryRun` 查看将处理的进程，不执行停止操作。
+
+启动其他工作区时，将其路径传给启动脚本：
+
+```bat
+start-orbit.cmd "D:\Develop\your-project"
+```
+
 UI 地址为 `http://127.0.0.1:8848/ui`。这个页面列出本机正在运行的 Workspace Runtime
 并链接到各自的 UI；它**不启动任何东西**，所以 Runtime 没起来的 Workspace 不会出现在那里。
 

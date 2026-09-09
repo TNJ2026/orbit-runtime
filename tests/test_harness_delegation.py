@@ -139,6 +139,12 @@ class DelegationQueueTests(unittest.TestCase):
         })
         self.assertEqual(2, len(invalid.issues))
         self.assertEqual("app.delegate", APP_DELEGATE_MANIFEST.name)
+        self.assertEqual("1.1.0", APP_DELEGATE_MANIFEST.version)
+        self.assertEqual(
+            {"type": "string", "minLength": 1, "maxLength": 4000},
+            dict(APP_DELEGATE_MANIFEST.config_schema["properties"]["prompt"]),
+        )
+        self.assertEqual(2, len(APP_DELEGATE_MANIFEST.compatible_fingerprints))
 
     def test_claim_is_actor_scoped_and_settles_exactly_once(self) -> None:
         self.queue.enqueue("delegation:1", actor="session:1", request={
@@ -546,6 +552,33 @@ class DelegationQueueTests(unittest.TestCase):
 
 
 class HarnessSubagentHandlerTests(unittest.TestCase):
+    def test_native_app_step_prompt_is_delivered_in_the_task_envelope(self) -> None:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
+            handler = AppDelegationHandler(DelegationQueue(
+                Path(directory) / "prompt.db", require_execution_lease=False,
+            ))
+            request = SimpleNamespace(
+                attempt_id="attempt:prompt", idempotency_key="prompt",
+                actor="session:app", input={"task": {"goal": "translate"}},
+                config={
+                    "target": "run_initiator",
+                    "prompt": "Translate the supplied text into Chinese.",
+                },
+                deadline=datetime.now(timezone.utc) + timedelta(minutes=5),
+            )
+
+            prepared = handler.prepare(request, SimpleNamespace(request=request))
+            task = prepared.payload["input"]["task"]
+
+            self.assertEqual(
+                "Translate the supplied text into Chinese.", task["instructions"],
+            )
+            self.assertEqual(
+                {"task": {"goal": "translate"}}, task["input"],
+            )
+            self.assertEqual("app.delegate", task["original_handler"]["name"])
+            self.assertEqual(request.config, task["original_config"])
+
     def test_app_handler_is_safe_to_send_to_a_spawned_worker(self) -> None:
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
             handler = AppDelegationHandler(DelegationQueue(

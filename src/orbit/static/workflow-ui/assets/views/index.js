@@ -1877,6 +1877,7 @@ export function createViews(context) {
       // Several writers may be available; the author can choose one and the
       // Runtime's default is selected initially.
       let writerAgent = defaultGenerationAgent();
+      const generationUnavailable = !writerAgent;
       const instruction = el("textarea", {
         id: "generateInstruction", required: "required", maxlength: "4000",
         disabled: activeGeneration ? "disabled" : null,
@@ -1889,7 +1890,10 @@ export function createViews(context) {
       });
       const submit = el("button", {
         class: "button primary", type: "submit", id: "generateWorkflow",
-        disabled: !generateCommand || activeGeneration ? "disabled" : null,
+        "aria-describedby": generationUnavailable
+          ? "workflowGenerationUnavailable" : null,
+        disabled: !generateCommand || generationUnavailable || activeGeneration
+          ? "disabled" : null,
       }, [
         el("span", { class: "generate-spark", "aria-hidden": "true", text: "✦" }),
         el("span", { text: activeGeneration
@@ -1900,7 +1904,7 @@ export function createViews(context) {
         class: "simplified-workflow-generator-form",
         onsubmit: async (event) => {
           event.preventDefault();
-          if (!generateCommand || activeGeneration
+          if (!generateCommand || generationUnavailable || activeGeneration
               || !instruction.value.trim() || !instruction.reportValidity()) return;
           submit.disabled = true;
           problem.hidden = true;
@@ -1922,7 +1926,7 @@ export function createViews(context) {
               : i18n.t("error.generic");
             problem.hidden = false;
             reportError(error);
-            submit.disabled = false;
+            submit.disabled = generationUnavailable;
           }
         },
       }, [
@@ -1948,6 +1952,11 @@ export function createViews(context) {
           }),
           el("div", { class: "actions simplified-workflow-generator-actions" }, [submit]),
         ]),
+        generationUnavailable ? el("p", {
+          id: "workflowGenerationUnavailable",
+          class: "simplified-workflow-generator-unavailable",
+          text: i18n.t("generate.unavailable"),
+        }) : null,
         problem,
       ]);
       page.append(el("header", {
@@ -2110,7 +2119,10 @@ export function createViews(context) {
         cards.append(card);
       }
       if (!entries.length) {
-        cards.append(el("div", { class: "empty panel", text: i18n.t("workflows.empty") }));
+        cards.append(el("div", {
+          class: "empty workflow-empty",
+          text: i18n.t("workflows.empty"),
+        }));
       }
     };
     drawCards();
@@ -2206,6 +2218,7 @@ export function createViews(context) {
       online.textContent = i18n.t("agents.online", {
         count: i18n.number(agents.length),
       });
+      list.classList.toggle("is-empty", agents.length === 0);
       list.replaceChildren(...(agents.length
         ? [
           el("div", { class: "agents-list-head", "aria-hidden": "true" }, [
@@ -2244,7 +2257,7 @@ export function createViews(context) {
             ]);
           }),
         ]
-        : [el("div", { class: "muted", text: i18n.t("agents.empty") })]));
+        : [el("div", { class: "agents-empty", text: i18n.t("agents.empty") })]));
     };
     drawAgents();
     /* The Agent finder opens in a page modal rather than a `<dialog>`, so the

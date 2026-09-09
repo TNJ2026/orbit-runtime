@@ -182,6 +182,27 @@ class TrustedCliAgentClient:
         self._executions = {}
         self._pending_cancellations = set()
 
+    def __getstate__(self):
+        """Carry the trusted client across a spawn-based Worker boundary.
+
+        Windows starts the Execution Worker with ``spawn``, so Handler
+        registrations are pickled before the child process starts.  A
+        ``threading.Lock`` is process-local and cannot be pickled; recreate it
+        in the child while preserving the client configuration and idle
+        bookkeeping that the Worker owns from then on.
+        """
+
+        with self._lock:
+            if self._executions:
+                raise TypeError("cannot pickle an Agent client with active executions")
+            state = dict(self.__dict__)
+        state.pop("_lock", None)
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._lock = Lock()
+
     def execute(self, request, context):
         stdout = self._run(
             (),

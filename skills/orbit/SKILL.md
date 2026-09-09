@@ -78,5 +78,14 @@ clean application restart, follow
 [refresh-codex-plugin.md](reference/refresh-codex-plugin.md). This procedure
 deliberately stops before fully quitting or reopening Codex.
 
+After a successful Orbit plugin install or reinstall, read
+[post-install-usage.md](reference/post-install-usage.md) and include its usage
+handoff in the final response. If the user did not name a host, show all three
+host sections: Codex, DeepSeek Harness, and WorkBuddy. List every card or native
+surface that host actually renders, what it does, the command or tool behind
+it, and a copyable prompt. Keep the distinction explicit: Codex and WorkBuddy
+render Orbit MCP App cards; DeepSeek Harness renders its own resident panel and
+must not be described as rendering those cards.
+
 Use the registered Orbit MCP tools for workflow operations. Do not construct
 mutation URLs: follow the Runtime's `allowed_commands[]` responses.

@@ -1,6 +1,6 @@
 {
   "name": "orbit",
-  "version": "0.4.0+codex.20260905110542",
+  "version": "1.0.0+codex.20260909042258",
   "description": "Local durable workflow Runtime with a browser UI and MCP tools.",
   "author": {
     "name": "Orbit"

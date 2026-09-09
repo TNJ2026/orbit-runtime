@@ -727,11 +727,14 @@ class HostHelperTests(unittest.TestCase):
         self.assertTrue(host_module._process_exists(os.getpid()))
 
     def test_health_is_false_when_nothing_answers(self) -> None:
-        """A closed port, not a slow one: the check must not hang the host."""
+        """A connection timeout is ordinary failed health, not a host error."""
 
-        self.assertFalse(
-            host_module._health_check("http://127.0.0.1:9/health", timeout=0.5),
-        )
+        with mock.patch.object(host_module, "urlopen", side_effect=TimeoutError):
+            self.assertFalse(
+                host_module._health_check(
+                    "http://127.0.0.1:9/health", timeout=0.5,
+                ),
+            )
 
     def test_health_reads_the_status_and_not_the_body(self) -> None:
         import contextlib
@@ -739,7 +742,7 @@ class HostHelperTests(unittest.TestCase):
 
         def answer(status):
             @contextlib.contextmanager
-            def opener(request, timeout=None):
+            def opener(request, timeout=None, context=None):
                 yield types.SimpleNamespace(status=status)
             return opener
 

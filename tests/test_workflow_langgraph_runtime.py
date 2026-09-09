@@ -2720,16 +2720,34 @@ class LangGraphWorkflowServiceTests(unittest.TestCase):
             }),
         ])
 
+        for supplied, key in (
+            ({}, "missing-prompt"),
+            ({"prompt": {}}, "empty-prompt-placeholder"),
+        ):
+            with self.subTest(supplied=supplied), tempfile.TemporaryDirectory(
+                ignore_cleanup_errors=True,
+            ) as directory:
+                service = self.service(
+                    directory, self.publish(directory, ir), registry,
+                )
+                run = service.start(
+                    ir.workflow_id, supplied, goal="Translate this",
+                    idempotency_key=key,
+                )
+
+            self.assertEqual("completed", run.status)
+            self.assertEqual({"prompt": {"goal": "Translate this"}}, run.inputs)
+            self.assertEqual({"goal": "Translate this"}, run.result)
+
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
             service = self.service(directory, self.publish(directory, ir), registry)
-            run = service.start(
-                ir.workflow_id, {}, goal="Translate this",
-                idempotency_key="goal-binding",
+            explicit = service.start(
+                ir.workflow_id, {"prompt": {"goal": "Explicit input"}},
+                goal="Run label", idempotency_key="explicit-prompt",
             )
 
-        self.assertEqual("completed", run.status)
-        self.assertEqual({"prompt": {"goal": "Translate this"}}, run.inputs)
-        self.assertEqual({"goal": "Translate this"}, run.result)
+        self.assertEqual({"prompt": {"goal": "Explicit input"}}, explicit.inputs)
+        self.assertEqual({"goal": "Explicit input"}, explicit.result)
 
     def test_goal_ready_app_workflow_binds_goal_into_task_input(self) -> None:
         task = IRPort("task", "schema://object/1.0", True, False, None, "")
