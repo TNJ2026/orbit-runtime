@@ -5,7 +5,7 @@ import { semanticWorkflowDiff } from "../workflow-diff.js";
 import { humanResponseValue, resumeActions } from "../run-resume.js";
 import { workflowGenerationProgress } from "../workflow/generation-progress.js";
 import { embeddedGraph } from "../workflow/definition-views.js";
-import { askConfirm, askText } from "../components/dialog.js";
+import { askConfirm, askText, showNotice } from "../components/dialog.js";
 
 export function createViews(context) {
   const { api, render, navigate, announce, reportError, commandButtons,
@@ -1990,6 +1990,7 @@ export function createViews(context) {
               api, i18n, reportError, defaultGenerationAgent,
               installCleanup: installViewCleanup,
             }, {
+              onCancelled: render,
               // A generation that did not land leaves nothing to keep, so the
               // only thing on offer is the form it came from. Success needs no
               // entry here: `render` has already replaced the whole page.
@@ -3538,15 +3539,36 @@ export function createViews(context) {
         if (cancel) {
           actions.append(el("button", {
             type: "button", class: "button", text: i18n.t("action.cancel"),
-            onclick: async () => {
+            onclick: async (event) => {
+              event.currentTarget.disabled = true;
+              let cancelledJob;
               try {
-                job = (await api.execute(
+                cancelledJob = (await api.execute(
                   cancel, {}, `workflow.authoring.cancel:${job.job_id}`,
                 )).data;
-                draw();
               } catch (error) {
-                reportError(error);
+                event.currentTarget.disabled = false;
+                const message = error instanceof ApiError
+                  ? i18n.t(error.messageKey, { message: error.message })
+                  : i18n.t("generate.cancelFailed.message");
+                await showNotice(el, {
+                  title: i18n.t("generate.cancelFailed.title"), message,
+                  closeLabel: i18n.t("action.close"),
+                });
+                return;
               }
+              if (cancelledJob?.status !== "cancelled") {
+                event.currentTarget.disabled = false;
+                await showNotice(el, {
+                  title: i18n.t("generate.cancelFailed.title"),
+                  message: i18n.t("generate.cancelFailed.message"),
+                  closeLabel: i18n.t("action.close"),
+                });
+                return;
+              }
+              clearTimeout(timer);
+              job = null;
+              draw();
             },
           }));
         } else {

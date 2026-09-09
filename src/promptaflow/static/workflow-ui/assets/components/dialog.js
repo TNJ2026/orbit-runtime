@@ -50,6 +50,24 @@ export function askConfirm(el, i18n, {
   });
 }
 
+/** One-way notice for an outcome the reader must acknowledge. */
+export function showNotice(el, { title, message, closeLabel }) {
+  return new Promise((resolve) => {
+    const close = el("button", {
+      type: "button", class: "button primary", text: closeLabel,
+    });
+    const { dialog } = shell(el, {
+      titleId: "appDialogTitle", title,
+      body: [el("p", { text: message })],
+      actions: [close],
+    });
+    close.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("close", () => resolve(), { once: true });
+    dialog.showModal();
+    close.focus();
+  });
+}
+
 /** Some text, resolving null on every way of declining. */
 export function askText(el, i18n, {
   title, label, value = "", confirmLabel, multiline = true,

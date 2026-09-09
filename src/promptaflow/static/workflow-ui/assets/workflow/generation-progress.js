@@ -1,5 +1,6 @@
 import { ApiError } from "../api.js";
 import { el } from "../components/dom.js";
+import { showNotice } from "../components/dialog.js";
 
 /** Progress marker the Runtime writes into an authoring job's output. */
 const SENTINEL = "\x1epromptaflow-progress:";
@@ -20,7 +21,7 @@ export function workflowGenerationProgress(
   initialJob, onSucceeded, context, options = {},
 ) {
   const {
-    api, i18n, reportError, defaultGenerationAgent, installCleanup,
+    api, i18n, defaultGenerationAgent, installCleanup,
   } = context;
   const {
     // `${statusPrefix}.${job.status}` — a prefix rather than five keys,
@@ -29,6 +30,7 @@ export function workflowGenerationProgress(
     progressTitleKey = "generate.progress.title",
     promptLabelKey = "generate.instruction",
     agentLabelKey = "generate.writtenBy",
+    onCancelled = null,
     // What the host offers once the job has settled. A node slot rather than
     // more labels: the two callers differ in what the buttons *do*, and no
     // amount of wording can express that.
@@ -106,20 +108,39 @@ export function workflowGenerationProgress(
       );
       if (!cancel) return;
       event.currentTarget.disabled = true;
+      let cancelledJob;
       try {
-        job = (await api.execute(
+        cancelledJob = (await api.execute(
           cancel, {}, `workflow.authoring.cancel:${job.job_id}`,
         )).data;
-        stopped = true;
-        if (timer) clearTimeout(timer);
-        state.textContent = i18n.t(`${statusPrefix}.${job.status}`);
-        jobState.className = `authoring-job-state ${job.status}`;
-        updateCancel();
-        settle();
       } catch (error) {
         event.currentTarget.disabled = false;
-        reportError(error);
+        const message = error instanceof ApiError
+          ? i18n.t(error.messageKey, { message: error.message })
+          : i18n.t("generate.cancelFailed.message");
+        await showNotice(el, {
+          title: i18n.t("generate.cancelFailed.title"), message,
+          closeLabel: i18n.t("action.close"),
+        });
+        return;
       }
+      if (cancelledJob?.status !== "cancelled") {
+        event.currentTarget.disabled = false;
+        await showNotice(el, {
+          title: i18n.t("generate.cancelFailed.title"),
+          message: i18n.t("generate.cancelFailed.message"),
+          closeLabel: i18n.t("action.close"),
+        });
+        return;
+      }
+      job = cancelledJob;
+      stopped = true;
+      if (timer) clearTimeout(timer);
+      state.textContent = i18n.t(`${statusPrefix}.${job.status}`);
+      jobState.className = `authoring-job-state ${job.status}`;
+      updateCancel();
+      if (onCancelled) await onCancelled(job);
+      else settle();
     },
   });
 

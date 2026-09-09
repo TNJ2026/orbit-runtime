@@ -349,6 +349,7 @@ class AccessibilityTests(unittest.TestCase):
         generation_js = (
             ASSETS / "workflow" / "generation-progress.js"
         ).read_text(encoding="utf-8")
+        views_js = (ASSETS / "views" / "index.js").read_text(encoding="utf-8")
         self.assertIn('class: "button workflow-generation-cancel"', generation_js)
         self.assertIn(
             '(item) => item.command === "workflow.authoring.cancel"', generation_js
@@ -356,6 +357,11 @@ class AccessibilityTests(unittest.TestCase):
         self.assertIn(
             '`workflow.authoring.cancel:${job.job_id}`', generation_js
         )
+        self.assertIn('cancelledJob?.status !== "cancelled"', generation_js)
+        self.assertIn("if (onCancelled) await onCancelled(job)", generation_js)
+        self.assertIn("onCancelled: render", views_js)
+        self.assertIn("job = null;\n              draw();", views_js)
+        self.assertIn("showNotice", generation_js)
 
     def messages(self, text: str) -> set[str]:
         return set(re.findall(r'"(promptaflow-viewer-[a-z-]+)"', text))
