@@ -1331,6 +1331,7 @@ def main() -> None:
             print(json.dumps(
                 {
                     **workspace_urls(identifier),
+                    "workspace_path": str(registered_workspace),
                     "agent_project_access": grants.granted(identifier),
                     "agent_project_access_mode": grants.mode(identifier),
                     "effective_project_access": (

@@ -54,8 +54,12 @@ class PowerShellScriptTests(unittest.TestCase):
             "Add-Content -LiteralPath $env:PROMPTAFLOW_TEST_CAPTURE -Encoding UTF8\n"
             "if ($Items.Count -ge 2 -and $Items[0] -eq 'hub' "
             "-and $Items[1] -eq 'register') {\n"
-            "  Write-Output '{\"ui_url\":\"http://127.0.0.1:8848/"
-            "workspaces/example/ui/\"}'\n"
+            "  $workspace = $env:PROMPTAFLOW_TEST_WORKSPACE_PATH\n"
+            "  if (-not $workspace) { "
+            "$workspace = [System.IO.Path]::GetFullPath($Items[2]) }\n"
+            "  Write-Output (@{ui_url='http://127.0.0.1:8848/"
+            "workspaces/example/ui/'; workspace_path=$workspace} "
+            "| ConvertTo-Json -Compress)\n"
             "}\n",
             encoding="utf-8",
         )
@@ -70,6 +74,7 @@ class PowerShellScriptTests(unittest.TestCase):
                 **os.environ,
                 "PROMPTAFLOW_CLI": str(fake),
                 "PROMPTAFLOW_TEST_CAPTURE": str(capture),
+                "PROMPTAFLOW_TEST_WORKSPACE_PATH": str(workspace.resolve()),
                 "PROMPTAFLOW_TEST_RUNTIME_JSON": json.dumps([{
                     "project_root": str(workspace.resolve()),
                     "base_url": "http://127.0.0.1:51234",

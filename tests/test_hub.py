@@ -342,6 +342,7 @@ class ProjectAccessGrantTests(unittest.TestCase):
                 "non_git_direct_read_write_no_rollback",
                 granted["effective_project_access"],
             )
+            self.assertEqual(str(workspace.resolve()), plain["workspace_path"])
             self.assertEqual(plain["workspace_id"], granted["workspace_id"])
 
 

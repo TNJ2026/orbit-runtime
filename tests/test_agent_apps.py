@@ -705,7 +705,7 @@ class HostHelperTests(unittest.TestCase):
             "pathlib.Path.home", return_value=Path("/users/example"),
         ):
             self.assertEqual(
-                Path("/users/example/.promptaflow/workspaces/default"),
+                (Path("/users/example") / ".promptaflow/workspaces/default").resolve(),
                 host_module.default_workspace(),
             )
 

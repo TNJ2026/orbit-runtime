@@ -162,9 +162,15 @@ try {
     $registrationText = ($registrationOutput | Out-String).Trim()
     try {
         $registration = $registrationText | ConvertFrom-Json
-        if (-not $registration.ui_url) {
-            throw "registration did not include ui_url"
+        if (-not $registration.ui_url -or -not $registration.workspace_path) {
+            throw "registration did not include ui_url and workspace_path"
         }
+        # Use the Hub's Python-canonicalized path from here on. On macOS,
+        # PowerShell preserves /var while Python resolves it to /private/var;
+        # comparing those spellings made a live Runtime look absent.
+        $workspace = [System.IO.Path]::GetFullPath(
+            [string]$registration.workspace_path
+        )
     }
     catch {
         throw "PromptaFlow Hub returned an invalid workspace registration: $registrationText"
