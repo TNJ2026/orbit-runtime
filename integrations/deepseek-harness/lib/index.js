@@ -607,7 +607,7 @@ var PromptaFlowGateway = class {
 					capabilities: {},
 					clientInfo: {
 						name: "dsh-promptaflow",
-						version: "0.1.0"
+						version: "0.6.0-alpha"
 					}
 				});
 				runtime.capabilities = await this.callRaw(runtime, "get_capabilities", {});

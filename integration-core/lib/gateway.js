@@ -236,7 +236,7 @@ export class PromptaFlowGateway {
             try {
                 await this.rpc(runtime, 'initialize', {
                     protocolVersion: '2025-06-18', capabilities: {},
-                    clientInfo: { name: 'dsh-promptaflow', version: '0.1.0' },
+                    clientInfo: { name: 'dsh-promptaflow', version: '0.6.0-alpha' },
                 });
                 runtime.capabilities = await this.callRaw(runtime, 'get_capabilities', {});
                 if (runtime.capabilities.integration_protocol !== 'promptaflow-harness/2')

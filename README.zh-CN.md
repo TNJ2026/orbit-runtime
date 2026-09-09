@@ -225,13 +225,13 @@ node --test tests/ui/client_modules.test.mjs
 ```bash
 uv build
 python scripts/build-marketplace-release.py \
-  --version 2.0.0 \
-  --output dist/promptaflow-marketplace-2.0.0.zip \
-  --plugin-output dist/promptaflow-plugin-2.0.0.zip
+  --version 0.6.0-alpha \
+  --output dist/promptaflow-marketplace-0.6.0-alpha.zip \
+  --plugin-output dist/promptaflow-plugin-0.6.0-alpha.zip
 ```
 
-推送 `2.0` 或 `v2.0.0` 这样的标签后，Release workflow 会把两段版本规范化为
-`2.0.0`，检查它与 `src/promptaflow/__init__.py` 的版本是否一致、运行测试，并把全部
-分发产物上传到 GitHub Release。也可以为已有标签手动运行；重复运行会覆盖上传的
-产物。PyPI 发布只在手动运行时按需勾选，并要求事先配置 Trusted Publisher；普通
+推送 `v0.6.0-alpha` 这样的完整 SemVer 标签后，Release workflow 会检查去掉
+`v` 的版本是否与 `src/promptaflow/__init__.py` 一致、运行测试，并把全部分发产物
+上传到 GitHub 预发布。也可以为已有标签手动运行；重复运行会覆盖上传的产物。
+PyPI 发布只在手动运行时按需勾选，并要求事先配置 Trusted Publisher；普通
 标签发布仅分发到 GitHub。

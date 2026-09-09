@@ -268,14 +268,14 @@ Build the Python package with:
 ```bash
 uv build
 python scripts/build-marketplace-release.py \
-  --version 2.0.0 \
-  --output dist/promptaflow-marketplace-2.0.0.zip \
-  --plugin-output dist/promptaflow-plugin-2.0.0.zip
+  --version 0.6.0-alpha \
+  --output dist/promptaflow-marketplace-0.6.0-alpha.zip \
+  --plugin-output dist/promptaflow-plugin-0.6.0-alpha.zip
 ```
 
-Pushing a tag such as `2.0` or `v2.0.0` runs the Release workflow. It normalizes
-a two-part tag to `2.0.0`, verifies that it matches `src/promptaflow/__init__.py`, runs
-the tests, and uploads all distribution assets to the GitHub Release. The same
-workflow can be started manually for an existing tag; repeated runs replace its
-uploaded assets. PyPI publishing is opt-in on a manual run and requires a
-configured Trusted Publisher; normal tag releases remain GitHub-only.
+Pushing a full SemVer tag such as `v0.6.0-alpha` runs the Release workflow. It
+verifies that the version without `v` matches `src/promptaflow/__init__.py`, runs the
+tests, and uploads all distribution assets to a GitHub pre-release. The same workflow
+can be started manually for an existing tag; repeated runs replace its uploaded
+assets. PyPI publishing is opt-in on a manual run and requires a configured Trusted
+Publisher; normal tag releases remain GitHub-only.

@@ -4,11 +4,10 @@ on:
   push:
     tags:
       - "v*"
-      - "[0-9]*"
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Existing Git tag to release (for example 2.0 or v2.0.0)"
+        description: "Existing Git tag to release (for example v0.6.0-alpha)"
         required: true
         type: string
       publish_pypi:
@@ -120,16 +119,17 @@ jobs:
           REQUESTED_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
           release_tag="$REQUESTED_TAG"
-          version="${release_tag#v}"
-          if [[ "$version" =~ ^[0-9]+\.[0-9]+$ ]]; then
-            version="$version.0"
-          fi
-          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+          if [[ ! "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
             echo "unsupported release tag: $release_tag" >&2
             exit 2
           fi
+          version="${release_tag#v}"
           package_version="$(python -c 'import ast; p=ast.parse(open("src/promptaflow/__init__.py").read()); print(next(n.value.value for n in p.body if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "__version__" for t in n.targets)))')"
           test "$package_version" = "$version"
+          integration_core_version="$(node -p "require('./integration-core/package.json').version")"
+          test "$integration_core_version" = "$version"
+          deepseek_harness_version="$(node -p "require('./integrations/deepseek-harness/package.json').version")"
+          test "$deepseek_harness_version" = "$version"
           echo "PROMPTAFLOW_RELEASE_VERSION=$version" >> "$GITHUB_ENV"
           echo "PROMPTAFLOW_RELEASE_TAG=$release_tag" >> "$GITHUB_ENV"
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -167,9 +167,14 @@ jobs:
           if gh release view "$PROMPTAFLOW_RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$PROMPTAFLOW_RELEASE_TAG" dist/* --clobber
           else
+            prerelease_flag=()
+            if [[ "$PROMPTAFLOW_RELEASE_VERSION" == *-* ]]; then
+              prerelease_flag=(--prerelease)
+            fi
             gh release create "$PROMPTAFLOW_RELEASE_TAG" dist/* \
               --verify-tag \
               --generate-notes \
+              "${prerelease_flag[@]}" \
               --title "PromptaFlow $PROMPTAFLOW_RELEASE_TAG"
           fi
 

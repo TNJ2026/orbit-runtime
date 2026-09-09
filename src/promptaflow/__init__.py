@@ -1,3 +1,3 @@
 """PromptaFlow — local multi-agent workflow orchestration for Agent Apps."""
 
-__version__ = "2.0.0"
+__version__ = "0.6.0-alpha"
