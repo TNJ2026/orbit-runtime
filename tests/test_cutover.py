@@ -176,7 +176,10 @@ class EveryCliIsGatedTests(unittest.TestCase):
 
         slug = project_slug(self.project)
         digest = project_id(self.project)
-        path = self.home / ".orbit" / "projects" / f"{slug}-{digest}" / "messages.db"
+        # The state root, under its current name: this fixture is about the
+        # pre-cutover engine's files, not about the directory rename — a home
+        # still called `.orbit` would be migrated before the gate ever ran.
+        path = self.home / ".promptaflow" / "projects" / f"{slug}-{digest}" / "messages.db"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(b"legacy")
         return path
@@ -252,7 +255,7 @@ class EveryCliIsGatedTests(unittest.TestCase):
 
         ensure_cutover_acknowledged(
             acknowledged=True, project_dir=self.project,
-            base_dir=self.home / ".orbit" / "projects",
+            base_dir=self.home / ".promptaflow" / "projects",
         )
         result = self.cli("db", "check")
         self.assertNotEqual(EXIT_NEEDS_ACKNOWLEDGEMENT, result.returncode, result.stdout)

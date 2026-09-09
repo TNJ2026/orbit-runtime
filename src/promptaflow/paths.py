@@ -20,6 +20,7 @@ migration below is what makes the move visible when it does happen.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import NamedTuple
 
 
 DIR_NAME = ".promptaflow"
@@ -53,23 +54,58 @@ def project_state_dir(project_root: Path | str) -> Path:
     return legacy if legacy.is_dir() else current
 
 
-def migrate_home_root() -> Path | None:
+class HomeMigration(NamedTuple):
+    """What :func:`migrate_home_root` did, or why it deliberately did not."""
+
+    #: The new path, when this call performed the move.
+    moved_to: Path | None = None
+    #: Endpoints of Runtimes still live under the old root, when that is why
+    #: nothing moved.
+    blocked_by: tuple[str, ...] = ()
+
+
+def _live_under(root: Path) -> tuple[str, ...]:
+    """Endpoints of Runtimes holding a lock under `root`, newest lookup wins.
+
+    Imported here rather than at module scope: runtime ownership resolves its
+    default root through this module, and the cycle is real.
+    """
+    try:
+        from .platform.runtime_ownership import discover_runtimes
+        return tuple(
+            str(runtime.facts.get("url") or runtime.lock_path)
+            for runtime in discover_runtimes(root)
+        )
+    except Exception:
+        # Discovery is a courtesy here. If it cannot answer, treat the tree as
+        # busy rather than moving a directory we failed to inspect.
+        return ("unknown",)
+
+
+def migrate_home_root() -> HomeMigration:
     """Move `~/.orbit` to `~/.promptaflow` once, at CLI startup.
 
     Deliberately not an import-time side effect: importing this package must
     never move a developer's real state, least of all from inside a test.
 
-    :returns: The new path when this call performed the move, else ``None``.
+    Refuses while a Runtime is live under the old root. `rename` would succeed
+    there — POSIX renames a directory out from under open handles without
+    complaint — and every path those processes resolve afterwards would fail,
+    with nothing anywhere saying why. Stopping first is the user's call, so
+    the move waits for them to make it.
     """
     current = Path.home() / DIR_NAME
     legacy = Path.home() / LEGACY_DIR_NAME
     if current.exists() or not legacy.is_dir():
-        return None
+        return HomeMigration()
+    live = _live_under(legacy)
+    if live:
+        return HomeMigration(blocked_by=live)
     try:
         legacy.rename(current)
     except OSError:
         # A different filesystem, a permission, an open handle on Windows.
         # `home_root` still resolves to the legacy directory, so the only
         # thing lost is the rename itself.
-        return None
-    return current
+        return HomeMigration()
+    return HomeMigration(moved_to=current)

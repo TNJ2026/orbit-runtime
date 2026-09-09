@@ -27,6 +27,7 @@ from .platform.projects import (
     upsert_project,
 )
 from .environment import env
+from .paths import LEGACY_DIR_NAME, migrate_home_root
 
 
 def _workflow_db_path(
@@ -1331,6 +1332,31 @@ def _runtimes(args) -> None:
 
 
 def main() -> None:
+    # Before anything reads state. The home root carried the old name until
+    # this release, so an install that upgrades in place has every project
+    # under it. Deliberately here and not at import time: importing this
+    # package must never move a developer's real directory.
+    migration = migrate_home_root()
+    if migration.moved_to is not None:
+        # Exit rather than carry on. Every default path in this process was
+        # resolved at import time, before the move — `DEFAULT_STATE_ROOT` and
+        # its siblings are module constants — so continuing would run the
+        # whole command against a directory that is no longer there. One extra
+        # invocation, once, on exactly one upgrade.
+        print(
+            f"promptaflow: moved ~/{LEGACY_DIR_NAME} to {migration.moved_to}. "
+            "Run the command again.",
+            file=sys.stderr,
+        )
+        raise SystemExit(0)
+    if migration.blocked_by:
+        print(
+            f"promptaflow: ~/{LEGACY_DIR_NAME} is still in use by "
+            f"{len(migration.blocked_by)} Runtime(s) and was left where it is; "
+            "stop them and run again to move it.",
+            file=sys.stderr,
+        )
+
     argv = sys.argv[1:]
     # Upgrade bridge for a Hub process that was started before this version.
     # Older managers launch `promptaflow serve` but already mark the process as a Hub
