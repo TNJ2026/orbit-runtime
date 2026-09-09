@@ -22,7 +22,7 @@ class RuntimeShutdownTests(unittest.TestCase):
         return create_app(
             db_path,
             poll_seconds=0.01,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: scopes.get(actor, ())),
             operator_actors=("operator",),
             shutdown_request=lambda: stopped.append(True),
@@ -235,7 +235,7 @@ class HarnessReachesShutdownAsTheOperatorTests(unittest.TestCase):
     """Why the Harness panel's stop button works without widening anything.
 
     On loopback every caller of `/api/v1` is `local` — the one operator — and
-    the `x-orbit-actor` header is honoured only on `/mcp`, where it refines
+    the `x-promptaflow-actor` header is honoured only on `/mcp`, where it refines
     that operator into Session slots and grants no scope it did not have. So a
     Harness posting `harness:session:<id>` to the shutdown endpoint arrives as
     `local` and is already allowed.
@@ -257,7 +257,7 @@ class HarnessReachesShutdownAsTheOperatorTests(unittest.TestCase):
                 "client": ("127.0.0.1", 5000), "scheme": "http",
                 "server": ("127.0.0.1", 80), "query_string": b"",
                 "root_path": "", "headers": [
-                    (b"x-orbit-actor", b"harness:session:abc"),
+                    (b"x-promptaflow-actor", b"harness:session:abc"),
                 ],
             }
             return loopback_scoped_mcp_authenticator(

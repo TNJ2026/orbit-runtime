@@ -5386,7 +5386,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
                 Path(directory) / "orbit.sqlite3",
                 workflow_db_path=store.path,
                 langgraph_service=service,
-                authenticator=lambda request: request.headers.get("x-orbit-actor"),
+                authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda actor: (
                     READ_SCOPE, WRITE_SCOPE, OPS_WRITE_SCOPE,
                 )),
@@ -5471,7 +5471,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
             app = create_app(
                 Path(directory) / "orbit.sqlite3",
                 langgraph_service=service,
-                authenticator=lambda request: request.headers.get("x-orbit-actor"),
+                authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda actor: (READ_SCOPE,)),
             )
             with AsgiHarness(app) as client:
@@ -5544,7 +5544,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
             app = create_app(
                 Path(directory) / "orbit.sqlite3",
-                authenticator=lambda request: request.headers.get("x-orbit-actor"),
+                authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda actor: (READ_SCOPE,)),
             )
             with AsgiHarness(app) as client:
@@ -5572,7 +5572,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
             app = create_app(
                 root / "orbit.sqlite3",
                 langgraph_state_directory=root,
-                authenticator=lambda request: request.headers.get("x-orbit-actor"),
+                authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda actor: (
                     READ_SCOPE, WRITE_SCOPE, OPS_WRITE_SCOPE,
                 )),
@@ -5616,7 +5616,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
             app = create_app(
                 Path(directory) / "orbit.sqlite3",
                 langgraph_service=service,
-                authenticator=lambda request: request.headers.get("x-orbit-actor"),
+                authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda actor: (READ_SCOPE,)),
             )
             self.assertIs(service, app.state.langgraph_service)
@@ -5649,7 +5649,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
             app = create_app(
                 Path(directory) / "orbit.sqlite3",
                 langgraph_service=BrokenService(),
-                authenticator=lambda request: request.headers.get("x-orbit-actor"),
+                authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda actor: (READ_SCOPE,)),
             )
             with AsgiHarness(app) as client:
@@ -5671,7 +5671,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
             app = create_app(
                 Path(directory) / "orbit.sqlite3",
                 langgraph_service=RecoveringService(),
-                authenticator=lambda request: request.headers.get("x-orbit-actor"),
+                authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda actor: (READ_SCOPE,)),
             )
             with AsgiHarness(app):
@@ -5690,7 +5690,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
             app = create_app(
                 Path(directory) / "orbit.sqlite3",
                 langgraph_service=PartialService(),
-                authenticator=lambda request: request.headers.get("x-orbit-actor"),
+                authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda actor: (READ_SCOPE,)),
             )
             with AsgiHarness(app) as client:
@@ -5785,7 +5785,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
                 schemas=BUILTIN_SCHEMAS,
                 workflow_generator=lambda _prompt: json.dumps(document),
                 langgraph_service=service,
-                authenticator=lambda request: request.headers.get("x-orbit-actor"),
+                authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda _actor: (
                     READ_SCOPE, WRITE_SCOPE, OPS_WRITE_SCOPE,
                 )),
@@ -5868,7 +5868,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
                 Path(directory) / "orbit.sqlite3",
                 workflow_db_path=store.path,
                 langgraph_service=service,
-                authenticator=lambda request: request.headers.get("x-orbit-actor"),
+                authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda actor: (
                     (READ_SCOPE,) if actor == "test:reader"
                     else (READ_SCOPE, WRITE_SCOPE, OPS_WRITE_SCOPE)
@@ -5962,7 +5962,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
                 Path(directory) / "orbit.sqlite3",
                 workflow_db_path=store.path,
                 langgraph_service=service,
-                authenticator=lambda request: request.headers.get("x-orbit-actor"),
+                authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=Authorizer(lambda actor: (
                     (READ_SCOPE,) if actor == "test:reader"
                     else (READ_SCOPE, WRITE_SCOPE, OPS_WRITE_SCOPE)

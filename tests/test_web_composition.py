@@ -121,7 +121,7 @@ class AsgiHarness:
         raw = b"" if body is None else json.dumps(body).encode()
         header_map = dict(headers or {})
         if actor is not None:
-            header_map["x-orbit-actor"] = actor
+            header_map["x-promptaflow-actor"] = actor
         if body is not None:
             header_map["content-type"] = "application/json"
             header_map["content-length"] = str(len(raw))

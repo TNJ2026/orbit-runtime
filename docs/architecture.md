@@ -373,7 +373,7 @@ LOCAL_SCOPES  = runtime.read · runtime.write · runtime.read.sensitive
               · runtime.ops.read · runtime.ops.write
 ```
 
-| 档 | 认证器 | `x-orbit-actor` 头 | 结果 |
+| 档 | 认证器 | `x-promptaflow-actor` 头 | 结果 |
 |---|---|---|---|
 | `full` | `loopback_authenticator` | **忽略** | 环回上的任何调用方都是 `local`,拿全部 scope |
 | `harness` | `loopback_scoped_mcp_authenticator(trusted_prefix="harness:session:")` | **必须**以该前缀开头 | 不匹配 → 认证返回 `None` → 请求被拒(`-32001`) |

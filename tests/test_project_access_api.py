@@ -42,7 +42,7 @@ class ProjectAccessEndpointTests(unittest.TestCase):
             self.db, handlers=[transform_registration()], schemas=SCHEMAS,
             langgraph_state_directory=self.root / "langgraph",
             workspace_path=self.project,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(
                 lambda actor: [READ_SCOPE] if actor == "reader"
                 else [READ_SCOPE, WRITE_SCOPE, OPS_WRITE_SCOPE]

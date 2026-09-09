@@ -87,7 +87,7 @@ export class OrbitGateway {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          'x-orbit-actor': `harness:session:${sessionId}`,
+          'x-promptaflow-actor': `harness:session:${sessionId}`,
           'idempotency-key': crypto.randomUUID(),
         },
         body: JSON.stringify({ expected_version: 0 }),
@@ -161,7 +161,7 @@ export class OrbitGateway {
     if (!runtime.baseUrl) return new Map()
     const response = await this.fetchImpl(
       `${runtime.baseUrl.replace(/\/$/, '')}/api/v1/handler-catalog`,
-      { headers: { 'x-orbit-actor': `harness:session:${sessionId}` } },
+      { headers: { 'x-promptaflow-actor': `harness:session:${sessionId}` } },
     )
     if (!response.ok) throw new OrbitTransportError(
       `Orbit Handler catalog failed with HTTP ${String(response.status)}`,
@@ -191,7 +191,7 @@ export class OrbitGateway {
     if (!runtime.baseUrl) throw new Error('Orbit Runtime did not publish a browser address')
     const response = await this.fetchImpl(
       `${runtime.baseUrl.replace(/\/$/, '')}${outputHref}?after=${String(after)}`,
-      { headers: { 'x-orbit-actor': `harness:session:${sessionId}` } },
+      { headers: { 'x-promptaflow-actor': `harness:session:${sessionId}` } },
     )
     if (!response.ok) throw new OrbitTransportError(
       `Orbit authoring output failed with HTTP ${String(response.status)}`,
@@ -408,7 +408,7 @@ export class OrbitGateway {
       const actor = this.actorFrom(params)
       const response = await this.fetchImpl(runtime.mcpUrl, {
         method: 'POST', headers: {
-          'content-type': 'application/json', ...(actor ? { 'x-orbit-actor': actor } : {}),
+          'content-type': 'application/json', ...(actor ? { 'x-promptaflow-actor': actor } : {}),
         }, signal: controller.signal,
         body: JSON.stringify({ jsonrpc: '2.0', id, method, params }),
       })

@@ -259,7 +259,7 @@ class ApiTestCase(unittest.TestCase):
             self.db,
             handlers=[transform_registration()], schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: self.scopes.get(actor, [])),
             artifact_backend=self.artifact_backend,
             single_goal_mode=False,
@@ -282,7 +282,7 @@ class RateLimitTests(unittest.TestCase):
             db,
             handlers=[transform_registration()], schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: [READ_SCOPE]),
             rate_limiter=RateLimiter(requests=2, window_seconds=60),
             **extra,
@@ -389,7 +389,7 @@ class HandlerDriftTests(unittest.TestCase):
             self.db,
             handlers=[transform_registration()], schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: [READ_SCOPE, WRITE_SCOPE]),
             single_goal_mode=False,
             langgraph_state_directory=Path(self.temp.name) / "langgraph",
@@ -698,7 +698,7 @@ class CatalogTests(ApiTestCase):
             Path(self.temp.name) / "nested.db",
             handlers=[registration], schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: self.scopes.get(actor, [])),
             single_goal_mode=False,
         )
@@ -783,7 +783,7 @@ class CatalogTests(ApiTestCase):
             ],
             schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: self.scopes.get(actor, [])),
             artifact_backend=self.artifact_backend,
             single_goal_mode=False,
@@ -1142,7 +1142,7 @@ class WorkflowDraftApiTests(ApiTestCase):
             self.db,
             handlers=[transform_registration()], schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: self.scopes.get(actor, [])),
             workflow_generator=generate,
             single_goal_mode=False,
@@ -1153,7 +1153,7 @@ class WorkflowDraftApiTests(ApiTestCase):
             self.db,
             handlers=[transform_registration()], schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: self.scopes.get(actor, [])),
             single_goal_mode=False,
         )
@@ -1178,7 +1178,7 @@ class WorkflowDraftApiTests(ApiTestCase):
                 self._agent_registration("agent.claude", "2.0.0"),
             ],
             schemas=SCHEMAS, poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: self.scopes.get(actor, [])),
             single_goal_mode=False,
         )
@@ -1346,7 +1346,7 @@ class WorkflowDraftApiTests(ApiTestCase):
             self.db,
             handlers=[self._agent_registration("agent.codex", "1.1.7")],
             schemas=SCHEMAS, poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: self.scopes.get(actor, [])),
             single_goal_mode=False,
         )
@@ -1550,7 +1550,7 @@ class WorkflowDraftApiTests(ApiTestCase):
             self.db,
             handlers=[transform_registration()], schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: self.scopes.get(actor, [])),
             workflow_generators=generators,
             single_goal_mode=False,
@@ -1599,7 +1599,7 @@ class WorkflowDraftApiTests(ApiTestCase):
             self.db, handlers=[transform_registration(), self._agent_registration()],
             schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: self.scopes.get(actor, [])),
             workflow_generators={"app:codex": lambda _prompt: "{}"}, single_goal_mode=False,
         )
@@ -2081,7 +2081,7 @@ class PublicWorkflowLibraryTests(unittest.TestCase):
                 path, workflow_db_path=shared,
                 handlers=[transform_registration()], schemas=SCHEMAS,
                 poll_seconds=0.02,
-                authenticator=lambda request: request.headers.get("x-orbit-actor"),
+                authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
                 authorizer=authorizer, single_goal_mode=False,
                 langgraph_state_directory=Path(path).parent / "langgraph",
             )
@@ -2132,7 +2132,7 @@ class CapabilityTests(ApiTestCase):
             self.db,
             handlers=[transform_registration()], schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: self.scopes.get(actor, [])),
             workspace_path=workspace,
         )
@@ -2188,7 +2188,7 @@ class CapabilityTests(ApiTestCase):
             self.db,
             handlers=[transform_registration()], schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: self.scopes.get(actor, [])),
             single_goal_mode=True,
         )
@@ -2203,7 +2203,7 @@ class CapabilityTests(ApiTestCase):
             self.db,
             handlers=[transform_registration()], schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: self.scopes.get(actor, [])),
             artifact_backend=self.artifact_backend,
             single_goal_mode=True,
@@ -2462,7 +2462,7 @@ class SingleGoalApiTests(unittest.TestCase):
             self.db,
             handlers=[transform_registration()], schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda _actor: [READ_SCOPE, WRITE_SCOPE]),
             single_goal_mode=True,
             langgraph_state_directory=Path(self.temp.name) / "langgraph",
@@ -2617,7 +2617,7 @@ class RunStepsApiTests(unittest.TestCase):
             self.db,
             handlers=[transform_registration()], schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(
                 lambda actor: [READ_SCOPE, WRITE_SCOPE]
                 if actor == "author" else [READ_SCOPE]
@@ -2758,7 +2758,7 @@ class WorkflowBranchHistoryApiTests(ApiTestCase):
             self.db,
             handlers=[transform_registration()], schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(
                 lambda actor: [READ_SCOPE, WRITE_SCOPE]
                 if actor == "author" else [READ_SCOPE]
@@ -2963,7 +2963,7 @@ class WorkflowViewerMountTests(unittest.TestCase):
             Path(temp.name) / "runtime.db",
             handlers=[transform_registration()], schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: [READ_SCOPE]),
             serve_ui=True,
             **extra,
@@ -3022,7 +3022,7 @@ class WorkflowCatalogSurfaceTests(ApiTestCase):
             Path(temp.name) / "runtime.db",
             handlers=[transform_registration()], schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: self.scopes.get(actor, [])),
         )
 

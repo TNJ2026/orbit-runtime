@@ -303,7 +303,7 @@ class CurrentAppExecutionTests(unittest.TestCase):
         app = create_app(
             self.root / "runtime.db", workflow_db_path=self.root / "workflows.db",
             handlers=[self.registration], schemas={"schema://object/1.0": {"type": "object"}},
-            langgraph_service=engine, authenticator=lambda r: r.headers.get("x-orbit-actor"),
+            langgraph_service=engine, authenticator=lambda r: r.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: [READ_SCOPE, WRITE_SCOPE]),
         )
         with AsgiHarness(app) as client:

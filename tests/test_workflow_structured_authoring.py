@@ -468,7 +468,7 @@ class AppWiringTests(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         return create_app(
             Path(directory.name) / "orbit.sqlite3",
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: (READ_SCOPE,)),
             **kwargs,
         )

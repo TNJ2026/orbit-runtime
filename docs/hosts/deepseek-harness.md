@@ -154,7 +154,7 @@ take the next step from.
 Harness runs this Runtime under the `harness` MCP tool profile, a subset of the
 full surface. It does not execute PromptaFlow workflow nodes: Agent discovery, CLI
 credentials, sandboxing, process cleanup, retry semantics and effects all
-remain the Runtime's. PromptaFlow accepts the `x-orbit-actor` header only from
+remain the Runtime's. PromptaFlow accepts the `x-promptaflow-actor` header only from
 loopback, only on `/mcp`, and only under `harness:session:*`.
 
 ## The panel

@@ -138,7 +138,7 @@ PromptaFlow 自己的 UI。
 Harness 用 `harness` 这个 MCP 工具 profile 运行 Runtime，它是完整工具面的一个子集。
 Harness **不执行** PromptaFlow 的工作流节点：Agent 发现、CLI 凭据、沙箱、进程清理、重试语义
 和副作用，全部仍归 Runtime 所有。PromptaFlow 只接受来自回环、只在 `/mcp` 上、且只在
-`harness:session:*` 下的 `x-orbit-actor` 头。
+`harness:session:*` 下的 `x-promptaflow-actor` 头。
 
 ## 面板
 

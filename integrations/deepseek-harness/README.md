@@ -178,7 +178,7 @@ restart resumes without a second cursor database. Session disposal aborts the
 poller, and a temporarily unavailable Runtime is retried without blocking the
 Session lifecycle.
 
-For the `harness` MCP profile, PromptaFlow accepts `x-orbit-actor` only from loopback,
+For the `harness` MCP profile, PromptaFlow accepts `x-promptaflow-actor` only from loopback,
 only on `/mcp`, and only under `harness:session:*`. This refines the existing
 single local-operator identity for event and single-goal isolation; it does not
 grant a remote caller or local process any additional scope.

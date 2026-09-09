@@ -90,11 +90,32 @@ class AuthorizationTests(unittest.TestCase):
         self.assertTrue(guard.allows(LOCAL_ACTOR, WRITE_SCOPE))
         self.assertFalse(guard.allows("someone-else", READ_SCOPE))
 
-    def test_loopback_mcp_may_refine_local_identity_under_one_prefix(self) -> None:
+    def test_a_gateway_from_before_the_rename_is_still_understood(self) -> None:
+        """The header a pinned older bundle sends still refines the identity.
+
+        The Gateway ships pinned inside a Harness Profile and the Runtime is
+        installed separately, so during an upgrade the old client reaching the
+        new Runtime is the ordinary case. If this stopped being read, that
+        client would silently fall back to the unscoped local actor.
+        """
+
         request = SimpleNamespace(
             client=SimpleNamespace(host="127.0.0.1"),
             url=SimpleNamespace(path="/mcp"),
             headers={"x-orbit-actor": "harness:session:abc-123"},
+        )
+        self.assertEqual(
+            "harness:session:abc-123",
+            loopback_scoped_mcp_authenticator(
+                request, trusted_prefix="harness:session:",
+            ),
+        )
+
+    def test_loopback_mcp_may_refine_local_identity_under_one_prefix(self) -> None:
+        request = SimpleNamespace(
+            client=SimpleNamespace(host="127.0.0.1"),
+            url=SimpleNamespace(path="/mcp"),
+            headers={"x-promptaflow-actor": "harness:session:abc-123"},
         )
         actor = loopback_scoped_mcp_authenticator(
             request, trusted_prefix="harness:session:",
@@ -107,7 +128,7 @@ class AuthorizationTests(unittest.TestCase):
     def test_scoped_identity_is_not_accepted_off_mcp_or_outside_prefix(self) -> None:
         base = {
             "client": SimpleNamespace(host="127.0.0.1"),
-            "headers": {"x-orbit-actor": "attacker"},
+            "headers": {"x-promptaflow-actor": "attacker"},
         }
         invalid = SimpleNamespace(**base, url=SimpleNamespace(path="/mcp"))
         self.assertIsNone(loopback_scoped_mcp_authenticator(
@@ -131,7 +152,7 @@ class AuthorizationTests(unittest.TestCase):
         request = SimpleNamespace(
             client=SimpleNamespace(host="127.0.0.1"),
             url=SimpleNamespace(path="/internal/v1/agent-tools"),
-            headers={"x-orbit-actor": "harness:session:abc-123"},
+            headers={"x-promptaflow-actor": "harness:session:abc-123"},
         )
         self.assertEqual(
             "harness:session:abc-123",
@@ -146,7 +167,7 @@ class AuthorizationTests(unittest.TestCase):
         request = SimpleNamespace(
             client=SimpleNamespace(host="127.0.0.1"),
             url=SimpleNamespace(path="/internal/v1/agent-tools"),
-            headers={"x-orbit-actor": "attacker"},
+            headers={"x-promptaflow-actor": "attacker"},
         )
         self.assertIsNone(loopback_scoped_mcp_authenticator(
             request, trusted_prefix="harness:session:",
@@ -154,7 +175,7 @@ class AuthorizationTests(unittest.TestCase):
         remote = SimpleNamespace(
             client=SimpleNamespace(host="10.0.0.9"),
             url=SimpleNamespace(path="/internal/v1/agent-tools"),
-            headers={"x-orbit-actor": "harness:session:abc-123"},
+            headers={"x-promptaflow-actor": "harness:session:abc-123"},
         )
         self.assertIsNone(loopback_scoped_mcp_authenticator(
             remote, trusted_prefix="harness:session:",
@@ -185,7 +206,7 @@ class AuthorizationTests(unittest.TestCase):
         request = SimpleNamespace(
             client=SimpleNamespace(host="127.0.0.1"),
             url=SimpleNamespace(path="/mcp"),
-            headers={"x-orbit-actor": "harness:session:"},
+            headers={"x-promptaflow-actor": "harness:session:"},
         )
         self.assertIsNone(loopback_scoped_mcp_authenticator(
             request, trusted_prefix="harness:session:",

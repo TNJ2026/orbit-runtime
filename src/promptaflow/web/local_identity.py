@@ -27,7 +27,11 @@ LOCAL_SCOPES: tuple[str, ...] = (
     READ_SCOPE, WRITE_SCOPE, SENSITIVE_SCOPE, OPS_READ_SCOPE, OPS_WRITE_SCOPE,
 )
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
-SCOPED_ACTOR_HEADER = "x-orbit-actor"
+SCOPED_ACTOR_HEADER = "x-promptaflow-actor"
+# The Gateway is a pinned bundle and the Runtime is installed separately, so a
+# client built before the rename reaches a Runtime built after it as a matter
+# of course during an upgrade. Read both; only ever send the current one.
+LEGACY_SCOPED_ACTOR_HEADER = "x-orbit-actor"
 # Where a Session-scoped actor may arrive. `/mcp` is the MCP transport served
 # directly; `/internal/v1/agent-tools` is the same tool backend reached through
 # the Hub, which forwards the header it was handed. They are one surface with
@@ -60,6 +64,8 @@ def loopback_scoped_mcp_authenticator(
     if actor is None or request.url.path not in SCOPED_ACTOR_PATHS:
         return actor
     candidate = request.headers.get(SCOPED_ACTOR_HEADER)
+    if candidate is None:
+        candidate = request.headers.get(LEGACY_SCOPED_ACTOR_HEADER)
     if candidate is None:
         return actor
     if (

@@ -18,7 +18,7 @@ async function target(mode, handler) {
     request.setEncoding('utf8'); request.on('data', chunk => { body += chunk })
     request.on('end', () => {
       calls++
-      lastActor = request.headers['x-orbit-actor']
+      lastActor = request.headers['x-promptaflow-actor']
       const message = JSON.parse(body)
       lastMessage = message
       const result = handler(message)

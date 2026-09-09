@@ -364,7 +364,7 @@ class EndpointTests(unittest.TestCase):
             Path(temp.name) / "runtime.db",
             schemas=SCHEMAS,
             poll_seconds=0.05,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: scopes),
             # Discovery is what wires an authoring service, and without one the
             # command is not offered at all — which is its own assertion below.

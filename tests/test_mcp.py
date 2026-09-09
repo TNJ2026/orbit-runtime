@@ -374,7 +374,7 @@ class DiscoveryTests(ApiTestCase):
         app = create_app(
             self.db.parent / "harness-profile.db",
             handlers=[transform_registration()], schemas=SCHEMAS,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda _actor: [READ_SCOPE, WRITE_SCOPE]),
             mcp_tool_profile="harness",
             langgraph_state_directory=self.db.parent / "harness-langgraph",
@@ -1110,7 +1110,7 @@ class ClientWrittenWorkflowTests(unittest.TestCase):
             Path(temp.name) / "runtime.db",
             handlers=[transform_registration()], schemas=SCHEMAS,
             poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda _actor: [READ_SCOPE, WRITE_SCOPE]),
             workflow_generators=broker.generators(),
             # No CLI here, and no App has reported itself yet. The broker is

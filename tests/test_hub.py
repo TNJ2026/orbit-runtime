@@ -576,13 +576,13 @@ class HubHttpTests(unittest.TestCase):
             return_value=(200, json.dumps(answer).encode(), "application/json"),
         ) as forward, AsgiHarness(create_hub_app(manager)) as client:
             client.request(
-                "POST", "/mcp", headers={"x-orbit-actor": "harness:session:abc"},
+                "POST", "/mcp", headers={"x-promptaflow-actor": "harness:session:abc"},
                 body={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}},
             )
 
         self.assertEqual(
             "harness:session:abc",
-            forward.call_args.args[2]["x-orbit-actor"],
+            forward.call_args.args[2]["x-promptaflow-actor"],
         )
 
     def test_blocking_forwards_have_a_dedicated_capacity_budget(self) -> None:

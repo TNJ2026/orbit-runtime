@@ -38,6 +38,7 @@ from .web.mcp import (
 from .web.mcp_app import ORBIT_DASHBOARD_MIME_TYPE, ORBIT_MCP_APP_RESOURCES
 from .environment import env
 from .paths import home_root
+from .web.local_identity import LEGACY_SCOPED_ACTOR_HEADER, SCOPED_ACTOR_HEADER
 
 
 def default_hub_root() -> Path:
@@ -547,7 +548,7 @@ def create_hub_app(
         base = await anyio.to_thread.run_sync(runtimes.ensure, identifier)
         headers = {"content-type": "application/json"}
         if actor is not None:
-            headers["x-orbit-actor"] = actor
+            headers[SCOPED_ACTOR_HEADER] = actor
         status, payload, _ = await anyio.to_thread.run_sync(
             _forward,
             f"{base}/internal/v1/agent-tools",
@@ -823,7 +824,7 @@ def create_hub_app(
                     method="POST",
                     body={"source": item["source"], "expected_version": expected},
                     headers={
-                        "x-orbit-actor": "local",
+                        SCOPED_ACTOR_HEADER: "local",
                         "idempotency-key": idempotency_key,
                     }, timeout=60,
                 )
@@ -853,7 +854,7 @@ def create_hub_app(
                 status, payload = await anyio.to_thread.run_sync(
                     lambda: _runtime_json(
                         f"{base}/api/v1/handler-catalog",
-                        headers={"x-orbit-actor": "local"},
+                        headers={SCOPED_ACTOR_HEADER: "local"},
                     )
                 )
                 if status >= 400:
@@ -962,7 +963,10 @@ def create_hub_app(
             message = json.loads(await request.body() or b"")
         except json.JSONDecodeError:
             return JSONResponse(failure(None, PARSE_ERROR, "request body must be JSON"))
-        forwarded_actor = request.headers.get("x-orbit-actor")
+        forwarded_actor = (
+            request.headers.get(SCOPED_ACTOR_HEADER)
+            or request.headers.get(LEGACY_SCOPED_ACTOR_HEADER)
+        )
         actor = forwarded_actor or "local"
         try:
             if isinstance(message, list):

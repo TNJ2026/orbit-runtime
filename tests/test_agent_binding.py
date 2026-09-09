@@ -579,7 +579,7 @@ class AgentFallbackCatalogTests(unittest.TestCase):
                 ),
             ],
             schemas=SCHEMAS, poll_seconds=0.02,
-            authenticator=lambda request: request.headers.get("x-orbit-actor"),
+            authenticator=lambda request: request.headers.get("x-promptaflow-actor"),
             authorizer=Authorizer(lambda actor: [READ_SCOPE, WRITE_SCOPE]),
             single_goal_mode=False,
             langgraph_state_directory=self.root / "langgraph",

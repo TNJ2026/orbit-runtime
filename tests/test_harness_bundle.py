@@ -46,7 +46,7 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
         self.assertIn("['hub', 'register', workspaceRoot]", gateway)
         self.assertIn("/workspaces/${workspaceId}/mcp", gateway)
         self.assertIn("process.env.ORBIT_HUB_URL", gateway)
-        self.assertIn("'x-orbit-actor': actor", gateway)
+        self.assertIn("'x-promptaflow-actor': actor", gateway)
         self.assertIn("process.env.ORBIT_RUNTIME_ROOT", gateway)
         self.assertNotIn("'mcp', '--transport'", gateway)
         self.assertIn("@Remote('getRuntime')", remote)
