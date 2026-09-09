@@ -6,11 +6,11 @@ import unittest
 from unittest.mock import patch
 
 from tests.test_recovery_point import git
-from orbit.platform.project_occupancy import (
+from promptaflow.platform.project_occupancy import (
     ProjectOccupancyRegistry, ProjectNeedsRecovery, ProjectBusy,
 )
-from orbit.workflow.langgraph_runtime.project_access import ProjectAccessCoordinator, ProjectAccessNeed
-from orbit.workspace.recovery import GitRecoveryPoints, FileBackupRecoveryPoints, RecoveryUnavailable
+from promptaflow.workflow.langgraph_runtime.project_access import ProjectAccessCoordinator, ProjectAccessNeed
+from promptaflow.workspace.recovery import GitRecoveryPoints, FileBackupRecoveryPoints, RecoveryUnavailable
 
 
 class RecoveryRegressions(unittest.TestCase):
@@ -30,7 +30,7 @@ class RecoveryRegressions(unittest.TestCase):
 
     def test_missing_project_settles_and_failure_survives_service_restart(self):
         from tests.test_web_composition import publish_linear_workflow, transform_registration
-        from orbit.workflow.langgraph_runtime import build_service
+        from promptaflow.workflow.langgraph_runtime import build_service
         db = self.root / "runtime.db"
         publish_linear_workflow(db)
         service = build_service(db, [transform_registration()],
@@ -66,7 +66,7 @@ class RecoveryRegressions(unittest.TestCase):
         c = ProjectAccessCoordinator(self.project, registry=registry,
             write_granted=True, recovery_points=self.points)
         c.acquire("run", ProjectAccessNeed(required=True, write=True))
-        with patch("orbit.workspace.recovery._write_json", side_effect=OSError("disk full")):
+        with patch("promptaflow.workspace.recovery._write_json", side_effect=OSError("disk full")):
             c.release("run", "completed")
         self.assertFalse(c.held_by("run"))
         self.assertIn("disk full", c.summarize("run")["error"])
@@ -299,7 +299,7 @@ class OccupancyRegressions(unittest.TestCase):
         self.addCleanup(claim.release)
         record = next((self.root / "registry").glob("*.json"))
         original = record.read_bytes()
-        with patch("orbit.platform.project_occupancy.os.replace", side_effect=OSError("disk")):
+        with patch("promptaflow.platform.project_occupancy.os.replace", side_effect=OSError("disk")):
             with self.assertRaises(OSError):
                 claim.record_recovery({"kind": "git"})
         self.assertEqual(original, record.read_bytes())
@@ -348,8 +348,8 @@ class RunWideGrantRegressions(unittest.TestCase):
     def test_implicit_agent_receives_grant_and_requires_capability(self):
         from dataclasses import replace
         from tests.test_workflow_langgraph_runtime import node, edge, workflow, binding
-        from orbit.workflow.domain.definitions import IRPolicy
-        from orbit.workflow.langgraph_runtime import compile_workflow, LangGraphHandlerRegistry
+        from promptaflow.workflow.domain.definitions import IRPolicy
+        from promptaflow.workflow.langgraph_runtime import compile_workflow, LangGraphHandlerRegistry
         first = replace(node("agent.first", inputs=("value",), outputs=("value",)),
                         policies=("access",))
         second = node("agent.second", inputs=("value",), outputs=("value",))
@@ -377,8 +377,8 @@ class RunWideGrantRegressions(unittest.TestCase):
 
         from dataclasses import replace
         from tests.test_workflow_langgraph_runtime import node, edge, workflow, binding
-        from orbit.workflow.domain.definitions import IRPolicy
-        from orbit.workflow.langgraph_runtime import compile_workflow, LangGraphHandlerRegistry
+        from promptaflow.workflow.domain.definitions import IRPolicy
+        from promptaflow.workflow.langgraph_runtime import compile_workflow, LangGraphHandlerRegistry
         first = replace(node("agent.first", inputs=("value",), outputs=("value",)),
                         policies=("access",))
         second = node("agent.second", inputs=("value",), outputs=("value",))

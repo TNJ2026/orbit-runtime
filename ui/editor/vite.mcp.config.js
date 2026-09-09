@@ -17,7 +17,7 @@ export default defineConfig({
   },
   build: {
     outDir: fileURLToPath(
-      new URL("../../src/orbit/static/mcp-app", import.meta.url),
+      new URL("../../src/promptaflow/static/mcp-app", import.meta.url),
     ),
     emptyOutDir: true,
     cssCodeSplit: false,

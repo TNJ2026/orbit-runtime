@@ -91,21 +91,21 @@ class CleanInstallTests(unittest.TestCase):
         with zipfile.ZipFile(self.wheel) as archive:
             names = set(archive.namelist())
         for asset in (
-            "orbit/static/workflow-ui/index.html",
-            "orbit/static/workflow-ui/assets/app.js",
-            "orbit/static/workflow-ui/assets/api.js",
-            "orbit/static/workflow-ui/assets/i18n.js",
-            "orbit/static/workflow-ui/assets/app.css",
-            "orbit/static/workflow-ui/assets/router.js",
-            "orbit/static/workflow-ui/assets/components/command-dialog.js",
-            "orbit/static/workflow-ui/assets/components/data-state.js",
-            "orbit/static/workflow-ui/assets/styles/tokens.css",
-            "orbit/static/workflow-ui/assets/styles/shell.css",
-            "orbit/static/workflow-ui/assets/styles/components.css",
-            "orbit/static/workflow-ui/assets/styles/views.css",
-            "orbit/static/workflow-ui/assets/i18n.zh-CN.json",
-            "orbit/static/workflow-ui/assets/i18n.en-US.json",
-            "orbit/static/workflow-ui/assets/favicon.svg",
+            "promptaflow/static/workflow-ui/index.html",
+            "promptaflow/static/workflow-ui/assets/app.js",
+            "promptaflow/static/workflow-ui/assets/api.js",
+            "promptaflow/static/workflow-ui/assets/i18n.js",
+            "promptaflow/static/workflow-ui/assets/app.css",
+            "promptaflow/static/workflow-ui/assets/router.js",
+            "promptaflow/static/workflow-ui/assets/components/command-dialog.js",
+            "promptaflow/static/workflow-ui/assets/components/data-state.js",
+            "promptaflow/static/workflow-ui/assets/styles/tokens.css",
+            "promptaflow/static/workflow-ui/assets/styles/shell.css",
+            "promptaflow/static/workflow-ui/assets/styles/components.css",
+            "promptaflow/static/workflow-ui/assets/styles/views.css",
+            "promptaflow/static/workflow-ui/assets/i18n.zh-CN.json",
+            "promptaflow/static/workflow-ui/assets/i18n.en-US.json",
+            "promptaflow/static/workflow-ui/assets/favicon.svg",
         ):
             with self.subTest(asset=asset):
                 self.assertIn(asset, names)

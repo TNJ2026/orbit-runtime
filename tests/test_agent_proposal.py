@@ -17,10 +17,10 @@ from types import SimpleNamespace
 import unittest
 from unittest import mock
 
-from orbit.workflow.catalogs.agent_discovery import (
+from promptaflow.workflow.catalogs.agent_discovery import (
     TRUSTED_AGENT_CLIS, AgentCliSpec, AgentInvocation, probe_executable,
 )
-from orbit.workflow.catalogs.agent_proposal import (
+from promptaflow.workflow.catalogs.agent_proposal import (
     DISCOVERY_FILE,
     DISCOVERY_TESTS,
     apply_patch,
@@ -28,7 +28,7 @@ from orbit.workflow.catalogs.agent_proposal import (
     render_patch,
     source_checkout_root,
 )
-from orbit.web.api_v1.agent_proposals import _explicit_cli_names, _mentioned_names
+from promptaflow.web.api_v1.agent_proposals import _explicit_cli_names, _mentioned_names
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -227,20 +227,20 @@ class PatchTests(unittest.TestCase):
                 check=True, capture_output=True,
             )
             for relative in (
-                "src/orbit/workflow/catalogs/agent_discovery.py",
-                "src/orbit/workflow/catalogs/agent_proposal.py",
-                "src/orbit/workflow/cli_environment.py",
-                "src/orbit/web/app.py",
-                "src/orbit/web/api_v1/__init__.py",
-                "src/orbit/web/api_v1/agent_proposals.py",
-                "src/orbit/web/api_v1/context.py",
-                "src/orbit/web/api_v1/ops.py",
-                "src/orbit/web/mcp.py",
-                "src/orbit/web/builtin_handlers.py",
-                "src/orbit/workflow/handlers/agent.py",
-                "src/orbit/workspace/__init__.py",
-                "src/orbit/workspace/git.py",
-                "src/orbit/workspace/project_access.py",
+                "src/promptaflow/workflow/catalogs/agent_discovery.py",
+                "src/promptaflow/workflow/catalogs/agent_proposal.py",
+                "src/promptaflow/workflow/cli_environment.py",
+                "src/promptaflow/web/app.py",
+                "src/promptaflow/web/api_v1/__init__.py",
+                "src/promptaflow/web/api_v1/agent_proposals.py",
+                "src/promptaflow/web/api_v1/context.py",
+                "src/promptaflow/web/api_v1/ops.py",
+                "src/promptaflow/web/mcp.py",
+                "src/promptaflow/web/builtin_handlers.py",
+                "src/promptaflow/workflow/handlers/agent.py",
+                "src/promptaflow/workspace/__init__.py",
+                "src/promptaflow/workspace/git.py",
+                "src/promptaflow/workspace/project_access.py",
                 "tests/test_agent_discovery.py",
             ):
                 (work / relative).write_text(
@@ -295,7 +295,7 @@ class PatchTests(unittest.TestCase):
         self.assertFalse(AgentCliSpec("aider", "aider").runtime_compatible)
 
     def test_detected_permissions_are_applied_to_a_reviewed_invocation(self) -> None:
-        from orbit.workflow.catalogs import agent_proposal
+        from promptaflow.workflow.catalogs import agent_proposal
 
         sample = propose(
             ["aider"], specs=(), which=which_for({"aider"}),
@@ -326,9 +326,9 @@ class PatchTests(unittest.TestCase):
     def test_a_moved_anchor_refuses_rather_than_patching_the_wrong_place(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             fake = Path(tmp)
-            (fake / "src/orbit/workflow/catalogs").mkdir(parents=True)
+            (fake / "src/promptaflow/workflow/catalogs").mkdir(parents=True)
             (fake / "tests").mkdir()
-            (fake / "src/orbit/workflow/catalogs/agent_discovery.py").write_text(
+            (fake / "src/promptaflow/workflow/catalogs/agent_discovery.py").write_text(
                 "# the allowlist moved\n", encoding="utf-8",
             )
             (fake / "tests/test_agent_discovery.py").write_text("", encoding="utf-8")
@@ -353,8 +353,8 @@ class EndpointTests(unittest.TestCase):
     """`/api/v1/agent-proposals` over HTTP, including who may reach it."""
 
     def build(self, *, authoring=True, proposal_root=ROOT):
-        from orbit.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
-        from orbit.web.app import create_app
+        from promptaflow.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
+        from promptaflow.web.app import create_app
         from test_web_composition import SCHEMAS
 
         temp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
@@ -456,7 +456,7 @@ class EndpointTests(unittest.TestCase):
             try:
                 os.chdir(workspace)
                 with mock.patch(
-                    "orbit.workflow.catalogs.agent_proposal.propose",
+                    "promptaflow.workflow.catalogs.agent_proposal.propose",
                     return_value=sample,
                 ):
                     with AsgiHarness(self.build(proposal_root=checkout)) as client:

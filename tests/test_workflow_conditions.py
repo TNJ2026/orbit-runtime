@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import unittest
 
-from orbit.workflow.graph.conditions import (
+from promptaflow.workflow.graph.conditions import (
     ConditionEvaluationError, MAX_CONDITION_DEPTH, MAX_CONDITION_NODES,
     evaluate_condition,
 )

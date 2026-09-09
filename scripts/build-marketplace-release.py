@@ -42,7 +42,7 @@ SEMVER = re.compile(
 
 
 def package_version() -> str:
-    tree = ast.parse((ROOT / "src/orbit/__init__.py").read_text(encoding="utf-8"))
+    tree = ast.parse((ROOT / "src/promptaflow/__init__.py").read_text(encoding="utf-8"))
     for node in tree.body:
         if not isinstance(node, ast.Assign):
             continue
@@ -50,7 +50,7 @@ def package_version() -> str:
             value = ast.literal_eval(node.value)
             if isinstance(value, str):
                 return value
-    raise SystemExit("src/orbit/__init__.py does not define __version__")
+    raise SystemExit("src/promptaflow/__init__.py does not define __version__")
 
 
 def base_version(value: str) -> str:

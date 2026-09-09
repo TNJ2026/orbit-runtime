@@ -12,25 +12,25 @@ import inspect
 import tempfile
 import unittest
 
-from orbit.web.api_v1 import (
+from promptaflow.web.api_v1 import (
     OPS_READ_SCOPE, OPS_WRITE_SCOPE, READ_SCOPE, SENSITIVE_SCOPE, WRITE_SCOPE,
     Authorizer,
 )
-from orbit.web.app import HandlerRegistration, create_app
-from orbit.web.local_identity import LOCAL_ACTOR
-from orbit.workflow.api.routes import RateLimiter
-from orbit.workflow.api.dto import (
+from promptaflow.web.app import HandlerRegistration, create_app
+from promptaflow.web.local_identity import LOCAL_ACTOR
+from promptaflow.workflow.api.routes import RateLimiter
+from promptaflow.workflow.api.dto import (
     CursorError, decode_cursor, encode_cursor, envelope, page_size,
 )
-from orbit.workflow.artifacts.local_cas import LocalCASBackend
-from orbit.workflow.api.workflow_catalog import WorkflowCatalogReadModelService
-from orbit.workflow.application.authoring_job_service import AuthoringJobService
-from orbit.workflow.domain.ids import EntityId
-from orbit.workflow.catalogs.handlers import HandlerManifest
-from orbit.workflow.domain.durable_execution import ExecutionSafety
-from orbit.workflow.domain.handlers import ResourceProfile
-from orbit.workflow.handlers import TransformHandler
-from orbit.workflow.persistence.database import connect_workflow_database
+from promptaflow.workflow.artifacts.local_cas import LocalCASBackend
+from promptaflow.workflow.api.workflow_catalog import WorkflowCatalogReadModelService
+from promptaflow.workflow.application.authoring_job_service import AuthoringJobService
+from promptaflow.workflow.domain.ids import EntityId
+from promptaflow.workflow.catalogs.handlers import HandlerManifest
+from promptaflow.workflow.domain.durable_execution import ExecutionSafety
+from promptaflow.workflow.domain.handlers import ResourceProfile
+from promptaflow.workflow.handlers import TransformHandler
+from promptaflow.workflow.persistence.database import connect_workflow_database
 from tests.test_web_composition import (
     AsgiHarness, SCHEMAS, publish_human_workflow, publish_linear_workflow,
     transform_registration,
@@ -378,9 +378,9 @@ class HandlerDriftTests(unittest.TestCase):
     def setUp(self) -> None:
         import json as json_module
 
-        from orbit.workflow.catalogs import InMemoryHandlerCatalog, InMemorySchemaCatalog
-        from orbit.workflow.dsl import compile_source
-        from orbit.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
+        from promptaflow.workflow.catalogs import InMemoryHandlerCatalog, InMemorySchemaCatalog
+        from promptaflow.workflow.dsl import compile_source
+        from promptaflow.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
 
         self.temp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(self.temp.cleanup)
@@ -526,9 +526,9 @@ class HandlerDriftTests(unittest.TestCase):
             self.assertEqual(200, started.status_code, started.text)
 
     def test_same_version_contract_drift_can_be_recompiled(self):
-        from orbit.workflow.catalogs import InMemoryHandlerCatalog, InMemorySchemaCatalog
-        from orbit.workflow.dsl import compile_source
-        from orbit.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
+        from promptaflow.workflow.catalogs import InMemoryHandlerCatalog, InMemorySchemaCatalog
+        from promptaflow.workflow.dsl import compile_source
+        from promptaflow.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
         import copy
         import json
         document = copy.deepcopy(self.DRIFTED)
@@ -558,9 +558,9 @@ class HandlerDriftTests(unittest.TestCase):
             self.assertEqual(200, started.status_code, started.text)
 
     def test_a_version_without_source_cannot_be_rebound(self) -> None:
-        from orbit.workflow.catalogs import InMemoryHandlerCatalog, InMemorySchemaCatalog
-        from orbit.workflow.dsl import compile_source
-        from orbit.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
+        from promptaflow.workflow.catalogs import InMemoryHandlerCatalog, InMemorySchemaCatalog
+        from promptaflow.workflow.dsl import compile_source
+        from promptaflow.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
         import json as json_module
 
         source = json_module.dumps({**self.DRIFTED, "metadata": {"id": "sourceless", "name": "Sourceless"}})
@@ -723,11 +723,11 @@ class CatalogTests(ApiTestCase):
         Whether the run later executes is the Runtime's concern; the catalog
         tests only read the advertisement and the acceptance.
         """
-        from orbit.workflow.domain.definitions import (
+        from promptaflow.workflow.domain.definitions import (
             CompiledWorkflow, IREdge, IRHandlerRef, IRNode, IRPort, WorkflowIR,
         )
-        from orbit.workflow.domain.serialization import definition_hash
-        from orbit.workflow.persistence.workflow_versions import (
+        from promptaflow.workflow.domain.serialization import definition_hash
+        from promptaflow.workflow.persistence.workflow_versions import (
             SQLiteWorkflowVersionStore,
         )
 
@@ -1081,14 +1081,14 @@ class WorkflowDraftApiTests(ApiTestCase):
         # degrade case.
         import json as json_module
 
-        from orbit.workflow.application.workflows import (
+        from promptaflow.workflow.application.workflows import (
             WorkflowCatalogs, WorkflowDefinitionService,
         )
-        from orbit.workflow.catalogs import (
+        from promptaflow.workflow.catalogs import (
             InMemoryHandlerCatalog, InMemorySchemaCatalog,
         )
-        from orbit.workflow.catalogs.extensions import InMemoryExtensionRegistry
-        from orbit.workflow.persistence.workflow_versions import (
+        from promptaflow.workflow.catalogs.extensions import InMemoryExtensionRegistry
+        from promptaflow.workflow.persistence.workflow_versions import (
             SQLiteWorkflowVersionStore,
         )
         from tests.test_workflow_drafts import dsl as editable_dsl
@@ -1319,12 +1319,12 @@ class WorkflowDraftApiTests(ApiTestCase):
 
     def test_agent_cli_version_change_is_not_reported_as_handler_drift(self) -> None:
         import json as json_module
-        from orbit.workflow.application.workflows import (
+        from promptaflow.workflow.application.workflows import (
             WorkflowCatalogs, WorkflowDefinitionService,
         )
-        from orbit.workflow.catalogs import InMemoryHandlerCatalog, InMemorySchemaCatalog
-        from orbit.workflow.catalogs.extensions import InMemoryExtensionRegistry
-        from orbit.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
+        from promptaflow.workflow.catalogs import InMemoryHandlerCatalog, InMemorySchemaCatalog
+        from promptaflow.workflow.catalogs.extensions import InMemoryExtensionRegistry
+        from promptaflow.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
         from tests.test_workflow_drafts import dsl as editable_dsl
 
         source = editable_dsl(workflow_id="agent-drift", name="Agent drift")
@@ -1659,7 +1659,7 @@ class WorkflowDraftApiTests(ApiTestCase):
         """
         import json as json_module
         import time
-        from orbit.workflow.authoring import active_scope
+        from promptaflow.workflow.authoring import active_scope
         from tests.test_workflow_drafts import dsl as editable_dsl
 
         def writer(_prompt):
@@ -2510,8 +2510,8 @@ class SingleGoalApiTests(unittest.TestCase):
 
         from starlette.applications import Starlette
 
-        from orbit.web.api_v1 import build_api_v1
-        from orbit.workflow.langgraph_runtime import build_service
+        from promptaflow.web.api_v1 import build_api_v1
+        from promptaflow.workflow.langgraph_runtime import build_service
 
         self.assertNotIn(
             "single_goal_mode",
@@ -2579,7 +2579,7 @@ class LiveMarkerTests(ApiTestCase):
         which is the granularity where the wait is long enough to need it.
         """
 
-        from orbit.workflow.langgraph_runtime.service import append_event
+        from promptaflow.workflow.langgraph_runtime.service import append_event
 
         with AsgiHarness(self.app) as client:
             started = client.post(
@@ -2749,8 +2749,8 @@ class WorkflowBranchHistoryApiTests(ApiTestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        from orbit.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
-        from orbit.web.app import create_app
+        from promptaflow.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
+        from promptaflow.web.app import create_app
         from tests.test_web_composition import SCHEMAS, transform_registration
 
         self.db = Path(self.temp.name) / "runtime.db"
@@ -2911,7 +2911,7 @@ class AuthoringSchemaApiTests(ApiTestCase):
         )
 
     def test_the_served_schema_is_the_one_the_compiler_binds_to(self) -> None:
-        from orbit.workflow.dsl import authoring_json_schema
+        from promptaflow.workflow.dsl import authoring_json_schema
 
         with AsgiHarness(self.app) as client:
             data = self._schema(client)
@@ -2980,7 +2980,7 @@ class WorkflowViewerMountTests(unittest.TestCase):
     def _built() -> bool:
         from importlib import resources
 
-        return resources.files("orbit").joinpath(
+        return resources.files("promptaflow").joinpath(
             "static/workflow-editor/index.html"
         ).is_file()
 

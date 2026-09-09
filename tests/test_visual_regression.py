@@ -39,15 +39,15 @@ try:  # pragma: no cover - the skip below reports the absence
 except ImportError:  # pragma: no cover
     sync_playwright = None
 
-from orbit.web.app import create_app
-from orbit.web.local_identity import local_authorizer, loopback_authenticator
-from orbit.workflow.api.routes import RateLimiter
-from orbit.workflow.artifacts.local_cas import LocalCASBackend
-from orbit.workflow.persistence.database import connect_workflow_database
-from orbit.web.app import HandlerRegistration
-from orbit.workflow.catalogs import HandlerManifest
-from orbit.workflow.domain.durable_execution import ExecutionSafety
-from orbit.workflow.domain.handlers import ResourceProfile
+from promptaflow.web.app import create_app
+from promptaflow.web.local_identity import local_authorizer, loopback_authenticator
+from promptaflow.workflow.api.routes import RateLimiter
+from promptaflow.workflow.artifacts.local_cas import LocalCASBackend
+from promptaflow.workflow.persistence.database import connect_workflow_database
+from promptaflow.web.app import HandlerRegistration
+from promptaflow.workflow.catalogs import HandlerManifest
+from promptaflow.workflow.domain.durable_execution import ExecutionSafety
+from promptaflow.workflow.domain.handlers import ResourceProfile
 from tests.test_web_composition import (
     SCHEMAS, TransformHandler, publish_linear_workflow, transform_registration,
 )

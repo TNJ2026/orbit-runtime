@@ -7,12 +7,12 @@ import sqlite3
 import tempfile
 import unittest
 
-from orbit.workflow.catalogs import HandlerManifest, InMemoryHandlerCatalog, InMemorySchemaCatalog
-from orbit.workflow.dsl import compile_source
-from orbit.workflow.domain.durable_execution import ExecutionSafety
-from orbit.workflow.domain.handlers import ResourceProfile
-from orbit.workflow.persistence import PublishConflictError, SQLiteWorkflowVersionStore
-from orbit.workflow.persistence.database import connect_workflow_database
+from promptaflow.workflow.catalogs import HandlerManifest, InMemoryHandlerCatalog, InMemorySchemaCatalog
+from promptaflow.workflow.dsl import compile_source
+from promptaflow.workflow.domain.durable_execution import ExecutionSafety
+from promptaflow.workflow.domain.handlers import ResourceProfile
+from promptaflow.workflow.persistence import PublishConflictError, SQLiteWorkflowVersionStore
+from promptaflow.workflow.persistence.database import connect_workflow_database
 from tests.test_workflow_dsl import VALID_DSL
 
 

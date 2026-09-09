@@ -13,21 +13,21 @@ import json
 from types import SimpleNamespace
 import unittest
 
-from orbit.workflow.authoring import (
+from promptaflow.workflow.authoring import (
     UnknownGenerationAgentError,
     AuthoringFailedError, AuthoringUnavailableError, AuthoringUnknownResultError,
     TrustedCliDslGenerator,
     WorkflowAuthoringService,
 )
-from orbit.workflow.catalogs import (
+from promptaflow.workflow.catalogs import (
     HandlerManifest, InMemoryHandlerCatalog, InMemorySchemaCatalog,
 )
-from orbit.workflow.catalogs.agent_discovery import TRUSTED_AGENT_CLIS
-from orbit.workflow.cli_environment import trusted_cli_environment
-from orbit.workflow.domain.durable_execution import ExecutionSafety
-from orbit.workflow.domain.handlers import ResourceProfile
-from orbit.workflow.dsl.schema import ID_PATTERN
-from orbit.workflow.langgraph_runtime.harness_subagent import APP_DELEGATE_MANIFEST
+from promptaflow.workflow.catalogs.agent_discovery import TRUSTED_AGENT_CLIS
+from promptaflow.workflow.cli_environment import trusted_cli_environment
+from promptaflow.workflow.domain.durable_execution import ExecutionSafety
+from promptaflow.workflow.domain.handlers import ResourceProfile
+from promptaflow.workflow.dsl.schema import ID_PATTERN
+from promptaflow.workflow.langgraph_runtime.harness_subagent import APP_DELEGATE_MANIFEST
 
 
 MANIFEST = HandlerManifest(
@@ -585,7 +585,7 @@ class AuthoringServiceTests(unittest.TestCase):
     def test_retry_context_keeps_the_head_of_a_long_answer(self) -> None:
         """Truncating from the front drops metadata and nodes — the part to fix."""
 
-        from orbit.workflow.authoring.generator import MAX_RETRY_CONTEXT_CHARS
+        from promptaflow.workflow.authoring.generator import MAX_RETRY_CONTEXT_CHARS
 
         broken = valid_document()
         broken["metadata"]["padding"] = "x" * (MAX_RETRY_CONTEXT_CHARS + 1000)
@@ -615,7 +615,7 @@ class AuthoringServiceTests(unittest.TestCase):
     def test_a_guard_failure_keeps_its_own_code(self) -> None:
         """Flattening every guard to GENERATION_PROTOCOL hides which one fired."""
 
-        from orbit.workflow.authoring.generator import _protocol_finding
+        from promptaflow.workflow.authoring.generator import _protocol_finding
 
         self.assertEqual(
             "GOAL_BINDING_MISSING",
@@ -723,8 +723,8 @@ class ExpressionVocabularyTests(unittest.TestCase):
     """
 
     def test_every_operator_the_compiler_accepts_is_offered(self) -> None:
-        from orbit.workflow.authoring.generator import _expression_vocabulary
-        from orbit.workflow.dsl.expressions import _CALLS, _COMPARE
+        from promptaflow.workflow.authoring.generator import _expression_vocabulary
+        from promptaflow.workflow.dsl.expressions import _CALLS, _COMPARE
 
         vocabulary = _expression_vocabulary()
         self.assertEqual(
@@ -747,7 +747,7 @@ class ExpressionVocabularyTests(unittest.TestCase):
         and the run died on `reference member 'issues_found' does not exist`.
         """
 
-        from orbit.workflow.authoring.generator import _expression_vocabulary
+        from promptaflow.workflow.authoring.generator import _expression_vocabulary
 
         guidance = _expression_vocabulary()["reading_an_agent_result"]
         self.assertIn("exists", guidance)
@@ -756,8 +756,8 @@ class ExpressionVocabularyTests(unittest.TestCase):
     def test_the_offered_comparison_example_actually_compiles(self) -> None:
         """A worked example in a prompt is a promise the compiler must keep."""
 
-        from orbit.workflow.authoring.generator import _expression_vocabulary
-        from orbit.workflow.dsl.expressions import validate_expression_ast
+        from promptaflow.workflow.authoring.generator import _expression_vocabulary
+        from promptaflow.workflow.dsl.expressions import validate_expression_ast
 
         example = _expression_vocabulary()["comparison"]["example"]
         self.assertEqual(example, validate_expression_ast(example, "$.condition"))
@@ -1075,7 +1075,7 @@ class CliGeneratorTests(unittest.TestCase):
     def test_a_generation_reports_its_child_so_it_can_be_stopped(self) -> None:
         """Without the handle, cancelling only discards a still-running Agent."""
 
-        from orbit.workflow.authoring.generator import CancelScope, cancellable
+        from promptaflow.workflow.authoring.generator import CancelScope, cancellable
 
         stopped: list[float | None] = []
 
@@ -1098,7 +1098,7 @@ class CliGeneratorTests(unittest.TestCase):
         self.assertEqual([], stopped)
 
     def test_a_cancellation_reaches_a_child_that_starts_afterwards(self) -> None:
-        from orbit.workflow.authoring.generator import CancelScope
+        from promptaflow.workflow.authoring.generator import CancelScope
 
         stopped: list[float | None] = []
 

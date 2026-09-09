@@ -58,18 +58,18 @@ dev = ["playwright>=1.45", "Pillow>=10"]
 structured-authoring = ["pydantic-ai-slim>=0.4"]
 
 [project.scripts]
-orbit = "orbit.__main__:main"
+orbit = "promptaflow.__main__:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-# Single source of truth for the version: src/orbit/__init__.py's __version__.
+# Single source of truth for the version: src/promptaflow/__init__.py's __version__.
 [tool.hatch.version]
-path = "src/orbit/__init__.py"
+path = "src/promptaflow/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/orbit"]
+packages = ["src/promptaflow"]
 # Non-Python resources (the modular Web UI)
 # are loaded via importlib.resources at runtime. hatchling already ships every
 # non-ignored file under the package tree, so they are included automatically —

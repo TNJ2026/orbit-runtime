@@ -22,27 +22,27 @@ import threading
 import time
 import unittest
 
-from orbit.web.app import RuntimeComposition, HandlerRegistration, create_app
-from orbit.web.schema_guard import (
+from promptaflow.web.app import RuntimeComposition, HandlerRegistration, create_app
+from promptaflow.web.schema_guard import (
     LEGACY_TABLES, MixedSchemaError, assert_runtime_schema, table_names,
 )
-from orbit.workflow.catalogs import (
+from promptaflow.workflow.catalogs import (
     HandlerManifest, InMemoryHandlerCatalog, InMemorySchemaCatalog,
 )
-from orbit.workflow.domain.definitions import CompiledWorkflow
-from orbit.workflow.domain.durable_execution import ExecutionSafety
-from orbit.workflow.domain.envelopes import CommandEnvelope
-from orbit.workflow.domain.handlers import ResourceProfile
-from orbit.workflow.domain.ids import EntityId
-from orbit.workflow.domain.serialization import definition_hash
-from orbit.workflow.domain.states import WorkflowRunStatus
-from orbit.workflow.domain.versions import AggregateVersion
-from orbit.workflow.handlers import TransformHandler
-from orbit.workflow.domain.definitions import (
+from promptaflow.workflow.domain.definitions import CompiledWorkflow
+from promptaflow.workflow.domain.durable_execution import ExecutionSafety
+from promptaflow.workflow.domain.envelopes import CommandEnvelope
+from promptaflow.workflow.domain.handlers import ResourceProfile
+from promptaflow.workflow.domain.ids import EntityId
+from promptaflow.workflow.domain.serialization import definition_hash
+from promptaflow.workflow.domain.states import WorkflowRunStatus
+from promptaflow.workflow.domain.versions import AggregateVersion
+from promptaflow.workflow.handlers import TransformHandler
+from promptaflow.workflow.domain.definitions import (
     IREdge, IRHandlerRef, IRNode, IRPort, WorkflowIR,
 )
-from orbit.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
-from orbit.workflow.dsl import compile_source
+from promptaflow.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
+from promptaflow.workflow.dsl import compile_source
 
 
 NOW = datetime(2026, 7, 17, tzinfo=timezone.utc)
@@ -513,7 +513,7 @@ class HealthEndpointTests(unittest.TestCase):
 
 class BackgroundLoopTests(unittest.TestCase):
     def test_loop_records_errors_without_dying(self) -> None:
-        from orbit.web.app import BackgroundLoop
+        from promptaflow.web.app import BackgroundLoop
 
         calls: list[int] = []
 
@@ -534,7 +534,7 @@ class BackgroundLoopTests(unittest.TestCase):
             self.assertTrue(loop.stop())
 
     def test_busy_loop_does_not_sleep_between_items(self) -> None:
-        from orbit.web.app import BackgroundLoop
+        from promptaflow.web.app import BackgroundLoop
 
         remaining = [5]
 
@@ -562,7 +562,7 @@ class BackgroundLoopTests(unittest.TestCase):
 class BoundaryTests(unittest.TestCase):
     def test_composition_root_does_not_import_the_legacy_engine(self) -> None:
         import ast
-        from orbit.web import app as app_module
+        from promptaflow.web import app as app_module
 
         tree = ast.parse(Path(app_module.__file__).read_text(encoding="utf-8"))
         offenders = []

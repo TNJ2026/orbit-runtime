@@ -15,7 +15,7 @@ import re
 import unittest
 
 
-UI_ROOT = Path(str(resources.files("orbit").joinpath("static/workflow-ui")))
+UI_ROOT = Path(str(resources.files("promptaflow").joinpath("static/workflow-ui")))
 ASSETS = UI_ROOT / "assets"
 LOCALES = ("zh-CN", "en-US")
 
@@ -480,7 +480,7 @@ class StepListRenderingTests(unittest.TestCase):
         chinese = json.loads(
             (ASSETS / "i18n.zh-CN.json").read_text(encoding="utf-8")
         )
-        from orbit.workflow.langgraph_runtime.service import EDGE_STATUSES
+        from promptaflow.workflow.langgraph_runtime.service import EDGE_STATUSES
 
         self.assertGreaterEqual(len(EDGE_STATUSES), 6)
         for status in EDGE_STATUSES:

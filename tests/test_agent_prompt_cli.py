@@ -16,15 +16,15 @@ import time
 from types import SimpleNamespace
 import unittest
 
-from orbit.workflow.catalogs.agent_discovery import (
+from promptaflow.workflow.catalogs.agent_discovery import (
     TRUSTED_AGENT_CLIS, AgentCliSpec, AgentDiscoveryError, AgentInvocation,
     DiscoveredAgent, agent_manifest,
 )
-from orbit.workflow.domain.handlers import (
+from promptaflow.workflow.domain.handlers import (
     CancelDisposition, HandlerValidationError, RecoveryDisposition,
     UnknownExternalResultError,
 )
-from orbit.workflow.handlers.agent import (
+from promptaflow.workflow.handlers.agent import (
     AGENT_COMPLETION_MARKER, AGENT_RESULT_PORT, AGENT_RESULT_TEXT_KEY,
     AGENT_RUNTIME_COMPLETION_PROTOCOL, AgentRequest,
     TrustedPromptCliAgentClient, attempt_completion_marker, render_agent_prompt,
@@ -198,7 +198,7 @@ class PromptTransportTests(unittest.TestCase):
         """Pipe cleanup is a capacity signal, not evidence about the reply."""
 
         from unittest.mock import patch
-        from orbit.platform.process import ProcessResult
+        from promptaflow.platform.process import ProcessResult
 
         client = self.client("print('unused')", prompt_flag="-p")
         outcome = ProcessResult(
@@ -208,7 +208,7 @@ class PromptTransportTests(unittest.TestCase):
             cancelled=False, timed_out=False,
             termination_reason="completed_output", leaked_drain_threads=1,
         )
-        with patch("orbit.workflow.handlers.agent.ProcessHandle") as handle_type:
+        with patch("promptaflow.workflow.handlers.agent.ProcessHandle") as handle_type:
             handle_type.return_value.wait.return_value = outcome
             self.assertEqual("answer", self.call(client))
 
@@ -347,7 +347,7 @@ class _FakeArtifacts:
         self.writes = []
 
     def write(self, *, name, content, content_type):
-        from orbit.workflow.domain.ids import EntityId
+        from promptaflow.workflow.domain.ids import EntityId
 
         artifact_id = EntityId("artifact", f"{name}-{len(self.blobs)}")
         self.blobs[str(artifact_id)] = content
@@ -413,7 +413,7 @@ class AgentArtifactRoutingTests(unittest.TestCase):
 
     def test_an_artifact_input_is_resolved_to_text_before_the_prompt(self) -> None:
         artifacts = _FakeArtifacts()
-        from orbit.workflow.domain.ids import EntityId
+        from promptaflow.workflow.domain.ids import EntityId
 
         artifacts.blobs[str(EntityId("artifact", "up-0"))] = b"upstream prose"
         # Echo argv so we can see what prompt the CLI received.
@@ -429,7 +429,7 @@ class AgentArtifactRoutingTests(unittest.TestCase):
         self.assertEqual(["-q", runtime_prompt("upstream prose")], seen["argv"])
 
     def test_a_large_prompt_via_a_flag_is_refused_with_a_hint(self) -> None:
-        from orbit.workflow.domain.ids import EntityId
+        from promptaflow.workflow.domain.ids import EntityId
 
         artifacts = _FakeArtifacts()
         artifacts.blobs[str(EntityId("artifact", "big-0"))] = b"y" * 500_000
@@ -445,7 +445,7 @@ class AgentArtifactRoutingTests(unittest.TestCase):
         self.assertIn("argument", str(raised.exception))
 
     def test_a_large_prompt_via_stdin_is_allowed_up_to_the_input_budget(self) -> None:
-        from orbit.workflow.domain.ids import EntityId
+        from promptaflow.workflow.domain.ids import EntityId
 
         artifacts = _FakeArtifacts()
         artifacts.blobs[str(EntityId("artifact", "big-0"))] = b"z" * 500_000
@@ -535,14 +535,14 @@ class WorkspaceNameTests(unittest.TestCase):
     """
 
     def test_an_ordinary_run_id_keeps_its_shape(self) -> None:
-        from orbit.workflow.handlers.agent import _safe_name
+        from promptaflow.workflow.handlers.agent import _safe_name
 
         self.assertEqual(
             "langgraph_run_abc123", _safe_name("langgraph_run:abc123"),
         )
 
     def test_separators_and_traversal_cannot_survive(self) -> None:
-        from orbit.workflow.handlers.agent import _safe_name
+        from promptaflow.workflow.handlers.agent import _safe_name
 
         for value in ("../../etc/passwd", "a/b", "a\\b", "..", ".", "..."):
             with self.subTest(value=value):
@@ -553,7 +553,7 @@ class WorkspaceNameTests(unittest.TestCase):
                 self.assertNotEqual("..", name)
 
     def test_a_name_with_nothing_usable_left_still_names_something(self) -> None:
-        from orbit.workflow.handlers.agent import _safe_name
+        from promptaflow.workflow.handlers.agent import _safe_name
 
         for value in ("", "...", "///"):
             with self.subTest(value=value):

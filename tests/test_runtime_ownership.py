@@ -9,10 +9,10 @@ import types
 import unittest
 from unittest.mock import patch
 
-from orbit.platform.runtime_ownership import (
+from promptaflow.platform.runtime_ownership import (
     RuntimeOwnership, RuntimeOwnershipError, discover_runtimes,
 )
-from orbit.platform.process import stop_pid_tree
+from promptaflow.platform.process import stop_pid_tree
 
 
 class RuntimeOwnershipTests(unittest.TestCase):
@@ -97,12 +97,12 @@ class McpOwnershipCleanupTests(unittest.TestCase):
         )
 
     def test_a_failed_artifact_store_does_not_bury_its_own_fault(self) -> None:
-        from orbit.__main__ import _mcp
+        from promptaflow.__main__ import _mcp
 
         boom = RuntimeError("the disk went away")
         with tempfile.TemporaryDirectory() as root:
             args = self.args(root)
-            with patch("orbit.workflow.artifacts.LocalCASBackend", side_effect=boom):
+            with patch("promptaflow.workflow.artifacts.LocalCASBackend", side_effect=boom):
                 with self.assertRaises(RuntimeError) as caught:
                     _mcp(args)
             # The fault that happened, not an UnboundLocalError from the
@@ -112,15 +112,15 @@ class McpOwnershipCleanupTests(unittest.TestCase):
             RuntimeOwnership(Path(args.db)).acquire().release()
 
     def test_explicit_project_root_selects_the_stdio_runtime_workspace(self) -> None:
-        from orbit.__main__ import _mcp
+        from promptaflow.__main__ import _mcp
 
         boom = RuntimeError("stop after resolving the workspace")
         with tempfile.TemporaryDirectory() as root:
             args = self.args(root)
             with patch(
-                "orbit.__main__._runtime_db_path", return_value=args.db,
+                "promptaflow.__main__._runtime_db_path", return_value=args.db,
             ) as resolve_db, patch(
-                "orbit.workflow.artifacts.LocalCASBackend", side_effect=boom,
+                "promptaflow.workflow.artifacts.LocalCASBackend", side_effect=boom,
             ):
                 with self.assertRaisesRegex(RuntimeError, "resolving the workspace"):
                     _mcp(args)
@@ -140,7 +140,7 @@ class McpOwnershipCleanupTests(unittest.TestCase):
         for diagnostics, quietly removes.
         """
 
-        from orbit.__main__ import _mcp
+        from promptaflow.__main__ import _mcp
 
         boom = RuntimeError("a loop refused to stop")
         released: list[int] = []
@@ -152,8 +152,8 @@ class McpOwnershipCleanupTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as root:
             args = self.args(root)
-            with patch("orbit.web.mcp.serve_stdio"), \
-                 patch("orbit.web.app.RuntimeComposition.stop", side_effect=boom), \
+            with patch("promptaflow.web.mcp.serve_stdio"), \
+                 patch("promptaflow.web.app.RuntimeComposition.stop", side_effect=boom), \
                  patch.object(RuntimeOwnership, "release", spy):
                 with self.assertRaises(RuntimeError) as caught:
                     _mcp(args)
@@ -317,7 +317,7 @@ class EphemeralPortTests(unittest.TestCase):
             home.mkdir()
             server = subprocess.Popen(
                 [
-                    sys.executable, "-m", "orbit", "_runtime", "--port", "0",
+                    sys.executable, "-m", "promptaflow", "_runtime", "--port", "0",
                     "--db", str(Path(root) / "runtime.db"),
                     "--project-root", str(Path(root)),
                     "--no-agent-discovery",
@@ -376,7 +376,7 @@ class ForkHookTests(unittest.TestCase):
         its instance and its lock file alive for the life of the process.
         """
 
-        from orbit.platform import runtime_ownership as module
+        from promptaflow.platform import runtime_ownership as module
 
         registered: list[dict] = []
         with patch.object(
@@ -399,7 +399,7 @@ class ForkHookTests(unittest.TestCase):
             self.assertEqual([None, None, None], [owner._file for owner in owners])
 
     def test_a_released_owner_is_not_reached_by_the_handler(self) -> None:
-        from orbit.platform import runtime_ownership as module
+        from promptaflow.platform import runtime_ownership as module
 
         directory = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, directory, True)

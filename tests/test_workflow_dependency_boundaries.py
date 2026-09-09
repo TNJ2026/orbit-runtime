@@ -34,7 +34,7 @@ class WorkflowDependencyBoundaryTests(unittest.TestCase):
         """
 
         root = Path(__file__).parents[1] / "src" / "orbit" / "workflow"
-        allowed = {"orbit.workflow.persistence.workflow_versions"}
+        allowed = {"promptaflow.workflow.persistence.workflow_versions"}
         violations = []
         for path in (root / "langgraph_runtime").glob("*.py"):
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
@@ -45,8 +45,8 @@ class WorkflowDependencyBoundaryTests(unittest.TestCase):
                 elif isinstance(node, ast.ImportFrom) and node.module:
                     names = [node.module]
                 for name in names:
-                    resolved = name.replace("..", "orbit.workflow.").replace(
-                        "orbit.workflow..", "orbit.workflow."
+                    resolved = name.replace("..", "promptaflow.workflow.").replace(
+                        "promptaflow.workflow..", "promptaflow.workflow."
                     )
                     if "persistence" not in resolved:
                         continue
@@ -59,7 +59,7 @@ class WorkflowDependencyBoundaryTests(unittest.TestCase):
         root = Path(__file__).parents[1] / "src" / "orbit" / "workflow"
         forbidden = {
             "sqlite3", "orbit.server", "orbit.store",
-            "orbit.workflow.persistence", "orbit.workflow.application",
+            "promptaflow.workflow.persistence", "promptaflow.workflow.application",
             "persistence", "application",
         }
         violations = []

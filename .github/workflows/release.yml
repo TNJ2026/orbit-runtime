@@ -52,7 +52,7 @@ jobs:
             echo "unsupported release tag: $release_tag" >&2
             exit 2
           fi
-          package_version="$(python -c 'import ast; p=ast.parse(open("src/orbit/__init__.py").read()); print(next(n.value.value for n in p.body if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "__version__" for t in n.targets)))')"
+          package_version="$(python -c 'import ast; p=ast.parse(open("src/promptaflow/__init__.py").read()); print(next(n.value.value for n in p.body if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "__version__" for t in n.targets)))')"
           test "$package_version" = "$version"
           echo "ORBIT_RELEASE_VERSION=$version" >> "$GITHUB_ENV"
           echo "ORBIT_RELEASE_TAG=$release_tag" >> "$GITHUB_ENV"

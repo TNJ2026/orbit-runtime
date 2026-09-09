@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import unittest
 
-from orbit.workflow.data.mapping import MappingEvaluationError, evaluate_mapping
-from orbit.workflow.testing import assert_reducer_source_is_pure, side_effect_guard
+from promptaflow.workflow.data.mapping import MappingEvaluationError, evaluate_mapping
+from promptaflow.workflow.testing import assert_reducer_source_is_pure, side_effect_guard
 
 
 class WorkflowMappingRuntimeTests(unittest.TestCase):

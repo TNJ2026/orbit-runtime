@@ -89,7 +89,7 @@ class ApprovalSubmissionTests(unittest.TestCase):
     """
 
     def node(self, port_id: str):
-        from orbit.workflow.domain.definitions import IRNode, IRPort
+        from promptaflow.workflow.domain.definitions import IRNode, IRPort
 
         return IRNode(
             "review", "human", (),
@@ -101,7 +101,7 @@ class ApprovalSubmissionTests(unittest.TestCase):
         )
 
     def test_the_accepted_samples_are_accepted(self) -> None:
-        from orbit.workflow.langgraph_runtime.compiler import (
+        from promptaflow.workflow.langgraph_runtime.compiler import (
             validate_human_response,
         )
 
@@ -112,7 +112,7 @@ class ApprovalSubmissionTests(unittest.TestCase):
                 validate_human_response(node, case["submission"])
 
     def test_the_refused_samples_are_refused(self) -> None:
-        from orbit.workflow.langgraph_runtime.compiler import (
+        from promptaflow.workflow.langgraph_runtime.compiler import (
             validate_human_response,
         )
 
@@ -128,10 +128,10 @@ class ServedPayloadTests(unittest.TestCase):
     """The shape as the Runtime actually emits it, not only as described."""
 
     def test_the_commands_a_catalog_advertises_match_the_frozen_shape(self) -> None:
-        from orbit.web.api_v1 import (
+        from promptaflow.web.api_v1 import (
             Authorizer, OPS_READ_SCOPE, READ_SCOPE, WRITE_SCOPE,
         )
-        from orbit.web.app import create_app
+        from promptaflow.web.app import create_app
         from tests.test_web_composition import (
             AsgiHarness, SCHEMAS, publish_linear_workflow, transform_registration,
         )

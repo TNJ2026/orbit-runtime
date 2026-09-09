@@ -11,8 +11,8 @@ import sqlite3
 import sys
 
 import yaml
-from orbit.workflow.domain.ir_schema import workflow_ir_from_primitive
-from orbit.workflow.domain.serialization import canonical_json, definition_hash
+from promptaflow.workflow.domain.ir_schema import workflow_ir_from_primitive
+from promptaflow.workflow.domain.serialization import canonical_json, definition_hash
 
 
 def strip_versions(value):

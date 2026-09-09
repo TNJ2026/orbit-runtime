@@ -27,7 +27,7 @@ from .agent_discovery import (
 )
 
 
-DISCOVERY_FILE = "src/orbit/workflow/catalogs/agent_discovery.py"
+DISCOVERY_FILE = "src/promptaflow/workflow/catalogs/agent_discovery.py"
 DISCOVERY_TESTS = "tests/test_agent_discovery.py"
 
 # Where each edit goes. Anchored on text rather than line numbers so a patch is

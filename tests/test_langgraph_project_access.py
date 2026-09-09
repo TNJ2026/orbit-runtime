@@ -2,12 +2,12 @@ from __future__ import annotations
 import tempfile, unittest
 from pathlib import Path
 
-from orbit.platform.project_occupancy import ProjectOccupancyRegistry, ProjectBusy
-from orbit.workflow.langgraph_runtime.project_access import (
+from promptaflow.platform.project_occupancy import ProjectOccupancyRegistry, ProjectBusy
+from promptaflow.workflow.langgraph_runtime.project_access import (
     ProjectAccessCoordinator, ProjectAccessNeed, ProjectAccessUnavailable,
     RELEASING_STATUSES, project_access_need,
 )
-from orbit.workflow.domain.definitions import (
+from promptaflow.workflow.domain.definitions import (
     IRHandlerRef, IRNode, IRPolicy, IRPort, IRResult, WorkflowIR,
 )
 
@@ -150,7 +150,7 @@ class ServiceSeamTests(unittest.TestCase):
         from tests.test_web_composition import (
             publish_linear_workflow, transform_registration,
         )
-        from orbit.workflow.langgraph_runtime import build_service
+        from promptaflow.workflow.langgraph_runtime import build_service
 
         self.temp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(self.temp.cleanup)
@@ -244,10 +244,10 @@ class ServiceSeamTests(unittest.TestCase):
         person can see and cancel.
         """
 
-        from orbit.platform.project_occupancy import (
+        from promptaflow.platform.project_occupancy import (
             ProjectOccupancyRegistry,
         )
-        from orbit.workflow.langgraph_runtime.project_access import (
+        from promptaflow.workflow.langgraph_runtime.project_access import (
             ProjectAccessCoordinator,
         )
         from pathlib import Path
@@ -310,8 +310,8 @@ class ServiceSeamTests(unittest.TestCase):
         for the whole poll interval with nobody holding it.
         """
 
-        from orbit.platform.project_occupancy import ProjectOccupancyRegistry
-        from orbit.workflow.langgraph_runtime.project_access import (
+        from promptaflow.platform.project_occupancy import ProjectOccupancyRegistry
+        from promptaflow.workflow.langgraph_runtime.project_access import (
             ProjectAccessCoordinator,
         )
         from pathlib import Path
@@ -366,8 +366,8 @@ class ServiceSeamTests(unittest.TestCase):
     def test_the_queued_run_gets_the_project_and_finishes(self) -> None:
         """The whole point, end to end: refused nothing, waited, then ran."""
 
-        from orbit.platform.project_occupancy import ProjectOccupancyRegistry
-        from orbit.workflow.langgraph_runtime.project_access import (
+        from promptaflow.platform.project_occupancy import ProjectOccupancyRegistry
+        from promptaflow.workflow.langgraph_runtime.project_access import (
             ProjectAccessCoordinator,
         )
         from pathlib import Path
@@ -424,8 +424,8 @@ class ServiceSeamTests(unittest.TestCase):
         bounded and says what it was waiting for.
         """
 
-        from orbit.platform.project_occupancy import ProjectOccupancyRegistry
-        from orbit.workflow.langgraph_runtime.project_access import (
+        from promptaflow.platform.project_occupancy import ProjectOccupancyRegistry
+        from promptaflow.workflow.langgraph_runtime.project_access import (
             ProjectAccessCoordinator,
         )
         from pathlib import Path
@@ -485,8 +485,8 @@ class ServiceSeamTests(unittest.TestCase):
     def test_a_cancelled_run_leaves_the_line(self) -> None:
         """Nothing else would ever take it out: it is waiting, not running."""
 
-        from orbit.platform.project_occupancy import ProjectOccupancyRegistry
-        from orbit.workflow.langgraph_runtime.project_access import (
+        from promptaflow.platform.project_occupancy import ProjectOccupancyRegistry
+        from promptaflow.workflow.langgraph_runtime.project_access import (
             ProjectAccessCoordinator,
         )
         from pathlib import Path
@@ -536,9 +536,9 @@ class ServiceSeamTests(unittest.TestCase):
             ).fetchall())
 
     def test_a_start_is_refused_when_write_was_not_granted(self) -> None:
-        from orbit.workflow.langgraph_runtime.service import LangGraphRunConflict
-        from orbit.platform.project_occupancy import ProjectOccupancyRegistry
-        from orbit.workflow.langgraph_runtime.project_access import (
+        from promptaflow.workflow.langgraph_runtime.service import LangGraphRunConflict
+        from promptaflow.platform.project_occupancy import ProjectOccupancyRegistry
+        from promptaflow.workflow.langgraph_runtime.project_access import (
             ProjectAccessCoordinator,
         )
         from pathlib import Path
@@ -609,7 +609,7 @@ class RecoveryPointIntegrationTests(unittest.TestCase):
         self.assertIn("untracked files git is not ignoring", left[0].recovery["covered"])
 
     def test_the_baseline_can_actually_put_the_project_back(self):
-        from orbit.workspace.recovery import GitRecoveryPoints, RecoveryPoint
+        from promptaflow.workspace.recovery import GitRecoveryPoints, RecoveryPoint
 
         c = self.coord()
         c.acquire("r1", ProjectAccessNeed(required=True, write=True))
@@ -628,7 +628,7 @@ class RecoveryPointIntegrationTests(unittest.TestCase):
         self.assertEqual("before\n", (self.project / "tracked.txt").read_text())
 
     def test_a_non_git_project_is_refused_rather_than_run_unprotected(self):
-        from orbit.workspace.recovery import RecoveryUnavailable
+        from promptaflow.workspace.recovery import RecoveryUnavailable
 
         plain = self.root / "plain"; plain.mkdir()
         c = ProjectAccessCoordinator(
@@ -677,7 +677,7 @@ class NonGitRecoveryTests(unittest.TestCase):
         )
 
     def test_it_picks_the_file_backup_strategy_off_git(self):
-        from orbit.workspace.recovery import FileBackupRecoveryPoints
+        from promptaflow.workspace.recovery import FileBackupRecoveryPoints
 
         self.assertIsInstance(
             self.coord().recovery_points, FileBackupRecoveryPoints,
@@ -686,7 +686,7 @@ class NonGitRecoveryTests(unittest.TestCase):
     def test_without_protect_it_is_still_refused(self):
         """Unchanged from before: no way back means no run (§6.2)."""
 
-        from orbit.workspace.recovery import RecoveryUnavailable
+        from promptaflow.workspace.recovery import RecoveryUnavailable
 
         c = self.coord()
         with self.assertRaises(RecoveryUnavailable):
@@ -711,7 +711,7 @@ class NonGitRecoveryTests(unittest.TestCase):
         )
 
     def test_the_declared_file_can_actually_be_put_back(self):
-        from orbit.workspace.recovery import FileBackupRecoveryPoints
+        from promptaflow.workspace.recovery import FileBackupRecoveryPoints
 
         c = self.coord()
         c.acquire("r1", ProjectAccessNeed(
@@ -730,7 +730,7 @@ class NonGitRecoveryTests(unittest.TestCase):
 
     def test_a_git_project_still_uses_git(self):
         import subprocess
-        from orbit.workspace.recovery import GitRecoveryPoints
+        from promptaflow.workspace.recovery import GitRecoveryPoints
 
         repo = self.root / "repo"; repo.mkdir()
         for argv in (("git","init","--initial-branch=main"),
@@ -757,8 +757,8 @@ class NonGitRecoveryTests(unittest.TestCase):
         now, which is what `_require_project_available` is for.
         """
 
-        from orbit.workflow.langgraph_runtime import build_service
-        from orbit.workflow.langgraph_runtime.service import LangGraphRunConflict
+        from promptaflow.workflow.langgraph_runtime import build_service
+        from promptaflow.workflow.langgraph_runtime.service import LangGraphRunConflict
         from tests.test_web_composition import (
             publish_linear_workflow, transform_registration,
         )

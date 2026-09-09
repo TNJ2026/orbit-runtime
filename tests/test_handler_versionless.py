@@ -5,10 +5,10 @@ from pathlib import Path
 import sqlite3
 import unittest
 
-from orbit.workflow.application.workflows import load_catalogs
-from orbit.workflow.dsl import compile_source, DiagnosticError
-from orbit.workflow.domain.serialization import canonical_json, definition_hash, to_primitive
-from orbit.workflow.domain.ir_schema import workflow_ir_from_primitive
+from promptaflow.workflow.application.workflows import load_catalogs
+from promptaflow.workflow.dsl import compile_source, DiagnosticError
+from promptaflow.workflow.domain.serialization import canonical_json, definition_hash, to_primitive
+from promptaflow.workflow.domain.ir_schema import workflow_ir_from_primitive
 
 
 class VersionlessHandlerTests(unittest.TestCase):
@@ -31,7 +31,7 @@ class VersionlessHandlerTests(unittest.TestCase):
 
     def test_build_version_does_not_change_definition_hash(self):
         from dataclasses import replace
-        from orbit.workflow.catalogs import InMemoryHandlerCatalog
+        from promptaflow.workflow.catalogs import InMemoryHandlerCatalog
         first = self.compile(self.document)
         manifest = self.catalogs.handlers.resolve("collect")
         newer = InMemoryHandlerCatalog([replace(manifest, version="9.0.0")])

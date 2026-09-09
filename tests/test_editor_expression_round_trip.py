@@ -22,8 +22,8 @@ import shutil
 import subprocess
 import unittest
 
-from orbit.workflow.dsl.diagnostics import DiagnosticError
-from orbit.workflow.dsl.expressions import compile_condition
+from promptaflow.workflow.dsl.diagnostics import DiagnosticError
+from promptaflow.workflow.dsl.expressions import compile_condition
 
 
 ROOT = Path(__file__).resolve().parents[1]

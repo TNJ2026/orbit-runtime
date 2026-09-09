@@ -16,27 +16,27 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 
-from orbit.workflow.agent_binding import (
+from promptaflow.workflow.agent_binding import (
     AgentRebindError,
     AgentFallback,
     preferred_agent,
     recent_agent_clients,
 )
-from orbit.workflow.catalogs.agent_discovery import (
+from promptaflow.workflow.catalogs.agent_discovery import (
     TRUSTED_AGENT_CLIS, DiscoveredAgent, agent_manifest,
 )
-from orbit.workflow.domain.definitions import (
+from promptaflow.workflow.domain.definitions import (
     CompiledWorkflow, IRHandlerRef, IRNode, IRPort, IRResult, WorkflowIR,
 )
-from orbit.workflow.domain.serialization import definition_hash
-from orbit.workflow.langgraph_runtime.compiler import (
+from promptaflow.workflow.domain.serialization import definition_hash
+from promptaflow.workflow.langgraph_runtime.compiler import (
     BoundHandler, LangGraphHandlerRegistry,
 )
-from orbit.workflow.langgraph_runtime.service import (
+from promptaflow.workflow.langgraph_runtime.service import (
     LangGraphRunConflict, LangGraphWorkflowService,
 )
-from orbit.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
-from orbit.web.api_v1 import READ_SCOPE, WRITE_SCOPE, Authorizer
+from promptaflow.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
+from promptaflow.web.api_v1 import READ_SCOPE, WRITE_SCOPE, Authorizer
 
 OBJECT = "schema://object/1.0"
 ABSENT = IRHandlerRef("agent.absent", "sha256:" + "b" * 64)
@@ -250,7 +250,7 @@ class ConnectedClientTests(unittest.TestCase):
     """
 
     def test_the_client_that_spoke_last_wins(self) -> None:
-        from orbit.web.mcp import McpSessionRegistry
+        from promptaflow.web.mcp import McpSessionRegistry
 
         now = [0.0]
         sessions = McpSessionRegistry(presence_seconds=60, clock=lambda: now[0])
@@ -272,7 +272,7 @@ class ConnectedClientTests(unittest.TestCase):
     def test_one_actor_keeps_one_session_so_a_swap_replaces_it(self) -> None:
         """Loopback is one actor: the row *is* the Agent connected now."""
 
-        from orbit.web.mcp import McpSessionRegistry
+        from promptaflow.web.mcp import McpSessionRegistry
 
         sessions = McpSessionRegistry()
         sessions.observe("local", "initialize", {"clientInfo": {"name": "codex"}})
@@ -283,7 +283,7 @@ class ConnectedClientTests(unittest.TestCase):
     def test_a_quiet_client_is_still_the_last_agent_seen(self) -> None:
         """Sticky on purpose: silence is not a reason to refuse to run."""
 
-        from orbit.web.mcp import McpSessionRegistry
+        from promptaflow.web.mcp import McpSessionRegistry
 
         now = [0.0]
         sessions = McpSessionRegistry(presence_seconds=60, clock=lambda: now[0])
@@ -296,7 +296,7 @@ class ConnectedClientTests(unittest.TestCase):
     def test_mcp_outranks_the_authoring_broker(self) -> None:
         """The broker's window is ten minutes and its list is sorted by name."""
 
-        from orbit.web.mcp import McpSessionRegistry
+        from promptaflow.web.mcp import McpSessionRegistry
 
         sessions = McpSessionRegistry()
         sessions.observe("local", "initialize", {"clientInfo": {"name": "codex"}})
@@ -563,8 +563,8 @@ class AgentFallbackCatalogTests(unittest.TestCase):
         )
 
     def catalog(self, workflow_id="workflow:single"):
-        from orbit.web.app import HandlerRegistration, create_app
-        from orbit.workflow.handlers import TransformHandler
+        from promptaflow.web.app import HandlerRegistration, create_app
+        from promptaflow.workflow.handlers import TransformHandler
         from tests.test_web_composition import (
             SCHEMAS, AsgiHarness, transform_registration,
         )

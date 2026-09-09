@@ -181,7 +181,7 @@ class PowerShellScriptTests(unittest.TestCase):
             self.assertIn("nothing was stopped or started", result.stdout)
 
     def test_windows_manifest_launches_the_powershell_hub_mode(self):
-        from orbit.agent_apps.manifest import load_manifest
+        from promptaflow.agent_apps.manifest import load_manifest
 
         loaded = load_manifest(ROOT / "agent-app.windows.json")
         manifest = json.loads(

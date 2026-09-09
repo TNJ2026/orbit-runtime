@@ -16,10 +16,10 @@ import unittest
 from tests.test_web_composition import (
     AsgiHarness, SCHEMAS, publish_linear_workflow, transform_registration,
 )
-from orbit.web.api_v1 import (
+from promptaflow.web.api_v1 import (
     OPS_WRITE_SCOPE, READ_SCOPE, WRITE_SCOPE, Authorizer,
 )
-from orbit.web.app import create_app
+from promptaflow.web.app import create_app
 
 
 def git(root, *args):
@@ -49,14 +49,14 @@ class ProjectAccessEndpointTests(unittest.TestCase):
             ),
             single_goal_mode=False, **kwargs,
         )
-        from orbit.platform.project_occupancy import ProjectOccupancyRegistry
+        from promptaflow.platform.project_occupancy import ProjectOccupancyRegistry
         access = app.state.runtime.langgraph_service.project_access
         if access is not None:
             access.registry = ProjectOccupancyRegistry(self.root / "occupancy")
         return app
 
     def test_corrupt_record_is_reported_instead_of_500(self):
-        from orbit.platform.project_occupancy import ProjectOccupancyRegistry
+        from promptaflow.platform.project_occupancy import ProjectOccupancyRegistry
         app = self.app(discover_agents=True, agent_project_access=True)
         access = app.state.runtime.langgraph_service.project_access
         access.registry = ProjectOccupancyRegistry(self.root / "occupancy")
@@ -78,7 +78,7 @@ class ProjectAccessEndpointTests(unittest.TestCase):
 
         app = self.app(discover_agents=True, agent_project_access=True)
         access = app.state.runtime.langgraph_service.project_access
-        from orbit.workflow.langgraph_runtime.project_access import ProjectAccessNeed
+        from promptaflow.workflow.langgraph_runtime.project_access import ProjectAccessNeed
 
         access.acquire("run-1", ProjectAccessNeed(required=True, write=True))
         with AsgiHarness(app) as client:
@@ -138,7 +138,7 @@ class ProjectAccessEndpointTests(unittest.TestCase):
 
         app = self.app(discover_agents=True, agent_project_access=True)
         access = app.state.runtime.langgraph_service.project_access
-        from orbit.workflow.langgraph_runtime.project_access import ProjectAccessNeed
+        from promptaflow.workflow.langgraph_runtime.project_access import ProjectAccessNeed
 
         need = ProjectAccessNeed(required=True, write=True)
         access.acquire("run-1", need)
@@ -234,7 +234,7 @@ class ProjectAccessEndpointTests(unittest.TestCase):
     def test_a_held_project_names_its_holder_and_its_way_back(self) -> None:
         app = self.app(discover_agents=True, agent_project_access=True)
         access = app.state.runtime.langgraph_service.project_access
-        from orbit.workflow.langgraph_runtime.project_access import ProjectAccessNeed
+        from promptaflow.workflow.langgraph_runtime.project_access import ProjectAccessNeed
 
         access.acquire("run-1", ProjectAccessNeed(required=True, write=True))
         self.addCleanup(access.release, "run-1", "completed")
@@ -256,7 +256,7 @@ class ProjectAccessEndpointTests(unittest.TestCase):
 
         app = self.app(discover_agents=True, agent_project_access=True)
         access = app.state.runtime.langgraph_service.project_access
-        from orbit.workflow.langgraph_runtime.project_access import ProjectAccessNeed
+        from promptaflow.workflow.langgraph_runtime.project_access import ProjectAccessNeed
 
         access.acquire("run-1", ProjectAccessNeed(required=True, write=True))
         access.abandon("run-1")  # as a stopped Runtime leaves it
@@ -298,7 +298,7 @@ class RunChangesEndpointTests(ProjectAccessEndpointTests):
     def test_a_non_git_run_reports_that_no_complete_diff_is_available(self) -> None:
         app = self.app(discover_agents=True, agent_project_access=True)
         access = app.state.runtime.langgraph_service.project_access
-        from orbit.workflow.langgraph_runtime.project_access import ProjectAccessNeed
+        from promptaflow.workflow.langgraph_runtime.project_access import ProjectAccessNeed
 
         with AsgiHarness(app) as client:
             run = self.start_run(client)

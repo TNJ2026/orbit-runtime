@@ -17,7 +17,7 @@ import sys
 import tempfile
 import unittest
 
-from orbit.platform.project_occupancy import (
+from promptaflow.platform.project_occupancy import (
     Occupancy, ProjectBusy, ProjectClaim, ProjectIdentity, ProjectNeedsRecovery,
     ProjectOccupancyRegistry, REGISTRY_LOCK_NAME,
 )
@@ -212,7 +212,7 @@ class AbandonedClaimTests(unittest.TestCase):
 
 CHILD = """
 import sys
-from orbit.platform.project_occupancy import (
+from promptaflow.platform.project_occupancy import (
     ProjectBusy, ProjectNeedsRecovery, ProjectOccupancyRegistry,
 )
 

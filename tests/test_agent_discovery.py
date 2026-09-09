@@ -16,14 +16,14 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 
-from orbit.workflow.catalogs.agent_discovery import (
+from promptaflow.workflow.catalogs.agent_discovery import (
     TRUSTED_AGENT_CLIS, AgentCliSpec, AgentDiscoveryError, AgentInvocation,
     DiscoveredAgent,
     agent_manifest, catalog_entries, discover_agent_clis,
     discover_agent_clis_cached, registrable_agents,
 )
-from orbit.workflow.cli_environment import trusted_cli_environment
-from orbit.workflow.domain.durable_execution import ExecutionSafety
+from promptaflow.workflow.cli_environment import trusted_cli_environment
+from promptaflow.workflow.domain.durable_execution import ExecutionSafety
 
 
 # A spec is registrable only once it carries a probed invocation.
@@ -597,8 +597,8 @@ class RegistrationTests(unittest.TestCase):
     def test_a_registry_refuses_to_seal_around_a_missing_cli(self) -> None:
         """Preflight is what keeps "registered" from meaning "unusable"."""
 
-        from orbit.web.app import RuntimeComposition
-        from orbit.web.builtin_handlers import BUILTIN_SCHEMAS, agent_handlers
+        from promptaflow.web.app import RuntimeComposition
+        from promptaflow.web.builtin_handlers import BUILTIN_SCHEMAS, agent_handlers
 
         absent = DiscoveredAgent(CLAUDE, "/nonexistent/claude", "2.1.3")
         registrations, _ = agent_handlers([absent])
@@ -609,7 +609,7 @@ class RegistrationTests(unittest.TestCase):
         self.assertIn("preflight", str(caught.exception))
 
     def test_a_discovered_agent_becomes_a_registration(self) -> None:
-        from orbit.web.builtin_handlers import agent_handlers
+        from promptaflow.web.builtin_handlers import agent_handlers
 
         registrations, names = agent_handlers([self.agent])
         self.assertEqual(("agent.claude",), names)
@@ -618,14 +618,14 @@ class RegistrationTests(unittest.TestCase):
     def test_the_registration_carries_the_discovered_executable(self) -> None:
         """The command is constructor-owned; nothing else may supply it."""
 
-        from orbit.web.builtin_handlers import agent_handlers
+        from promptaflow.web.builtin_handlers import agent_handlers
 
         registrations, _ = agent_handlers([self.agent])
         client = registrations[0].implementation.client
         self.assertEqual((self.executable,), client.command)
 
     def test_an_ungranted_capability_produces_no_registration(self) -> None:
-        from orbit.web.builtin_handlers import agent_handlers
+        from promptaflow.web.builtin_handlers import agent_handlers
 
         registrations, names = agent_handlers([self.agent], allowed_capabilities=[])
         self.assertEqual((), registrations)
@@ -634,8 +634,8 @@ class RegistrationTests(unittest.TestCase):
     def test_the_composition_can_resolve_a_registered_agent(self) -> None:
         """End of the chain: sealed registry, resolvable by fingerprint."""
 
-        from orbit.web.app import RuntimeComposition
-        from orbit.web.builtin_handlers import BUILTIN_SCHEMAS, agent_handlers
+        from promptaflow.web.app import RuntimeComposition
+        from promptaflow.web.builtin_handlers import BUILTIN_SCHEMAS, agent_handlers
 
         registrations, _ = agent_handlers([self.agent])
         composition = RuntimeComposition(
@@ -657,11 +657,11 @@ class RegistrationTests(unittest.TestCase):
 
         from unittest.mock import patch
 
-        from orbit.web.app import create_app
-        from orbit.web.builtin_handlers import BUILTIN_SCHEMAS
+        from promptaflow.web.app import create_app
+        from promptaflow.web.builtin_handlers import BUILTIN_SCHEMAS
 
         with patch(
-            "orbit.workflow.catalogs.agent_discovery.discover_agent_clis_cached",
+            "promptaflow.workflow.catalogs.agent_discovery.discover_agent_clis_cached",
             return_value=(self.agent,),
         ):
             app = create_app(

@@ -13,26 +13,26 @@ import tempfile
 import time
 import unittest
 
-from orbit.workflow.application.workflow_draft_service import (
+from promptaflow.workflow.application.workflow_draft_service import (
     DraftAlreadyActiveError, DraftNotFoundError, DraftNotValidatedError,
     DraftRevisionStateError, DraftSourceTooLargeError, DraftVersionConflictError,
     MAX_SOURCE_BYTES,
     SourceUnavailableError, WorkflowDraftApplicationService,
     WorkflowVersionConflictError,
 )
-from orbit.workflow.application.workflows import (
+from promptaflow.workflow.application.workflows import (
     WorkflowCatalogs, WorkflowDefinitionService,
 )
-from orbit.workflow.catalogs import (
+from promptaflow.workflow.catalogs import (
     HandlerManifest, InMemoryHandlerCatalog, InMemorySchemaCatalog,
 )
-from orbit.workflow.catalogs.extensions import InMemoryExtensionRegistry
-from orbit.workflow.domain.durable_execution import ExecutionSafety
-from orbit.workflow.domain.handlers import ResourceProfile
-from orbit.workflow.domain.ids import EntityId
-from orbit.workflow.persistence.database import connect_workflow_database
-from orbit.workflow.persistence.migrations import migrate_workflow_database
-from orbit.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
+from promptaflow.workflow.catalogs.extensions import InMemoryExtensionRegistry
+from promptaflow.workflow.domain.durable_execution import ExecutionSafety
+from promptaflow.workflow.domain.handlers import ResourceProfile
+from promptaflow.workflow.domain.ids import EntityId
+from promptaflow.workflow.persistence.database import connect_workflow_database
+from promptaflow.workflow.persistence.migrations import migrate_workflow_database
+from promptaflow.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
 
 
 NOW = datetime(2026, 7, 20, 9, tzinfo=timezone.utc)
@@ -373,7 +373,7 @@ class DraftLifecycleTests(DraftTestCase):
 
     def test_missing_source_versions_are_not_editable(self) -> None:
         # A version published without source_text (early CLI/test data).
-        from orbit.workflow.dsl import compile_source
+        from promptaflow.workflow.dsl import compile_source
 
         compiled = compile_source(
             json.dumps(dsl("legacy", "Legacy")),
@@ -415,14 +415,14 @@ class DraftLifecycleTests(DraftTestCase):
 
 class DraftReviseTests(DraftTestCase):
     def _reviser(self, new_source):
-        from orbit.workflow.authoring.generator import GenerationOutcome
-        from orbit.workflow.domain.serialization import definition_hash
+        from promptaflow.workflow.authoring.generator import GenerationOutcome
+        from promptaflow.workflow.domain.serialization import definition_hash
 
         calls = []
 
         def reviser(current_source, instruction, *, expected_workflow_id, agent=None):
             calls.append((current_source, instruction, expected_workflow_id, agent))
-            from orbit.workflow.dsl import compile_source
+            from promptaflow.workflow.dsl import compile_source
 
             compiled = compile_source(
                 new_source, self.definitions.catalogs.handlers,
@@ -580,7 +580,7 @@ class DraftReviseTests(DraftTestCase):
         self.assertEqual(1, len(calls))
 
     def test_revise_without_a_reviser_is_unavailable(self) -> None:
-        from orbit.workflow.application.workflow_draft_service import (
+        from promptaflow.workflow.application.workflow_draft_service import (
             RevisionUnavailableError,
         )
 
@@ -798,7 +798,7 @@ class RevisionJobTests(DraftReviseTests):
 
         # The straggler comes back after the lease was reclaimed: its write is
         # fenced off so it cannot resurrect a job the operator saw fail.
-        from orbit.workflow.application.workflow_draft_service import (
+        from promptaflow.workflow.application.workflow_draft_service import (
             RevisionLeaseError,
         )
 

@@ -17,24 +17,24 @@ import threading
 import time
 import unittest
 
-from orbit.workflow.application.authoring_job_service import (
+from promptaflow.workflow.application.authoring_job_service import (
     AuthoringJobConflict, AuthoringJobService,
 )
-from orbit.workflow.application.workflows import (
+from promptaflow.workflow.application.workflows import (
     WorkflowCatalogs, WorkflowDefinitionService,
 )
-from orbit.workflow.authoring.generator import (
+from promptaflow.workflow.authoring.generator import (
     GenerationOutcome, WorkflowAuthoringService, _clean_change_summary,
 )
-from orbit.workflow.catalogs import (
+from promptaflow.workflow.catalogs import (
     HandlerManifest, InMemoryHandlerCatalog, InMemorySchemaCatalog,
 )
-from orbit.workflow.catalogs.extensions import InMemoryExtensionRegistry
-from orbit.workflow.domain.durable_execution import ExecutionSafety
-from orbit.workflow.domain.handlers import ResourceProfile
-from orbit.workflow.persistence.database import connect_workflow_database
-from orbit.workflow.persistence.migrations import migrate_workflow_database
-from orbit.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
+from promptaflow.workflow.catalogs.extensions import InMemoryExtensionRegistry
+from promptaflow.workflow.domain.durable_execution import ExecutionSafety
+from promptaflow.workflow.domain.handlers import ResourceProfile
+from promptaflow.workflow.persistence.database import connect_workflow_database
+from promptaflow.workflow.persistence.migrations import migrate_workflow_database
+from promptaflow.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
 
 
 MANIFEST = HandlerManifest(
@@ -473,7 +473,7 @@ class UnknownResultTests(AuthoringJobTestCase):
         return AuthoringJobService(self.path, authoring, self.definitions)
 
     def test_a_silenced_agent_is_marked_unknown_and_audited_as_such(self) -> None:
-        from orbit.workflow.authoring import AuthoringUnknownResultError
+        from promptaflow.workflow.authoring import AuthoringUnknownResultError
 
         jobs = self.failing(AuthoringUnknownResultError("cli exceeded its deadline"))
         created = jobs.create(actor="author", prompt="Research", idempotency_key="g1")
@@ -485,7 +485,7 @@ class UnknownResultTests(AuthoringJobTestCase):
         self.assertIs(True, details["unknown_result"])
 
     def test_an_ordinary_failure_is_not_dressed_up_as_unknown(self) -> None:
-        from orbit.workflow.authoring import AuthoringUnavailableError
+        from promptaflow.workflow.authoring import AuthoringUnavailableError
 
         jobs = self.failing(AuthoringUnavailableError("generator CLI cannot run"))
         created = jobs.create(actor="author", prompt="Research", idempotency_key="g1")
@@ -499,7 +499,7 @@ class UnknownResultTests(AuthoringJobTestCase):
     def test_cancelling_a_running_job_stops_the_agent_rather_than_waiting(self) -> None:
         """Discarding the answer is not enough: the CLI has to be told to stop."""
 
-        from orbit.workflow.authoring.generator import active_scope
+        from promptaflow.workflow.authoring.generator import active_scope
 
         stopped = threading.Event()
         started = threading.Event()
@@ -538,7 +538,7 @@ class UnknownResultTests(AuthoringJobTestCase):
     def test_deadline_expires_without_a_reader_and_stops_the_agent(self) -> None:
         """The watchdog, not a GET/list poll, owns deadline enforcement."""
 
-        from orbit.workflow.authoring.generator import active_scope
+        from promptaflow.workflow.authoring.generator import active_scope
 
         stopped = threading.Event()
         started = threading.Event()

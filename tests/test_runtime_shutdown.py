@@ -6,10 +6,10 @@ import tempfile
 import time
 import unittest
 
-from orbit.web.api_v1 import (
+from promptaflow.web.api_v1 import (
     OPS_READ_SCOPE, OPS_WRITE_SCOPE, READ_SCOPE, WRITE_SCOPE, Authorizer,
 )
-from orbit.web.app import create_app
+from promptaflow.web.app import create_app
 from tests.test_web_composition import AsgiHarness
 
 
@@ -95,7 +95,7 @@ class ExecutionDoesNotBlockTheServerTests(unittest.TestCase):
     """
 
     def slow_tool(self, seconds: float):
-        from orbit.workflow.handlers.tools import ToolResult
+        from promptaflow.workflow.handlers.tools import ToolResult
 
         class Adapter:
             def execute(self, request, context):
@@ -116,11 +116,11 @@ class ExecutionDoesNotBlockTheServerTests(unittest.TestCase):
 
     def publish_one_slow_node(self, database: Path, registration) -> str:
         import tests.test_workflow_langgraph_runtime as engine_tests
-        from orbit.workflow.domain.definitions import (
+        from promptaflow.workflow.domain.definitions import (
             CompiledWorkflow, IRHandlerRef, IRNode,
         )
-        from orbit.workflow.domain.serialization import definition_hash
-        from orbit.workflow.persistence.workflow_versions import (
+        from promptaflow.workflow.domain.serialization import definition_hash
+        from promptaflow.workflow.persistence.workflow_versions import (
             SQLiteWorkflowVersionStore,
         )
 
@@ -249,7 +249,7 @@ class HarnessReachesShutdownAsTheOperatorTests(unittest.TestCase):
     def test_a_session_header_does_not_reach_the_HTTP_API(self) -> None:
         from starlette.requests import Request
 
-        from orbit.web.local_identity import loopback_scoped_mcp_authenticator
+        from promptaflow.web.local_identity import loopback_scoped_mcp_authenticator
 
         def ask(path: str) -> str | None:
             scope = {

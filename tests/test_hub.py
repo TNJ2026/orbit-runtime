@@ -8,13 +8,13 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from orbit.hub import (
+from promptaflow.hub import (
     HubError, MultipleRuntimesError, ProjectAccessGrants, WorkspaceRegistry,
     WorkspaceRuntimeManager, create_hub_app, workspace_urls,
 )
-from orbit.global_control import WorkflowTemplateStore
-from orbit.platform.projects import project_id
-from orbit.platform.runtime_ownership import DiscoveredRuntime
+from promptaflow.global_control import WorkflowTemplateStore
+from promptaflow.platform.projects import project_id
+from promptaflow.platform.runtime_ownership import DiscoveredRuntime
 from tests.test_web_composition import AsgiHarness
 
 
@@ -305,7 +305,7 @@ class ProjectAccessGrantTests(unittest.TestCase):
 
         def register(*flags: str) -> dict:
             result = subprocess.run(
-                [sys.executable, "-m", "orbit", "hub", "register",
+                [sys.executable, "-m", "promptaflow", "hub", "register",
                  str(workspace), *flags],
                 capture_output=True, text=True, timeout=120,
                 env={
@@ -542,7 +542,7 @@ class HubHttpTests(unittest.TestCase):
         app = create_hub_app(manager)
         answer = {"result": {"tools": [{"name": "list_runs"}]}}
         with mock.patch(
-            "orbit.hub._forward",
+            "promptaflow.hub._forward",
             return_value=(200, json.dumps(answer).encode(), "application/json"),
         ) as forward, AsgiHarness(app) as client:
             request = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
@@ -572,7 +572,7 @@ class HubHttpTests(unittest.TestCase):
         manager = self.Manager()
         answer = {"result": {"tools": []}}
         with mock.patch(
-            "orbit.hub._forward",
+            "promptaflow.hub._forward",
             return_value=(200, json.dumps(answer).encode(), "application/json"),
         ) as forward, AsgiHarness(create_hub_app(manager)) as client:
             client.request(
@@ -611,7 +611,7 @@ class HubHttpTests(unittest.TestCase):
 
         payload = {"delegation": {"delegation_id": "app:one"}}
         with mock.patch(
-            "orbit.hub._runtime_json", return_value=(200, payload),
+            "promptaflow.hub._runtime_json", return_value=(200, payload),
         ) as forwarded, AsgiHarness(create_hub_app(Manager())) as client:
             response = client.request(
                 "POST", "/internal/v1/background-delegations/claim",
@@ -667,7 +667,7 @@ class HubHttpTests(unittest.TestCase):
         manager.registry = Registry()
         backend = {"result": {"tools": []}}
         with mock.patch(
-            "orbit.hub._forward",
+            "promptaflow.hub._forward",
             return_value=(200, json.dumps(backend).encode(), "application/json"),
         ), AsgiHarness(create_hub_app(manager)) as client:
             initialized = client.request("POST", "/mcp", body={
@@ -735,7 +735,7 @@ class HubGlobalControlTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             store = WorkflowTemplateStore(Path(temporary) / "templates.json")
             with mock.patch(
-                "orbit.hub._runtime_json",
+                "promptaflow.hub._runtime_json",
                 return_value=(201, {"data": {"workflow_id": "workflow:shared", "version": 1}}),
             ) as runtime, AsgiHarness(create_hub_app(manager, template_store=store)) as client:
                 created = client.request("POST", "/api/v1/workflow-templates", body={
@@ -763,7 +763,7 @@ class HubGlobalControlTests(unittest.TestCase):
             "attempt_count": 7, "failed_count": 2,
         }, {"name": "transform", "attempt_count": 99, "failed_count": 99}]}}
         with mock.patch(
-            "orbit.hub._runtime_json", return_value=(200, catalog),
+            "promptaflow.hub._runtime_json", return_value=(200, catalog),
         ), AsgiHarness(create_hub_app(self.Manager())) as client:
             response = client.get("/api/v1/global/agent-stats")
 
@@ -789,7 +789,7 @@ class HubGlobalControlTests(unittest.TestCase):
         """
 
         with mock.patch(
-            "orbit.hub._runtime_json", return_value=(200, {"data": None}),
+            "promptaflow.hub._runtime_json", return_value=(200, {"data": None}),
         ), AsgiHarness(create_hub_app(self.Manager())) as client:
             response = client.get("/api/v1/global/agent-stats")
 
@@ -808,7 +808,7 @@ class HubGlobalControlTests(unittest.TestCase):
             {"name": "agent.claude", "attempt_count": [], "failed_count": 0},
         ]}}
         with mock.patch(
-            "orbit.hub._runtime_json", return_value=(200, catalog),
+            "promptaflow.hub._runtime_json", return_value=(200, catalog),
         ), AsgiHarness(create_hub_app(self.Manager())) as client:
             response = client.get("/api/v1/global/agent-stats")
 

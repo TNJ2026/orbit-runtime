@@ -8,7 +8,7 @@ from unittest import mock
 
 from pydantic import ValidationError
 
-from orbit.workflow.authoring.generator import (
+from promptaflow.workflow.authoring.generator import (
     CHANGE_KINDS,
     MAX_CHANGE_ENTRIES,
     AuthoringFailedError,
@@ -17,23 +17,23 @@ from orbit.workflow.authoring.generator import (
     CancelScope,
     cancellable,
 )
-from orbit.workflow.authoring import (
+from promptaflow.workflow.authoring import (
     UnknownGenerationAgentError,
     WorkflowAuthoringService,
 )
-from orbit.workflow.authoring.structured import (
+from promptaflow.workflow.authoring.structured import (
     ChangeEntry,
     GeneratedWorkflow,
     StructuredDslGenerator,
     structured_generators,
 )
-from orbit.workflow.catalogs import (
+from promptaflow.workflow.catalogs import (
     HandlerManifest, InMemoryHandlerCatalog, InMemorySchemaCatalog,
 )
-from orbit.web.api_v1 import READ_SCOPE, Authorizer
-from orbit.workflow.domain.durable_execution import ExecutionSafety
-from orbit.workflow.domain.handlers import ResourceProfile
-from orbit.workflow.dsl import AuthoredWorkflow
+from promptaflow.web.api_v1 import READ_SCOPE, Authorizer
+from promptaflow.workflow.domain.durable_execution import ExecutionSafety
+from promptaflow.workflow.domain.handlers import ResourceProfile
+from promptaflow.workflow.dsl import AuthoredWorkflow
 from tests.test_web_composition import AsgiHarness
 
 
@@ -424,7 +424,7 @@ class CliArgumentTests(unittest.TestCase):
     """`--structured-agent NAME=MODEL`, refused at the prompt when malformed."""
 
     def _parse(self, values):
-        from orbit.__main__ import _structured_agents
+        from promptaflow.__main__ import _structured_agents
 
         return _structured_agents(values)
 
@@ -462,7 +462,7 @@ class AppWiringTests(unittest.TestCase):
         without pydantic-ai installed or a network call.
         """
 
-        from orbit.web.app import create_app
+        from promptaflow.web.app import create_app
 
         directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(directory.cleanup)
@@ -475,7 +475,7 @@ class AppWiringTests(unittest.TestCase):
 
     def setUp(self) -> None:
         patcher = mock.patch(
-            "orbit.workflow.authoring.structured.StructuredDslGenerator",
+            "promptaflow.workflow.authoring.structured.StructuredDslGenerator",
             lambda model, **kwargs: _generator(_StubAgent(_generated())),
         )
         patcher.start()
@@ -554,7 +554,7 @@ class RevisionByPatchTests(unittest.TestCase):
     }
 
     def reviser(self, operations, error=None, declared_base=1):
-        from orbit.workflow.authoring.structured import WorkflowRevision
+        from promptaflow.workflow.authoring.structured import WorkflowRevision
 
         revision = None if error else WorkflowRevision.model_validate(
             {"patch": {"base_version": declared_base, "operations": operations}}
@@ -581,7 +581,7 @@ class RevisionByPatchTests(unittest.TestCase):
         to notice. Refused, and refused as feedback the funnel can retry with.
         """
 
-        from orbit.workflow.authoring.generator import AuthoringFailedError
+        from promptaflow.workflow.authoring.generator import AuthoringFailedError
 
         generator = self.reviser(
             [{"op": "set_node_label", "node_id": "work", "label": "x"}],
@@ -677,7 +677,7 @@ class RevisionByPatchTests(unittest.TestCase):
     def test_the_prompt_reaches_the_reviser_and_not_the_generator(self) -> None:
         generation = _StubAgent(_generated())
         revision = _StubAgent(None, None)
-        from orbit.workflow.authoring.structured import WorkflowRevision
+        from promptaflow.workflow.authoring.structured import WorkflowRevision
 
         revision.output = WorkflowRevision.model_validate(
             {"patch": {"base_version": 1, "operations": [

@@ -6,8 +6,8 @@ from pathlib import Path
 import re
 import unittest
 
-from orbit.web import mcp_app
-from orbit.web.mcp_app import (
+from promptaflow.web import mcp_app
+from promptaflow.web.mcp_app import (
     ORBIT_AUTHORING_HTML,
     ORBIT_AUTHORING_URI,
     ORBIT_DASHBOARD_HTML,
@@ -139,7 +139,7 @@ class CurrentTaskCardTests(unittest.TestCase):
         """Read out of the UI's tokens rather than copied by eye."""
 
         tokens = Path(__file__).resolve().parents[1].joinpath(
-            "src/orbit/static/workflow-ui/assets/styles/tokens.css"
+            "src/promptaflow/static/workflow-ui/assets/styles/tokens.css"
         ).read_text(encoding="utf-8")
         dark, light = tokens.split('html[data-theme="light"]', 1)
         for value, block, where in (

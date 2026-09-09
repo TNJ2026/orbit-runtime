@@ -17,7 +17,7 @@ import time
 import unittest
 from unittest.mock import patch
 
-from orbit.platform import process
+from promptaflow.platform import process
 
 
 PY = sys.executable

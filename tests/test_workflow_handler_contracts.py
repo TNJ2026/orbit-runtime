@@ -6,9 +6,9 @@ import json
 from pathlib import Path
 import unittest
 
-from orbit.workflow.domain.accounting import UsageSnapshot
-from orbit.workflow.domain.errors import ErrorCategory
-from orbit.workflow.domain.handlers import (
+from promptaflow.workflow.domain.accounting import UsageSnapshot
+from promptaflow.workflow.domain.errors import ErrorCategory
+from promptaflow.workflow.domain.handlers import (
     CancelAck,
     CancelDisposition,
     ExternalEffect,
@@ -26,13 +26,13 @@ from orbit.workflow.domain.handlers import (
     RecoveryResult,
     UnknownExternalResultError,
 )
-from orbit.workflow.domain.ids import EntityId
-from orbit.workflow.domain.schemas import SchemaValidationError, validate_contract
-from orbit.workflow.domain.serialization import to_primitive
-from orbit.workflow.domain.stability import CONTRACT_STABILITY, ContractStability
-from orbit.workflow.domain.versions import Revision
-from orbit.workflow.testing import assert_reducer_source_is_pure, side_effect_guard
-from orbit.workflow.handlers.transform import TransformHandler
+from promptaflow.workflow.domain.ids import EntityId
+from promptaflow.workflow.domain.schemas import SchemaValidationError, validate_contract
+from promptaflow.workflow.domain.serialization import to_primitive
+from promptaflow.workflow.domain.stability import CONTRACT_STABILITY, ContractStability
+from promptaflow.workflow.domain.versions import Revision
+from promptaflow.workflow.testing import assert_reducer_source_is_pure, side_effect_guard
+from promptaflow.workflow.handlers.transform import TransformHandler
 
 
 NOW = datetime(2026, 7, 17, 0, 0, 1, tzinfo=timezone.utc)

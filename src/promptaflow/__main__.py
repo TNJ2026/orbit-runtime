@@ -1449,7 +1449,7 @@ def main() -> None:
             )
         if args.background_agent_command or args.background_agent_backend:
             command = [
-                sys.executable, "-m", "orbit", "agent-worker",
+                sys.executable, "-m", "promptaflow", "agent-worker",
                 "--hub-url", f"http://127.0.0.1:{args.port}",
                 "--parent-pid", str(os.getpid()),
             ]

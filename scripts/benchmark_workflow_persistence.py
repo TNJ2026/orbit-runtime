@@ -15,18 +15,18 @@ import statistics
 import tempfile
 import time
 
-from orbit.workflow.domain.envelopes import EventEnvelope
-from orbit.workflow.domain.ids import EntityId
-from orbit.workflow.domain.persistence import SnapshotRecord
-from orbit.workflow.domain.upcasting import UpcasterRegistry
-from orbit.workflow.domain.versions import AggregateVersion, DefinitionHash, Revision, SchemaVersion
-from orbit.workflow.persistence import (
+from promptaflow.workflow.domain.envelopes import EventEnvelope
+from promptaflow.workflow.domain.ids import EntityId
+from promptaflow.workflow.domain.persistence import SnapshotRecord
+from promptaflow.workflow.domain.upcasting import UpcasterRegistry
+from promptaflow.workflow.domain.versions import AggregateVersion, DefinitionHash, Revision, SchemaVersion
+from promptaflow.workflow.persistence import (
     EventVersionCatalog, SQLiteEventStore, SQLiteReadSession, SQLiteSnapshotStore,
     SQLiteUnitOfWork, UpcastingEventReader, check_database, rehydrate_run_view,
     snapshot_checksum,
 )
-from orbit.workflow.persistence.database import connect_workflow_database
-from orbit.workflow.persistence.migrations import migrate_workflow_database
+from promptaflow.workflow.persistence.database import connect_workflow_database
+from promptaflow.workflow.persistence.migrations import migrate_workflow_database
 
 
 NOW = datetime(2026, 7, 17, tzinfo=timezone.utc)

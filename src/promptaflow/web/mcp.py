@@ -22,7 +22,7 @@ import threading
 import time
 from typing import Any, Callable, Mapping
 
-from orbit import __version__
+from promptaflow import __version__
 from .run_visibility import reading_actor, writing_actor
 from starlette.requests import Request
 from starlette.responses import JSONResponse

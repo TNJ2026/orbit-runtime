@@ -13,7 +13,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from orbit.workspace.acceptance import (
+from promptaflow.workspace.acceptance import (
     AcceptanceUnmet, CHECKS, evaluate,
 )
 

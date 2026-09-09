@@ -14,7 +14,7 @@ from pathlib import Path
 import unittest
 
 
-ORBIT = resources.files("orbit")
+ORBIT = resources.files("promptaflow")
 REMOVED_MODULES = ("server", "store", "project_index")
 REMOVED_ASSETS = (
     "static/ui.html",
@@ -99,9 +99,9 @@ class PackageContentTests(unittest.TestCase):
 
     def test_the_runtime_packages_are_importable(self) -> None:
         for module in (
-            "orbit.web.app", "orbit.web.api_v1", "orbit.web.mcp",
-            "orbit.platform.cutover", "orbit.workflow.langgraph_runtime",
-            "orbit.hub", "orbit.workflow.langgraph_runtime.execution_worker",
+            "promptaflow.web.app", "promptaflow.web.api_v1", "promptaflow.web.mcp",
+            "promptaflow.platform.cutover", "promptaflow.workflow.langgraph_runtime",
+            "promptaflow.hub", "promptaflow.workflow.langgraph_runtime.execution_worker",
         ):
             with self.subTest(module=module):
                 __import__(module)
@@ -151,7 +151,7 @@ class SourceIsReviewableTests(unittest.TestCase):
     click, and was invisible in every diff along the way.
     """
 
-    ROOTS = ("src/orbit", "ui/editor/src", "tests")
+    ROOTS = ("src/promptaflow", "ui/editor/src", "tests")
     TEXT_SUFFIXES = {
         ".py", ".js", ".mjs", ".jsx", ".css", ".html", ".json", ".md", ".toml",
     }

@@ -19,7 +19,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from orbit.platform import projects
+from promptaflow.platform import projects
 
 
 class ProjectResolutionTests(unittest.TestCase):

@@ -409,7 +409,7 @@ class WorkspaceRuntimeManager:
         """
 
         arguments = [
-            sys.executable, "-m", "orbit", "_runtime", "--host", "127.0.0.1",
+            sys.executable, "-m", "promptaflow", "_runtime", "--host", "127.0.0.1",
             "--port", "0", "--project-root", str(workspace),
         ]
         grant_mode = self.grants.mode(project_id(workspace))

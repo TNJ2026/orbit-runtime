@@ -9,7 +9,7 @@ from pathlib import Path
 # How long a writer waits for the lock before giving up. Every lease renewal
 # competes for it against five workers, the timer loop and recovery, so this is
 # also the longest a single renewal can stall — the job lease TTL is sized
-# against it (see orbit.workflow.worker.runtime.JOB_LEASE_TTL).
+# against it (see promptaflow.workflow.worker.runtime.JOB_LEASE_TTL).
 BUSY_TIMEOUT_MS = 30_000
 
 

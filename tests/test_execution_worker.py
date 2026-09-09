@@ -6,11 +6,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from orbit.web.builtin_handlers import builtin_handlers
-from orbit.workflow.langgraph_runtime.compiler import (
+from promptaflow.web.builtin_handlers import builtin_handlers
+from promptaflow.workflow.langgraph_runtime.compiler import (
     LangGraphExecutionContext, LangGraphUnknownExternalResult,
 )
-from orbit.workflow.langgraph_runtime.execution_worker import (
+from promptaflow.workflow.langgraph_runtime.execution_worker import (
     start_execution_worker, start_execution_worker_pool,
 )
 

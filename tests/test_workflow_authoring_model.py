@@ -5,14 +5,14 @@ import unittest
 
 from pydantic import ValidationError
 
-from orbit.workflow.catalogs import (
+from promptaflow.workflow.catalogs import (
     HandlerManifest,
     InMemoryHandlerCatalog,
     InMemorySchemaCatalog,
 )
-from orbit.workflow.domain.durable_execution import ExecutionSafety
-from orbit.workflow.domain.handlers import ResourceProfile
-from orbit.workflow.dsl import (
+from promptaflow.workflow.domain.durable_execution import ExecutionSafety
+from promptaflow.workflow.domain.handlers import ResourceProfile
+from promptaflow.workflow.dsl import (
     LANGGRAPH_NODE_KINDS,
     AuthoredWorkflow,
     authoring_json_schema,

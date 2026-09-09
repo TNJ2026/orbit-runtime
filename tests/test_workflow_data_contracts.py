@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import unittest
 
-from orbit.workflow.domain.data import (
+from promptaflow.workflow.domain.data import (
     ArtifactLink, ArtifactLinkType, ArtifactMetadata, ArtifactStatus,
     ArtifactVisibility, DataCommitManifest, DataOwnerKind, InputManifest,
     InputManifestItem, PortDataPolicy, PortTransport, SecretRef,
@@ -14,14 +14,14 @@ from orbit.workflow.domain.data import (
     DEFAULT_ARTIFACT_BYTES, MAX_ARTIFACT_BYTES, MAX_INLINE_VALUE_BYTES,
     derive_artifact_id, derive_value_id,
 )
-from orbit.workflow.data.secrets import SecretLeakDetected, assert_no_secret_values
-from orbit.workflow.domain.errors import ERROR_CODE_REGISTRY, ErrorCategory
-from orbit.workflow.domain.ids import EntityId
-from orbit.workflow.domain.models import ArtifactRef
-from orbit.workflow.domain.schemas import SchemaValidationError, validate_contract
-from orbit.workflow.domain.serialization import canonical_json, definition_hash, to_primitive
-from orbit.workflow.domain.stability import CONTRACT_STABILITY, ContractStability
-from orbit.workflow.domain.versions import DefinitionHash
+from promptaflow.workflow.data.secrets import SecretLeakDetected, assert_no_secret_values
+from promptaflow.workflow.domain.errors import ERROR_CODE_REGISTRY, ErrorCategory
+from promptaflow.workflow.domain.ids import EntityId
+from promptaflow.workflow.domain.models import ArtifactRef
+from promptaflow.workflow.domain.schemas import SchemaValidationError, validate_contract
+from promptaflow.workflow.domain.serialization import canonical_json, definition_hash, to_primitive
+from promptaflow.workflow.domain.stability import CONTRACT_STABILITY, ContractStability
+from promptaflow.workflow.domain.versions import DefinitionHash
 
 
 NOW = datetime(2026, 7, 17, 12, 0, tzinfo=timezone.utc)

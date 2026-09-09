@@ -11,19 +11,19 @@ import threading
 import time
 import unittest
 
-from orbit.workflow.domain.durable_execution import ExecutionSafety
-from orbit.workflow.domain.definitions import IRHandlerRef, IRNode
-from orbit.workflow.domain.handlers import (
+from promptaflow.workflow.domain.durable_execution import ExecutionSafety
+from promptaflow.workflow.domain.definitions import IRHandlerRef, IRNode
+from promptaflow.workflow.domain.handlers import (
     CancelDisposition, HandlerPermanentError, RecoveryDisposition,
 )
-from orbit.workflow.langgraph_runtime.harness_subagent import (
+from promptaflow.workflow.langgraph_runtime.harness_subagent import (
     APP_DELEGATE_MANIFEST, AppDelegationHandler, DelegationQueue,
     HARNESS_SUBAGENT_MANIFEST, HarnessSubagentHandler,
 )
-from orbit.workflow.langgraph_runtime.wiring import trusted_handlers
-from orbit.web.app import HandlerRegistration
-from orbit.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
-from orbit.web.mcp import build_mcp_dispatcher
+from promptaflow.workflow.langgraph_runtime.wiring import trusted_handlers
+from promptaflow.web.app import HandlerRegistration
+from promptaflow.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
+from promptaflow.web.mcp import build_mcp_dispatcher
 
 
 class DelegationQueueTests(unittest.TestCase):

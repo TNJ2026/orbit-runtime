@@ -6,13 +6,13 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from orbit.background_agent import BackgroundAgentWorker
-from orbit.background_agent_adapter import run_codex
+from promptaflow.background_agent import BackgroundAgentWorker
+from promptaflow.background_agent_adapter import run_codex
 
 
 class BackgroundAgentWorkerTests(unittest.TestCase):
     def test_cli_keeps_subcommand_and_child_command_separate(self) -> None:
-        from orbit.__main__ import build_parser
+        from promptaflow.__main__ import build_parser
 
         args = build_parser().parse_args([
             "agent-worker", "--command", "agent adapter", "--pool", "coding",
@@ -22,14 +22,14 @@ class BackgroundAgentWorkerTests(unittest.TestCase):
         self.assertEqual(["coding"], args.pool)
 
     def test_cli_defaults_to_the_builtin_codex_backend(self) -> None:
-        from orbit.__main__ import build_parser
+        from promptaflow.__main__ import build_parser
 
         args = build_parser().parse_args(["agent-worker"])
         self.assertEqual("codex", args.backend)
         self.assertIsNone(args.agent_command)
 
     def test_hub_can_enable_the_builtin_worker_from_environment(self) -> None:
-        from orbit.__main__ import build_parser
+        from promptaflow.__main__ import build_parser
 
         with mock.patch.dict(
             "os.environ", {"ORBIT_BACKGROUND_AGENT_BACKEND": "codex"}, clear=False,
@@ -77,7 +77,7 @@ class BackgroundAgentWorkerTests(unittest.TestCase):
             )
             worker = BackgroundAgentWorker(command, worker_id="machine-worker")
             with mock.patch(
-                "orbit.background_agent._post", side_effect=responses,
+                "promptaflow.background_agent._post", side_effect=responses,
             ) as post:
                 self.assertTrue(worker.run_once())
 
@@ -90,7 +90,7 @@ class BackgroundAgentWorkerTests(unittest.TestCase):
     def test_empty_queue_does_not_launch_a_child(self) -> None:
         worker = BackgroundAgentWorker("false", worker_id="machine-worker")
         with mock.patch(
-            "orbit.background_agent._post",
+            "promptaflow.background_agent._post",
             return_value={"workspace_id": None, "delegation": None},
         ):
             self.assertFalse(worker.run_once())

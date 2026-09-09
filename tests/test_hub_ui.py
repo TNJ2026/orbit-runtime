@@ -3,9 +3,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock
 
-from orbit.hub import WorkspaceRuntimeManager, create_hub_app
-from orbit.platform.runtime_ownership import DiscoveredRuntime
-from orbit.web.hub_ui import render_hub_ui
+from promptaflow.hub import WorkspaceRuntimeManager, create_hub_app
+from promptaflow.platform.runtime_ownership import DiscoveredRuntime
+from promptaflow.web.hub_ui import render_hub_ui
 from tests.test_web_composition import AsgiHarness
 
 

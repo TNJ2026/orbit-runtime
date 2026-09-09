@@ -16,11 +16,11 @@ import unittest
 
 from starlette.applications import Starlette
 
-from orbit.web.authoring_events import (
+from promptaflow.web.authoring_events import (
     CLOSE_BAD_CLIENT_NAME, CLOSE_UNAUTHENTICATED, authoring_event_routes,
 )
-from orbit.workflow.authoring import ExternalAuthoringBroker
-from orbit.workflow.authoring import CancelScope, cancellable
+from promptaflow.workflow.authoring import ExternalAuthoringBroker
+from promptaflow.workflow.authoring import CancelScope, cancellable
 
 
 LOOPBACK = ("127.0.0.1", 51234)
@@ -255,7 +255,7 @@ class CompositionTests(unittest.TestCase):
         import tempfile
         from pathlib import Path
 
-        from orbit.web.app import create_app
+        from promptaflow.web.app import create_app
         from tests.test_api_v1 import SCHEMAS, transform_registration
 
         temp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)

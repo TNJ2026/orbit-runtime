@@ -856,7 +856,7 @@ def create_app(
 
     from importlib import resources as _resources
 
-    workflow_viewer_available = _resources.files("orbit").joinpath(
+    workflow_viewer_available = _resources.files("promptaflow").joinpath(
         "static/workflow-editor/index.html"
     ).is_file()
 
@@ -1163,7 +1163,7 @@ def create_app(
                 response.headers["cache-control"] = "no-cache"
                 return response
 
-        ui_root = resources.files("orbit").joinpath("static/workflow-ui")
+        ui_root = resources.files("promptaflow").joinpath("static/workflow-ui")
         routes.append(
             Mount(
                 "/ui",
@@ -1175,7 +1175,7 @@ def create_app(
         # The graph canvas is embedded by workflow and run pages. It remains a
         # separate bundle so the rest of the UI does not acquire its framework,
         # but it is no longer exposed as an editor page.
-        viewer_root = resources.files("orbit").joinpath("static/workflow-editor")
+        viewer_root = resources.files("promptaflow").joinpath("static/workflow-editor")
         if viewer_root.joinpath("index.html").is_file():
             routes.append(
                 Mount(

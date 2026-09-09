@@ -15,12 +15,12 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.types import interrupt
 
-from orbit.workflow.catalogs import (
+from promptaflow.workflow.catalogs import (
     HandlerManifest,
     InMemoryHandlerCatalog,
     InMemorySchemaCatalog,
 )
-from orbit.workflow.domain.definitions import (
+from promptaflow.workflow.domain.definitions import (
     CompiledWorkflow,
     IREdge,
     IRExtension,
@@ -31,17 +31,17 @@ from orbit.workflow.domain.definitions import (
     IRResult,
     WorkflowIR,
 )
-from orbit.workflow.domain.durable_execution import ExecutionSafety
-from orbit.workflow.domain.data import PortDataPolicy, PortTransport
-from orbit.workflow.domain.handlers import (
+from promptaflow.workflow.domain.durable_execution import ExecutionSafety
+from promptaflow.workflow.domain.data import PortDataPolicy, PortTransport
+from promptaflow.workflow.domain.handlers import (
     RecoveryDisposition, RecoveryResult, ResourceProfile,
     UnknownExternalResultError,
 )
-from orbit.workflow.domain.serialization import canonical_json, definition_hash, to_primitive
+from promptaflow.workflow.domain.serialization import canonical_json, definition_hash, to_primitive
 from unittest.mock import patch
 
-from orbit.workflow.langgraph_runtime import service as langgraph_service_module
-from orbit.workflow.langgraph_runtime import (
+from promptaflow.workflow.langgraph_runtime import service as langgraph_service_module
+from promptaflow.workflow.langgraph_runtime import (
     BoundHandler,
     HandlerBindingError,
     HandlerOutcome,
@@ -56,16 +56,16 @@ from orbit.workflow.langgraph_runtime import (
     compile_generated_workflow,
     compile_workflow,
 )
-from orbit.workflow.handlers.agent import AgentHandler, AgentResponse, FakeAgentClient
-from orbit.workflow.handlers.tools import (
+from promptaflow.workflow.handlers.agent import AgentHandler, AgentResponse, FakeAgentClient
+from promptaflow.workflow.handlers.tools import (
     ToolHandler, ToolManifest, ToolRegistry, ToolResult,
 )
-from orbit.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
-from orbit.web.api_v1 import OPS_WRITE_SCOPE, READ_SCOPE, WRITE_SCOPE, Authorizer
-from orbit.web.app import HandlerRegistration, create_app
-from orbit.web.builtin_handlers import BUILTIN_SCHEMAS, builtin_handlers
-from orbit.workflow.langgraph_runtime.wiring import trusted_handlers
-from orbit.workflow.langgraph_runtime.artifacts import (
+from promptaflow.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
+from promptaflow.web.api_v1 import OPS_WRITE_SCOPE, READ_SCOPE, WRITE_SCOPE, Authorizer
+from promptaflow.web.app import HandlerRegistration, create_app
+from promptaflow.web.builtin_handlers import BUILTIN_SCHEMAS, builtin_handlers
+from promptaflow.workflow.langgraph_runtime.wiring import trusted_handlers
+from promptaflow.workflow.langgraph_runtime.artifacts import (
     LangGraphArtifactAccessDenied,
     LangGraphArtifactStore,
 )
@@ -3453,7 +3453,7 @@ class LangGraphWorkflowServiceTests(unittest.TestCase):
         exactly one attempt.
         """
 
-        from orbit.workflow.langgraph_runtime.compiler import (
+        from promptaflow.workflow.langgraph_runtime.compiler import (
             LangGraphRetryRequested,
         )
 

@@ -31,13 +31,13 @@ try:
 except ImportError:  # pragma: no cover - exercised by the skip
     sync_playwright = None
 
-from orbit.web.app import HandlerRegistration, create_app
-from orbit.workflow.handlers import TransformHandler
-from orbit.web.api_v1 import Authorizer, WRITE_SCOPE
-from orbit.web.local_identity import LOCAL_ACTOR, LOCAL_SCOPES, loopback_authenticator
-from orbit.workflow.artifacts.local_cas import LocalCASBackend
-from orbit.workflow.api.routes import RateLimiter
-from orbit.workflow.domain.ids import EntityId
+from promptaflow.web.app import HandlerRegistration, create_app
+from promptaflow.workflow.handlers import TransformHandler
+from promptaflow.web.api_v1 import Authorizer, WRITE_SCOPE
+from promptaflow.web.local_identity import LOCAL_ACTOR, LOCAL_SCOPES, loopback_authenticator
+from promptaflow.workflow.artifacts.local_cas import LocalCASBackend
+from promptaflow.workflow.api.routes import RateLimiter
+from promptaflow.workflow.domain.ids import EntityId
 from tests.test_web_composition import (
     SCHEMAS, publish_human_workflow, publish_linear_workflow,
     transform_registration,
@@ -1200,7 +1200,7 @@ class SimplifiedGoalUITests(BrowserE2ETestCase):
 class SimplifiedGenerationProgressTests(BrowserE2ETestCase):
     @classmethod
     def extra_app_kwargs(cls) -> dict:
-        from orbit.workflow.authoring import active_scope
+        from promptaflow.workflow.authoring import active_scope
         from tests.test_workflow_authoring_jobs import dsl
 
         def writer(_prompt):
@@ -1304,14 +1304,14 @@ class SimplifiedUpgradeTests(BrowserE2ETestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        from orbit.workflow.application.workflows import (
+        from promptaflow.workflow.application.workflows import (
             WorkflowCatalogs, WorkflowDefinitionService,
         )
-        from orbit.workflow.catalogs import (
+        from promptaflow.workflow.catalogs import (
             InMemoryHandlerCatalog, InMemorySchemaCatalog,
         )
-        from orbit.workflow.catalogs.extensions import InMemoryExtensionRegistry
-        from orbit.workflow.persistence.workflow_versions import (
+        from promptaflow.workflow.catalogs.extensions import InMemoryExtensionRegistry
+        from promptaflow.workflow.persistence.workflow_versions import (
             SQLiteWorkflowVersionStore,
         )
         from tests.test_workflow_authoring_jobs import MANIFEST, dsl as goal_ready_dsl
@@ -1536,14 +1536,14 @@ class SimplifiedRegenerateTests(BrowserE2ETestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        from orbit.workflow.application.workflows import (
+        from promptaflow.workflow.application.workflows import (
             WorkflowCatalogs, WorkflowDefinitionService,
         )
-        from orbit.workflow.catalogs import (
+        from promptaflow.workflow.catalogs import (
             InMemoryHandlerCatalog, InMemorySchemaCatalog,
         )
-        from orbit.workflow.catalogs.extensions import InMemoryExtensionRegistry
-        from orbit.workflow.persistence.workflow_versions import (
+        from promptaflow.workflow.catalogs.extensions import InMemoryExtensionRegistry
+        from promptaflow.workflow.persistence.workflow_versions import (
             SQLiteWorkflowVersionStore,
         )
         from tests.test_workflow_authoring_jobs import MANIFEST, dsl
@@ -1814,7 +1814,7 @@ class GoalHomeTests(BrowserE2ETestCase):
     @classmethod
     def extra_app_kwargs(cls) -> dict:
         from tests.test_workflow_authoring_jobs import dsl
-        from orbit.workflow.authoring import ExternalAuthoringBroker
+        from promptaflow.workflow.authoring import ExternalAuthoringBroker
 
         broker = ExternalAuthoringBroker(presence_seconds=3600)
         broker.claim(actor=LOCAL_ACTOR, client="Codex")
@@ -2531,9 +2531,9 @@ class AgentSubstitutionNoticeTests(BrowserE2ETestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        from orbit.workflow.domain.definitions import CompiledWorkflow
-        from orbit.workflow.domain.serialization import definition_hash
-        from orbit.workflow.persistence.workflow_versions import (
+        from promptaflow.workflow.domain.definitions import CompiledWorkflow
+        from promptaflow.workflow.domain.serialization import definition_hash
+        from promptaflow.workflow.persistence.workflow_versions import (
             SQLiteWorkflowVersionStore,
         )
         from tests.test_agent_binding import agent_step, single_step_workflow
@@ -2816,9 +2816,9 @@ class EngineRefusalNoticeTests(BrowserE2ETestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        from orbit.workflow.domain.definitions import CompiledWorkflow
-        from orbit.workflow.domain.serialization import definition_hash
-        from orbit.workflow.persistence.workflow_versions import (
+        from promptaflow.workflow.domain.definitions import CompiledWorkflow
+        from promptaflow.workflow.domain.serialization import definition_hash
+        from promptaflow.workflow.persistence.workflow_versions import (
             SQLiteWorkflowVersionStore,
         )
         from tests.test_agent_binding import agent_step, single_step_workflow
@@ -2872,11 +2872,11 @@ class TwoSubstitutesNoticeTests(BrowserE2ETestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        from orbit.workflow.domain.definitions import (
+        from promptaflow.workflow.domain.definitions import (
             CompiledWorkflow, IRHandlerRef, IRResult, WorkflowIR,
         )
-        from orbit.workflow.domain.serialization import definition_hash
-        from orbit.workflow.persistence.workflow_versions import (
+        from promptaflow.workflow.domain.serialization import definition_hash
+        from promptaflow.workflow.persistence.workflow_versions import (
             SQLiteWorkflowVersionStore,
         )
         from tests.test_agent_binding import agent_step, port

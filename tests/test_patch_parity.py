@@ -21,7 +21,7 @@ import shutil
 import subprocess
 import unittest
 
-from orbit.workflow.dsl.patch import (
+from promptaflow.workflow.dsl.patch import (
     GraphPatch, PatchBaseMismatch, PatchError, apply_patch,
 )
 

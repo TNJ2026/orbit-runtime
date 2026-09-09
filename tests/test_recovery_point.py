@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 import unittest
 
-from orbit.workspace.recovery import (
+from promptaflow.workspace.recovery import (
     GitRecoveryPoints, RecoveryPointError, RecoveryUnavailable,
 )
 
@@ -366,7 +366,7 @@ class FileBackupRecoveryTests(unittest.TestCase):
     """
 
     def setUp(self) -> None:
-        from orbit.workspace.recovery import FileBackupRecoveryPoints
+        from promptaflow.workspace.recovery import FileBackupRecoveryPoints
 
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -482,7 +482,7 @@ class FileBackupRecoveryTests(unittest.TestCase):
         self.assertTrue((self.project / "unnamed.txt").exists())
 
     def test_too_little_disk_refuses_rather_than_running_unprotected(self) -> None:
-        from orbit.workspace.recovery import FileBackupRecoveryPoints
+        from promptaflow.workspace.recovery import FileBackupRecoveryPoints
 
         points = FileBackupRecoveryPoints(
             self.project, self.project / ".orbit", min_free_bytes=10 ** 18,

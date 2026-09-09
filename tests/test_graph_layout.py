@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from orbit.workflow.api.graph_layout import graph_layout
+from promptaflow.workflow.api.graph_layout import graph_layout
 
 
 def edge(source: str, target: str, **extra) -> dict:

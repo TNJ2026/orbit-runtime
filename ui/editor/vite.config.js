@@ -6,13 +6,13 @@ import { defineConfig } from "vite";
 // The build lands inside the Python package, and the result is committed.
 // Someone installing orbit with pip has no node and no way to run this, so the
 // wheel has to ship the viewer already built; hatchling includes every
-// non-ignored file under src/orbit, which is what puts it there.
+// non-ignored file under src/promptaflow, which is what puts it there.
 export default defineConfig({
   plugins: [react()],
   base: "/viewer/",
   build: {
     outDir: fileURLToPath(
-      new URL("../../src/orbit/static/workflow-editor", import.meta.url),
+      new URL("../../src/promptaflow/static/workflow-editor", import.meta.url),
     ),
     emptyOutDir: true,
     // No sourcemaps and no hashed chunk names: the output is committed, so a

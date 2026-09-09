@@ -5,21 +5,21 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from orbit.workflow.domain.serialization import to_primitive
-from orbit.workflow.catalogs import (
+from promptaflow.workflow.domain.serialization import to_primitive
+from promptaflow.workflow.catalogs import (
     ExtensionManifest,
     HandlerManifest,
     InMemoryExtensionRegistry,
     InMemoryHandlerCatalog,
     InMemorySchemaCatalog,
 )
-from orbit.workflow.domain.definitions import IRHandlerRef
-from orbit.workflow.domain.durable_execution import ExecutionSafety
-from orbit.workflow.domain.handlers import ResourceProfile
-from orbit.workflow.domain.ir_schema import validate_workflow_ir, workflow_ir_from_primitive
-from orbit.workflow.domain.schemas import SchemaValidationError
-from orbit.workflow.application import load_catalogs
-from orbit.workflow.dsl import (
+from promptaflow.workflow.domain.definitions import IRHandlerRef
+from promptaflow.workflow.domain.durable_execution import ExecutionSafety
+from promptaflow.workflow.domain.handlers import ResourceProfile
+from promptaflow.workflow.domain.ir_schema import validate_workflow_ir, workflow_ir_from_primitive
+from promptaflow.workflow.domain.schemas import SchemaValidationError
+from promptaflow.workflow.application import load_catalogs
+from promptaflow.workflow.dsl import (
     DiagnosticError,
     analyze_dsl,
     canonical_ir_json,
@@ -28,7 +28,7 @@ from orbit.workflow.dsl import (
     parse_dsl_file,
     validate_dsl_structure,
 )
-from orbit.workflow.dsl.semantic import _find_cycle
+from promptaflow.workflow.dsl.semantic import _find_cycle
 
 
 VALID_DSL = {
@@ -847,8 +847,8 @@ class NodeLabelTests(unittest.TestCase):
                     self.compile(self.document(label=label))
 
     def test_a_label_survives_the_canonical_ir_round_trip(self) -> None:
-        from orbit.workflow.domain.ir_schema import workflow_ir_from_primitive
-        from orbit.workflow.domain.serialization import to_primitive
+        from promptaflow.workflow.domain.ir_schema import workflow_ir_from_primitive
+        from promptaflow.workflow.domain.serialization import to_primitive
 
         compiled = self.compile(self.document(label="Collect the data"))
         restored = workflow_ir_from_primitive(to_primitive(compiled.ir))

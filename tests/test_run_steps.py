@@ -21,17 +21,17 @@ import time
 from types import SimpleNamespace
 import unittest
 
-from orbit.workflow.domain.definitions import (
+from promptaflow.workflow.domain.definitions import (
     CompiledWorkflow, IRHandlerRef, IRNode, IRPolicy,
 )
-from orbit.workflow.domain.serialization import definition_hash
-from orbit.workflow.langgraph_runtime import build_service
-from orbit.workflow.langgraph_runtime import service as service_module
-from orbit.workflow.langgraph_runtime.compiler import LangGraphHandlerRegistry
-from orbit.workflow.langgraph_runtime.service import (
+from promptaflow.workflow.domain.serialization import definition_hash
+from promptaflow.workflow.langgraph_runtime import build_service
+from promptaflow.workflow.langgraph_runtime import service as service_module
+from promptaflow.workflow.langgraph_runtime.compiler import LangGraphHandlerRegistry
+from promptaflow.workflow.langgraph_runtime.service import (
     BRANCH_VERDICTS, EDGE_STATUSES, LangGraphWorkflowService,
 )
-from orbit.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
+from promptaflow.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
 
 import tests.test_workflow_langgraph_runtime as engine_tests
 from tests.test_web_composition import (
@@ -370,8 +370,8 @@ class FailedStepTests(unittest.TestCase):
         self.root = Path(self.temp.name)
 
     def test_a_journalled_handler_that_failed_is_named(self) -> None:
-        from orbit.workflow.langgraph_runtime.artifacts import LangGraphArtifactStore
-        from orbit.workflow.langgraph_runtime.wiring import trusted_handlers
+        from promptaflow.workflow.langgraph_runtime.artifacts import LangGraphArtifactStore
+        from promptaflow.workflow.langgraph_runtime.wiring import trusted_handlers
 
         class Adapter:
             def execute(self, request, context):
@@ -478,7 +478,7 @@ class ProgressIsObservableTests(unittest.TestCase):
         self.root = Path(self.temp.name)
 
     def slow_steps(self, count: int, seconds: float):
-        from orbit.workflow.handlers.tools import ToolResult
+        from promptaflow.workflow.handlers.tools import ToolResult
 
         class Adapter:
             def execute(self, request, context):
@@ -528,10 +528,10 @@ class ProgressIsObservableTests(unittest.TestCase):
         outcome is what makes the common path the one that works.
         """
 
-        from orbit.web.api_v1 import (
+        from promptaflow.web.api_v1 import (
             Authorizer, OPS_READ_SCOPE, READ_SCOPE, WRITE_SCOPE,
         )
-        from orbit.web.app import create_app
+        from promptaflow.web.app import create_app
         from tests.test_web_composition import AsgiHarness
 
         temp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
@@ -586,8 +586,8 @@ class ProgressIsObservableTests(unittest.TestCase):
     def test_waiting_is_still_what_a_caller_gets_unless_it_says_otherwise(self) -> None:
         """MCP and every embedder call the same command and want the answer."""
 
-        from orbit.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
-        from orbit.web.app import create_app
+        from promptaflow.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
+        from promptaflow.web.app import create_app
         from tests.test_web_composition import (
             AsgiHarness, SCHEMAS, publish_linear_workflow, transform_registration,
         )
@@ -665,8 +665,8 @@ class ProgressIsObservableTests(unittest.TestCase):
         middle of the thing you are waiting for.
         """
 
-        from orbit.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
-        from orbit.web.app import create_app
+        from promptaflow.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
+        from promptaflow.web.app import create_app
         from tests.test_web_composition import AsgiHarness
 
         registration, ir = self.slow_steps(2, 0.5)
@@ -725,7 +725,7 @@ class ProgressIsObservableTests(unittest.TestCase):
         self.assertEqual("completed", service.get(first.run_id).status)
 
     def test_the_single_goal_slot_is_held_by_a_run_nobody_is_waiting_for(self) -> None:
-        from orbit.workflow.langgraph_runtime.service import ActiveGoalExists
+        from promptaflow.workflow.langgraph_runtime.service import ActiveGoalExists
 
         service, ir, _visits = self.deferring_service(0.5, single_goal=True)
         service.start(
@@ -748,7 +748,7 @@ class ProgressIsObservableTests(unittest.TestCase):
         to whoever is refused, and cancellable by them.
         """
 
-        from orbit.workflow.langgraph_runtime.service import ActiveGoalExists
+        from promptaflow.workflow.langgraph_runtime.service import ActiveGoalExists
 
         service, ir, _visits = self.deferring_service(0.5, single_goal=True)
         service.start(
@@ -802,10 +802,10 @@ class ProgressIsObservableTests(unittest.TestCase):
         that is what a watcher polling the steps of a working run sees.
         """
 
-        from orbit.web.api_v1 import (
+        from promptaflow.web.api_v1 import (
             Authorizer, OPS_READ_SCOPE, READ_SCOPE, WRITE_SCOPE,
         )
-        from orbit.web.app import create_app
+        from promptaflow.web.app import create_app
         from tests.test_web_composition import AsgiHarness
 
         temp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
@@ -1109,8 +1109,8 @@ class RetryOnTheRealHandlerPathTests(unittest.TestCase):
         self.root = Path(self.temp.name)
 
     def service(self, adapter, *, policy=True, safety=None):
-        from orbit.workflow.langgraph_runtime.artifacts import LangGraphArtifactStore
-        from orbit.workflow.langgraph_runtime.wiring import trusted_handlers
+        from promptaflow.workflow.langgraph_runtime.artifacts import LangGraphArtifactStore
+        from promptaflow.workflow.langgraph_runtime.wiring import trusted_handlers
 
         fixture = engine_tests.LangGraphProductionWiringTests("run")
         registration = (
@@ -1152,7 +1152,7 @@ class RetryOnTheRealHandlerPathTests(unittest.TestCase):
         return service, ir
 
     def flaky(self, failures: int):
-        from orbit.workflow.handlers.tools import ToolResult
+        from promptaflow.workflow.handlers.tools import ToolResult
 
         calls = {"count": 0}
 
@@ -1232,8 +1232,8 @@ class RetryOnTheRealHandlerPathTests(unittest.TestCase):
         never even reached.
         """
 
-        from orbit.workflow.domain.durable_execution import ExecutionSafety
-        from orbit.workflow.langgraph_runtime.compiler import LangGraphCompileError
+        from promptaflow.workflow.domain.durable_execution import ExecutionSafety
+        from promptaflow.workflow.langgraph_runtime.compiler import LangGraphCompileError
 
         adapter, calls = self.flaky(99)
         service, ir = self.service(
@@ -1249,8 +1249,8 @@ class RetryOnTheRealHandlerPathTests(unittest.TestCase):
     def test_each_attempt_leaves_its_own_console(self) -> None:
         """Reading why the first go failed is the point of keeping them."""
 
-        from orbit.workflow.handlers.tools import ToolResult
-        from orbit.workflow.langgraph_runtime.console import AttemptConsole
+        from promptaflow.workflow.handlers.tools import ToolResult
+        from promptaflow.workflow.langgraph_runtime.console import AttemptConsole
 
         calls = {"count": 0}
 
@@ -1307,9 +1307,9 @@ class EdgeReportTests(unittest.TestCase):
         self.root = Path(self.temp.name)
 
     def run_with(self, output, *, edges, route_mode=None):
-        from orbit.workflow.handlers.tools import ToolResult
-        from orbit.workflow.langgraph_runtime.artifacts import LangGraphArtifactStore
-        from orbit.workflow.langgraph_runtime.wiring import trusted_handlers
+        from promptaflow.workflow.handlers.tools import ToolResult
+        from promptaflow.workflow.langgraph_runtime.artifacts import LangGraphArtifactStore
+        from promptaflow.workflow.langgraph_runtime.wiring import trusted_handlers
 
         class Adapter:
             def execute(self, request, context):
@@ -1508,9 +1508,9 @@ class BranchHistoryTests(EdgeReportTests):
         `starts` holds some outputs back for runs the test starts itself.
         """
 
-        from orbit.workflow.handlers.tools import ToolResult
-        from orbit.workflow.langgraph_runtime.artifacts import LangGraphArtifactStore
-        from orbit.workflow.langgraph_runtime.wiring import trusted_handlers
+        from promptaflow.workflow.handlers.tools import ToolResult
+        from promptaflow.workflow.langgraph_runtime.artifacts import LangGraphArtifactStore
+        from promptaflow.workflow.langgraph_runtime.wiring import trusted_handlers
 
         pending = list(outputs)
 
@@ -1870,7 +1870,7 @@ class DefinitionsAreParsedOnceTests(unittest.TestCase):
 
         import dataclasses
         import json as json_module
-        from orbit.workflow.domain.serialization import to_primitive
+        from promptaflow.workflow.domain.serialization import to_primitive
 
         first = self.engine._ir_for(
             run_id="langgraph_run:one", workflow_id="workflow:human",
@@ -1938,10 +1938,10 @@ class DefinitionsAreParsedOnceTests(unittest.TestCase):
         self.assertEqual({"work", "done"}, steps)
 
     def test_the_cache_is_bounded(self) -> None:
-        from orbit.workflow.langgraph_runtime.service import IR_CACHE_SIZE
+        from promptaflow.workflow.langgraph_runtime.service import IR_CACHE_SIZE
 
         import json as json_module
-        from orbit.workflow.domain.serialization import to_primitive
+        from promptaflow.workflow.domain.serialization import to_primitive
 
         run = self.start(1)[0]
         work = engine_tests.node("work", inputs=("value",), outputs=("value",))
@@ -2004,7 +2004,7 @@ class ShutdownIsActuallyBoundedTests(unittest.TestCase):
             import tempfile
             from pathlib import Path
             sys.path.insert(0, ".")
-            from orbit.workflow.langgraph_runtime import build_service
+            from promptaflow.workflow.langgraph_runtime import build_service
             from tests.test_web_composition import (
                 publish_human_workflow, transform_registration,
             )
@@ -2030,15 +2030,15 @@ class ShutdownIsActuallyBoundedTests(unittest.TestCase):
             import tempfile, threading, time
             from pathlib import Path
             sys.path.insert(0, ".")
-            from orbit.workflow.domain.definitions import CompiledWorkflow
-            from orbit.workflow.domain.serialization import definition_hash
-            from orbit.workflow.langgraph_runtime.compiler import (
+            from promptaflow.workflow.domain.definitions import CompiledWorkflow
+            from promptaflow.workflow.domain.serialization import definition_hash
+            from promptaflow.workflow.langgraph_runtime.compiler import (
                 LangGraphHandlerRegistry,
             )
-            from orbit.workflow.langgraph_runtime.service import (
+            from promptaflow.workflow.langgraph_runtime.service import (
                 LangGraphWorkflowService,
             )
-            from orbit.workflow.persistence.workflow_versions import (
+            from promptaflow.workflow.persistence.workflow_versions import (
                 SQLiteWorkflowVersionStore,
             )
             import tests.test_workflow_langgraph_runtime as engine_tests
@@ -2247,9 +2247,9 @@ class CancellingAQueuedRunTests(unittest.TestCase):
     def build(self, *, nodes=1):
         """A workflow whose Tool blocks, wired through the real adapters."""
 
-        from orbit.workflow.handlers.tools import ToolResult
-        from orbit.workflow.langgraph_runtime.artifacts import LangGraphArtifactStore
-        from orbit.workflow.langgraph_runtime.wiring import trusted_handlers
+        from promptaflow.workflow.handlers.tools import ToolResult
+        from promptaflow.workflow.langgraph_runtime.artifacts import LangGraphArtifactStore
+        from promptaflow.workflow.langgraph_runtime.wiring import trusted_handlers
 
         outer = self
 
@@ -2434,9 +2434,9 @@ class CancellingAQueuedRunTests(unittest.TestCase):
         cancelled rather than executed.
         """
 
-        from orbit.workflow.handlers.tools import ToolResult
-        from orbit.workflow.langgraph_runtime.artifacts import LangGraphArtifactStore
-        from orbit.workflow.langgraph_runtime.wiring import trusted_handlers
+        from promptaflow.workflow.handlers.tools import ToolResult
+        from promptaflow.workflow.langgraph_runtime.artifacts import LangGraphArtifactStore
+        from promptaflow.workflow.langgraph_runtime.wiring import trusted_handlers
 
         preparing = threading.Event()
         proceed = threading.Event()
@@ -2531,7 +2531,7 @@ class CancellingAQueuedRunTests(unittest.TestCase):
         its next node start.
         """
 
-        from orbit.workflow.langgraph_runtime.wiring import _CancelledRuns
+        from promptaflow.workflow.langgraph_runtime.wiring import _CancelledRuns
 
         marks = _CancelledRuns()
         marks.add("langgraph_run:slow")
@@ -2654,7 +2654,7 @@ class CancellingAQueuedRunTests(unittest.TestCase):
     def test_bound_handler_keeps_its_original_positional_contract(self) -> None:
         """Adding finish_run must not shift transports or retry safety."""
 
-        from orbit.workflow.langgraph_runtime.compiler import BoundHandler
+        from promptaflow.workflow.langgraph_runtime.compiler import BoundHandler
 
         def cancel(_run_id: str) -> bool:
             return True
@@ -2673,11 +2673,11 @@ class CancellingAQueuedRunTests(unittest.TestCase):
     def test_a_cancellation_is_not_something_to_retry(self) -> None:
         """Otherwise a retry policy would resurrect a cancelled run."""
 
-        from orbit.workflow.langgraph_runtime.compiler import (
+        from promptaflow.workflow.langgraph_runtime.compiler import (
             LangGraphRetryableError, LangGraphRunCancelled,
         )
-        from orbit.workflow.langgraph_runtime.wiring import _retryable
-        from orbit.workflow.domain.durable_execution import ExecutionSafety
+        from promptaflow.workflow.langgraph_runtime.wiring import _retryable
+        from promptaflow.workflow.domain.durable_execution import ExecutionSafety
 
         manifest = SimpleNamespace(execution_safety=ExecutionSafety.REPLAY_SAFE)
         cancelled = LangGraphRunCancelled("gone")

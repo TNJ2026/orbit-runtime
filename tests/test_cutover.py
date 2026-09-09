@@ -17,7 +17,7 @@ import sys
 import tempfile
 import unittest
 
-from orbit.platform.cutover import (
+from promptaflow.platform.cutover import (
     ACKNOWLEDGE_FLAG, EXIT_NEEDS_ACKNOWLEDGEMENT, CutoverRequired,
     ensure_cutover_acknowledged, marker_path, read_marker,
 )
@@ -46,7 +46,7 @@ class CutoverTestCase(unittest.TestCase):
     def plant_legacy(self, content: bytes = b"legacy sqlite bytes") -> Path:
         """Create a legacy database where the sentinel looks for one."""
 
-        from orbit.platform.projects import project_id, project_slug
+        from promptaflow.platform.projects import project_id, project_slug
 
         slug = project_slug(self.project)
         digest = project_id(self.project)
@@ -172,7 +172,7 @@ class EveryCliIsGatedTests(unittest.TestCase):
         self.temp.cleanup()
 
     def plant_legacy(self) -> Path:
-        from orbit.platform.projects import project_id, project_slug
+        from promptaflow.platform.projects import project_id, project_slug
 
         slug = project_slug(self.project)
         digest = project_id(self.project)
@@ -191,7 +191,7 @@ class EveryCliIsGatedTests(unittest.TestCase):
         """
 
         return subprocess.run(
-            [sys.executable, "-m", "orbit", *args],
+            [sys.executable, "-m", "promptaflow", *args],
             capture_output=True, text=True, cwd=str(self.project), timeout=20,
             env={
                 "PYTHONPATH": str(ROOT / "src"),
@@ -248,7 +248,7 @@ class EveryCliIsGatedTests(unittest.TestCase):
         self.assertEqual(0, granted.returncode, granted.stderr)
 
         # --help exits before the gate, so grant it through a real resolution.
-        from orbit.platform.cutover import ensure_cutover_acknowledged
+        from promptaflow.platform.cutover import ensure_cutover_acknowledged
 
         ensure_cutover_acknowledged(
             acknowledged=True, project_dir=self.project,
@@ -263,7 +263,7 @@ class ServeCliTests(unittest.TestCase):
 
     def test_serve_help_documents_the_flag(self) -> None:
         result = subprocess.run(
-            [sys.executable, "-m", "orbit", "serve", "--help"],
+            [sys.executable, "-m", "promptaflow", "serve", "--help"],
             capture_output=True, text=True, cwd=str(ROOT),
             env={"PYTHONPATH": str(ROOT / "src"), "PATH": "/usr/bin:/bin"},
         )

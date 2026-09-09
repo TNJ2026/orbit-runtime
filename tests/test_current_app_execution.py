@@ -7,16 +7,16 @@ import tempfile
 import time
 import unittest
 
-from orbit.web.app import HandlerRegistration
-from orbit.workflow.domain.data import PortDataPolicy, PortTransport
-from orbit.workflow.domain.definitions import CompiledWorkflow, IREdge, IRNode, IRPolicy, IRResult
-from orbit.workflow.domain.serialization import definition_hash
-from orbit.workflow.langgraph_runtime.current_app import bind_current_app
-from orbit.workflow.langgraph_runtime.execution_worker import start_execution_worker
-from orbit.workflow.langgraph_runtime.harness_subagent import APP_DELEGATE_MANIFEST, AppDelegationHandler, DelegationQueue
-from orbit.workflow.langgraph_runtime.service import LangGraphWorkflowService, LangGraphRunConflict
-from orbit.workflow.langgraph_runtime.wiring import trusted_handlers
-from orbit.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
+from promptaflow.web.app import HandlerRegistration
+from promptaflow.workflow.domain.data import PortDataPolicy, PortTransport
+from promptaflow.workflow.domain.definitions import CompiledWorkflow, IREdge, IRNode, IRPolicy, IRResult
+from promptaflow.workflow.domain.serialization import definition_hash
+from promptaflow.workflow.langgraph_runtime.current_app import bind_current_app
+from promptaflow.workflow.langgraph_runtime.execution_worker import start_execution_worker
+from promptaflow.workflow.langgraph_runtime.harness_subagent import APP_DELEGATE_MANIFEST, AppDelegationHandler, DelegationQueue
+from promptaflow.workflow.langgraph_runtime.service import LangGraphWorkflowService, LangGraphRunConflict
+from promptaflow.workflow.langgraph_runtime.wiring import trusted_handlers
+from promptaflow.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
 from tests.test_agent_binding import agent_step, port, single_step_workflow
 
 
@@ -146,7 +146,7 @@ class CurrentAppExecutionTests(unittest.TestCase):
         else — can satisfy the port at all.
         """
 
-        from orbit.workflow.langgraph_runtime.current_app import bind_current_app
+        from promptaflow.workflow.langgraph_runtime.current_app import bind_current_app
 
         for label, declared, adaptable in (
             ("markdown, and PDF too", ("text/markdown", "application/pdf"), True),
@@ -208,7 +208,7 @@ class CurrentAppExecutionTests(unittest.TestCase):
         self.finished(engine, run)
 
     def test_invalid_mode_or_missing_app_handler_creates_no_run(self):
-        from orbit.workflow.langgraph_runtime.compiler import LangGraphHandlerRegistry
+        from promptaflow.workflow.langgraph_runtime.compiler import LangGraphHandlerRegistry
         ir = single_step_workflow(agent_step())
         engine = self.engine(ir, registry=LangGraphHandlerRegistry([]))
         for mode in ("typo", None, "current_app"):
@@ -218,7 +218,7 @@ class CurrentAppExecutionTests(unittest.TestCase):
             self.assertEqual(0, db.execute("select count(*) from langgraph_runs").fetchone()[0])
 
     def test_installed_agent_is_also_overridden(self):
-        from orbit.workflow.langgraph_runtime.compiler import BoundHandler, LangGraphHandlerRegistry
+        from promptaflow.workflow.langgraph_runtime.compiler import BoundHandler, LangGraphHandlerRegistry
         step = agent_step()
         installed = BoundHandler(step.handler.name, "1.0.0", step.handler.manifest_fingerprint,
                                  lambda *_: self.fail("CLI should never run"), capabilities=frozenset({"agent.invoke"}))
@@ -266,9 +266,9 @@ class CurrentAppExecutionTests(unittest.TestCase):
         self.assertIsNone(self.queue.claim(actor=ACTOR, worker_id="again"))
 
     def test_mcp_start_and_read_only_preview_accept_current_app(self):
-        from orbit.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
-        from orbit.web.mcp import build_mcp_dispatcher
-        from orbit.workflow.catalogs import InMemorySchemaCatalog
+        from promptaflow.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
+        from promptaflow.web.mcp import build_mcp_dispatcher
+        from promptaflow.workflow.catalogs import InMemorySchemaCatalog
         ir = single_step_workflow(agent_step())
         engine = self.engine(ir)
         dispatch = build_mcp_dispatcher(
@@ -295,8 +295,8 @@ class CurrentAppExecutionTests(unittest.TestCase):
         self.finished(engine, engine.get(started["run_id"]))
 
     def test_http_start_accepts_current_app(self):
-        from orbit.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
-        from orbit.web.app import create_app
+        from promptaflow.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
+        from promptaflow.web.app import create_app
         from tests.test_web_composition import AsgiHarness
         ir = single_step_workflow(agent_step())
         engine = self.engine(ir)

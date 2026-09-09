@@ -22,12 +22,12 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from orbit.workflow.catalogs.agent_discovery import (
+from promptaflow.workflow.catalogs.agent_discovery import (
     AgentCliSpec, AgentInvocation, DiscoveredAgent,
 )
-from orbit.workflow.domain.handlers import HandlerValidationError
-from orbit.workflow.handlers.agent import TrustedCliAgentClient
-from orbit.workspace import (
+from promptaflow.workflow.domain.handlers import HandlerValidationError
+from promptaflow.workflow.handlers.agent import TrustedCliAgentClient
+from promptaflow.workspace import (
     GitWorkspaceProvider, GitWorktreeGrant, WorkspaceError,
     WorkspaceUnavailable,
 )
@@ -257,7 +257,7 @@ class GrantDoesNotMoveTheFingerprintTests(unittest.TestCase):
         )
 
     def registrations(self, grant):
-        from orbit.web.builtin_handlers import agent_handlers
+        from promptaflow.web.builtin_handlers import agent_handlers
 
         registrations, _names = agent_handlers(
             [self.agent], grant_capabilities=grant,
@@ -265,8 +265,8 @@ class GrantDoesNotMoveTheFingerprintTests(unittest.TestCase):
         return registrations
 
     def bound(self, registrations):
-        from orbit.workflow.langgraph_runtime.artifacts import LangGraphArtifactStore
-        from orbit.workflow.langgraph_runtime.wiring import trusted_handlers
+        from promptaflow.workflow.langgraph_runtime.artifacts import LangGraphArtifactStore
+        from promptaflow.workflow.langgraph_runtime.wiring import trusted_handlers
 
         db = Path(self.temp.name) / "runs.sqlite3"
         store = LangGraphArtifactStore(db, Path(self.temp.name) / "artifacts")
@@ -399,11 +399,11 @@ class CreateAppGitDetectionTests(unittest.TestCase):
         self.agent = DiscoveredAgent(CLAUDE, self.executable, "2.1.3")
 
     def build_app(self, project_root: Path):
-        from orbit.web.app import create_app
-        from orbit.web.builtin_handlers import BUILTIN_SCHEMAS
+        from promptaflow.web.app import create_app
+        from promptaflow.web.builtin_handlers import BUILTIN_SCHEMAS
 
         with patch(
-            "orbit.workflow.catalogs.agent_discovery.discover_agent_clis_cached",
+            "promptaflow.workflow.catalogs.agent_discovery.discover_agent_clis_cached",
             return_value=(self.agent,),
         ):
             return create_app(
@@ -456,7 +456,7 @@ class CreateAppGitDetectionTests(unittest.TestCase):
 
     def test_git_missing_refuses_startup_rather_than_silently_downgrading(self) -> None:
         root = self.git_repo()
-        with patch("orbit.workspace.git_available", return_value=False):
+        with patch("promptaflow.workspace.git_available", return_value=False):
             with self.assertRaises(ValueError) as caught:
                 self.build_app(root)
         self.assertIn("--agent-project-access", str(caught.exception))
@@ -478,11 +478,11 @@ class CreateAppGitDetectionTests(unittest.TestCase):
         Workspace must not have it silently default to wherever this
         process happens to have been started from."""
 
-        from orbit.web.app import create_app
-        from orbit.web.builtin_handlers import BUILTIN_SCHEMAS
+        from promptaflow.web.app import create_app
+        from promptaflow.web.builtin_handlers import BUILTIN_SCHEMAS
 
         with patch(
-            "orbit.workflow.catalogs.agent_discovery.discover_agent_clis_cached",
+            "promptaflow.workflow.catalogs.agent_discovery.discover_agent_clis_cached",
             return_value=(self.agent,),
         ):
             with self.assertRaises(ValueError) as caught:
@@ -583,7 +583,7 @@ class ScratchDirectoryPromptTests(unittest.TestCase):
     """An Agent in the real project is told where to put its own files."""
 
     def test_the_prompt_names_the_scratch_directory(self) -> None:
-        from orbit.workflow.handlers.agent import render_agent_prompt
+        from promptaflow.workflow.handlers.agent import render_agent_prompt
 
         rendered = render_agent_prompt(
             {"prompt": "do the thing"}, {},
@@ -594,7 +594,7 @@ class ScratchDirectoryPromptTests(unittest.TestCase):
         self.assertIn("real project directory", rendered)
 
     def test_a_node_without_the_project_is_told_nothing_extra(self) -> None:
-        from orbit.workflow.handlers.agent import render_agent_prompt
+        from promptaflow.workflow.handlers.agent import render_agent_prompt
 
         rendered = render_agent_prompt({"prompt": "do the thing"}, {})
 

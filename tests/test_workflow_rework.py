@@ -14,9 +14,9 @@ import unittest
 
 from langgraph.checkpoint.memory import InMemorySaver
 
-from orbit.workflow.application import load_catalogs
-from orbit.workflow.dsl import DiagnosticError, compile_source
-from orbit.workflow.langgraph_runtime import (
+from promptaflow.workflow.application import load_catalogs
+from promptaflow.workflow.dsl import DiagnosticError, compile_source
+from promptaflow.workflow.langgraph_runtime import (
     BoundHandler,
     LangGraphHandlerRegistry,
     compile_workflow,

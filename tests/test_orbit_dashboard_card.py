@@ -19,7 +19,7 @@ try:
 except ImportError:  # pragma: no cover - exercised by the skip
     sync_playwright = None
 
-from orbit.web.mcp_app import ORBIT_DASHBOARD_HTML
+from promptaflow.web.mcp_app import ORBIT_DASHBOARD_HTML
 
 
 WORKFLOWS = [

@@ -16,7 +16,7 @@ import unittest
 
 from starlette.applications import Starlette
 
-from orbit.web.runtime_events import (
+from promptaflow.web.runtime_events import (
     CLOSE_BAD_SUBSCRIPTION,
     _frame,
     CLOSE_FORBIDDEN,
@@ -24,8 +24,8 @@ from orbit.web.runtime_events import (
     _cursor,
     runtime_event_routes,
 )
-from orbit.workflow.langgraph_runtime import build_service
-from orbit.workflow.langgraph_runtime.service import LangGraphRunConflict
+from promptaflow.workflow.langgraph_runtime import build_service
+from promptaflow.workflow.langgraph_runtime.service import LangGraphRunConflict
 
 from tests.test_web_composition import (
     publish_human_workflow, publish_linear_workflow, transform_registration,
@@ -297,7 +297,7 @@ class RuntimeEventTests(unittest.TestCase):
 
 
 def _position_of(cursor: str) -> int:
-    from orbit.workflow.api.dto import decode_cursor
+    from promptaflow.workflow.api.dto import decode_cursor
 
     return int(decode_cursor(cursor)["position"])
 
@@ -321,8 +321,8 @@ class NodeEventTests(unittest.TestCase):
         from tests.test_workflow_langgraph_runtime import (
             LangGraphProductionWiringTests, port,
         )
-        from orbit.workflow.domain.definitions import IRHandlerRef, IRNode
-        from orbit.workflow.langgraph_runtime.wiring import trusted_handlers
+        from promptaflow.workflow.domain.definitions import IRHandlerRef, IRNode
+        from promptaflow.workflow.langgraph_runtime.wiring import trusted_handlers
 
         fixture = LangGraphProductionWiringTests("run")
         registration = (
@@ -339,7 +339,7 @@ class NodeEventTests(unittest.TestCase):
         ))
 
     def context(self, attempt: str = "1"):
-        from orbit.workflow.langgraph_runtime.compiler import (
+        from promptaflow.workflow.langgraph_runtime.compiler import (
             LangGraphExecutionContext,
         )
 
@@ -365,7 +365,7 @@ class NodeEventTests(unittest.TestCase):
     CONFIG = {"tool_name": "example.read", "tool_version": "1.0.0"}
 
     def test_an_attempt_is_recorded_as_it_starts_and_as_it_settles(self) -> None:
-        from orbit.workflow.handlers.tools import ToolResult
+        from promptaflow.workflow.handlers.tools import ToolResult
 
         class Adapter:
             def execute(self, request, context):
@@ -392,7 +392,7 @@ class NodeEventTests(unittest.TestCase):
         execution twice.
         """
 
-        from orbit.workflow.handlers.tools import ToolResult
+        from promptaflow.workflow.handlers.tools import ToolResult
 
         class Adapter:
             def __init__(self): self.calls = 0
@@ -463,7 +463,7 @@ class RunGoalTests(unittest.TestCase):
         service directly.
         """
 
-        from orbit.workflow.langgraph_runtime.service import LangGraphRunConflict
+        from promptaflow.workflow.langgraph_runtime.service import LangGraphRunConflict
 
         self.engine.start(
             "workflow:linear", {"value": 1}, idempotency_key="same",
@@ -517,7 +517,7 @@ class SingleGoalTests(unittest.TestCase):
         )
 
     def test_a_second_goal_is_refused_and_names_the_first(self) -> None:
-        from orbit.workflow.langgraph_runtime.service import ActiveGoalExists
+        from promptaflow.workflow.langgraph_runtime.service import ActiveGoalExists
 
         engine = self.engine()
         first = self.start(engine, "one", goal="Review the draft")
@@ -563,7 +563,7 @@ class SingleGoalTests(unittest.TestCase):
         cancellable to the person being refused — and the refusal names it.
         """
 
-        from orbit.workflow.langgraph_runtime.service import ActiveGoalExists
+        from promptaflow.workflow.langgraph_runtime.service import ActiveGoalExists
 
         engine = self.engine()
         engine.start(
@@ -593,7 +593,7 @@ class SingleGoalTests(unittest.TestCase):
 
         from concurrent.futures import ThreadPoolExecutor
 
-        from orbit.workflow.langgraph_runtime.service import ActiveGoalExists
+        from promptaflow.workflow.langgraph_runtime.service import ActiveGoalExists
 
         engine = self.engine()
         started, refused = [], []
@@ -612,7 +612,7 @@ class SingleGoalTests(unittest.TestCase):
 
 class CompositionTests(unittest.TestCase):
     def test_the_socket_is_mounted_with_the_engine_behind_it(self) -> None:
-        from orbit.web.app import create_app
+        from promptaflow.web.app import create_app
         from tests.test_web_composition import SCHEMAS
 
         temp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
@@ -634,7 +634,7 @@ class CompositionTests(unittest.TestCase):
         it. With no engine there is nothing to stream, so there is no route.
         """
 
-        from orbit.web.app import create_app
+        from promptaflow.web.app import create_app
         from tests.test_web_composition import SCHEMAS
 
         temp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
@@ -664,13 +664,13 @@ class EventIdentityTests(unittest.TestCase):
         from tests.test_workflow_langgraph_runtime import (
             LangGraphHandlerRegistry, binding, edge, node, workflow,
         )
-        from orbit.workflow.domain.definitions import IRPolicy
-        from orbit.workflow.domain.serialization import definition_hash
-        from orbit.workflow.persistence.workflow_versions import (
+        from promptaflow.workflow.domain.definitions import IRPolicy
+        from promptaflow.workflow.domain.serialization import definition_hash
+        from promptaflow.workflow.persistence.workflow_versions import (
             SQLiteWorkflowVersionStore,
         )
-        from orbit.workflow.domain.definitions import CompiledWorkflow
-        from orbit.workflow.langgraph_runtime.service import (
+        from promptaflow.workflow.domain.definitions import CompiledWorkflow
+        from promptaflow.workflow.langgraph_runtime.service import (
             LangGraphWorkflowService,
         )
 
@@ -742,14 +742,14 @@ class HandlerConsoleTests(unittest.TestCase):
     """What a Handler printed, and the rules that keep it from mattering too much."""
 
     def setUp(self) -> None:
-        from orbit.workflow.langgraph_runtime.console import AttemptConsole
+        from promptaflow.workflow.langgraph_runtime.console import AttemptConsole
 
         self.temp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(self.temp.cleanup)
         self.console = AttemptConsole(Path(self.temp.name) / "runs.sqlite3")
 
     def sink(self, **overrides):
-        from orbit.workflow.langgraph_runtime.console import AttemptConsoleSink
+        from promptaflow.workflow.langgraph_runtime.console import AttemptConsoleSink
 
         return AttemptConsoleSink(
             self.console, run_id="langgraph_run:r", node_id="work",
@@ -781,7 +781,7 @@ class HandlerConsoleTests(unittest.TestCase):
         sink = self.sink()
         sink.emit("stdout", "one\n")
         sink.emit("stderr", "two\n")
-        from orbit.workflow.langgraph_runtime.console import AttemptConsoleSink
+        from promptaflow.workflow.langgraph_runtime.console import AttemptConsoleSink
         other = AttemptConsoleSink(
             self.console, run_id="langgraph_run:r", node_id="other",
             attempt_id="langgraph_attempt:other:1",
@@ -840,7 +840,7 @@ class HandlerConsoleTests(unittest.TestCase):
             def append(self, **_kwargs):
                 raise OSError("disk full")
 
-        from orbit.workflow.langgraph_runtime.console import AttemptConsoleSink
+        from promptaflow.workflow.langgraph_runtime.console import AttemptConsoleSink
 
         sink = AttemptConsoleSink(
             Broken(), run_id="langgraph_run:r", node_id="work",
@@ -855,7 +855,7 @@ class HandlerConsoleTests(unittest.TestCase):
 
     def test_output_is_scoped_to_one_node_when_asked(self) -> None:
         self.sink().emit("stdout", "from work\n")
-        from orbit.workflow.langgraph_runtime.console import AttemptConsoleSink
+        from promptaflow.workflow.langgraph_runtime.console import AttemptConsoleSink
 
         AttemptConsoleSink(
             self.console, run_id="langgraph_run:r", node_id="other",
@@ -877,13 +877,13 @@ class HandlerConsoleWiringTests(unittest.TestCase):
         import sys as _sys
 
         import tests.test_workflow_langgraph_runtime as engine_tests
-        from orbit.workflow.domain.definitions import IRHandlerRef, IRNode
-        from orbit.workflow.handlers.agent import TrustedCliAgentClient
-        from orbit.workflow.langgraph_runtime.compiler import (
+        from promptaflow.workflow.domain.definitions import IRHandlerRef, IRNode
+        from promptaflow.workflow.handlers.agent import TrustedCliAgentClient
+        from promptaflow.workflow.langgraph_runtime.compiler import (
             LangGraphExecutionContext,
         )
-        from orbit.workflow.langgraph_runtime.console import AttemptConsole
-        from orbit.workflow.langgraph_runtime.wiring import trusted_handlers
+        from promptaflow.workflow.langgraph_runtime.console import AttemptConsole
+        from promptaflow.workflow.langgraph_runtime.wiring import trusted_handlers
 
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
             root = Path(directory)

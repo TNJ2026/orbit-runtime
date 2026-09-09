@@ -5,8 +5,8 @@ import json
 from pathlib import Path
 import unittest
 
-from orbit.workflow.domain.errors import ERROR_CODE_REGISTRY, ErrorCategory
-from orbit.workflow.domain.graph import (
+from promptaflow.workflow.domain.errors import ERROR_CODE_REGISTRY, ErrorCategory
+from promptaflow.workflow.domain.graph import (
     FAILURE_RESOLUTION_PRECEDENCE,
     CompletionDecision,
     CompletionDisposition,
@@ -29,12 +29,12 @@ from orbit.workflow.domain.graph import (
     derive_graph_node_run_id,
     derive_join_group_id,
 )
-from orbit.workflow.domain.ids import EntityId
-from orbit.workflow.domain.schemas import SchemaValidationError, validate_contract
-from orbit.workflow.domain.serialization import to_primitive
-from orbit.workflow.domain.stability import CONTRACT_STABILITY, ContractStability
-from orbit.workflow.domain.states import BranchTokenStatus
-from orbit.workflow.domain.versions import DefinitionHash, Revision
+from promptaflow.workflow.domain.ids import EntityId
+from promptaflow.workflow.domain.schemas import SchemaValidationError, validate_contract
+from promptaflow.workflow.domain.serialization import to_primitive
+from promptaflow.workflow.domain.stability import CONTRACT_STABILITY, ContractStability
+from promptaflow.workflow.domain.states import BranchTokenStatus
+from promptaflow.workflow.domain.versions import DefinitionHash, Revision
 
 
 FIXTURE = (

@@ -18,8 +18,8 @@ import sys
 import tempfile
 import unittest
 
-from orbit.workflow.persistence.database import connect_workflow_database
-from orbit.workflow.persistence.migrations import migrate_workflow_database
+from promptaflow.workflow.persistence.database import connect_workflow_database
+from promptaflow.workflow.persistence.migrations import migrate_workflow_database
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,7 +28,7 @@ RETIRED_COMMANDS = ("start", "up", "init", "config", "runner")
 
 def cli(*args: str, cwd: Path | None = None) -> subprocess.CompletedProcess:
     return subprocess.run(
-        [sys.executable, "-m", "orbit", *args],
+        [sys.executable, "-m", "promptaflow", *args],
         capture_output=True, text=True, cwd=str(cwd or ROOT), timeout=120,
         env={"PYTHONPATH": str(ROOT / "src"), "PATH": "/usr/bin:/bin"},
     )
@@ -223,7 +223,7 @@ class RunCommandTests(CliMatrixTestCase):
             publish_human_workflow, publish_linear_workflow,
             transform_registration,
         )
-        from orbit.workflow.langgraph_runtime import build_service
+        from promptaflow.workflow.langgraph_runtime import build_service
 
         publish_linear_workflow(self.db)
         publish_human_workflow(self.db)

@@ -11,12 +11,12 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from orbit.web.builtin_handlers import (
+from promptaflow.web.builtin_handlers import (
     BUILTIN_SCHEMAS, DEV_TOOL_MANIFEST, DEV_TOOL_WRITE_MANIFEST,
     TRANSFORM_MANIFEST, builtin_handlers, dev_tool_handlers,
 )
-from orbit.workflow.domain.durable_execution import ExecutionSafety
-from orbit.workflow.handlers.dev_tools import VerifyProfile
+from promptaflow.workflow.domain.durable_execution import ExecutionSafety
+from promptaflow.workflow.handlers.dev_tools import VerifyProfile
 
 
 PROFILES = (VerifyProfile("unit", ("python", "-m", "unittest", "discover")),)

@@ -14,16 +14,16 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 
-from orbit.workflow.domain.durable_execution import ExecutionSafety
-from orbit.workflow.domain.handlers import ExternalEffect, RecoveryDisposition
-from orbit.workflow.domain.ids import EntityId
-from orbit.workflow.handlers.dev_tools import (
+from promptaflow.workflow.domain.durable_execution import ExecutionSafety
+from promptaflow.workflow.domain.handlers import ExternalEffect, RecoveryDisposition
+from promptaflow.workflow.domain.ids import EntityId
+from promptaflow.workflow.handlers.dev_tools import (
     CAPABILITY_WORKSPACE_WRITE, DevToolError, GitDiffAdapter, GitIntegrateAdapter,
     GitStatusAdapter, VerifyAdapter, VerifyProfile, WorkspaceRunner,
     dev_tool_manifests, register_dev_tools,
 )
-from orbit.workflow.handlers.tools import ToolRegistry, ToolRequest
-from orbit.workspace.git import GitWorkspaceProvider, git_available
+from promptaflow.workflow.handlers.tools import ToolRegistry, ToolRequest
+from promptaflow.workspace.git import GitWorkspaceProvider, git_available
 
 
 def request(**payload):

@@ -10,17 +10,17 @@ import threading
 import unittest
 from unittest import mock
 
-from orbit.__main__ import _agent_app, _runtime_db_path
-from orbit.agent_apps import host as host_module
-from orbit.agent_apps.host import AgentAppHost, AgentAppHostError
-from orbit.agent_apps.event_bridge import AgentAppEventBridge, EventInbox
-from orbit.agent_apps.manifest import ManifestError, load_manifest
-from orbit.agent_apps.mcp_proxy import (
+from promptaflow.__main__ import _agent_app, _runtime_db_path
+from promptaflow.agent_apps import host as host_module
+from promptaflow.agent_apps.host import AgentAppHost, AgentAppHostError
+from promptaflow.agent_apps.event_bridge import AgentAppEventBridge, EventInbox
+from promptaflow.agent_apps.manifest import ManifestError, load_manifest
+from promptaflow.agent_apps.mcp_proxy import (
     HubUnavailableError, HubWorkspaceRegistrationError, forward_http,
     register_workspace_with_hub, serve_proxy,
 )
-from orbit.platform.projects import project_db_path
-from orbit.platform.runtime_ownership import DiscoveredRuntime
+from promptaflow.platform.projects import project_db_path
+from promptaflow.platform.runtime_ownership import DiscoveredRuntime
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -298,7 +298,7 @@ class HostTests(unittest.TestCase):
             sleep=lambda _seconds: None,
         )
         with mock.patch(
-            "orbit.agent_apps.host.subprocess.Popen", return_value=_Process()
+            "promptaflow.agent_apps.host.subprocess.Popen", return_value=_Process()
         ) as launch:
             host.ensure(self.manifest_path, workspace=self.workspace)
         arguments, keyword_arguments = launch.call_args
@@ -313,8 +313,8 @@ class HostTests(unittest.TestCase):
             clock=iter((0.0, 3.0)).__next__,
             sleep=lambda _seconds: None,
         )
-        with mock.patch("orbit.agent_apps.host.descendant_pids", return_value=[]), mock.patch(
-            "orbit.agent_apps.host.terminate_pid_tree"
+        with mock.patch("promptaflow.agent_apps.host.descendant_pids", return_value=[]), mock.patch(
+            "promptaflow.agent_apps.host.terminate_pid_tree"
         ) as terminate:
             with self.assertRaisesRegex(AgentAppHostError, "did not become ready"):
                 host.ensure(self.manifest_path, workspace=self.workspace)
@@ -410,8 +410,8 @@ class RestartRaceTests(unittest.TestCase):
             sleep=lambda _seconds: None,
         )
         with mock.patch(
-            "orbit.agent_apps.host.descendant_pids", return_value=[]
-        ), mock.patch("orbit.agent_apps.host.terminate_pid_tree"):
+            "promptaflow.agent_apps.host.descendant_pids", return_value=[]
+        ), mock.patch("promptaflow.agent_apps.host.terminate_pid_tree"):
             with self.assertRaises(AgentAppHostError) as raised:
                 host.ensure(self.manifest_path, workspace=self.workspace)
         message = str(raised.exception)
@@ -945,7 +945,7 @@ class OrbitMcpProxyStartupTests(unittest.TestCase):
         self.temp.cleanup()
 
     def test_default_manifest_is_selected_for_each_platform(self) -> None:
-        from orbit.__main__ import _default_agent_app_manifest
+        from promptaflow.__main__ import _default_agent_app_manifest
 
         self.assertEqual(
             ROOT / "agent-app.json",
@@ -984,10 +984,10 @@ class OrbitMcpProxyStartupTests(unittest.TestCase):
             "agent_app_action": "mcp-proxy",
         })()
         with mock.patch(
-            "orbit.agent_apps.mcp_proxy.register_workspace_with_hub",
+            "promptaflow.agent_apps.mcp_proxy.register_workspace_with_hub",
             return_value=registration,
         ), mock.patch(
-            "orbit.agent_apps.mcp_proxy.serve_proxy",
+            "promptaflow.agent_apps.mcp_proxy.serve_proxy",
         ) as serve, mock.patch.object(AgentAppHost, "ensure") as ensure:
             _agent_app(args)
 

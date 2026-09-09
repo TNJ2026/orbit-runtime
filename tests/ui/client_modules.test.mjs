@@ -15,7 +15,7 @@ import { dirname, resolve } from "node:path";
 import test from "node:test";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const assets = resolve(here, "../../src/orbit/static/workflow-ui/assets");
+const assets = resolve(here, "../../src/promptaflow/static/workflow-ui/assets");
 
 const { Api, ApiError } = await import(`${assets}/api.js`);
 const { I18n, preferredLocale, LOCALES } = await import(`${assets}/i18n.js`);

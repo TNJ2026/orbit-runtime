@@ -61,7 +61,7 @@ class BackgroundAgentWorker:
             raise ValueError("command and a non-default backend cannot both be set")
         argv = (
             tuple(shlex.split(command)) if command is not None
-            else (sys.executable, "-m", "orbit.background_agent_adapter", backend)
+            else (sys.executable, "-m", "promptaflow.background_agent_adapter", backend)
         )
         if not argv:
             raise ValueError("background Agent command is required")

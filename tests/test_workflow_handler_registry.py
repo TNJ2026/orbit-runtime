@@ -4,18 +4,18 @@ import pickle
 from types import SimpleNamespace
 import unittest
 
-from orbit.workflow.catalogs import HandlerManifest, InMemoryHandlerCatalog
-from orbit.workflow.domain.durable_execution import ExecutionSafety
-from orbit.workflow.domain.handlers import (
+from promptaflow.workflow.catalogs import HandlerManifest, InMemoryHandlerCatalog
+from promptaflow.workflow.domain.durable_execution import ExecutionSafety
+from promptaflow.workflow.domain.handlers import (
     CancelAck, CancelDisposition, HandlerValidationResult, PreparedExecution,
     RawHandlerResult, RecoveryDisposition, RecoveryResult, ResourceProfile,
 )
-from orbit.workflow.domain.schemas import validate_contract
-from orbit.workflow.domain.serialization import to_primitive
-from orbit.workflow.handlers.registry import (
+from promptaflow.workflow.domain.schemas import validate_contract
+from promptaflow.workflow.domain.serialization import to_primitive
+from promptaflow.workflow.handlers.registry import (
     ExecutionRegistry, HandlerContractMismatchError, HandlerNotAvailableError,
 )
-from orbit.workflow.langgraph_runtime.compiler import (
+from promptaflow.workflow.langgraph_runtime.compiler import (
     BoundHandler, LangGraphHandlerRegistry,
 )
 

@@ -11,8 +11,8 @@ import json
 from types import SimpleNamespace
 import unittest
 
-from orbit.web.mcp import HARNESS_TOOL_NAMES, McpSessionRegistry
-from orbit.web.mcp_app import ORBIT_DASHBOARD_URI, ORBIT_WORKFLOWS_URI
+from promptaflow.web.mcp import HARNESS_TOOL_NAMES, McpSessionRegistry
+from promptaflow.web.mcp_app import ORBIT_DASHBOARD_URI, ORBIT_WORKFLOWS_URI
 from tests.test_api_v1 import ApiTestCase
 from tests.test_web_composition import AsgiHarness
 
@@ -367,9 +367,9 @@ class DiscoveryTests(ApiTestCase):
         is the thing that leaves gaps in its own presence.
         """
 
-        from orbit.web.app import create_app
+        from promptaflow.web.app import create_app
         from tests.test_api_v1 import SCHEMAS, transform_registration
-        from orbit.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
+        from promptaflow.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
 
         app = create_app(
             self.db.parent / "harness-profile.db",
@@ -727,11 +727,11 @@ class DiscoveryAndResultTests(ApiTestCase):
         beginning, which is what the definition tool is here to prevent.
         """
 
-        from orbit.workflow.dsl import compile_source
-        from orbit.workflow.catalogs import (
+        from promptaflow.workflow.dsl import compile_source
+        from promptaflow.workflow.catalogs import (
             InMemoryHandlerCatalog, InMemorySchemaCatalog,
         )
-        from orbit.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
+        from promptaflow.workflow.persistence.workflow_versions import SQLiteWorkflowVersionStore
         from tests.test_api_v1 import SCHEMAS, transform_registration
 
         dsl = {
@@ -850,7 +850,7 @@ class DiscoveryAndResultTests(ApiTestCase):
 
         from datetime import datetime, timedelta, timezone
 
-        from orbit.workflow.persistence.database import connect_workflow_database
+        from promptaflow.workflow.persistence.database import connect_workflow_database
 
         self.publish_reversed_workflow()
         later = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
@@ -1012,7 +1012,7 @@ class DiscoveryAndResultTests(ApiTestCase):
             self.assertIn("error", payload_of(result))
 
     def test_artifact_content_is_bounded_and_base64_encoded(self) -> None:
-        from orbit.workflow.domain.data import PortTransport
+        from promptaflow.workflow.domain.data import PortTransport
 
         store = self.app.state.langgraph_service.artifacts
         policy = SimpleNamespace(
@@ -1098,10 +1098,10 @@ class ClientWrittenWorkflowTests(unittest.TestCase):
         import time
         from pathlib import Path
 
-        from orbit.web.app import create_app
-        from orbit.workflow.authoring import ExternalAuthoringBroker
+        from promptaflow.web.app import create_app
+        from promptaflow.workflow.authoring import ExternalAuthoringBroker
         from tests.test_api_v1 import SCHEMAS, transform_registration
-        from orbit.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
+        from promptaflow.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
 
         temp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(temp.cleanup)
@@ -1269,9 +1269,9 @@ class SharedAuthoringServiceTests(unittest.TestCase):
         import tempfile
         from pathlib import Path
 
-        import orbit.workflow.application.authoring_job_service as service_module
-        from orbit.web.app import create_app
-        from orbit.workflow.application.authoring_job_service import (
+        import promptaflow.workflow.application.authoring_job_service as service_module
+        from promptaflow.web.app import create_app
+        from promptaflow.workflow.application.authoring_job_service import (
             AuthoringJobService,
         )
         from tests.test_api_v1 import SCHEMAS, transform_registration
@@ -1318,7 +1318,7 @@ class StdioTransportTests(ApiTestCase):
     def run_stdio(self, *messages, actor="writer", actor_prefix=None):
         import io
 
-        from orbit.web.mcp import serve_stdio
+        from promptaflow.web.mcp import serve_stdio
 
         sink = io.StringIO()
         serve_stdio(
@@ -1415,8 +1415,8 @@ class HubDoorIdentityTests(unittest.TestCase):
         import tempfile
         from pathlib import Path
 
-        from orbit.web.app import create_app
-        from orbit.web.local_identity import (
+        from promptaflow.web.app import create_app
+        from promptaflow.web.local_identity import (
             local_authorizer, loopback_scoped_mcp_authenticator,
         )
         from tests.test_api_v1 import SCHEMAS, transform_registration
@@ -1597,7 +1597,7 @@ class WorkspaceIsTheBoundaryTests(ApiTestCase):
     def test_both_transports_answer_from_the_same_rule(self) -> None:
         import inspect
 
-        from orbit.web import api_v1, mcp, run_visibility
+        from promptaflow.web import api_v1, mcp, run_visibility
 
         self.assertIsNone(run_visibility.reading_actor("anybody"))
         # Read from the shared module rather than each deciding for itself,

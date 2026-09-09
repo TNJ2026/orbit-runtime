@@ -13,14 +13,14 @@ import threading
 import time
 import unittest
 
-from orbit.web.app import _connected_client_first
-from orbit.workflow.authoring import (
+from promptaflow.web.app import _connected_client_first
+from promptaflow.workflow.authoring import (
     AuthoringUnavailableError, AuthoringUnknownResultError, CancelScope,
     ExternalAuthoringBroker, UnknownAuthoringRequestError, WorkflowAuthoringService,
     cancellable,
 )
-from orbit.workflow.authoring.external import ReservedClientNameError
-from orbit.workflow.application.authoring_job_service import AuthoringJobService
+from promptaflow.workflow.authoring.external import ReservedClientNameError
+from promptaflow.workflow.application.authoring_job_service import AuthoringJobService
 
 from tests.test_workflow_authoring_jobs import AuthoringJobTestCase, dsl
 

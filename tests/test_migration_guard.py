@@ -19,7 +19,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 TESTS = ROOT / "tests"
 MIGRATION = TESTS / "migration"
-SRC = ROOT / "src" / "orbit"
+SRC = ROOT / "src" / "promptaflow"
 
 # The legacy test modules M6 deleted. `test_packaging.py` survives as a
 # package-manifest guard, so its rewritten tests stay under disposition.
@@ -41,7 +41,7 @@ REMOVED_ASSETS = (
 # second way to run the system.
 REMOVED_COMMANDS = ("start", "up", "init", "config", "runner")
 
-# After the cutover every package under src/orbit is new Runtime, so the
+# After the cutover every package under src/promptaflow is new Runtime, so the
 # import guard covers all of them rather than one subtree.
 NEW_RUNTIME_ROOTS = ("workflow", "web", "platform", "workspace")
 
@@ -243,7 +243,7 @@ class LegacyRemovalGuard(unittest.TestCase):
         import sys
 
         result = subprocess.run(
-            [sys.executable, "-m", "orbit", "--help"],
+            [sys.executable, "-m", "promptaflow", "--help"],
             capture_output=True, text=True, cwd=str(ROOT),
             env={"PYTHONPATH": str(ROOT / "src"), "PATH": "/usr/bin:/bin"},
         )

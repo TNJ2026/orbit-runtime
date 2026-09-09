@@ -15,7 +15,7 @@ import tempfile
 import threading
 import unittest
 
-from orbit.workspace.git import (
+from promptaflow.workspace.git import (
     GitWorkspaceProvider,
     WorkspaceError,
     WorkspaceUnavailable,
@@ -285,7 +285,7 @@ class GitignoreTests(GitWorkspaceTestCase):
 class BoundaryTests(unittest.TestCase):
     def test_workspace_module_does_not_import_engine_or_domain(self) -> None:
         import ast
-        from orbit.workspace import git as git_module
+        from promptaflow.workspace import git as git_module
 
         tree = ast.parse(Path(git_module.__file__).read_text(encoding="utf-8"))
         offenders = []

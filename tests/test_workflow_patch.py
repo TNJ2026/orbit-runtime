@@ -5,15 +5,15 @@ import unittest
 
 from pydantic import ValidationError
 
-from orbit.workflow.catalogs import (
+from promptaflow.workflow.catalogs import (
     HandlerManifest,
     InMemoryHandlerCatalog,
     InMemorySchemaCatalog,
 )
-from orbit.workflow.domain.durable_execution import ExecutionSafety
-from orbit.workflow.domain.handlers import ResourceProfile
-from orbit.workflow.dsl import AuthoredWorkflow, compile_source
-from orbit.workflow.dsl.patch import GraphPatch, PatchError, apply_patch
+from promptaflow.workflow.domain.durable_execution import ExecutionSafety
+from promptaflow.workflow.domain.handlers import ResourceProfile
+from promptaflow.workflow.dsl import AuthoredWorkflow, compile_source
+from promptaflow.workflow.dsl.patch import GraphPatch, PatchError, apply_patch
 
 
 BASE = {
@@ -226,7 +226,7 @@ class StillCompilesTests(unittest.TestCase):
     def test_a_patch_that_leaves_a_broken_document_is_caught_by_the_compiler(self) -> None:
         """The patch applies; the workflow is refused. That division is the point."""
 
-        from orbit.workflow.dsl import DiagnosticError
+        from promptaflow.workflow.dsl import DiagnosticError
 
         result = apply_patch(clone(), patch({"op": "remove_node", "node_id": "done"}))
         # Applying succeeded — nothing dangling was left behind …

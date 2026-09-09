@@ -10,8 +10,8 @@ import unittest
 from unittest.mock import Mock, patch
 from urllib.request import Request
 
-from orbit.__main__ import main
-from orbit.workflow.artifacts import LocalCASBackend
+from promptaflow.__main__ import main
+from promptaflow.workflow.artifacts import LocalCASBackend
 from tests.test_workflow_dsl import VALID_DSL
 
 
@@ -115,10 +115,10 @@ class WorkflowCliTests(unittest.TestCase):
             "ui_url": "http://127.0.0.1:8848/workspaces/example/ui/",
         }
         with (
-            patch("orbit.__main__._runtime_db_path") as gate,
-            patch("orbit.__main__._running_hub", return_value=True),
+            patch("promptaflow.__main__._runtime_db_path") as gate,
+            patch("promptaflow.__main__._running_hub", return_value=True),
             patch(
-                "orbit.__main__._register_running_hub",
+                "promptaflow.__main__._register_running_hub",
                 return_value=registration,
             ) as register,
         ):
@@ -137,7 +137,7 @@ class WorkflowCliTests(unittest.TestCase):
         with (
             patch.dict("os.environ", {"ORBIT_HUB_CHILD": "1"}),
             patch("sys.argv", ["orbit", "serve", "--port", "0"]),
-            patch("orbit.__main__._serve_runtime") as serve_runtime,
+            patch("promptaflow.__main__._serve_runtime") as serve_runtime,
         ):
             main()
 
@@ -145,7 +145,7 @@ class WorkflowCliTests(unittest.TestCase):
         self.assertEqual(0, serve_runtime.call_args.args[0].port)
 
     def test_existing_hub_registration_uses_its_internal_route_then_starts_ui(self) -> None:
-        from orbit.__main__ import _register_running_hub
+        from promptaflow.__main__ import _register_running_hub
 
         registration = {
             "ui_url": "http://127.0.0.1:8848/workspaces/example/ui/",
@@ -174,7 +174,7 @@ class WorkflowCliTests(unittest.TestCase):
                 return Response(json.dumps(registration).encode("utf-8"))
             return Response(b"<")
 
-        with patch("orbit.__main__.urlopen", side_effect=open_url):
+        with patch("promptaflow.__main__.urlopen", side_effect=open_url):
             result = _register_running_hub(
                 "http://127.0.0.1:8848", Path(self.temp_dir.name),
             )
@@ -205,15 +205,15 @@ class WorkflowCliTests(unittest.TestCase):
         config.bind_socket.return_value = listener
 
         with (
-            patch("orbit.__main__._runtime_db_path"),
-            patch("orbit.__main__._running_hub", return_value=False),
-            patch("orbit.hub.WorkspaceRegistry", return_value=registry),
-            patch("orbit.hub.ProjectAccessGrants", return_value=grants),
-            patch("orbit.hub.WorkspaceRuntimeManager", return_value=manager),
-            patch("orbit.hub.create_hub_app", return_value=Mock()),
-            patch("orbit.__main__.uvicorn.Config", return_value=config),
-            patch("orbit.__main__.uvicorn.Server", return_value=server),
-            patch("orbit.global_control.WorkflowTemplateStore", return_value=Mock()),
+            patch("promptaflow.__main__._runtime_db_path"),
+            patch("promptaflow.__main__._running_hub", return_value=False),
+            patch("promptaflow.hub.WorkspaceRegistry", return_value=registry),
+            patch("promptaflow.hub.ProjectAccessGrants", return_value=grants),
+            patch("promptaflow.hub.WorkspaceRuntimeManager", return_value=manager),
+            patch("promptaflow.hub.create_hub_app", return_value=Mock()),
+            patch("promptaflow.__main__.uvicorn.Config", return_value=config),
+            patch("promptaflow.__main__.uvicorn.Server", return_value=server),
+            patch("promptaflow.global_control.WorkflowTemplateStore", return_value=Mock()),
         ):
             output = self.run_cli(
                 "serve", "--project-root", str(workspace), "--port", "0",
@@ -228,9 +228,9 @@ class WorkflowCliTests(unittest.TestCase):
     def test_serve_wires_the_configured_artifact_store(self) -> None:
         artifact_root = Path(self.temp_dir.name) / "custom-artifacts"
         with (
-            patch("orbit.web.app.create_app") as create_app,
-            patch("orbit.__main__.upsert_project"),
-            patch("orbit.__main__.uvicorn.Server"),
+            patch("promptaflow.web.app.create_app") as create_app,
+            patch("promptaflow.__main__.upsert_project"),
+            patch("promptaflow.__main__.uvicorn.Server"),
         ):
             output = self.run_cli(
                 "_runtime", "--port", "0", "--db", str(self.db),
@@ -247,9 +247,9 @@ class WorkflowCliTests(unittest.TestCase):
 
     def test_serve_defaults_artifacts_beside_the_selected_database(self) -> None:
         with (
-            patch("orbit.web.app.create_app") as create_app,
-            patch("orbit.__main__.upsert_project"),
-            patch("orbit.__main__.uvicorn.Server"),
+            patch("promptaflow.web.app.create_app") as create_app,
+            patch("promptaflow.__main__.upsert_project"),
+            patch("promptaflow.__main__.uvicorn.Server"),
         ):
             self.run_cli(
                 "_runtime", "--port", "0", "--db", str(self.db), "--no-agent-discovery",
@@ -260,9 +260,9 @@ class WorkflowCliTests(unittest.TestCase):
 
     def test_serve_enables_langgraph_by_default(self) -> None:
         with (
-            patch("orbit.web.app.create_app") as create_app,
-            patch("orbit.__main__.upsert_project"),
-            patch("orbit.__main__.uvicorn.Server"),
+            patch("promptaflow.web.app.create_app") as create_app,
+            patch("promptaflow.__main__.upsert_project"),
+            patch("promptaflow.__main__.uvicorn.Server"),
         ):
             self.run_cli(
                 "_runtime", "--port", "0", "--db", str(self.db), "--no-agent-discovery",
@@ -321,16 +321,16 @@ class WorkflowInventoryCliTests(unittest.TestCase):
     """
 
     def setUp(self) -> None:
-        from orbit.workflow.application.workflows import (
+        from promptaflow.workflow.application.workflows import (
             WorkflowCatalogs, WorkflowDefinitionService,
         )
-        from orbit.workflow.catalogs import (
+        from promptaflow.workflow.catalogs import (
             InMemoryHandlerCatalog, InMemorySchemaCatalog,
         )
-        from orbit.workflow.catalogs.extensions import InMemoryExtensionRegistry
-        from orbit.workflow.persistence.database import connect_workflow_database
-        from orbit.workflow.persistence.migrations import migrate_workflow_database
-        from orbit.workflow.persistence.workflow_versions import (
+        from promptaflow.workflow.catalogs.extensions import InMemoryExtensionRegistry
+        from promptaflow.workflow.persistence.database import connect_workflow_database
+        from promptaflow.workflow.persistence.migrations import migrate_workflow_database
+        from promptaflow.workflow.persistence.workflow_versions import (
             SQLiteWorkflowVersionStore,
         )
         from tests.test_workflow_authoring_jobs import MANIFEST, dsl
@@ -431,7 +431,7 @@ class WorkflowInventoryCliTests(unittest.TestCase):
         self.assertIsNotNone(entries[0]["reason"])
 
     def test_a_workflow_without_source_needs_an_operator_not_a_prompt(self) -> None:
-        from orbit.workflow.persistence.database import connect_workflow_database
+        from promptaflow.workflow.persistence.database import connect_workflow_database
 
         # A published version is immutable, so the source-less case is written
         # as a fresh version — which is how it exists in the wild: published by
@@ -465,9 +465,9 @@ class WorkflowInventoryCliTests(unittest.TestCase):
         """The operator hears it at boot, not from a confused user later."""
 
         with (
-            patch("orbit.web.app.create_app"),
-            patch("orbit.__main__.upsert_project"),
-            patch("orbit.__main__.uvicorn.Server"),
+            patch("promptaflow.web.app.create_app"),
+            patch("promptaflow.__main__.upsert_project"),
+            patch("promptaflow.__main__.uvicorn.Server"),
         ):
             output = self.run_cli(
                 "_runtime", "--port", "0", "--db", str(self.db), "--no-agent-discovery",
@@ -481,11 +481,11 @@ class WorkflowInventoryCliTests(unittest.TestCase):
         """A report is information; refusing to boot over it would be worse."""
 
         with (
-            patch("orbit.web.app.create_app"),
-            patch("orbit.__main__.upsert_project"),
-            patch("orbit.__main__.uvicorn.Server") as run,
+            patch("promptaflow.web.app.create_app"),
+            patch("promptaflow.__main__.upsert_project"),
+            patch("promptaflow.__main__.uvicorn.Server") as run,
             patch(
-                "orbit.__main__._goal_readiness_buckets",
+                "promptaflow.__main__._goal_readiness_buckets",
                 side_effect=RuntimeError("projection is rebuilding"),
             ),
         ):
@@ -536,19 +536,19 @@ class WorkflowLibraryResolutionTests(unittest.TestCase):
     """Every Workspace resolves the same host-wide executable catalog."""
 
     def parse(self, *arguments: str):
-        from orbit.__main__ import build_parser
+        from promptaflow.__main__ import build_parser
 
         return build_parser().parse_args(list(arguments))
 
     def resolved(self, *arguments: str, project_root=None) -> str:
-        from orbit.__main__ import _workflow_db_path
+        from promptaflow.__main__ import _workflow_db_path
 
         return _workflow_db_path(
             self.parse(*arguments).db, project_root=project_root,
         )
 
     def test_every_default_surface_resolves_the_shared_workflow_database(self) -> None:
-        from orbit.platform.projects import public_workflow_db_path
+        from promptaflow.platform.projects import public_workflow_db_path
 
         with tempfile.TemporaryDirectory() as directory:
             expected = str(public_workflow_db_path())
@@ -578,7 +578,7 @@ class WorkflowLibraryResolutionTests(unittest.TestCase):
     def test_workflow_commands_accept_a_workspace_but_use_the_shared_catalog(self) -> None:
         """The Workspace selects runtime state, never a private definition DB."""
 
-        from orbit.platform.projects import public_workflow_db_path
+        from promptaflow.platform.projects import public_workflow_db_path
 
         with tempfile.TemporaryDirectory() as directory:
             expected = str(public_workflow_db_path())

@@ -19,8 +19,8 @@ import time
 from types import SimpleNamespace
 import unittest
 
-from orbit.workflow.domain.handlers import UnknownExternalResultError
-from orbit.workflow.handlers.agent import AgentRequest, TrustedPromptCliAgentClient
+from promptaflow.workflow.domain.handlers import UnknownExternalResultError
+from promptaflow.workflow.handlers.agent import AgentRequest, TrustedPromptCliAgentClient
 
 
 def context(

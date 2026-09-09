@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 
-from orbit.global_control import (
+from promptaflow.global_control import (
     WorkflowTemplateError, WorkflowTemplateStorageError, WorkflowTemplateStore,
 )
 

@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from orbit.workflow.artifacts import local_cas
-from orbit.workflow.artifacts.local_cas import BlobIntegrityError, LocalCASBackend
+from promptaflow.workflow.artifacts import local_cas
+from promptaflow.workflow.artifacts.local_cas import BlobIntegrityError, LocalCASBackend
 
 
 class LocalCASBackendTests(unittest.TestCase):

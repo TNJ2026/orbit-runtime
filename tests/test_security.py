@@ -16,18 +16,18 @@ from types import SimpleNamespace
 import time
 import unittest
 
-from orbit.platform import process as process_port
-from orbit.web.api_v1 import READ_SCOPE, SENSITIVE_SCOPE, WRITE_SCOPE, Authorizer
-from orbit.web.local_identity import (
+from promptaflow.platform import process as process_port
+from promptaflow.web.api_v1 import READ_SCOPE, SENSITIVE_SCOPE, WRITE_SCOPE, Authorizer
+from promptaflow.web.local_identity import (
     LOCAL_ACTOR, local_authorizer, loopback_authenticator,
     loopback_scoped_mcp_authenticator,
 )
-from orbit.workflow.handlers.context import ScopedSecretResolver, SecretAccessError
-from orbit.workflow.handlers.dev_tools import (
+from promptaflow.workflow.handlers.context import ScopedSecretResolver, SecretAccessError
+from promptaflow.workflow.handlers.dev_tools import (
     DevToolError, GitStatusAdapter, VerifyAdapter, VerifyProfile, WorkspaceRunner,
 )
-from orbit.workflow.handlers.tools import ToolRequest
-from orbit.workspace.git import GitWorkspaceProvider, WorkspaceError, workspace_slug
+from promptaflow.workflow.handlers.tools import ToolRequest
+from promptaflow.workspace.git import GitWorkspaceProvider, WorkspaceError, workspace_slug
 
 
 class SecretTests(unittest.TestCase):
@@ -169,8 +169,8 @@ class AuthorizationTests(unittest.TestCase):
 
         import inspect
 
-        from orbit.web.local_identity import SCOPED_ACTOR_PATHS
-        from orbit.web.mcp import agent_tool_routes, mcp_routes
+        from promptaflow.web.local_identity import SCOPED_ACTOR_PATHS
+        from promptaflow.web.mcp import agent_tool_routes, mcp_routes
 
         for build in (agent_tool_routes, mcp_routes):
             routes = build(lambda _message, _actor: None)
@@ -377,7 +377,7 @@ class NetworkExposureTests(unittest.TestCase):
         """Binding all interfaces must be a deliberate act, never a default."""
 
         result = subprocess.run(
-            [sys.executable, "-m", "orbit", "serve", "--help"],
+            [sys.executable, "-m", "promptaflow", "serve", "--help"],
             capture_output=True, text=True,
             cwd=str(Path(__file__).resolve().parents[1]),
             # Inherited and then narrowed, rather than built from nothing.
