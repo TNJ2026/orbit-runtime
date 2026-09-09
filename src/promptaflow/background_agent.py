@@ -39,13 +39,13 @@ def _post(base_url: str, operation: str, body: Mapping[str, Any]) -> Mapping[str
     except HTTPError as exc:
         raise BackgroundAgentError(exc.read().decode("utf-8", "replace")) from exc
     except (OSError, URLError) as exc:
-        raise BackgroundAgentError(f"Orbit Hub is unavailable: {exc}") from exc
+        raise BackgroundAgentError(f"PromptaFlow Hub is unavailable: {exc}") from exc
     try:
         decoded = json.loads(payload)
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        raise BackgroundAgentError("Orbit Hub returned invalid JSON") from exc
+        raise BackgroundAgentError("PromptaFlow Hub returned invalid JSON") from exc
     if not isinstance(decoded, Mapping):
-        raise BackgroundAgentError("Orbit Hub returned a non-object response")
+        raise BackgroundAgentError("PromptaFlow Hub returned a non-object response")
     return decoded
 
 

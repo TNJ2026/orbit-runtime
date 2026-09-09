@@ -1,8 +1,8 @@
 # 卡片
 
-**简体中文** | [English](./cards.md) · [宿主](./hosts/README.zh-CN.md) · [Orbit](../README.zh-CN.md)
+**简体中文** | [English](./cards.md) · [宿主](./hosts/README.zh-CN.md) · [PromptaFlow](../README.zh-CN.md)
 
-Orbit 附带五张小页面，宿主可以把它们画在对话旁边。它们是 MCP App（MCP Apps 扩展，
+PromptaFlow 附带五张小页面，宿主可以把它们画在对话旁边。它们是 MCP App（MCP Apps 扩展，
 SEP-1865）：每一张都作为 MCP 资源发布、mime type 为 `text/html;profile=mcp-app`，
 并通过 `_meta.ui.resourceUri` 绑定到打开它的那个工具上。
 
@@ -10,27 +10,27 @@ SEP-1865）：每一张都作为 MCP 资源发布、mime type 为 `text/html;pro
 
 **调用那个工具就行。** 没有单独的「打开卡片」调用 —— 卡片就在工具的 `_meta` 里，
 所以实现了 MCP Apps 的宿主会在工具应答时把它挂进沙箱 iframe，没实现的则只显示工具
-返回的 JSON。**画不画是宿主的决定，不是 Orbit 的**，所以「调用成功了吗」和「屏幕上
+返回的 JSON。**画不画是宿主的决定，不是 PromptaFlow 的**，所以「调用成功了吗」和「屏幕上
 出现了吗」要当成两个问题看。
 
 | 调用这个 | 就出现这张卡 | 显示 |
 | --- | --- | --- |
-| `open_orbit_dashboard` | Orbit workspace | 目标、工作流、历史记录和 Agents |
-| `list_workflows` | Orbit workflows | 已发布的目录 |
-| `get_workflow_definition` | Orbit workflows | 同一张卡，直接停在某个工作流上 |
-| `generate_workflow` | Orbit workflow generation | 某个撰写任务的进度与结果 |
-| `start_run` | Orbit goal execution | 该次 run 的步骤、是否需要人、以及结果 |
-| `open_orbit_goals` | Orbit goals | 最近的目标运行及其状态 |
+| `open_orbit_dashboard` | PromptaFlow workspace | 目标、工作流、历史记录和 Agents |
+| `list_workflows` | PromptaFlow workflows | 已发布的目录 |
+| `get_workflow_definition` | PromptaFlow workflows | 同一张卡，直接停在某个工作流上 |
+| `generate_workflow` | PromptaFlow workflow generation | 某个撰写任务的进度与结果 |
+| `start_run` | PromptaFlow goal execution | 该次 run 的步骤、是否需要人、以及结果 |
+| `open_orbit_goals` | PromptaFlow goals | 最近的目标运行及其状态 |
 
 **按意图选卡，不要先开 workspace 卡片**：要看工作流就是 `list_workflows`，要跑目标就是
-`start_run`；「打开 Orbit」本身才是 `open_orbit_dashboard`。这个历史工具名会继续保留，
+`start_run`；「打开 PromptaFlow」本身才是 `open_orbit_dashboard`。这个历史工具名会继续保留，
 避免破坏已有客户端。
 
 ## 每张卡是什么
 
-![Orbit workspace 卡片，停在历史记录 tab](./images/cards/dashboard.png)
+![PromptaFlow workspace 卡片，停在历史记录 tab](./images/cards/dashboard.png)
 
-**Orbit workspace。** 四个 tab —— 目标、工作流、历史记录、Agents —— 行尾是**创建工作流**。
+**PromptaFlow workspace。** 四个 tab —— 目标、工作流、历史记录、Agents —— 行尾是**创建工作流**。
 
 **目标**是卡片打开时落到的那一页：正在跑的全部，或者都不在跑时最近跑过的那一个，
 带上它的步骤、还能对它做的事、以及它的结果。一个目标跑完的那一刻，正是它的结果最要紧
@@ -40,23 +40,23 @@ SEP-1865）：每一张都作为 MCP 资源发布、mime type 为 `text/html;pro
 **历史记录**是同一个项目的全部目标执行记录，按天分组；打开一条看到的，就是目标页对
 单个 run 显示的那些东西。
 
-![Orbit workflows 卡片](./images/cards/workflows.png)
+![PromptaFlow workflows 卡片](./images/cards/workflows.png)
 
-**Orbit workflows。** 已发布的目录，每行带**新目标**。点某一行会把**同一张卡**切换到
+**PromptaFlow workflows。** 已发布的目录，每行带**新目标**。点某一行会把**同一张卡**切换到
 该工作流的详情（流程图、定义列表，以及新目标／修改／删除），而不是再开一张卡。
 
 ![工作流生成卡片](./images/cards/workflow-generation.png)
 
-**Orbit workflow generation。** 一个撰写任务：排队中、生成中、已生成或失败，并带上
+**PromptaFlow workflow generation。** 一个撰写任务：排队中、生成中、已生成或失败，并带上
 当初给它的要求。
 
 ![目标执行卡片](./images/cards/goal-execution.png)
 
-**Orbit goal execution。** 一次 run：它的步骤、是否需要人、以及结果。
+**PromptaFlow goal execution。** 一次 run：它的步骤、是否需要人、以及结果。
 
 ![目标列表卡片](./images/cards/goals.png)
 
-**Orbit goals。** 最近的 run 及其当前状态，列表形式。
+**PromptaFlow goals。** 最近的 run 及其当前状态，列表形式。
 
 **五张卡都跟随宿主的语言** —— 按钮、空状态，以及它们送回对话的提示词都跟随。宿主报了
 语言就用宿主的，没报之前用浏览器的猜；宿主中途改语言，卡片会重画。
@@ -76,7 +76,7 @@ SEP-1865）：每一张都作为 MCP 资源发布、mime type 为 `text/html;pro
 `ui://orbit/current-task-v45.html`、`ui://orbit/workflows-v22.html` —— 改动一张卡就
 意味着换一个新 URI 发布，因为已经取过旧 URI 的宿主会一直渲染那份旧文档。
 
-对使用者的影响很小但真实：**升级 Orbit 之后，开一个新对话。** 已经挂载过卡片的会话
+对使用者的影响很小但真实：**升级 PromptaFlow 之后，开一个新对话。** 已经挂载过卡片的会话
 会继续用它当初取到的那一份。
 
 ## 怎么重新生成这些图

@@ -291,7 +291,7 @@ def build_routes(ctx) -> list[Route]:
                 "workspace_path": ctx.operational_config.get("workspace_path"),
                 "allowed_commands": ([{
                     "command": "runtime.shutdown",
-                    "label": "Stop Orbit",
+                    "label": "Stop PromptaFlow",
                     "method": "POST",
                     "href": "/api/v1/runtime/shutdown",
                     "target_aggregate_id": "runtime",
@@ -311,7 +311,7 @@ def build_routes(ctx) -> list[Route]:
             body: Mapping[str, Any], actor: str, _key: str,
         ) -> Mapping[str, Any]:
             if actor not in ctx.operators:
-                raise PermissionError("only a Runtime operator may stop Orbit")
+                raise PermissionError("only a Runtime operator may stop PromptaFlow")
             unknown = set(body) - {"expected_version"}
             if unknown:
                 raise ValueError(

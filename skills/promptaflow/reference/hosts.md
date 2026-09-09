@@ -6,7 +6,7 @@ Work out which host is running this task, then read its section.
 
 ## The client name
 
-Orbit lists a connected App under the name it registers. Use:
+PromptaFlow lists a connected App under the name it registers. Use:
 
 | Host | Client name |
 | --- | --- |
@@ -33,7 +33,7 @@ paths made the call. Neither shadows a discovered CLI, so neither is refused.
 workspace with the fixed loopback Hub and uses its workspace-scoped MCP URL.
 The Hub starts or discovers a dynamic-port Runtime for that workspace. In a
 projectless chat, the Host uses `ORBIT_DEFAULT_WORKSPACE` when configured,
-otherwise `~/.orbit/workspaces/default`.
+otherwise `~/.promptaflow/workspaces/default`.
 
 The Hub is the public MCP Gateway, not a transparent MCP proxy. It owns MCP
 protocol lifecycle and App resources; workspace Runtimes expose a private
@@ -45,11 +45,11 @@ invocation and cancellation cross that private worker boundary.
 
 **Claude Code.** There is no plugin. The skill is reached through the
 `.claude/skills/orbit` symlink in the checkout, and the MCP server comes from
-the repo-root `.mcp.json`. Its cross-platform `uv` command lets Orbit select
+the repo-root `.mcp.json`. Its cross-platform `uv` command lets PromptaFlow select
 `agent-app.json` on POSIX and `agent-app.windows.json` on Windows before
 starting the MCP proxy. When no workspace is supplied, the proxy uses
 `ORBIT_DEFAULT_WORKSPACE` or
-`~/.orbit/workspaces/default`; it does not guess from the process cwd.
+`~/.promptaflow/workspaces/default`; it does not guess from the process cwd.
 
 Because this depends on the checkout, the skill is active only for someone
 working inside it. It is not installable as a Claude plugin: there is no
@@ -60,13 +60,13 @@ packages `.codex-plugin` alone.
 pointing straight at the Hub over HTTP, `http://127.0.0.1:8848/mcp`, with no
 credentials — the Hub is on loopback and a loopback caller is already the
 operator. It speaks Streamable HTTP (`accept: application/json,
-text/event-stream`) and negotiates protocol `2025-11-25` against Orbit's
+text/event-stream`) and negotiates protocol `2025-11-25` against PromptaFlow's
 `2025-06-18`, which it accepts. It opens a GET on the endpoint for a
 server-initiated stream; the 405 it gets back is the answer, not a fault.
 
-Do not reach for `orbit mcp` here. Its stdio transport is the only shape
+Do not reach for `promptaflow mcp` here. Its stdio transport is the only shape
 WorkBuddy's own documentation describes, but the process it starts wants the
-project database that a running Hub or `orbit serve` already owns, and it
+project database that a running Hub or `promptaflow serve` already owns, and it
 exits with `Runtime database is already owned` rather than sharing. HTTP is
 what leaves the rest of the machine working.
 
@@ -74,9 +74,9 @@ what leaves the rest of the machine working.
 
 `open_orbit_dashboard` always starts or discovers the Runtime and returns the
 current run list. Whether it also *draws* anything is the host's decision, not
-Orbit's, so treat the visible surface as a separate question from the call.
+PromptaFlow's, so treat the visible surface as a separate question from the call.
 
-The card it offers is an MCP App (the MCP Apps extension, SEP-1865). Orbit
+The card it offers is an MCP App (the MCP Apps extension, SEP-1865). PromptaFlow
 serves it as the resource `ui://orbit/current-task-v39.html` with mime type
 `text/html;profile=mcp-app`, and binds it to the tool through
 `_meta.ui.resourceUri` — see `src/orbit/web/mcp_app.py`. There is nothing
@@ -95,7 +95,7 @@ graphs, logs, and workflow management remain in the full UI.
 
 **Claude Code.** Observed not to mount it — the call returns data and the user
 sees nothing. Say that this host does not currently render the MCP App. Send
-the user to the full `/ui` only when they explicitly ask to operate Orbit
+the user to the full `/ui` only when they explicitly ask to operate PromptaFlow
 directly.
 
 **WorkBuddy.** Mounts it. Observed in full: it lists the resources, asks for
@@ -136,15 +136,15 @@ The rule that outlives any of these: if the card did not appear, say so and
 offer the full UI rather than silently opening a second surface.
 
 When the Hub is not running and no MCP tool can reach it, start it with
-`./start-orbit.sh <absolute-project-path>` and open the workspace URL it
+`./start-promptaflow.sh <absolute-project-path>` and open the workspace URL it
 prints. Port 8848 belongs to the Hub; workspace Runtimes use discovered dynamic
 ports and remain isolated from one another.
 
 ## When to hold a listening call
 
-Opening Orbit never registers this App and never starts a listening call.
+Opening PromptaFlow never registers this App and never starts a listening call.
 `wait_authoring_request` parks the task until someone clicks Generate in the
-Orbit UI, so use it only for an explicit request to receive authoring work.
+PromptaFlow UI, so use it only for an explicit request to receive authoring work.
 Under Codex a pending call sits beside a person who can keep working.
 
 Under Claude Code a pending tool call blocks the conversation for its whole
@@ -154,7 +154,7 @@ timeout. Do not open one speculatively. Instead:
   presence with `register_authoring_client`. It marks the same address present
   without claiming work, for ten minutes, and is renewed by calling it again.
 - **Hold `wait_authoring_request`** only when the user has said they are going
-  to the Orbit UI to click Generate. Then the block is the point: the task has
+  to the PromptaFlow UI to click Generate. Then the block is the point: the task has
   nothing else to do until the request arrives.
 
 ## First-turn recovery prompt
@@ -172,7 +172,7 @@ its worker id is derived by the integration rather than supplied by the model.
 
 ## Being listed is not being selected
 
-Registering does not make Orbit write with this App by default. Connected App
+Registering does not make PromptaFlow write with this App by default. Connected App
 names are layered underneath the discovered CLIs on purpose: a forked CLI
 runs, while a parked prompt only waits and may never be answered. So the
 Runtime names no App as its default writer, and the UI's writer menu opens on

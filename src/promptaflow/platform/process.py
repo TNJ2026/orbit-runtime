@@ -50,7 +50,7 @@ def process_identity(pid: int) -> str | None:
     """A stable birth token for ``pid``, or None when it cannot be proved.
 
     A persisted pid is not enough for crash recovery: the operating system may
-    reuse it before Orbit restarts.  Linux exposes the process start tick in
+    reuse it before PromptaFlow restarts.  Linux exposes the process start tick in
     procfs; the portable Unix fallback asks ``ps`` for the absolute start time.
     Callers must refuse to signal a recovered pid when this token changed.
     """

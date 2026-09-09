@@ -1,4 +1,4 @@
-# Orbit 架构
+# PromptaFlow 架构
 
 > 三部曲之一。另两篇:[generating-a-workflow.md](./generating-a-workflow.md)(一句话怎么变成 Workflow)、
 > [executing-a-goal.md](./executing-a-goal.md)(一个 Goal 怎么跑完)。
@@ -10,7 +10,7 @@
 
 ## 1. 一句话
 
-Orbit 是一个**本地**的、单人使用的 Agent 工作流 Runtime:Agent 写出静态的 Workflow DSL,
+PromptaFlow 是一个**本地**的、单人使用的 Agent 工作流 Runtime:Agent 写出静态的 Workflow DSL,
 可信编译器把它编译成 LangGraph 图,每个可执行节点交给**已注册的** Handler 运行,
 全过程持久化、可恢复、可重放。
 
@@ -82,12 +82,12 @@ flowchart TB
 
 ## 4. 进程、端口与状态
 
-`orbit serve` 是统一入口：先复用或启动全机唯一的 Hub，再注册当前项目，并由 Hub
+`promptaflow serve` 是统一入口：先复用或启动全机唯一的 Hub，再注册当前项目，并由 Hub
 启动内部 Runtime 进程。用户不再直接启动单 Workspace Runtime：
 
 ```mermaid
 flowchart LR
-    CLI["orbit serve --project-root PATH"] --> HUB
+    CLI["promptaflow serve --project-root PATH"] --> HUB
     subgraph proc["全机 Hub"]
         HUB["127.0.0.1:8848<br/>稳定路由 + UI + MCP"]
     end
@@ -98,13 +98,13 @@ flowchart LR
         CHILD --> LOOPS
     end
 
-    subgraph hostwide["~/.orbit/ · 全机共享"]
+    subgraph hostwide["~/.promptaflow/ · 全机共享"]
         IDX["projects/index.json<br/>项目登记表"]
         TEMPLATES[("global/workflow-templates.json<br/>可复用 DSL 源码")]
         CACHE[("cache/agents.json<br/>CLI 版本探测缓存")]
     end
 
-    subgraph perproj["~/.orbit/projects/&lt;slug&gt;-&lt;hash&gt;/ · 每项目一份"]
+    subgraph perproj["~/.promptaflow/projects/&lt;slug&gt;-&lt;hash&gt;/ · 每项目一份"]
         RDB[("runtime.db<br/>运行状态 + 已发布 Workflow<br/>+ -wal / -shm")]
         LOCK["runtime.db.owner.lock<br/>runtime.db.owner.json"]
         RUNS[("langgraph-runs.sqlite3")]
@@ -128,8 +128,8 @@ flowchart LR
 
 | 文件 | 内容 | 作用域 |
 |---|---|---|
-| `~/.orbit/global/workflow-templates.json` | 可复用 Workflow DSL 源码，不是可执行版本 | **全机唯一** |
-| `~/.orbit/cache/agents.json` | 受信 CLI 路径/文件身份/版本的短期探测缓存 | **全机唯一** |
+| `~/.promptaflow/global/workflow-templates.json` | 可复用 Workflow DSL 源码，不是可执行版本 | **全机唯一** |
+| `~/.promptaflow/cache/agents.json` | 受信 CLI 路径/文件身份/版本的短期探测缓存 | **全机唯一** |
 | `runtime.db` | 项目运行时状态、草稿、写作任务、已发布 `WorkflowVersion` | 每项目 |
 | `langgraph-runs.sqlite3` | Run 元数据、幂等回执、耐久定时器 | 每项目 |
 | `langgraph-checkpoints.sqlite3` | LangGraph checkpoint | 每项目 |
@@ -140,7 +140,7 @@ Runtime。跨 Workspace 复用的是**源码模板**；Hub 把模板实例化到
 短期缓存，但每个 Runtime 都会重新解析 PATH 和文件身份，并独立注册/授权 Handler。
 Agent 原始执行统计仍属于 Workspace；Hub 的 `/api/v1/global/agent-stats` 只聚合已在线
 Runtime，不会为了查统计而启动离线 Workspace。
-首次启动 Hub 会把旧 `~/.orbit/workflows/library.db` 和
+首次启动 Hub 会把旧 `~/.promptaflow/workflows/library.db` 和
 `single-agent-library.db` 中仍保留作者源码的最新版本幂等导入为全局模板；
 旧库保持只读、不删除，也不会自动发布到任何 Workspace。Workspace 旧 Run
 已引用的精确版本会单独恢复到该 Workspace 并标记归档，因此可继续读取/恢复，
@@ -256,7 +256,7 @@ flowchart LR
 
 ## 6. 执行期:LangGraph 是唯一引擎
 
-`LangGraphWorkflowService`(`langgraph_runtime/service.py`,2414 行)是 Orbit **唯一**的执行引擎。
+`LangGraphWorkflowService`(`langgraph_runtime/service.py`,2414 行)是 PromptaFlow **唯一**的执行引擎。
 不兼容的定义**不可运行,也不回退到其他引擎**。
 
 ```mermaid
@@ -314,7 +314,7 @@ sequenceDiagram
 
 ## 7. 写作回环:谁来写这个 Workflow
 
-这是 Orbit 里最不直观、也最值得单独画的一段。「生成一个 Workflow」有两种写手:
+这是 PromptaFlow 里最不直观、也最值得单独画的一段。「生成一个 Workflow」有两种写手:
 
 ```mermaid
 flowchart TD
@@ -379,7 +379,7 @@ LOCAL_SCOPES  = runtime.read · runtime.write · runtime.read.sensitive
 | `harness` | `loopback_scoped_mcp_authenticator(trusted_prefix="harness:session:")` | **必须**以该前缀开头 | 不匹配 → 认证返回 `None` → 请求被拒(`-32001`) |
 
 这是一个真实的**可移植性边界**:一个不带 `harness:session:` 前缀的宿主(比如 Claude Code)
-在 `harness` 档下会被拒掉每一次工具调用。要给别的宿主一个身份,需要 Orbit 侧新增受信前缀,
+在 `harness` 档下会被拒掉每一次工具调用。要给别的宿主一个身份,需要 PromptaFlow 侧新增受信前缀,
 不是客户端改个字符串就行的。
 
 ## 10. 集成层:一个 Runtime,多个宿主
@@ -393,7 +393,7 @@ flowchart TB
     end
 
     subgraph py["Python 宿主适配"]
-        PROXY["orbit agent-app mcp-proxy<br/>stdio ⇄ HTTP JSON-RPC"]
+        PROXY["promptaflow agent-app mcp-proxy<br/>stdio ⇄ HTTP JSON-RPC"]
         HOSTM["agent_apps/host.py<br/>发现 · 按需拉起 · 就绪等待"]
         EB["agent_apps/event_bridge.py<br/>工作区内的事件收件箱"]
         PROXY -. Hub 离线时回退 .-> HOSTM
@@ -406,7 +406,7 @@ flowchart TB
     PROXY --> REGISTER["Hub /internal/v1/workspaces/register"]
     REGISTER --> HTTP
     PROXY --> HTTP
-    HTTP --> RT["Orbit Runtime"]
+    HTTP --> RT["PromptaFlow Runtime"]
 ```
 
 **`integration-core`** 的归属规则是**机械可判定**的,不靠品味:
@@ -418,14 +418,14 @@ flowchart TB
 `ORBIT_ERROR_KEYS` 是「能出什么错」的集合;而「重新打开面板以启动」这句话
 不是一个后台进程说得出口的,所以措辞留给宿主。
 
-**`orbit agent-app mcp-proxy`** 是 Python 侧的等价物:把 HTTP JSON-RPC 的 MCP 端点
+**`promptaflow agent-app mcp-proxy`** 是 Python 侧的等价物:把 HTTP JSON-RPC 的 MCP 端点
 用换行分隔的 JSON-RPC 抬到 stdio 上,顺带注入三个事件工具
 (`wait_app_event` / `list_app_events` / `ack_app_event`)。
 它由 `agent-app.json` 清单驱动:`service.command` 说怎么起、`ready_url` 说怎么算就绪、
 `discovery: "orbit-runtime"` 说怎么找到已经在跑的那一个。
 
 工作区注册由常驻 Hub 独占写入。代理把绝对路径发给 Hub 的内部环回端点，拿回
-workspace-scoped MCP/UI/events URL；它不直接改 `~/.orbit/hub/workspaces.json`。
+workspace-scoped MCP/UI/events URL；它不直接改 `~/.promptaflow/hub/workspaces.json`。
 Hub 已就绪时代理也不会进入 `AgentAppHost` 的用户级锁目录。事件收件箱默认放在
 工作区 `.orbit/agent-apps/<app-id>/`，因此受限宿主只需对当前工作区有写权限；显式设置
 `AGENT_APP_STATE_DIR` 或 `--state-dir` 时仍尊重调用方指定的位置。只有 Hub 确实离线时，
@@ -484,4 +484,4 @@ Hub 已就绪时代理也不会进入 `AgentAppHost` 的用户级锁目录。事
 - 代码:`src/orbit/{web,workflow,platform,agent_apps}`、`integration-core/src`、`integrations/`
 - 各包自带 README:`workflow/`、`workflow/dsl/`、`workflow/handlers/`、`workflow/persistence/`、`workflow/langgraph_runtime/`、`integration-core/`
 - **运行中的 Runtime**:`GET /api/v1/capabilities`、`GET /health/ready`、MCP `tools/list` 与 `get_capabilities`(工具计数、引擎能力、已发现的 11 个 Agent CLI 均来自实测,非推断)
-- 磁盘:`~/.orbit/projects/<slug>/`、`~/.orbit/workflows/`
+- 磁盘:`~/.promptaflow/projects/<slug>/`、`~/.promptaflow/workflows/`

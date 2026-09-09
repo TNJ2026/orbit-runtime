@@ -1,14 +1,14 @@
-# Orbit
+# PromptaFlow
 
 <p align="center">
-  <img src="./docs/images/orbit-banner.png" alt="Orbit — 本地 Agent 工作流 Runtime" width="100%">
+  <img src="./docs/images/promptaflow-banner.png" alt="PromptaFlow — 本地 Agent 工作流 Runtime" width="100%">
 </p>
 
 **简体中文** | [English](./README.md)
 
-Orbit 是面向 Agent App 的本地持久化 LangGraph 工作流 Runtime。固定地址的 Hub 将 API、
+PromptaFlow 是面向 Agent App 的本地持久化 LangGraph 工作流 Runtime。固定地址的 Hub 将 API、
 Web UI、工作流编写和 MCP 流量路由到每个 Workspace 各自的受管 Runtime 进程。项目数据
-保存在 `~/.orbit/projects/`。
+保存在 `~/.promptaflow/projects/`。
 
 目前可以从 **Codex app**、**WorkBuddy**、**DeepSeek Harness** 面板，以及任何其他
 支持 MCP 的 App 接入——各走各的前门，面对的是同一个 Runtime。Agent 步骤通常 fork
@@ -19,11 +19,11 @@ Web UI、工作流编写和 MCP 流量路由到每个 Workspace 各自的受管 
 需要 Python 3.10 或更高版本，以及 [uv](https://docs.astral.sh/uv/)。
 
 ```bash
-uv tool install orbit-runtime      # 或 pipx install orbit-runtime
+uv tool install promptaflow      # 或 pipx install promptaflow
 uv tool update-shell
 ```
 
-发行包名是 `orbit-runtime`，它安装出来的命令是 `orbit`。两者不同是因为 `orbit` 这个名字
+发行包名是 `orbit-runtime`，它安装出来的命令是 `promptaflow`。两者不同是因为 `promptaflow` 这个名字
 在本项目之前就已经被 PyPI 占用；`orbit-runtime` 也正是各集成在 npm 上使用的名字。
 
 从源码运行：
@@ -32,26 +32,26 @@ uv tool update-shell
 git clone https://github.com/TNJ2026/orbit.git
 cd orbit
 uv sync --extra dev
-uv run orbit serve
+uv run promptaflow serve
 ```
 
 Windows PowerShell 也可以使用原生脚本：启动脚本注册当前工作区，重启和停止脚本会处理
 Hub 及其发现到的全部 Workspace Runtime：
 
 ```bat
-start-orbit.cmd
-restart-orbit.cmd
-stop-orbit.cmd
+start-promptaflow.cmd
+restart-promptaflow.cmd
+stop-promptaflow.cmd
 ```
 
 这些 `.cmd` 入口可从 PowerShell、CMD 或资源管理器直接运行，并且不会修改系统的
-PowerShell 执行策略。可以先用 `restart-orbit.cmd -DryRun` 或
-`stop-orbit.cmd -DryRun` 查看将处理的进程，不执行停止操作。
+PowerShell 执行策略。可以先用 `restart-promptaflow.cmd -DryRun` 或
+`stop-promptaflow.cmd -DryRun` 查看将处理的进程，不执行停止操作。
 
 启动其他工作区时，将其路径传给启动脚本：
 
 ```bat
-start-orbit.cmd "D:\Develop\your-project"
+start-promptaflow.cmd "D:\Develop\your-project"
 ```
 
 UI 地址为 `http://127.0.0.1:8848/ui`。这个页面列出本机正在运行的 Workspace Runtime
@@ -75,20 +75,20 @@ Agent 存在的地方用它们。
 
 ## 宿主
 
-Orbit 是一个 Runtime，但有好几扇前门。每个宿主接入方式不同、注册的客户端名不同，
-是否绘制 Orbit 的卡片也不同。**[每个宿主一页。](./docs/hosts/README.zh-CN.md)**
+PromptaFlow 是一个 Runtime，但有好几扇前门。每个宿主接入方式不同、注册的客户端名不同，
+是否绘制 PromptaFlow 的卡片也不同。**[每个宿主一页。](./docs/hosts/README.zh-CN.md)**
 
-| 宿主 | 怎么接到 Orbit | 注册名 | 是否绘制卡片 |
+| 宿主 | 怎么接到 PromptaFlow | 注册名 | 是否绘制卡片 |
 | --- | --- | --- | --- |
 | [Codex app](./docs/hosts/codex-app.zh-CN.md) | 随插件分发的 stdio Proxy → Hub | `codex-app` | 是 |
-| [WorkBuddy](./docs/hosts/workbuddy.zh-CN.md) | 自定义连接器，HTTP 直连 Hub | `orbit`，以及 `workbuddy-third-party:custom-mcp:orbit` | 是 |
+| [WorkBuddy](./docs/hosts/workbuddy.zh-CN.md) | 自定义连接器，HTTP 直连 Hub | `promptaflow`，以及 `workbuddy-third-party:custom-mcp:orbit` | 是 |
 | [DeepSeek Harness](./docs/hosts/deepseek-harness.zh-CN.md) | 带自有 Gateway 与面板的 Host Profile Bundle | 按 Session 的 `harness:session:*` actor | 自己的面板 |
 | [其他 MCP App](./docs/hosts/other-apps.zh-CN.md) | stdio Proxy | 自己的稳定名称 | 取决于宿主 |
 
 客户端名不得遮蔽已发现的 CLI。Runtime 会把已安装的 CLI 发现为 `codex`、`claude` 等
 Agent，所以 App 若用其中某个名字注册会被**直接拒绝**而不是改名——`-app` 后缀正是为此存在的。
 
-Orbit 还附带五张可以画在对话旁边的小页面 —— **[卡片](./docs/cards.zh-CN.md)** ——
+PromptaFlow 还附带五张可以画在对话旁边的小页面 —— **[卡片](./docs/cards.zh-CN.md)** ——
 那里写了每张卡由哪个工具打开，以及升级之后为什么有时看到的还是旧的。
 
 下面的内容，无论从哪儿接入都一样。
@@ -171,32 +171,32 @@ scope。它是控制台而非日志：按尝试和流分别限量、写在所有
 ## CLI 快速参考
 
 ```bash
-orbit serve
-orbit serve --project-root /absolute/path/to/project
-orbit hub register /absolute/path/to/project --no-agent-project-access
+promptaflow serve
+promptaflow serve --project-root /absolute/path/to/project
+promptaflow hub register /absolute/path/to/project --no-agent-project-access
 orbit --version
-orbit runtimes --json                     # 哪些 Runtime 在跑、在哪
-orbit mcp
-orbit mcp --project-root /absolute/path/to/project
-orbit run list
-orbit run inspect <run_id>
-orbit workflow validate <file> --catalog <catalog.json>
-orbit workflow publish <file> --catalog <catalog.json> --expected-version <n>
+promptaflow runtimes --json                     # 哪些 Runtime 在跑、在哪
+promptaflow mcp
+promptaflow mcp --project-root /absolute/path/to/project
+promptaflow run list
+promptaflow run inspect <run_id>
+promptaflow workflow validate <file> --catalog <catalog.json>
+promptaflow workflow publish <file> --catalog <catalog.json> --expected-version <n>
 ```
 
-`orbit serve` 是统一入口：它会复用或启动绑定在 `127.0.0.1:8848` 的 Hub、注册当前
+`promptaflow serve` 是统一入口：它会复用或启动绑定在 `127.0.0.1:8848` 的 Hub、注册当前
 Workspace，并等待 Hub 管理的 Runtime 就绪。它不再提供独立 Runtime 模式。多 Workspace 时，Agent CLI、Workflow 源码模板
 和已发布 Workflow 全局共享；运行历史、人工任务、Artifact 及其他执行状态仍按 Workspace
 隔离。Hub 还持有可复用的 Workflow 源码模板，并聚合在线 Workspace Runtime 的 Agent 统计。
 
 ## Codex 插件分发
 
-Orbit 仅通过仓库/个人 Marketplace 分发，不提交到通用公共 Plugins Directory。
+PromptaFlow 仅通过仓库/个人 Marketplace 分发，不提交到通用公共 Plugins Directory。
 完整步骤见 [Codex App 安装指南](./docs/hosts/codex-app.zh-CN.md)，其中也提供了让 Codex
 直接从本仓库安装的一行提示词。
 
 每个 GitHub Release 都包含 `orbit-marketplace-<version>.zip`。下载并解压后，注册解压目录并
-安装 Orbit：
+安装 PromptaFlow：
 
 ```bash
 unzip orbit-marketplace-<version>.zip

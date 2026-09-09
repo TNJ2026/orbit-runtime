@@ -65,7 +65,7 @@ HARNESS_TOOL_NAMES = frozenset({
     "generate_workflow", "modify_workflow", "get_authoring_job",
     "list_authoring_jobs", "read_authoring_output",
     # The Host stands on the authoring queue with these, which is what makes it
-    # a writer Orbit will pick over forking an Agent CLI. Without them the
+    # a writer PromptaFlow will pick over forking an Agent CLI. Without them the
     # preference has nothing to prefer: being connected does not put a client
     # on the queue, waiting does, and a profile that hides the wait leaves the
     # Host permanently absent from it.
@@ -102,7 +102,7 @@ def _ui_tool_meta(resource_uri: str) -> dict[str, Any]:
 SESSION_RECOVERY_INSTRUCTIONS = (
     "On the first user turn of each conversation, call list_delegations once "
     "with its default arguments. If it returns no delegations, stay silent "
-    "about recovery. If it returns any, tell the user that Orbit has resumable "
+    "about recovery. If it returns any, tell the user that PromptaFlow has resumable "
     "work and ask whether to continue or reconcile it. Never execute an unknown "
     "delegation again. A still-leased delegation owned by this task's stable "
     "worker may continue from its checkpoint after renewing the lease."
@@ -248,7 +248,7 @@ def _content(payload: Any, *, is_error: bool = False) -> dict[str, Any]:
 
 
 def workflow_id_argument(arguments: Mapping[str, Any]) -> str:
-    """The workflow id as Orbit stores it, however the caller wrote it.
+    """The workflow id as PromptaFlow stores it, however the caller wrote it.
 
     Every published id is namespaced — `workflow:wf_…` — and every surface
     that hands one back says so. An Agent given one reliably drops the
@@ -325,14 +325,14 @@ def build_mcp_dispatcher(
     tools = (
         {
             "name": "get_capabilities",
-            "description": "Report Orbit and integration protocol capabilities.",
+            "description": "Report PromptaFlow and integration protocol capabilities.",
             "scope": READ_SCOPE,
             "inputSchema": {"type": "object", "properties": {}},
         },
         {
             "name": "open_orbit_dashboard",
             "description": (
-                "Open Orbit's workspace card beside the conversation. It provides "
+                "Open PromptaFlow's workspace card beside the conversation. It provides "
                 "goals, workflows, history, agents, live progress, and attention state."
             ),
             "scope": READ_SCOPE,
@@ -342,7 +342,7 @@ def build_mcp_dispatcher(
         {
             "name": "open_orbit_goals",
             "description": (
-                "Open Orbit's recent goals card beside the conversation. "
+                "Open PromptaFlow's recent goals card beside the conversation. "
                 "It shows goal runs and their current status without opening the full UI."
             ),
             "scope": READ_SCOPE,
@@ -596,8 +596,8 @@ def build_mcp_dispatcher(
             "name": "wait_authoring_request",
             "description": (
                 "Wait for a workflow generation prompt addressed to this App. "
-                "While waiting, the App is offered in Orbit under this name. "
-                "Use this when a person will click Generate in the Orbit UI."
+                "While waiting, the App is offered in PromptaFlow under this name. "
+                "Use this when a person will click Generate in the PromptaFlow UI."
             ),
             "scope": WRITE_SCOPE,
             "inputSchema": {
@@ -606,7 +606,7 @@ def build_mcp_dispatcher(
                     "client": {
                         "type": "string",
                         "description": (
-                            "The name this App is offered under in Orbit. Choose a "
+                            "The name this App is offered under in PromptaFlow. Choose a "
                             "stable, readable one; a name another Agent already "
                             "answers to is refused rather than renamed."
                         ),
@@ -1608,7 +1608,7 @@ def build_mcp_dispatcher(
                 for resource in ORBIT_MCP_APP_RESOURCES
             ]})
         # Declared `resources`, so a client is entitled to ask how they are
-        # addressed. Orbit's are five fixed `ui://` documents with nothing
+        # addressed. PromptaFlow's are five fixed `ui://` documents with nothing
         # templated about them, and the answer to that is an empty list —
         # not METHOD_NOT_FOUND, which reads to a host as a resource surface
         # that does not work and takes the panels down with it. Observed:

@@ -1,4 +1,4 @@
-/* Orbit Runtime UI.
+/* PromptaFlow Runtime UI.
  *
  * Two rules shape everything below:
  *

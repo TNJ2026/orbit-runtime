@@ -8,7 +8,7 @@ is a place a correct answer can still be lost.
 
 This generator asks a model that supports structured output to fill
 `AuthoredWorkflow` directly. A reply that does not fit the type is a validation
-error the client retries against the model, before Orbit sees it at all; a
+error the client retries against the model, before PromptaFlow sees it at all; a
 reply that does fit needs no salvaging, because it was never text.
 
 It satisfies the same `(prompt: str) -> str` contract as the CLI generator and
@@ -18,7 +18,7 @@ replaces is the extraction step, not the pipeline.
 
 pydantic-ai is an optional dependency. It is imported when a generator is
 constructed, never at module import, so a Runtime that never asks for one keeps
-Orbit's install as shallow as it was. Absent, construction fails with
+PromptaFlow's install as shallow as it was. Absent, construction fails with
 `AuthoringUnavailableError` — the same answer the service already gives for a
 CLI that will not run.
 

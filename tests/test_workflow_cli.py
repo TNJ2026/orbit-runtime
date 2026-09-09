@@ -61,7 +61,7 @@ class WorkflowCliTests(unittest.TestCase):
 
     def run_cli(self, *arguments: str) -> str:
         output = StringIO()
-        with patch("sys.argv", ["orbit", *arguments]), redirect_stdout(output):
+        with patch("sys.argv", ["promptaflow", *arguments]), redirect_stdout(output):
             main()
         return output.getvalue()
 
@@ -99,7 +99,7 @@ class WorkflowCliTests(unittest.TestCase):
         with patch(
             "sys.argv",
             [
-                "orbit", "workflow", "validate", str(self.workflow),
+                "promptaflow", "workflow", "validate", str(self.workflow),
                 "--catalog", str(self.catalog), "--json",
             ],
         ), redirect_stdout(output), self.assertRaises(SystemExit) as raised:
@@ -136,7 +136,7 @@ class WorkflowCliTests(unittest.TestCase):
     def test_an_old_hub_child_launch_is_translated_to_the_internal_runtime(self) -> None:
         with (
             patch.dict("os.environ", {"ORBIT_HUB_CHILD": "1"}),
-            patch("sys.argv", ["orbit", "serve", "--port", "0"]),
+            patch("sys.argv", ["promptaflow", "serve", "--port", "0"]),
             patch("promptaflow.__main__._serve_runtime") as serve_runtime,
         ):
             main()
@@ -394,7 +394,7 @@ class WorkflowInventoryCliTests(unittest.TestCase):
 
     def run_cli(self, *arguments: str) -> str:
         output = StringIO()
-        with patch("sys.argv", ["orbit", *arguments]), redirect_stdout(output):
+        with patch("sys.argv", ["promptaflow", *arguments]), redirect_stdout(output):
             main()
         return output.getvalue()
 
@@ -475,7 +475,7 @@ class WorkflowInventoryCliTests(unittest.TestCase):
 
         self.assertIn("goal readiness:", output)
         self.assertIn("workflow:legacy", output)
-        self.assertIn("orbit workflow inventory", output)
+        self.assertIn("promptaflow workflow inventory", output)
 
     def test_a_readiness_survey_that_fails_does_not_stop_the_server(self) -> None:
         """A report is information; refusing to boot over it would be worse."""

@@ -26,10 +26,10 @@ class WorkspaceRegistryTests(unittest.TestCase):
 
         self.assertEqual("global", manifest["scope"])
         self.assertEqual(
-            ["{manifest_dir}/start-orbit.sh", "--hub-service"],
+            ["{manifest_dir}/start-promptaflow.sh", "--hub-service"],
             manifest["service"]["command"],
         )
-        self.assertIn("ORBIT_CLI", manifest["service"]["environment"])
+        self.assertIn("PROMPTAFLOW_CLI", manifest["service"]["environment"])
         self.assertEqual("http://127.0.0.1:8848/health/ready", manifest["service"]["ready_url"])
         self.assertEqual("http://127.0.0.1:8848/mcp", manifest["mcp"]["url"])
 
@@ -247,7 +247,7 @@ class ProjectAccessGrantTests(unittest.TestCase):
     def test_the_grant_survives_a_re_registration(self) -> None:
         """Registering happens on every start; permission must not ride on it.
 
-        `start-orbit.sh` runs `hub register` each time, and the Workspace
+        `start-promptaflow.sh` runs `hub register` each time, and the Workspace
         registry is rewritten by it. A grant kept in that file would be
         revoked by the next ordinary start, silently.
         """
@@ -293,7 +293,7 @@ class ProjectAccessGrantTests(unittest.TestCase):
         """Through the entry point an operator actually types.
 
         Reported on every registration rather than only when it changes:
-        `hub register` is what `start-orbit.sh` runs, so it is the one moment
+        `hub register` is what `start-promptaflow.sh` runs, so it is the one moment
         the person opening a Workspace is told whether a workflow in it can
         read the project.
         """

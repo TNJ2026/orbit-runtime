@@ -16,21 +16,21 @@ param(
 Set-StrictMode -Version 3.0
 $ErrorActionPreference = "Stop"
 
-$orbitSourceRoot = [System.IO.Path]::GetFullPath($PSScriptRoot)
-$env:ORBIT_SOURCE_ROOT = $orbitSourceRoot
+$promptaflowSourceRoot = [System.IO.Path]::GetFullPath($PSScriptRoot)
+$env:PROMPTAFLOW_SOURCE_ROOT = $promptaflowSourceRoot
 
-function Resolve-OrbitCommand {
-    if ($env:ORBIT_CLI) {
-        $explicit = Get-Command -Name $env:ORBIT_CLI -ErrorAction SilentlyContinue
+function Resolve-PromptaflowCommand {
+    if ($env:PROMPTAFLOW_CLI) {
+        $explicit = Get-Command -Name $env:PROMPTAFLOW_CLI -ErrorAction SilentlyContinue
         if ($null -eq $explicit) {
-            throw "ORBIT_CLI is not executable: $($env:ORBIT_CLI)"
+            throw "PROMPTAFLOW_CLI is not executable: $($env:PROMPTAFLOW_CLI)"
         }
         return [pscustomobject]@{ Executable = $explicit.Source; Prefix = @() }
     }
 
     foreach ($candidate in @(
-        (Join-Path $orbitSourceRoot ".venv\Scripts\orbit.exe"),
-        (Join-Path $orbitSourceRoot ".venv\bin\orbit")
+        (Join-Path $promptaflowSourceRoot ".venv\Scripts\promptaflow.exe"),
+        (Join-Path $promptaflowSourceRoot ".venv\bin\promptaflow")
     )) {
         if (Test-Path -LiteralPath $candidate -PathType Leaf) {
             return [pscustomobject]@{ Executable = $candidate; Prefix = @() }
@@ -41,26 +41,26 @@ function Resolve-OrbitCommand {
     if ($null -ne $uv) {
         return [pscustomobject]@{
             Executable = $uv.Source
-            Prefix = @("run", "--project", $orbitSourceRoot, "orbit")
+            Prefix = @("run", "--project", $promptaflowSourceRoot, "promptaflow")
         }
     }
-    throw "Orbit cannot start: no project virtualenv or uv executable was found."
+    throw "PromptaFlow cannot start: no project virtualenv or uv executable was found."
 }
 
-function Invoke-Orbit {
+function Invoke-Promptaflow {
     param(
         [Parameter(Mandatory = $true)]
         [string[]] $Arguments,
         [switch] $DiscardOutput
     )
 
-    $prefix = $script:orbitCommand.Prefix
+    $prefix = $script:promptaflowCommand.Prefix
     $global:LASTEXITCODE = 0
     if ($DiscardOutput) {
-        & $script:orbitCommand.Executable @prefix @Arguments | Out-Null
+        & $script:promptaflowCommand.Executable @prefix @Arguments | Out-Null
     }
     else {
-        & $script:orbitCommand.Executable @prefix @Arguments
+        & $script:promptaflowCommand.Executable @prefix @Arguments
     }
     $result = $global:LASTEXITCODE
     if ($null -ne $result -and $result -ne 0) {
@@ -71,9 +71,9 @@ function Invoke-Orbit {
 function Find-WorkspaceRuntimeUrl {
     param([Parameter(Mandatory = $true)][string] $Workspace)
 
-    $prefix = $script:orbitCommand.Prefix
+    $prefix = $script:promptaflowCommand.Prefix
     $global:LASTEXITCODE = 0
-    $output = & $script:orbitCommand.Executable @prefix "runtimes" "--json" 2>$null
+    $output = & $script:promptaflowCommand.Executable @prefix "runtimes" "--json" 2>$null
     if ($global:LASTEXITCODE -ne 0) { return $null }
     $text = ($output | Out-String).Trim()
     if (-not $text) { return $null }
@@ -103,10 +103,10 @@ function Find-WorkspaceRuntimeUrl {
 }
 
 try {
-    $script:orbitCommand = Resolve-OrbitCommand
+    $script:promptaflowCommand = Resolve-PromptaflowCommand
 
     if ($HubService) {
-        Invoke-Orbit -Arguments (@("hub", "serve") + $ForwardArguments)
+        Invoke-Promptaflow -Arguments (@("hub", "serve") + $ForwardArguments)
         exit 0
     }
 
@@ -117,18 +117,22 @@ try {
         $env:PYTHONUTF8 = "1"
         $env:PYTHONIOENCODING = "utf-8"
         $arguments = @(
-            "agent-app", "mcp-proxy", (Join-Path $orbitSourceRoot "agent-app.windows.json")
+            "agent-app", "mcp-proxy", (Join-Path $promptaflowSourceRoot "agent-app.windows.json")
         )
-        if ($env:ORBIT_AGENT_APP_WORKSPACE) {
-            $workspace = (Resolve-Path -LiteralPath $env:ORBIT_AGENT_APP_WORKSPACE).Path
+        # Explicit rather than `??`: the .cmd wrapper launches Windows
+        # PowerShell 5.1, which fails to parse that operator at all.
+        $workspaceInput = $env:PROMPTAFLOW_AGENT_APP_WORKSPACE
+        if (-not $workspaceInput) { $workspaceInput = $env:ORBIT_AGENT_APP_WORKSPACE }
+        if ($workspaceInput) {
+            $workspace = (Resolve-Path -LiteralPath $workspaceInput).Path
             $arguments += @("--workspace", $workspace)
         }
-        Invoke-Orbit -Arguments ($arguments + $ForwardArguments)
+        Invoke-Promptaflow -Arguments ($arguments + $ForwardArguments)
         exit 0
     }
 
     if ($ForwardArguments.Count -gt 0) {
-        throw "usage: .\start-orbit.ps1 [PROJECT_PATH]"
+        throw "usage: .\start-promptaflow.ps1 [PROJECT_PATH]"
     }
 
     $workspaceInput = $ProjectPath
@@ -136,20 +140,20 @@ try {
         $workspaceInput = (Get-Location).Path
     }
     if (-not (Test-Path -LiteralPath $workspaceInput -PathType Container)) {
-        [Console]::Error.WriteLine("Orbit project path is not a directory: $workspaceInput")
+        [Console]::Error.WriteLine("PromptaFlow project path is not a directory: $workspaceInput")
         exit 2
     }
     $workspace = (Resolve-Path -LiteralPath $workspaceInput).Path
 
     # The Windows manifest launches this script's HubService mode, so AgentAppHost
     # retains ownership of the background process and its PID record.
-    Invoke-Orbit -Arguments @(
-        "agent-app", "ensure", (Join-Path $orbitSourceRoot "agent-app.windows.json")
+    Invoke-Promptaflow -Arguments @(
+        "agent-app", "ensure", (Join-Path $promptaflowSourceRoot "agent-app.windows.json")
     ) -DiscardOutput
 
-    $prefix = $script:orbitCommand.Prefix
+    $prefix = $script:promptaflowCommand.Prefix
     $global:LASTEXITCODE = 0
-    $registrationOutput = & $script:orbitCommand.Executable @prefix `
+    $registrationOutput = & $script:promptaflowCommand.Executable @prefix `
         "hub" "register" $workspace
     if ($global:LASTEXITCODE -ne 0) {
         exit $global:LASTEXITCODE
@@ -162,11 +166,11 @@ try {
         }
     }
     catch {
-        throw "Orbit Hub returned an invalid workspace registration: $registrationText"
+        throw "PromptaFlow Hub returned an invalid workspace registration: $registrationText"
     }
 
     $windowsManifest = Get-Content `
-        -LiteralPath (Join-Path $orbitSourceRoot "agent-app.windows.json") `
+        -LiteralPath (Join-Path $promptaflowSourceRoot "agent-app.windows.json") `
         -Raw | ConvertFrom-Json
     $hubReadyUri = [Uri] $windowsManifest.service.ready_url
     $hubUrl = $hubReadyUri.GetLeftPart([UriPartial]::Authority)
@@ -184,7 +188,7 @@ try {
     if (-not $runtimeUrl) {
         throw "Workspace Runtime started but did not publish its URL."
     }
-    Write-Output "Orbit Hub: $hubUrl"
+    Write-Output "PromptaFlow Hub: $hubUrl"
     Write-Output "Workspace Runtime: $runtimeUrl"
     Write-Output "Workspace UI: $($registration.ui_url)"
 }

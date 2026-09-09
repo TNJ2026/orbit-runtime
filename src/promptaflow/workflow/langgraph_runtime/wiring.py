@@ -1,4 +1,4 @@
-"""Safe production wiring for Orbit's LangGraph execution runtime."""
+"""Safe production wiring for PromptaFlow's LangGraph execution runtime."""
 
 from __future__ import annotations
 
@@ -869,7 +869,7 @@ def trusted_handlers(
     artifact_store: LangGraphArtifactStore | None = None,
     secret_values: Mapping[str, str] | None = None,
 ) -> LangGraphHandlerRegistry:
-    """Expose only reviewed adapters, never arbitrary Orbit NodeHandlers."""
+    """Expose only reviewed adapters, never arbitrary PromptaFlow NodeHandlers."""
 
     if artifact_store is None and attempt_db_path is not None:
         attempt_path = Path(attempt_db_path)

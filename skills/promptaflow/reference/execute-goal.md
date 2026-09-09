@@ -1,6 +1,6 @@
 # Execute A Goal
 
-Use this procedure when the user asks Orbit to carry out a goal, including when
+Use this procedure when the user asks PromptaFlow to carry out a goal, including when
 the workflow was generated earlier in the same task.
 
 First normalize and validate the user's request by following
@@ -71,7 +71,7 @@ adapts only this Run, including every parallel Agent branch.
    binding.
    This call opens the dedicated goal-execution MCP App, which shows only this
    run's progress and result. Do not call `open_orbit_dashboard` first unless
-   the user separately asked to open Orbit.
+   the user separately asked to open PromptaFlow.
 4. Report the run identifier, then call `inspect_run`. Treat its status,
    revision, interrupts, and `allowed_commands[]` as authoritative.
 5. Apply `options.follow`: `none` returns after inspection; `interrupt` follows
@@ -82,7 +82,7 @@ adapts only this Run, including every parallel Agent branch.
    default open statuses. Surface any `unknown` item for reconciliation; do
    not execute it again. When the user verifies it succeeded, call
    `reconcile_delegation` with `outcome: "confirmed_succeeded"` and the exact
-   object result; Orbit restores that node from the recorded result and
+   object result; PromptaFlow restores that node from the recorded result and
    continues the existing Run without invoking the Agent again. For a verified
    failure, submit `outcome: "confirmed_failed"` and `error`. Continue or
    observe a still-leased item only when its

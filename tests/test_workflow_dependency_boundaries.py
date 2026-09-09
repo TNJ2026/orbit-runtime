@@ -7,7 +7,7 @@ import unittest
 
 class WorkflowDependencyBoundaryTests(unittest.TestCase):
     def test_domain_and_dsl_do_not_import_runtime_or_infrastructure(self) -> None:
-        root = Path(__file__).parents[1] / "src" / "orbit" / "workflow"
+        root = Path(__file__).parents[1] / "src" / "promptaflow" / "workflow"
         forbidden = {"sqlite3", "starlette", "uvicorn", "orbit.server", "orbit.store"}
         violations = []
         for directory in (root / "domain", root / "dsl"):
@@ -33,7 +33,7 @@ class WorkflowDependencyBoundaryTests(unittest.TestCase):
         engine's removal was able to be clean because it never had.
         """
 
-        root = Path(__file__).parents[1] / "src" / "orbit" / "workflow"
+        root = Path(__file__).parents[1] / "src" / "promptaflow" / "workflow"
         allowed = {"promptaflow.workflow.persistence.workflow_versions"}
         violations = []
         for path in (root / "langgraph_runtime").glob("*.py"):
@@ -56,7 +56,7 @@ class WorkflowDependencyBoundaryTests(unittest.TestCase):
         self.assertEqual([], violations)
 
     def test_handlers_do_not_import_runtime_repositories(self) -> None:
-        root = Path(__file__).parents[1] / "src" / "orbit" / "workflow"
+        root = Path(__file__).parents[1] / "src" / "promptaflow" / "workflow"
         forbidden = {
             "sqlite3", "orbit.server", "orbit.store",
             "promptaflow.workflow.persistence", "promptaflow.workflow.application",

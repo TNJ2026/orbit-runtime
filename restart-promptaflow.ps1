@@ -10,7 +10,7 @@ param(
 Set-StrictMode -Version 3.0
 $ErrorActionPreference = "Stop"
 
-$orbitSourceRoot = [System.IO.Path]::GetFullPath($PSScriptRoot)
+$promptaflowSourceRoot = [System.IO.Path]::GetFullPath($PSScriptRoot)
 $userProfilePath = [Environment]::GetFolderPath("UserProfile")
 $agentAppStateRoot = if ($env:AGENT_APP_STATE_DIR) {
     $env:AGENT_APP_STATE_DIR
@@ -25,17 +25,17 @@ else {
     Join-Path $userProfilePath ".orbit"
 }
 
-function Resolve-OrbitCommand {
-    if ($env:ORBIT_CLI) {
-        $explicit = Get-Command -Name $env:ORBIT_CLI -ErrorAction SilentlyContinue
+function Resolve-PromptaflowCommand {
+    if ($env:PROMPTAFLOW_CLI) {
+        $explicit = Get-Command -Name $env:PROMPTAFLOW_CLI -ErrorAction SilentlyContinue
         if ($null -eq $explicit) {
-            throw "ORBIT_CLI is not executable: $($env:ORBIT_CLI)"
+            throw "PROMPTAFLOW_CLI is not executable: $($env:PROMPTAFLOW_CLI)"
         }
         return [pscustomobject]@{ Executable = $explicit.Source; Prefix = @() }
     }
     foreach ($candidate in @(
-        (Join-Path $orbitSourceRoot ".venv\Scripts\orbit.exe"),
-        (Join-Path $orbitSourceRoot ".venv\bin\orbit")
+        (Join-Path $promptaflowSourceRoot ".venv\Scripts\promptaflow.exe"),
+        (Join-Path $promptaflowSourceRoot ".venv\bin\promptaflow")
     )) {
         if (Test-Path -LiteralPath $candidate -PathType Leaf) {
             return [pscustomobject]@{ Executable = $candidate; Prefix = @() }
@@ -45,16 +45,16 @@ function Resolve-OrbitCommand {
     if ($null -ne $uv) {
         return [pscustomobject]@{
             Executable = $uv.Source
-            Prefix = @("run", "--project", $orbitSourceRoot, "orbit")
+            Prefix = @("run", "--project", $promptaflowSourceRoot, "promptaflow")
         }
     }
-    throw "Orbit CLI not found; create .venv or install uv first."
+    throw "PromptaFlow CLI not found; create .venv or install uv first."
 }
 
-function Invoke-OrbitJson {
-    $prefix = $script:orbitCommand.Prefix
+function Invoke-PromptaflowJson {
+    $prefix = $script:promptaflowCommand.Prefix
     $global:LASTEXITCODE = 0
-    $output = & $script:orbitCommand.Executable @prefix "runtimes" "--json" 2>$null
+    $output = & $script:promptaflowCommand.Executable @prefix "runtimes" "--json" 2>$null
     $result = $global:LASTEXITCODE
     if ($null -ne $result -and $result -ne 0) {
         throw "orbit runtimes --json failed with exit code $result"
@@ -99,11 +99,11 @@ function Test-OrbitCommand {
         if ($CommandLine -match ($orbitPrefix + '(?:hub\s+serve|serve)(?:\s|$)')) {
             return $true
         }
-        $escapedLauncher = [regex]::Escape((Join-Path $orbitSourceRoot "start-orbit.ps1"))
+        $escapedLauncher = [regex]::Escape((Join-Path $promptaflowSourceRoot "start-promptaflow.ps1"))
         if ($CommandLine -match ("(?i)" + $escapedLauncher + '.*-HubService(?:\s|$)')) {
             return $true
         }
-        $escapedBashLauncher = [regex]::Escape((Join-Path $orbitSourceRoot "start-orbit.sh"))
+        $escapedBashLauncher = [regex]::Escape((Join-Path $promptaflowSourceRoot "start-promptaflow.sh"))
         return $CommandLine -match (
             "(?i)" + $escapedBashLauncher + '.*--hub-service(?:\s|$)'
         )
@@ -159,7 +159,7 @@ function Read-RecordedPid {
 function Add-HubDescendants {
     # The Agent App PID belongs to its PowerShell launcher. Windows does not
     # automatically terminate a child when that launcher exits, so retain the
-    # identity of every Orbit Hub descendant while the tree is still intact.
+    # identity of every PromptaFlow Hub descendant while the tree is still intact.
     $allProcesses = @(Get-CimInstance -ClassName Win32_Process -ErrorAction SilentlyContinue)
     $frontier = @(
         $candidates.Values |
@@ -251,7 +251,7 @@ function Force-StopCandidateTree {
 }
 
 try {
-    $script:orbitCommand = Resolve-OrbitCommand
+    $script:promptaflowCommand = Resolve-PromptaflowCommand
 
     $pidRoot = Join-Path $agentAppStateRoot "orbit"
     if (Test-Path -LiteralPath $pidRoot -PathType Container) {
@@ -265,7 +265,7 @@ try {
     }
     Add-HubDescendants
 
-    $manifest = Get-Content -LiteralPath (Join-Path $orbitSourceRoot "agent-app.windows.json") `
+    $manifest = Get-Content -LiteralPath (Join-Path $promptaflowSourceRoot "agent-app.windows.json") `
         -Raw | ConvertFrom-Json
     $readyUri = [Uri] $manifest.service.ready_url
     $listenerCommand = Get-Command -Name "Get-NetTCPConnection" -ErrorAction SilentlyContinue
@@ -274,7 +274,7 @@ try {
             ForEach-Object { Add-Candidate -ProcessId $_.OwningProcess -Kind Hub }
     }
 
-    $listed = Invoke-OrbitJson
+    $listed = Invoke-PromptaflowJson
     $runtimesProperty = if ($null -ne $listed) {
         $listed.PSObject.Properties["runtimes"]
     }
@@ -311,7 +311,7 @@ try {
 
     $ordered = @($candidates.Values | Sort-Object Label, ProcessId)
     if ($ordered.Count -eq 0) {
-        Write-Output "Nothing of Orbit's is running."
+        Write-Output "Nothing of PromptaFlow's is running."
     }
     else {
         foreach ($candidate in $ordered) {
@@ -348,13 +348,13 @@ try {
     }
 
     if ($StopOnly) {
-        Write-Output "Orbit Hub and all discovered Runtimes are stopped."
+        Write-Output "PromptaFlow Hub and all discovered Runtimes are stopped."
         exit 0
     }
 
-    Write-Output "Starting Orbit through the Agent App host..."
+    Write-Output "Starting PromptaFlow through the Agent App host..."
     $global:LASTEXITCODE = 0
-    & (Join-Path $orbitSourceRoot "start-orbit.ps1")
+    & (Join-Path $promptaflowSourceRoot "start-promptaflow.ps1")
     exit $global:LASTEXITCODE
 }
 catch {

@@ -1,4 +1,4 @@
-"""CLI entry point: orbit serve | run | workflow | db."""
+"""CLI entry point: promptaflow serve | run | workflow | db."""
 
 from __future__ import annotations
 
@@ -61,7 +61,7 @@ def _runtime_db_path(
     Every command that touches the default database goes through here, so
     neither the path rule nor the gate can drift between `serve`, `workflow
     publish`, `run start` and `db check`. Putting the gate anywhere else is how
-    `orbit workflow publish` came to write a fresh `runtime.db` for a project
+    `promptaflow workflow publish` came to write a fresh `runtime.db` for a project
     whose legacy data had never been acknowledged.
 
     An explicit `--db` is not gated: the gate protects the *default* path,
@@ -141,7 +141,7 @@ def _report_goal_readiness(db_path) -> None:
             print(f"  {label}: {item['workflow_id']}  {item['name']}", flush=True)
     if upgrade or migrate:
         print(
-            "  run `orbit workflow inventory --json` for the full report",
+            "  run `promptaflow workflow inventory --json` for the full report",
             flush=True,
         )
 
@@ -160,7 +160,7 @@ def _workflow_inventory(args, machine_output: bool) -> None:
     ))
     if not path.exists():
         raise SystemExit(
-            f"no runtime database at {path}; run `orbit serve` once, or name the "
+            f"no runtime database at {path}; run `promptaflow serve` once, or name the "
             "Workspace with --project-root (or the file with --db)"
         )
     buckets = _goal_readiness_buckets(path)
@@ -288,13 +288,13 @@ def _run_engine(args):
 
 
 def _run_command(args) -> None:
-    """`orbit run list|inspect` — read-only.
+    """`promptaflow run list|inspect` — read-only.
 
     There is no `start` here. A run executes inside the process that starts
     it, so a CLI that started one would have to rebuild the whole Handler
     wiring a server has — discovery, workspaces, secrets — and would still
     behave differently from the server that normally runs them. Starting
-    belongs to the UI, or to `start_run` over `orbit mcp`.
+    belongs to the UI, or to `start_run` over `promptaflow mcp`.
     """
 
     engine = _run_engine(args)
@@ -325,7 +325,7 @@ def _run_command(args) -> None:
         run = engine.get(args.run_id)
         steps = engine.steps(args.run_id)
     except LookupError as exc:
-        raise SystemExit(f"orbit run: {exc}") from None
+        raise SystemExit(f"promptaflow run: {exc}") from None
     if args.json:
         print(json.dumps({
             "run_id": run.run_id, "workflow_id": run.workflow_id,
@@ -379,7 +379,7 @@ def _hub_health_url(host: str, port: int) -> str:
 
 
 def _running_hub(base_url: str) -> bool:
-    """Return whether ``base_url`` is an Orbit Hub, not merely an open port."""
+    """Return whether ``base_url`` is an PromptaFlow Hub, not merely an open port."""
 
     try:
         with urlopen(f"{base_url}/health/ready", timeout=0.5) as response:
@@ -389,7 +389,8 @@ def _running_hub(base_url: str) -> bool:
     return (
         response.status == 200
         and isinstance(payload, dict)
-        and payload.get("service") == "orbit-hub"
+        # A Hub started by a build from before the rename still says so.
+        and payload.get("service") in {"promptaflow-hub", "orbit-hub"}
     )
 
 
@@ -406,16 +407,16 @@ def _register_running_hub(base_url: str, project_root: Path) -> dict:
         with urlopen(request, timeout=5) as response:
             registration = json.loads(response.read())
     except (HTTPError, URLError, OSError, ValueError, json.JSONDecodeError) as exc:
-        raise SystemExit(f"orbit serve: cannot register workspace with Hub: {exc}") from None
+        raise SystemExit(f"promptaflow serve: cannot register workspace with Hub: {exc}") from None
     if not isinstance(registration, dict) or not registration.get("ui_url"):
-        raise SystemExit("orbit serve: Hub returned an invalid workspace registration")
+        raise SystemExit("promptaflow serve: Hub returned an invalid workspace registration")
 
     # A routed request is the Hub's public start signal for a Workspace Runtime.
     try:
         with urlopen(str(registration["ui_url"]), timeout=65) as response:
             response.read(1)
     except (HTTPError, URLError, OSError, ValueError) as exc:
-        raise SystemExit(f"orbit serve: workspace Runtime did not become ready: {exc}") from None
+        raise SystemExit(f"promptaflow serve: workspace Runtime did not become ready: {exc}") from None
     return registration
 
 
@@ -441,7 +442,7 @@ def _serve(args) -> None:
     if _running_hub(base_url):
         registration = _register_running_hub(base_url, project_root)
         print(
-            f"orbit Hub already running at {base_url}; "
+            f"promptaflow Hub already running at {base_url}; "
             f"workspace ready at {registration['ui_url']}",
             flush=True,
         )
@@ -464,10 +465,10 @@ def _serve(args) -> None:
     listener.listen()
     base_url = _hub_health_url(args.host, listener.getsockname()[1])
     urls = workspace_urls(identifier, base_url)
-    print(f"orbit Hub listening on {base_url}", flush=True)
+    print(f"promptaflow Hub listening on {base_url}", flush=True)
     try:
         manager.ensure(identifier)
-        print(f"orbit workspace ready at {urls['ui_url']}", flush=True)
+        print(f"promptaflow workspace ready at {urls['ui_url']}", flush=True)
         uvicorn.Server(config).run(sockets=[listener])
     finally:
         listener.close()
@@ -514,7 +515,7 @@ def _serve_runtime(args) -> None:
     try:
         ownership.acquire()
     except RuntimeOwnershipError as exc:
-        raise SystemExit(f"orbit serve: {exc}") from None
+        raise SystemExit(f"promptaflow serve: {exc}") from None
 
     artifact_root = _artifact_root_path(args.artifact_root, db_path)
     try:
@@ -522,7 +523,7 @@ def _serve_runtime(args) -> None:
     except (OSError, ValueError) as exc:
         ownership.release()
         raise SystemExit(
-            f"orbit serve: cannot initialize Artifact store at "
+            f"promptaflow serve: cannot initialize Artifact store at "
             f"{artifact_root}: {exc}"
         ) from None
 
@@ -662,7 +663,7 @@ def _serve_runtime(args) -> None:
         host=args.host, port=port,
     )
     print(
-        f"orbit Runtime listening on http://{args.host}:{port}/ui/ "
+        f"promptaflow Runtime listening on http://{args.host}:{port}/ui/ "
         f"(health: /health/ready, engine: langgraph) "
         f"(db: {db_path}, artifacts: {artifact_backend.root})",
         flush=True,
@@ -709,7 +710,7 @@ def _mcp(args) -> None:
 
     actor_prefix = getattr(args, "actor_prefix", None)
     if actor_prefix is not None and not actor_prefix.strip():
-        raise SystemExit("orbit mcp: --actor-prefix cannot be empty")
+        raise SystemExit("promptaflow mcp: --actor-prefix cannot be empty")
     project_root = resolve_project_root(getattr(args, "project_root", None))
     db_path = _runtime_db_path(args.db, project_root=project_root)
     try:
@@ -717,7 +718,7 @@ def _mcp(args) -> None:
     except MixedSchemaError as exc:
         raise SystemExit(f"error: {exc}") from None
 
-    # Ownership first, the way `orbit serve` takes it: the cleanup below
+    # Ownership first, the way `promptaflow serve` takes it: the cleanup below
     # releases the lock, so the lock has to exist by the time anything can
     # fail into it. Taken the other way round, an Artifact store that failed
     # for a reason other than OSError/ValueError raised UnboundLocalError from
@@ -726,7 +727,7 @@ def _mcp(args) -> None:
     try:
         ownership.acquire()
     except RuntimeOwnershipError as exc:
-        raise SystemExit(f"orbit mcp: {exc}") from None
+        raise SystemExit(f"promptaflow mcp: {exc}") from None
     # Discoverable, but deliberately without an endpoint: this Runtime speaks
     # only to the process holding its stdio. Saying so keeps a client from
     # reading "no base_url yet" as "still starting up" and waiting forever.
@@ -738,7 +739,7 @@ def _mcp(args) -> None:
     except (OSError, ValueError) as exc:
         ownership.release()
         raise SystemExit(
-            f"orbit mcp: cannot initialize Artifact store at "
+            f"promptaflow mcp: cannot initialize Artifact store at "
             f"{artifact_root}: {exc}"
         ) from None
     except Exception:
@@ -789,7 +790,7 @@ def _mcp(args) -> None:
         # Started by hand because no ASGI server will run the lifespan here.
         composition.start()
         print(
-            f"orbit MCP on stdio (db: {db_path}, engine: langgraph)",
+            f"promptaflow MCP on stdio (db: {db_path}, engine: langgraph)",
             file=sys.stderr, flush=True,
         )
         serve_stdio(
@@ -834,7 +835,7 @@ def _default_agent_app_manifest(
 
 
 def _agent_app(args) -> None:
-    """Run the generic local Agent App host without coupling it to Orbit Runtime."""
+    """Run the generic local Agent App host without coupling it to PromptaFlow Runtime."""
 
     from dataclasses import replace
 
@@ -862,16 +863,16 @@ def _agent_app(args) -> None:
         try:
             host.ensure(manifest_path)
         except (AgentAppHostError, ValueError) as exc:
-            raise SystemExit(f"orbit agent-app: {exc}") from None
+            raise SystemExit(f"promptaflow agent-app: {exc}") from None
         print(workspace_urls(identifier)["ui_url"])
         return
 
     try:
         manifest = load_manifest(manifest_path)
     except ValueError as exc:
-        raise SystemExit(f"orbit agent-app: {exc}") from None
+        raise SystemExit(f"promptaflow agent-app: {exc}") from None
     if manifest.mcp is None:
-        raise SystemExit(f"orbit agent-app: {manifest.app_id} does not declare an MCP endpoint")
+        raise SystemExit(f"promptaflow agent-app: {manifest.app_id} does not declare an MCP endpoint")
     try:
         registration = register_workspace_with_hub(
             manifest.mcp.url, workspace, create=args.workspace is None,
@@ -883,15 +884,15 @@ def _agent_app(args) -> None:
         try:
             host.ensure(manifest_path)
         except (AgentAppHostError, ValueError) as exc:
-            raise SystemExit(f"orbit agent-app: {exc}") from None
+            raise SystemExit(f"promptaflow agent-app: {exc}") from None
         try:
             registration = register_workspace_with_hub(
                 manifest.mcp.url, workspace, create=args.workspace is None,
             )
         except (HubUnavailableError, HubWorkspaceRegistrationError) as exc:
-            raise SystemExit(f"orbit agent-app mcp-proxy: {exc}") from None
+            raise SystemExit(f"promptaflow agent-app mcp-proxy: {exc}") from None
     except HubWorkspaceRegistrationError as exc:
-        raise SystemExit(f"orbit agent-app mcp-proxy: {exc}") from None
+        raise SystemExit(f"promptaflow agent-app mcp-proxy: {exc}") from None
     identifier = str(registration["workspace_id"])
     selected = replace(
         manifest,
@@ -918,7 +919,7 @@ def _agent_app(args) -> None:
             state_dir=proxy_state,
         )
     except RuntimeError as exc:
-        raise SystemExit(f"orbit agent-app mcp-proxy: {exc}") from None
+        raise SystemExit(f"promptaflow agent-app mcp-proxy: {exc}") from None
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -928,10 +929,10 @@ def build_parser() -> argparse.ArgumentParser:
     which library — can be asserted without running it.
     """
 
-    parser = argparse.ArgumentParser(prog="orbit", description="Local multi-agent workflow orchestrator")
+    parser = argparse.ArgumentParser(prog="promptaflow", description="Local multi-agent workflow orchestrator")
     parser.add_argument(
-        "--version", action="version", version=f"orbit {__version__}",
-        help="Show the orbit version and exit",
+        "--version", action="version", version=f"promptaflow {__version__}",
+        help="Show the promptaflow version and exit",
     )
     sub = parser.add_subparsers(
         dest="command", required=True,
@@ -952,7 +953,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Acknowledge, once, that pre-migration data from the legacy engine "
-            "is abandoned. orbit never opens, imports or deletes those files."
+            "is abandoned. promptaflow never opens, imports or deletes those files."
         ),
     )
 
@@ -966,7 +967,7 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Port (default: 8848). Use 0 to let the kernel pick a free one — "
             "the number it chose is published in the Runtime's ownership "
-            "record, so `orbit runtimes` and any client that discovers this "
+            "record, so `promptaflow runtimes` and any client that discovers this "
             "Runtime still find it."
         ),
     )
@@ -977,7 +978,7 @@ def build_parser() -> argparse.ArgumentParser:
     serve_cmd.add_argument(
         "--db",
         default=None,
-        help="SQLite path (default: per-project database under ~/.orbit/projects/)",
+        help="SQLite path (default: per-project database under ~/.promptaflow/projects/)",
     )
     serve_cmd.add_argument(
         "--artifact-root",
@@ -1056,7 +1057,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Acknowledge, once, that pre-migration data from the legacy engine "
-            "is abandoned. orbit never opens, imports or deletes those files."
+            "is abandoned. promptaflow never opens, imports or deletes those files."
         ),
     )
 
@@ -1070,7 +1071,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     mcp_cmd.add_argument(
         "--db", default=None,
-        help="SQLite path (default: per-project database under ~/.orbit/projects/)",
+        help="SQLite path (default: per-project database under ~/.promptaflow/projects/)",
     )
     mcp_cmd.add_argument(
         "--artifact-root", default=None,
@@ -1127,7 +1128,7 @@ def build_parser() -> argparse.ArgumentParser:
     worker_cmd.add_argument("--parent-pid", type=int, default=None, help=argparse.SUPPRESS)
     runtimes_cmd.add_argument(
         "--root", default=None,
-        help="Directory to search (default: ~/.orbit)",
+        help="Directory to search (default: ~/.promptaflow)",
     )
 
     hub_cmd = sub.add_parser("hub", help="Run or configure the multi-workspace Hub")
@@ -1208,7 +1209,7 @@ def build_parser() -> argparse.ArgumentParser:
             "--workspace", default=None,
             help=(
                 "Workspace identity and working directory for workspace-scoped Apps "
-                "(default: ORBIT_DEFAULT_WORKSPACE or ~/.orbit/workspaces/default)"
+                "(default: PROMPTAFLOW_DEFAULT_WORKSPACE or ~/.promptaflow/workspaces/default)"
             ),
         )
         command.add_argument(
@@ -1332,7 +1333,7 @@ def _runtimes(args) -> None:
 def main() -> None:
     argv = sys.argv[1:]
     # Upgrade bridge for a Hub process that was started before this version.
-    # Older managers launch `orbit serve` but already mark the process as a Hub
+    # Older managers launch `promptaflow serve` but already mark the process as a Hub
     # child. Translate that private protocol before argparse sees the public
     # `serve` surface; interactive callers never receive the old Runtime mode.
     if (

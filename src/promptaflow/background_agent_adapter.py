@@ -37,12 +37,12 @@ def _request(source=None) -> Mapping[str, Any]:
 def _prompt(request: Mapping[str, Any]) -> str:
     task = request.get("input")
     return (
-        "Execute the following Orbit workflow Agent step in the current working "
+        "Execute the following PromptaFlow workflow Agent step in the current working "
         "directory. Respect the repository instructions and the sandbox. Return "
         "a JSON object matching the supplied schema. Put the complete business "
         "result object, JSON-encoded, in result_json. Do not wrap the response "
         "in Markdown.\n\n"
-        "Orbit delegation request:\n"
+        "PromptaFlow delegation request:\n"
         + json.dumps(task, ensure_ascii=False, sort_keys=True)
     )
 

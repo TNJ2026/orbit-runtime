@@ -2,7 +2,7 @@
 
 The Handler is fixed before the execution registry seals. Provider names are
 data in the delegation request, so installing another Harness Provider never
-mutates the sealed Orbit registry. The queue is also the idempotency boundary:
+mutates the sealed PromptaFlow registry. The queue is also the idempotency boundary:
 one deterministic delegation id can be claimed at most once, and an expired
 lease becomes unknown rather than being offered to a second Agent.
 """

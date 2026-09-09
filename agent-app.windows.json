@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "id": "orbit",
+  "id": "promptaflow",
   "scope": "global",
   "service": {
     "command": [
@@ -9,7 +9,7 @@
       "-ExecutionPolicy",
       "Bypass",
       "-File",
-      "{manifest_dir}/start-orbit.ps1",
+      "{manifest_dir}/start-promptaflow.ps1",
       "-HubService"
     ],
     "cwd": ".",
@@ -24,7 +24,7 @@
       "PATHEXT",
       "COMSPEC",
       "USERNAME",
-      "ORBIT_CLI",
+      "PROMPTAFLOW_CLI",
       "SYSTEMROOT",
       "WINDIR",
       "TEMP",

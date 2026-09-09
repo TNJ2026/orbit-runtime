@@ -1,4 +1,4 @@
-"""Compile trusted Orbit Workflow IR into an executable LangGraph graph."""
+"""Compile trusted PromptaFlow Workflow IR into an executable LangGraph graph."""
 
 from .artifacts import LangGraphArtifactAccessDenied, LangGraphArtifactStore
 from .compiler import (

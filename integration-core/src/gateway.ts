@@ -40,7 +40,7 @@ export class OrbitGateway {
     discoveryAttempts: 0, rpcCalls: 0, transportFailures: 0,
   }
   constructor(
-    private readonly command = 'orbit',
+    private readonly command = 'promptaflow',
     private readonly commandPrefix: readonly string[] = [],
     private readonly fetchImpl: Fetch = globalThis.fetch,
     private readonly discoveryRoot = process.env.ORBIT_RUNTIME_ROOT || undefined,

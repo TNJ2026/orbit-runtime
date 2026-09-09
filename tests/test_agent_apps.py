@@ -963,7 +963,7 @@ class OrbitMcpProxyStartupTests(unittest.TestCase):
         self.assertEqual("uv", server["command"])
         self.assertEqual(
             [
-                "run", "--project", ".", "orbit",
+                "run", "--project", ".", "promptaflow",
                 "agent-app", "mcp-proxy",
             ],
             server["args"],

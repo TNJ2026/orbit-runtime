@@ -1,19 +1,19 @@
-# Orbit in the Codex app
+# PromptaFlow in the Codex app
 
-[简体中文](./codex-app.zh-CN.md) | **English** · [Hosts](./README.md) · [Orbit](../../README.md)
+[简体中文](./codex-app.zh-CN.md) | **English** · [Hosts](./README.md) · [PromptaFlow](../../README.md)
 
 | | |
 | --- | --- |
-| Reaches Orbit through | the bundled plugin's stdio proxy → the loopback Hub |
+| Reaches PromptaFlow through | the bundled plugin's stdio proxy → the loopback Hub |
 | Registers as | `codex-app` |
-| Draws Orbit's cards | yes |
+| Draws PromptaFlow's cards | yes |
 | Event tools | the proxy's `wait_app_event`, `list_app_events`, `ack_app_event` |
 
 ## Install the repository/personal plugin
 
-Orbit is distributed through a local Marketplace archive attached to each
+PromptaFlow is distributed through a local Marketplace archive attached to each
 [GitHub Release](https://github.com/TNJ2026/orbit/releases). Installing this
-archive registers it for the current user only; it does not publish Orbit to
+archive registers it for the current user only; it does not publish PromptaFlow to
 the public Plugins Directory.
 
 ### Install with a Codex prompt
@@ -24,11 +24,11 @@ copied into the prompt. It may ask for approval before downloading the release
 or writing the user-level plugin configuration.
 
 ```text
-Install the Orbit Codex plugin from https://github.com/TNJ2026/orbit.
+Install the PromptaFlow Codex plugin from https://github.com/TNJ2026/orbit.
 ```
 
 For a specific release, add its exact version to the prompt, for example:
-`Install Orbit 0.4.0`.
+`Install PromptaFlow 0.4.0`.
 
 ### 1. Check the prerequisites
 
@@ -36,7 +36,7 @@ Install these before continuing:
 
 - The Codex desktop app and its `codex` CLI. Confirm the plugin commands are
   available with `codex plugin --help`.
-- `uv`, which creates and maintains the Python environment used by Orbit.
+- `uv`, which creates and maintains the Python environment used by PromptaFlow.
 - Bash. macOS and Linux include it; on Windows, use Git Bash or another Bash
   installation visible to Codex.
 
@@ -56,7 +56,7 @@ unzip orbit-marketplace-<version>.zip -d "$HOME/.local/share/orbit-codex"
 On Windows PowerShell:
 
 ```powershell
-$installRoot = Join-Path $env:LOCALAPPDATA "Orbit\Codex"
+$installRoot = Join-Path $env:LOCALAPPDATA "PromptaFlow\Codex"
 New-Item -ItemType Directory -Force -Path $installRoot
 Expand-Archive -Path .\orbit-marketplace-<version>.zip -DestinationPath $installRoot -Force
 ```
@@ -69,7 +69,7 @@ orbit-marketplace/
 └── plugins/orbit/
     ├── .codex-plugin/plugin.json
     ├── .mcp.json
-    ├── start-orbit.sh
+    ├── start-promptaflow.sh
     └── skills/orbit/SKILL.md
 ```
 
@@ -99,7 +99,7 @@ directory added above. If another `orbit-local` entry points elsewhere, remove
 that stale source with `codex plugin marketplace remove orbit-local`, then add
 the intended directory again.
 
-### 4. Install Orbit
+### 4. Install PromptaFlow
 
 Install from the CLI:
 
@@ -112,16 +112,16 @@ The list should show `orbit` as installed and enabled. Alternatively, after
 registering the Marketplace:
 
 1. Open **Plugins** in the Codex app.
-2. Select the **Orbit Local** source.
-3. Find **Orbit** and select **Install**.
+2. Select the **PromptaFlow Local** source.
+3. Find **PromptaFlow** and select **Install**.
 
-### 5. Restart Codex and open Orbit
+### 5. Restart Codex and open PromptaFlow
 
 1. Fully quit the Codex desktop app; closing only its window is not enough.
 2. Reopen Codex and start a new task so the installed Skill and MCP tools load.
 3. Open the project that should own the workflow Runtime.
-4. Ask Codex: `Open Orbit`.
-5. Confirm that the Orbit workspace opens beside the conversation.
+4. Ask Codex: `Open PromptaFlow`.
+5. Confirm that the PromptaFlow workspace opens beside the conversation.
 
 The first start may take longer because `uv` must create the plugin's virtual
 environment and install its locked Python dependencies.
@@ -142,7 +142,7 @@ environment and install its locked Python dependencies.
 5. Reopen Codex and start a new task.
 
 If the Marketplace path changes, remove `orbit-local`, add the new absolute
-path, and then reinstall Orbit.
+path, and then reinstall PromptaFlow.
 
 ### Remove the installation
 
@@ -158,7 +158,7 @@ deleted. Fully restart Codex to clear the plugin from new tasks.
 
 - **Marketplace not found:** run `codex plugin marketplace list` and verify the
   registered root directly contains `.agents/plugins/marketplace.json`.
-- **Orbit is absent:** run `codex plugin list --available --json` and confirm
+- **PromptaFlow is absent:** run `codex plugin list --available --json` and confirm
   `orbit` is available from `orbit-local`, then repeat the install command.
 - **`bash` not found:** install Bash and ensure it is visible in the environment
   used to launch Codex.
@@ -170,12 +170,12 @@ deleted. Fully restart Codex to clear the plugin from new tasks.
 The plugin ships the MCP proxy, and the plugin host sets
 `ORBIT_AGENT_APP_WORKSPACE` to the open project. The proxy registers that
 workspace with the loopback Hub on port 8848 and uses its workspace-scoped MCP
-URL; the Hub starts or discovers a dynamic-port Runtime for it. Orbit requires
+URL; the Hub starts or discovers a dynamic-port Runtime for it. PromptaFlow requires
 an explicit project directory and never uses an incidental process working
 directory — in a projectless chat it uses `ORBIT_DEFAULT_WORKSPACE` when
-configured, otherwise `~/.orbit/workspaces/default`.
+configured, otherwise `~/.promptaflow/workspaces/default`.
 
-Opening Orbit starts or reuses the Runtime and opens the native workspace card
+Opening PromptaFlow starts or reuses the Runtime and opens the native workspace card
 beside the conversation. It is display-only: it does not register this App as
 a writer and does not begin listening for authoring work. Ask for that
 explicitly, and Codex calls `wait_authoring_request(client="codex-app")` —
@@ -183,7 +183,7 @@ under Codex a pending call sits beside a person who can keep working, and it
 is renewed while the task is active. Ending the task removes `codex-app`; the
 Runtime keeps running.
 
-Select **Stop Orbit** beside the Refresh button and confirm to stop the
+Select **Stop PromptaFlow** beside the Refresh button and confirm to stop the
 Runtime, workers, timers, MCP endpoint, and event connections for the project.
 
 ## How the pieces fit
@@ -202,8 +202,8 @@ ports and stay isolated from one another.
 
 ## Holding a listening call
 
-Opening Orbit registers nothing. `wait_authoring_request` parks the task
-until someone presses Generate in the Orbit UI, so hold it only when that is
+Opening PromptaFlow registers nothing. `wait_authoring_request` parks the task
+until someone presses Generate in the PromptaFlow UI, so hold it only when that is
 what was asked for. Under Codex the pending call sits beside a person who can
 keep working, which is why it is renewed automatically while the task lives.
 
@@ -220,10 +220,10 @@ resumed and ask before continuing or reconciling. An `unknown` delegation is
 never executed again. See
 [delegating a goal to the conversation](../../README.md#delegating-a-goal-to-the-conversation).
 
-## If nothing can reach Orbit
+## If nothing can reach PromptaFlow
 
 Start the Hub by hand and open the workspace URL it prints:
 
 ```bash
-./start-orbit.sh /absolute/path/to/project
+./start-promptaflow.sh /absolute/path/to/project
 ```

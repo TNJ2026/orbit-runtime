@@ -119,7 +119,7 @@ def agent_client(
 ):
     """The adapter a discovered CLI is invoked through.
 
-    A CLI that speaks Orbit's JSON protocol needs no adapter; none of the ones
+    A CLI that speaks PromptaFlow's JSON protocol needs no adapter; none of the ones
     on the allowlist do, so each carries a probed invocation profile instead.
     """
 

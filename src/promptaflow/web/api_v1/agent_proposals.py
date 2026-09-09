@@ -3,12 +3,12 @@
 The allowlist in `agent_discovery` grows by code review and nothing else. This
 endpoint does the part of that review a person should not have to do by hand —
 is the program here, what does it call itself — and builds a constrained patch.
-The UI may ask Orbit to apply that patch; it can touch only the allowlist and
+The UI may ask PromptaFlow to apply that patch; it can touch only the allowlist and
 its pinned contract tests, and the new registration takes effect on restart.
 
 The division of labour is the whole point. An Agent is asked *what to look at*,
 because turning "something that can refactor Rust" into a list of program names
-is exactly what a model is for. Orbit does the looking itself, with the same
+is exactly what a model is for. PromptaFlow does the looking itself, with the same
 probe discovery uses, because what a CLI is and what a model says it is are not
 the same fact — and this file must not be where they get confused.
 """
@@ -31,9 +31,9 @@ MAX_PROMPT_CHARS = 2000
 MAX_CANDIDATES = 8
 _NAME_IN_TEXT = re.compile(r'"([^"]{1,64})"')
 
-_ASK = """Handle the user's request to add an Agent CLI to Orbit. Report your
+_ASK = """Handle the user's request to add an Agent CLI to PromptaFlow. Report your
 work clearly in plain text: identify only the CLI explicitly requested, explain
-the executable name you resolved from the request, and state what Orbit should
+the executable name you resolved from the request, and state what PromptaFlow should
 check before registering it. Do not recommend, mention, or add alternatives.
 The executable name is already present verbatim in the request. Do not use
 tools, inspect the filesystem, or modify anything; return the report directly.
@@ -56,7 +56,7 @@ def build_routes(ctx) -> list[Route]:
         additions = [item for item in proposals if item.proposable]
         if additions and ctx.agent_proposal_root is None:
             raise ValueError(
-                "Orbit source checkout is unavailable; start Orbit through "
+                "PromptaFlow source checkout is unavailable; start PromptaFlow through "
                 "the repository's start-orbit.sh before applying an Agent CLI proposal"
             )
         patch = (
@@ -219,7 +219,7 @@ def _mentioned_names(prompt: str, candidates: list[str]) -> list[str]:
 
 
 def _explicit_cli_names(prompt: str) -> list[str]:
-    """CLI names the person explicitly asked Orbit to add.
+    """CLI names the person explicitly asked PromptaFlow to add.
 
     ``CLI`` is useful disambiguation but should not be a password: short UI
     requests such as ``添加pi`` and ``add aider`` carry the same explicit scope.

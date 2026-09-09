@@ -917,7 +917,7 @@ class WorkflowAuthoringService:
             "Use preferred_handler for action nodes when it is set, unless the instruction explicitly requires a different available handler for a distinct role.",
             "When using app.delegate, set config.target to run_initiator. background_pool is not an available Workflow configuration.",
             "Every app.delegate action must set a non-empty config.prompt that states the instructions for that step. The Runtime presents this prompt to the initiating App as task.instructions; do not rely on the workflow goal alone to describe a later step.",
-            "Split a long Agent job with independently meaningful stages into separate action nodes, and connect their declared outputs to the next stage. A completed node is Orbit's durable recovery boundary. Do not hide research, implementation, verification, and reporting inside one monolithic Agent prompt when later stages can consume a persisted result from an earlier node. Keep one node when the work is genuinely atomic; do not create artificial checkpoint-only nodes.",
+            "Split a long Agent job with independently meaningful stages into separate action nodes, and connect their declared outputs to the next stage. A completed node is PromptaFlow's durable recovery boundary. Do not hide research, implementation, verification, and reporting inside one monolithic Agent prompt when later stages can consume a persisted result from an earlier node. Keep one node when the work is genuinely atomic; do not create artificial checkpoint-only nodes.",
             "Treat an explicitly numbered or named sequence in the user's instruction as requested workflow structure when the user says the steps must run in order, must all be completed, or must not be skipped. Represent every substantive requested step as its own business node, preserve the stated order with edges, and pass a persisted cumulative result to the next step; do not hide the sequence as an internal checklist inside one Agent prompt. A terminal node does not count as one of the requested business steps. A step may be merged only when it is purely output formatting or has no independently meaningful input, work, or result; the maximum node cap still applies.",
             "When an output is expected to contain long-form or otherwise substantial text, pass it as an Artifact instead of inline data: keep the handler's port id and schema_id, set transport:'artifact_ref', choose an appropriate text content type and max_size_bytes, and set visibility:'run'. Apply the same Artifact policy to every downstream port carrying that content. Reserve inline transport for short structured values, status, routing, and small summaries.",
             "An edge's two ports must agree on transport, visibility and content types — all three, or the edge is refused. One consequence is worth stating on its own: an Artifact edge and an inline edge can never share a join input port, so a fan-in that mixes long-form and short results needs a port for each kind.",
@@ -1170,10 +1170,10 @@ class WorkflowAuthoringService:
                 f"{index}. {rule}" for index, rule in enumerate(rules, start=1)
             )
         parts = [
-            "You describe a change to an existing Orbit workflow as a list of "
+            "You describe a change to an existing PromptaFlow workflow as a list of "
             "operations against it."
             if shape == "patch" else
-            "You translate a natural-language description into an Orbit workflow DSL document.",
+            "You translate a natural-language description into an PromptaFlow workflow DSL document.",
             # Rules read as text, numbered and tiered. Serialized into the facts
             # blob they were one more JSON array among many, with no way to see
             # which of two dozen peers fails a compile and which reads badly.

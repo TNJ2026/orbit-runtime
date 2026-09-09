@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "start-orbit.sh"
+SCRIPT = ROOT / "start-promptaflow.sh"
 
 
 class StartOrbitScriptTests(unittest.TestCase):
@@ -17,7 +17,7 @@ class StartOrbitScriptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture = root / "arguments.txt"
-            fake_orbit = root / "orbit"
+            fake_orbit = root / "promptaflow"
             fake_orbit.write_text(
                 "#!/bin/sh\nprintf '%s\\n' \"$@\" >> \"$ORBIT_TEST_CAPTURE\"\n"
                 "printf '%s\\n' '---' >> \"$ORBIT_TEST_CAPTURE\"\n",
@@ -26,10 +26,10 @@ class StartOrbitScriptTests(unittest.TestCase):
             fake_orbit.chmod(0o755)
             environment = {
                 **os.environ,
-                "ORBIT_CLI": str(fake_orbit),
+                "PROMPTAFLOW_CLI": str(fake_orbit),
                 "ORBIT_TEST_CAPTURE": str(capture),
             }
-            environment.pop("ORBIT_AGENT_APP_WORKSPACE", None)
+            environment.pop("PROMPTAFLOW_AGENT_APP_WORKSPACE", None)
 
             result = subprocess.run(
                 ["bash", str(SCRIPT)], cwd=root, env=environment,
@@ -54,7 +54,7 @@ class StartOrbitScriptTests(unittest.TestCase):
             workspace = root / "workspace"
             workspace.mkdir()
             capture = root / "arguments.txt"
-            fake_orbit = root / "orbit"
+            fake_orbit = root / "promptaflow"
             fake_orbit.write_text(
                 "#!/bin/sh\nprintf '%s\\n' \"$@\" >> \"$ORBIT_TEST_CAPTURE\"\nprintf '%s\\n' '---' >> \"$ORBIT_TEST_CAPTURE\"\n",
                 encoding="utf-8",
@@ -62,10 +62,10 @@ class StartOrbitScriptTests(unittest.TestCase):
             fake_orbit.chmod(0o755)
             environment = {
                 **os.environ,
-                "ORBIT_CLI": str(fake_orbit),
+                "PROMPTAFLOW_CLI": str(fake_orbit),
                 "ORBIT_TEST_CAPTURE": str(capture),
             }
-            environment.pop("ORBIT_AGENT_APP_WORKSPACE", None)
+            environment.pop("PROMPTAFLOW_AGENT_APP_WORKSPACE", None)
 
             result = subprocess.run(
                 ["bash", str(SCRIPT), str(workspace / ".")],
@@ -104,18 +104,18 @@ class StartOrbitScriptTests(unittest.TestCase):
         manifest = json.loads((ROOT / "agent-app.json").read_text(encoding="utf-8"))
 
         self.assertEqual(
-            "{manifest_dir}/start-orbit.sh",
+            "{manifest_dir}/start-promptaflow.sh",
             manifest["service"]["command"][0],
         )
         self.assertEqual("--hub-service", manifest["service"]["command"][1])
         self.assertNotIn("uv", manifest["service"]["command"])
-        self.assertIn("ORBIT_CLI", manifest["service"]["environment"])
+        self.assertIn("PROMPTAFLOW_CLI", manifest["service"]["environment"])
 
     def test_internal_hub_mode_accepts_an_explicit_orbit_executable(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture = root / "arguments.txt"
-            fake_orbit = root / "orbit"
+            fake_orbit = root / "promptaflow"
             fake_orbit.write_text(
                 "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$ORBIT_TEST_CAPTURE\"\n"
                 "printf '%s\\n' \"$ORBIT_SOURCE_ROOT\" > \"$ORBIT_TEST_ROOT_CAPTURE\"\n",
@@ -128,7 +128,7 @@ class StartOrbitScriptTests(unittest.TestCase):
                 ["bash", str(SCRIPT), "--hub-service"], cwd=ROOT,
                 env={
                     **os.environ,
-                    "ORBIT_CLI": str(fake_orbit),
+                    "PROMPTAFLOW_CLI": str(fake_orbit),
                     "ORBIT_TEST_CAPTURE": str(capture),
                     "ORBIT_TEST_ROOT_CAPTURE": str(root_capture),
                 },

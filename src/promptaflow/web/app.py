@@ -288,7 +288,7 @@ class RuntimeComposition:
 
         These refs live in the *user's* repository and each pins a tree of
         their whole project, so never reclaiming them is real growth in
-        somebody else's .git rather than in Orbit's own state. Two conditions
+        somebody else's .git rather than in PromptaFlow's own state. Two conditions
         guard it, both required: the run is settled, and the point has
         outlived the retention period — because a run finishing is not the
         moment somebody stops wanting to undo it.
@@ -594,7 +594,7 @@ def create_app(
                 except OSError as exc:
                     raise ValueError(
                         f"could not ensure {project_root_for_agents}/.gitignore "
-                        f"covers the Orbit state directory: {exc}"
+                        f"covers the PromptaFlow state directory: {exc}"
                     ) from exc
         agent_registrations, _names = agent_handlers(
             invokable_agents,
@@ -1195,7 +1195,7 @@ def create_app(
     # connection: same dispatcher, same services, one transport removed.
     app.state.mcp_dispatch = mcp_dispatch
     app.state.mcp_sessions = mcp_sessions
-    # Kept separate from the Orbit composition by design (ADR 002). Embedders
+    # Kept separate from the PromptaFlow composition by design (ADR 002). Embedders
     # may operate the optional adapter without implying it is the default
     # event-sourced Runtime.
     app.state.langgraph_service = langgraph_service

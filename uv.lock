@@ -584,49 +584,6 @@ wheels = [
 ]
 
 [[package]]
-name = "orbit-runtime"
-source = { editable = "." }
-dependencies = [
-    { name = "anyio" },
-    { name = "jsonschema" },
-    { name = "langchain-core" },
-    { name = "langgraph" },
-    { name = "langgraph-checkpoint-sqlite" },
-    { name = "pydantic" },
-    { name = "pyyaml" },
-    { name = "starlette" },
-    { name = "uvicorn" },
-    { name = "websockets" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "pillow" },
-    { name = "playwright" },
-]
-structured-authoring = [
-    { name = "pydantic-ai-slim" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "anyio", specifier = ">=3.6.2,<5" },
-    { name = "jsonschema", specifier = ">=4.23" },
-    { name = "langchain-core", specifier = ">=1.0,<2" },
-    { name = "langgraph", specifier = ">=1.0,<2" },
-    { name = "langgraph-checkpoint-sqlite", specifier = ">=3.0,<4" },
-    { name = "pillow", marker = "extra == 'dev'", specifier = ">=10" },
-    { name = "playwright", marker = "extra == 'dev'", specifier = ">=1.45" },
-    { name = "pydantic", specifier = ">=2.7,<3" },
-    { name = "pydantic-ai-slim", marker = "extra == 'structured-authoring'", specifier = ">=0.4" },
-    { name = "pyyaml", specifier = ">=6.0" },
-    { name = "starlette", specifier = ">=0.37" },
-    { name = "uvicorn", specifier = ">=0.29" },
-    { name = "websockets", specifier = ">=12" },
-]
-provides-extras = ["dev", "structured-authoring"]
-
-[[package]]
 name = "orjson"
 version = "3.11.9"
 source = { registry = "https://pypi.org/simple" }
@@ -884,6 +841,49 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/6c/fd/2b78036e5fbe9d5f5645bbe08a1eac7160c51243c0093963edbcf67c35d9/playwright-1.61.0-py3-none-win_amd64.whl", hash = "sha256:35c6cc4589a5d00964a59d7b3e59641e0aac0c02f15479a7af77d20f6bc79597", size = 37844846, upload-time = "2026-06-29T10:33:10.637Z" },
     { url = "https://files.pythonhosted.org/packages/27/0d/1b0f3c4ee4eb0514bc805b5c2f9a223e5b6de4f11a926f5235d51d0fc81b/playwright-1.61.0-py3-none-win_arm64.whl", hash = "sha256:e9fcbffcf557a8620fdedd92491eb59a32d18e23d6f3b4f6214b952be324fe51", size = 33955127, upload-time = "2026-06-29T10:33:14.008Z" },
 ]
+
+[[package]]
+name = "promptaflow"
+source = { editable = "." }
+dependencies = [
+    { name = "anyio" },
+    { name = "jsonschema" },
+    { name = "langchain-core" },
+    { name = "langgraph" },
+    { name = "langgraph-checkpoint-sqlite" },
+    { name = "pydantic" },
+    { name = "pyyaml" },
+    { name = "starlette" },
+    { name = "uvicorn" },
+    { name = "websockets" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "pillow" },
+    { name = "playwright" },
+]
+structured-authoring = [
+    { name = "pydantic-ai-slim" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "anyio", specifier = ">=3.6.2,<5" },
+    { name = "jsonschema", specifier = ">=4.23" },
+    { name = "langchain-core", specifier = ">=1.0,<2" },
+    { name = "langgraph", specifier = ">=1.0,<2" },
+    { name = "langgraph-checkpoint-sqlite", specifier = ">=3.0,<4" },
+    { name = "pillow", marker = "extra == 'dev'", specifier = ">=10" },
+    { name = "playwright", marker = "extra == 'dev'", specifier = ">=1.45" },
+    { name = "pydantic", specifier = ">=2.7,<3" },
+    { name = "pydantic-ai-slim", marker = "extra == 'structured-authoring'", specifier = ">=0.4" },
+    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "starlette", specifier = ">=0.37" },
+    { name = "uvicorn", specifier = ">=0.29" },
+    { name = "websockets", specifier = ">=12" },
+]
+provides-extras = ["dev", "structured-authoring"]
 
 [[package]]
 name = "pydantic"

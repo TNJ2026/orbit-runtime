@@ -6,7 +6,7 @@ working out whether a program is even here, and what it calls itself — can be
 done for them, without the answer ever becoming an executable on its own.
 
 The output is a tightly scoped patch. The candidate's help text is checked for
-one of Orbit's code-owned maximum-permission profiles. Known, previously
+one of PromptaFlow's code-owned maximum-permission profiles. Known, previously
 exercised invocation profiles receive that profile automatically; unknown CLIs
 remain detection-only until their prompt transport receives a code review.
 """
@@ -42,10 +42,10 @@ _PERMISSIONS_END = "            },\n            settings,\n        )"
 
 
 def source_checkout_root(configured: Path | str | None = None) -> Path | None:
-    """Return the Orbit checkout that may receive a generated proposal patch.
+    """Return the PromptaFlow checkout that may receive a generated proposal patch.
 
     A Workspace Runtime runs with the user's project as its cwd.  That project
-    is the *target* of workflows, never the checkout containing Orbit's trusted
+    is the *target* of workflows, never the checkout containing PromptaFlow's trusted
     Agent allowlist.  Repository launchers therefore name their own checkout
     through ``ORBIT_SOURCE_ROOT``; editable development installs can derive the
     same root from this module.  A wheel installation has neither and must not

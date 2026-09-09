@@ -1,25 +1,25 @@
-# 在 DeepSeek Harness 中使用 Orbit
+# 在 DeepSeek Harness 中使用 PromptaFlow
 
-**简体中文** | [English](./deepseek-harness.md) · [宿主](./README.zh-CN.md) · [Orbit](../../README.zh-CN.md)
+**简体中文** | [English](./deepseek-harness.md) · [宿主](./README.zh-CN.md) · [PromptaFlow](../../README.zh-CN.md)
 
 | | |
 | --- | --- |
 | 接入方式 | 带自有 Gateway 的 Host Profile Bundle |
 | 注册名 | 按 Session 的 `harness:session:*` actor |
-| 是否绘制 Orbit 卡片 | 否 —— 它画自己的面板 |
+| 是否绘制 PromptaFlow 卡片 | 否 —— 它画自己的面板 |
 | MCP 工具 profile | `harness`，完整工具面的子集 |
 
 ## 从仓库安装
 
-`integrations/deepseek-harness` 是可安装的 Host Profile Bundle。安装后，Orbit Runtime
-仍是独立的本地进程，Harness Web Profile 则获得 Orbit 面板和工具。
+`integrations/deepseek-harness` 是可安装的 Host Profile Bundle。安装后，PromptaFlow Runtime
+仍是独立的本地进程，Harness Web Profile 则获得 PromptaFlow 面板和工具。
 
 ### 使用简单提示词安装
 
 把下面这句话交给能够读取公开仓库并运行本地命令的 DeepSeek Harness Agent：
 
 ```text
-请安装这个仓库中的 Orbit DeepSeek Harness 集成：https://github.com/TNJ2026/orbit
+请安装这个仓库中的 PromptaFlow DeepSeek Harness 集成：https://github.com/TNJ2026/orbit
 ```
 
 Agent 应从仓库的宿主索引找到本文，并执行下面的步骤。它必须在重启当前 Harness Profile
@@ -28,7 +28,7 @@ Agent 应从仓库的宿主索引找到本文，并执行下面的步骤。它�
 ### 1. 检查前置条件
 
 - Git 和 `uv`。
-- Orbit Runtime 需要 Python 3.10 或更高版本。
+- PromptaFlow Runtime 需要 Python 3.10 或更高版本。
 - 集成 Bundle 需要 Node.js 22 或更高版本。
 - 可用的 `dsh` 命令，以及名为 `web` 的 Harness Web Profile。
 
@@ -41,7 +41,7 @@ node --version
 dsh --version
 ```
 
-### 2. 把 Orbit 克隆到稳定目录
+### 2. 把 PromptaFlow 克隆到稳定目录
 
 ```bash
 git clone https://github.com/TNJ2026/orbit.git /绝对路径/稳定目录/orbit
@@ -51,7 +51,7 @@ cd /绝对路径/稳定目录/orbit
 如果仓库已经存在，更新前先检查本地修改，不要丢弃未提交工作；干净的 checkout 可使用
 `git pull --ff-only` 更新。
 
-### 3. 安装 Orbit Runtime
+### 3. 安装 PromptaFlow Runtime
 
 ```bash
 uv tool install /绝对路径/稳定目录/orbit
@@ -78,12 +78,12 @@ checkout。
 1. 重启 Harness Web Profile。
 2. 打开一个由真实目录支持的 Workspace。
 3. 执行 `/orbit`。
-4. 确认 Orbit 面板出现，且 Settings 行显示 **connected**。
-5. 打开一个历史 Run，或让 Agent 列出 Orbit 工作流，验证 Host 到 Runtime 的链路。
+4. 确认 PromptaFlow 面板出现，且 Settings 行显示 **connected**。
+5. 打开一个历史 Run，或让 Agent 列出 PromptaFlow 工作流，验证 Host 到 Runtime 的链路。
 
-打开 `/orbit` 时，必要则为该 Harness Workspace 启动 Orbit；这样启动的 Runtime 在面板或
-Profile 关闭后依然存活。Gateway 默认在 `~/.orbit` 下寻找归属记录——如果 Runtime 数据库
-在别处，为该 Profile 设置 `ORBIT_RUNTIME_ROOT`。Orbit CLI 对该数据库持有一把非阻塞的
+打开 `/orbit` 时，必要则为该 Harness Workspace 启动 PromptaFlow；这样启动的 Runtime 在面板或
+Profile 关闭后依然存活。Gateway 默认在 `~/.promptaflow` 下寻找归属记录——如果 Runtime 数据库
+在别处，为该 Profile 设置 `ORBIT_RUNTIME_ROOT`。PromptaFlow CLI 对该数据库持有一把非阻塞的
 归属锁，并在归属记录里公布自己的 Workspace 和 MCP 端点；Harness 从不持有这把锁，也不
 制造第二个写入者。
 
@@ -100,7 +100,7 @@ dsh --profile web --dump-config
 ```
 
 重启 Profile 后重复上面的验证。需要回滚时，在干净 checkout 中切换到目标 Release 标签，
-重新安装该版本的 Runtime 和 Bundle，再重启 Profile。回滚 Bundle 不需要删除 Orbit Runtime
+重新安装该版本的 Runtime 和 Bundle，再重启 Profile。回滚 Bundle 不需要删除 PromptaFlow Runtime
 数据库。
 
 仅移除 Harness 集成：
@@ -110,12 +110,12 @@ dsh plugin --profile web remove @promptaflow/dsh
 dsh --profile web --dump-config
 ```
 
-第二条命令不应再列出该 Bundle。移除集成不会停止或删除独立运行的 Orbit Runtime。
+第二条命令不应再列出该 Bundle。移除集成不会停止或删除独立运行的 PromptaFlow Runtime。
 
 | 组件 | 支持范围 |
 | --- | --- |
-| Orbit Runtime | `>=0.4.0 <0.5.0` |
-| Orbit 集成协议 | `orbit-harness/1` |
+| PromptaFlow Runtime | `>=0.4.0 <0.5.0` |
+| PromptaFlow 集成协议 | `orbit-harness/1` |
 | Harness 包 | `>=0.1.1-rc.2 <0.2.0`（不支持 alpha 预发布版本） |
 | React | `^18.2.0` |
 | Node.js | `>=22` |
@@ -123,7 +123,7 @@ dsh --profile web --dump-config
 这个 bundle 在 Harness 外壳浮层里常驻一个面板。它可以折成一个徽标，只说「有没有东西
 在跑」，展开则是 Runtime 自己的四个页面——目标、工作流、历史、Agents。面板可停靠也可
 拆出拖动，并记住你选的哪种。流程图、Artifact 和工作流撰写**不在这里重画**：面板会打开
-Orbit 自己的 UI。
+PromptaFlow 自己的 UI。
 
 **Run 由对 Agent 说话来启动，不从面板启动。** Agent 拥有一组有界的原生工具——
 `orbit_list_workflows`、`orbit_list_runs`、`orbit_inspect_run`、`orbit_start_run`、
@@ -136,8 +136,8 @@ Orbit 自己的 UI。
 也无法从它接着往下做。
 
 Harness 用 `harness` 这个 MCP 工具 profile 运行 Runtime，它是完整工具面的一个子集。
-Harness **不执行** Orbit 的工作流节点：Agent 发现、CLI 凭据、沙箱、进程清理、重试语义
-和副作用，全部仍归 Runtime 所有。Orbit 只接受来自回环、只在 `/mcp` 上、且只在
+Harness **不执行** PromptaFlow 的工作流节点：Agent 发现、CLI 凭据、沙箱、进程清理、重试语义
+和副作用，全部仍归 Runtime 所有。PromptaFlow 只接受来自回环、只在 `/mcp` 上、且只在
 `harness:session:*` 下的 `x-orbit-actor` 头。
 
 ## 面板
@@ -147,12 +147,12 @@ Harness **不执行** Orbit 的工作流节点：Agent 发现、CLI 凭据、沙
 把它们弄丢了。第一层以下的数据在展开之前不取，没有可跟的东西时就停止跟随。
 
 Run 可以取消、被中断的可以继续、等待人工的步骤可以在面板里裁决。**每一次变更都带上面板
-当时显示的 revision**，如果 Orbit 已经往前走了就会被拒绝：一个悄悄作用在比你正在读的更新
+当时显示的 revision**，如果 PromptaFlow 已经往前走了就会被拒绝：一个悄悄作用在比你正在读的更新
 的 Run 上的按钮，比一个会失败的按钮更糟。
 
 面板列的是 **Workspace 的 Run，不是这个聊天的**。Gateway 的每次调用都带一个按 Session 的
 actor，而 `list_runs` 默认按调用者收窄 —— 这对「Agent 陈述自己干过什么」是对的，对「站在
-Orbit UI 旁边的面板」是错的：曾经出现过 Runtime 里有二十五个 Run、而面板的历史是空的。
+PromptaFlow UI 旁边的面板」是错的：曾经出现过 Runtime 里有二十五个 Run、而面板的历史是空的。
 面板传 `owner: workspace`；Agent 工具保持默认。
 
 轮询跟着工作走：有 Run 在动时每两秒一次，都不动时每十五秒一次，每次只发一个带 Session id
@@ -179,11 +179,11 @@ Runtime 挂了的时候，留在上下文里的是上一个答案，而不是空
 Harness 源上的 `/plugins/dsh-orbit/api` 提供 Run 检查、Steps、Graph、Edges、基于游标的
 输出、有上限的 Artifact 内容和附件导入。每次调用都带一个 Workspace，而 **Host 一个都不信**：
 在任何 Gateway 调用之前，都要对着它声称所属的 Session、或对着 Workspace 注册表校验一遍。
-它从不让调用方直接够到 Orbit 的回环地址；客户端代码也永远拿不到 Runtime 端点、子进程句柄、
-actor 头或 Orbit 凭据。
+它从不让调用方直接够到 PromptaFlow 的回环地址；客户端代码也永远拿不到 Runtime 端点、子进程句柄、
+actor 头或 PromptaFlow 凭据。
 
-图片 Artifact 在同时通过 Orbit 的 2 MiB 代理上限和 Harness 图片准入之后，可以导入 Harness
-的附件存储；当前附件契约支持 PNG、JPEG、WebP 和 GIF，其他媒体留在 Orbit。
+图片 Artifact 在同时通过 PromptaFlow 的 2 MiB 代理上限和 Harness 图片准入之后，可以导入 Harness
+的附件存储；当前附件契约支持 PNG、JPEG、WebP 和 GIF，其他媒体留在 PromptaFlow。
 
 诊断文档只包含 Workspace/Session id、协议能力、聚合计数、Gateway 计数器和 Bridge 状态 ——
 不含 MCP 端点、actor 头、原始输出、Artifact 字节、任务提示词或凭据。
@@ -201,7 +201,7 @@ worker id 由集成推导，而不是由模型提供。参见
 
 ## 失败与重连
 
-Gateway 在启动时就拒绝不兼容的 Orbit 集成协议；运行时编解码器在 DTO 到达 Client 之前就
+Gateway 在启动时就拒绝不兼容的 PromptaFlow 集成协议；运行时编解码器在 DTO 到达 Client 之前就
 拒绝畸形的核心 DTO —— 畸形的 Run、Step、Output 或 Artifact 载荷会在 Gateway 边界失败，
 而不是一路穿过 TypeScript 断言。MCP 传输失败时，缓存的端点会被丢弃，下一次 Bridge 轮询或
 工具调用会重新发现，因此 Hub 重启或工作区 Runtime 更换动态端口时无需重启 Harness。

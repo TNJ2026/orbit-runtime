@@ -55,7 +55,7 @@ class CleanInstallTests(unittest.TestCase):
         )
         if install.returncode != 0:
             raise unittest.SkipTest(f"install failed:\n{install.stderr[-2000:]}")
-        cls.orbit = cls.venv / "bin" / "orbit"
+        cls.orbit = cls.venv / "bin" / "promptaflow"
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -68,10 +68,10 @@ class CleanInstallTests(unittest.TestCase):
         )
 
     def test_the_console_script_is_installed(self) -> None:
-        self.assertTrue(self.orbit.exists(), "no `orbit` entry point in the wheel")
+        self.assertTrue(self.orbit.exists(), "no `promptaflow` entry point in the wheel")
         result = self.orbit_cli("--version")
         self.assertEqual(0, result.returncode, result.stderr)
-        self.assertIn("orbit", result.stdout)
+        self.assertIn("promptaflow", result.stdout)
 
     def test_the_installed_cli_offers_only_the_target_commands(self) -> None:
         result = self.orbit_cli("--help")
@@ -163,7 +163,7 @@ class CleanInstallTests(unittest.TestCase):
 
             with urllib.request.urlopen(f"{base}/ui/", timeout=5) as response:
                 self.assertEqual(200, response.status)
-                self.assertIn(b"Orbit Runtime", response.read())
+                self.assertIn(b"PromptaFlow Runtime", response.read())
             with urllib.request.urlopen(
                 f"{base}/ui/assets/router.js", timeout=5
             ) as response:
@@ -173,7 +173,7 @@ class CleanInstallTests(unittest.TestCase):
             # /ui/ again, which must remain the stable SPA fallback.
             with urllib.request.urlopen(f"{base}/ui/index.html", timeout=5) as response:
                 self.assertEqual(200, response.status)
-                self.assertIn(b"Orbit Runtime", response.read())
+                self.assertIn(b"PromptaFlow Runtime", response.read())
             with urllib.request.urlopen(
                 f"{base}/api/v1/langgraph-runs", timeout=5
             ) as response:

@@ -3,7 +3,7 @@
 This adapter implements the safe generation boundary:
 
 ```text
-Agent prompt -> Workflow DSL -> Orbit validation/Canonical IR
+Agent prompt -> Workflow DSL -> PromptaFlow validation/Canonical IR
              -> exact trusted Handler binding -> LangGraph StateGraph
 ```
 
@@ -124,7 +124,7 @@ before the LangGraph checkpoint advances, the next process sees `firing` and
 idempotently finishes it. Run `recover_running()` during startup and
 `recover_due()` from the timer loop; neither requires manual database edits.
 
-This service is Orbit's only workflow execution engine. It uses the
+This service is PromptaFlow's only workflow execution engine. It uses the
 `/api/v1/langgraph-runs` HTTP surface and LangGraph MCP tools. Compatible
 workflows advertise `langgraph_run.start`; incompatible definitions are not
 runnable and never fall back to another engine. Clients execute the server's
@@ -135,7 +135,7 @@ runnable and never fall back to another engine. Clients execute the server's
 Start the local Runtime normally:
 
 ```console
-orbit serve
+promptaflow serve
 ```
 
 This creates `langgraph-runs.sqlite3` and
@@ -149,7 +149,7 @@ Agent nodes receive a stable run/attempt identity and write an attempt journal
 before submitting to the CLI. A completed response is replayable if the graph
 checkpoint write is interrupted. A timeout, cancellation, process loss, or an
 attempt found `started` during recovery parks the run as `unknown`; it is never
-submitted a second time automatically. This preserves Orbit's core
+submitted a second time automatically. This preserves PromptaFlow's core
 unknown-external-result rule while Agent execution migrates to LangGraph.
 Cancellation is persisted before live Handler cancellation hooks run. A late
 result therefore cannot overwrite `cancelled`.
@@ -208,7 +208,7 @@ what it always was.
 
 Writes require the normal `idempotency-key` header. Read DTOs advertise a
 resume command only to actors with write scope and only while interrupted;
-clients do not infer commands from status. The existing Orbit `/api/v1/runs`
+clients do not infer commands from status. The existing PromptaFlow `/api/v1/runs`
 tools remain unchanged.
 
 The same explicit injection advertises six MCP tools to agents:

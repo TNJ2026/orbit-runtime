@@ -1,8 +1,8 @@
 # Hosts
 
-Orbit is one Runtime with several front doors. Each host reaches it
+PromptaFlow is one Runtime with several front doors. Each host reaches it
 differently, registers under its own client name, and differs in whether it
-draws Orbit's cards and which tools it can see. Everything outside these
+draws PromptaFlow's cards and which tools it can see. Everything outside these
 pages — running a goal, delegating one to the conversation, events, output,
 the CLI — is the same wherever you connect from, and lives in the
 [main README](../../README.md). What the cards themselves are, and which
@@ -10,7 +10,7 @@ tool opens each, is in [the cards](../cards.md).
 
 [简体中文](./README.zh-CN.md) | **English**
 
-| Host | How it reaches Orbit | Registers as | Draws the card |
+| Host | How it reaches PromptaFlow | Registers as | Draws the card |
 | --- | --- | --- | --- |
 | [Codex app](./codex-app.md) | bundled plugin, stdio proxy → Hub | `codex-app` | yes |
 | [WorkBuddy](./workbuddy.md) | custom connector, HTTP straight at the Hub | `orbit`, and `workbuddy-third-party:custom-mcp:orbit` | yes |

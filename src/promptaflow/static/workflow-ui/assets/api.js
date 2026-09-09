@@ -127,7 +127,7 @@ export class Api {
 
   /** What this run changed in the project, as far as anything can say.
    *
-   * Two kinds of answer and they are not interchangeable: what Orbit
+   * Two kinds of answer and they are not interchangeable: what PromptaFlow
    * compared for itself against the run's recovery point, and what only the
    * Agent can account for. The payload keeps them apart; so does the card
    * that draws it.

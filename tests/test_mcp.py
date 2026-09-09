@@ -87,7 +87,7 @@ class HandshakeTests(ApiTestCase):
                 resource for resource in resources
                 if resource["uri"] == ORBIT_DASHBOARD_URI
             )
-            self.assertEqual("Orbit workspace", workspace["name"])
+            self.assertEqual("PromptaFlow workspace", workspace["name"])
             self.assertIn("goals, workflows, history, agents", workspace["description"])
             for resource in resources:
                 self.assertEqual("text/html;profile=mcp-app", resource["mimeType"])

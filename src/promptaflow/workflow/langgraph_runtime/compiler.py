@@ -1,6 +1,6 @@
 """Restricted WorkflowIR-to-LangGraph compiler.
 
-The authoring Agent never supplies Python.  It produces Orbit's declarative
+The authoring Agent never supplies Python.  It produces PromptaFlow's declarative
 DSL, the existing compiler turns that into a validated ``WorkflowIR``, and
 this module binds the IR to an explicit allow-list of trusted callables.
 """
@@ -1700,7 +1700,7 @@ def compile_generated_workflow(
     """Validate Agent-authored DSL and compile only its trusted Handler refs.
 
     This is the intended public entry point for the generation pipeline.  A
-    caller cannot skip Orbit's structural/semantic compiler and hand arbitrary
+    caller cannot skip PromptaFlow's structural/semantic compiler and hand arbitrary
     Python to LangGraph.
     """
 

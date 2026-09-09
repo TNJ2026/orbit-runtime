@@ -1,9 +1,7 @@
 [project]
-# The distribution is `orbit-runtime`; the command it installs is `orbit`.
 # `orbit` alone was taken on PyPI before this project existed, and the two
 # names do not have to match. It also lines up with the npm scope the
-# integrations already publish under, `@orbit-runtime/`.
-name = "orbit-runtime"
+name = "promptaflow"
 dynamic = ["version"]
 description = "Local durable workflow runtime for agent work"
 readme = "README.md"
@@ -58,7 +56,8 @@ dev = ["playwright>=1.45", "Pillow>=10"]
 structured-authoring = ["pydantic-ai-slim>=0.4"]
 
 [project.scripts]
-orbit = "promptaflow.__main__:main"
+promptaflow = "promptaflow.__main__:main"
+paf = "promptaflow.__main__:main"
 
 [build-system]
 requires = ["hatchling"]

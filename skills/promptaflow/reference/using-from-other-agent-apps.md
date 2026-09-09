@@ -1,10 +1,10 @@
-# Using Orbit From Another Agent App
+# Using PromptaFlow From Another Agent App
 
 Use this procedure for an MCP-capable App such as another desktop Agent client.
 
 ## Connect the MCP proxy
 
-Keep the Orbit Runtime running, then add an MCP stdio server to the App. Adapt
+Keep the PromptaFlow Runtime running, then add an MCP stdio server to the App. Adapt
 the field names to the App's MCP configuration format:
 
 ```json
@@ -12,7 +12,7 @@ the field names to the App's MCP configuration format:
   "mcpServers": {
     "orbit": {
       "command": "bash",
-      "args": ["/absolute/path/to/orbit/start-orbit.sh", "--mcp-proxy"],
+      "args": ["/absolute/path/to/orbit/start-promptaflow.sh", "--mcp-proxy"],
       "env": {
         "ORBIT_AGENT_APP_WORKSPACE": "/absolute/path/to/the/project"
       }
@@ -21,13 +21,13 @@ the field names to the App's MCP configuration format:
 }
 ```
 
-Use the Orbit source or installed plugin directory that actually contains the
+Use the PromptaFlow source or installed plugin directory that actually contains the
 script. The workspace selects a workspace-scoped Hub URL; the Hub starts or
 discovers that project's dynamic-port Runtime and data directory.
 Restart or reconnect the App's MCP session after changing its configuration.
-When the App cannot supply a project path, omit the environment entry. Orbit
+When the App cannot supply a project path, omit the environment entry. PromptaFlow
 then creates and uses `ORBIT_DEFAULT_WORKSPACE` when configured, otherwise
-`~/.orbit/workspaces/default`.
+`~/.promptaflow/workspaces/default`.
 
 An HTTP-only App should use `http://127.0.0.1:8848/mcp` for the default
 workspace. This is the stable MCP Gateway: it owns the external MCP handshake,
@@ -45,14 +45,14 @@ people never need to type a workspace hash. Without a selection the session
 uses the default workspace.
 For another registered workspace use
 `http://127.0.0.1:8848/workspaces/<workspace_id>/mcp`; obtain the stable id and
-URLs with `orbit hub register /absolute/project/path`.
+URLs with `promptaflow hub register /absolute/project/path`.
 
 ## Act as a workflow-writing App
 
 1. Repeatedly call `wait_authoring_request` with a stable client name and a
    bounded timeout, for example `client="claude-desktop"` and
    `timeout_seconds=300`.
-2. Keep the call pending while the user selects `app:claude-desktop` in Orbit
+2. Keep the call pending while the user selects `app:claude-desktop` in PromptaFlow
    and clicks Generate or requests a revision. The pending wait is the presence
    registration; connecting MCP alone does not add an `app:*` option.
 3. Follow the returned prompt exactly and produce one Workflow DSL JSON object,
@@ -69,7 +69,7 @@ URLs with `orbit hub register /absolute/project/path`.
 A wait timeout only removes the temporary online presence; it is not a workflow
 generation failure. Start another wait to appear online again. If several Apps
 are connected, give each one a distinct stable client name.
-Orbit refuses late submissions after cancellation, so correctness does not
+PromptaFlow refuses late submissions after cancellation, so correctness does not
 depend on whether the App can actually abort its model request.
 
 ## Operate workflow runs

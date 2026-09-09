@@ -1,17 +1,17 @@
-# 在 WorkBuddy 中使用 Orbit
+# 在 WorkBuddy 中使用 PromptaFlow
 
-**简体中文** | [English](./workbuddy.md) · [宿主](./README.zh-CN.md) · [Orbit](../../README.zh-CN.md)
+**简体中文** | [English](./workbuddy.md) · [宿主](./README.zh-CN.md) · [PromptaFlow](../../README.zh-CN.md)
 
 | | |
 | --- | --- |
 | 接入方式 | 自定义连接器，HTTP 直连 Hub |
 | 注册名 | `orbit`，以及 `workbuddy-third-party:custom-mcp:orbit` |
-| 是否绘制 Orbit 卡片 | 是 |
+| 是否绘制 PromptaFlow 卡片 | 是 |
 | 事件工具 | Runtime 的 `list_runtime_events` |
 
 ## 从仓库配置连接器
 
-WorkBuddy 没有专用插件，也没有 Proxy。Orbit 在本地运行，WorkBuddy 通过自定义 HTTP MCP
+WorkBuddy 没有专用插件，也没有 Proxy。PromptaFlow 在本地运行，WorkBuddy 通过自定义 HTTP MCP
 连接器直连它的回环 Hub。
 
 ### 使用简单提示词配置
@@ -19,10 +19,10 @@ WorkBuddy 没有专用插件，也没有 Proxy。Orbit 在本地运行，WorkBud
 把下面这句话交给能够读取公开仓库并运行本地命令的 WorkBuddy Agent：
 
 ```text
-请从这个仓库为 WorkBuddy 配置 Orbit 连接器：https://github.com/TNJ2026/orbit
+请从这个仓库为 WorkBuddy 配置 PromptaFlow 连接器：https://github.com/TNJ2026/orbit
 ```
 
-Agent 应通过仓库的宿主索引找到本文，安装并启动 Orbit、检查端点，然后引导你完成它无法
+Agent 应通过仓库的宿主索引找到本文，安装并启动 PromptaFlow、检查端点，然后引导你完成它无法
 代替操作的连接器设置。
 
 ### 1. 检查前置条件
@@ -32,7 +32,7 @@ Agent 应通过仓库的宿主索引找到本文，安装并启动 Orbit、检�
 - 支持自定义 Streamable HTTP MCP 连接器的 WorkBuddy 版本。
 - 使用仓库启动脚本时需要 Bash；Windows 请使用 Git Bash 或 Agent 能找到的其他 Bash。
 
-### 2. 克隆并安装 Orbit
+### 2. 克隆并安装 PromptaFlow
 
 把 checkout 保存在稳定目录：
 
@@ -46,18 +46,18 @@ orbit --version
 如果 checkout 已存在，请先检查并保留本地修改。干净的 checkout 可用 `git pull --ff-only`
 更新，再运行 `uv tool install --force /绝对路径/稳定目录/orbit` 刷新已安装工具。
 
-### 3. 为目标项目启动 Orbit
+### 3. 为目标项目启动 PromptaFlow
 
 把需要拥有 Runtime 的项目路径交给仓库启动脚本：
 
 ```bash
-/绝对路径/稳定目录/orbit/start-orbit.sh /绝对路径/目标项目
+/绝对路径/稳定目录/orbit/start-promptaflow.sh /绝对路径/目标项目
 ```
 
 然后检查发现结果：
 
 ```bash
-orbit runtimes --json
+promptaflow runtimes --json
 ```
 
 打开 `http://127.0.0.1:8848/ui`，其中应列出目标 Workspace。请保留该 checkout，因为启动
@@ -70,27 +70,27 @@ orbit runtimes --json
 
 | 字段 | 值 |
 | --- | --- |
-| 名称 | `Orbit` |
+| 名称 | `PromptaFlow` |
 | MCP URL | `http://127.0.0.1:8848/mcp` |
 | 传输方式 | Streamable HTTP |
 | 认证 | 无 |
 
-保存连接器，并为目标 Agent 或对话启用它。不要配置远程 URL：Orbit Hub 有意只监听回环
+保存连接器，并为目标 Agent 或对话启用它。不要配置远程 URL：PromptaFlow Hub 有意只监听回环
 地址。
 
 ### 5. 验证连接
 
-1. 确认 WorkBuddy 显示 `Orbit` 连接器提供的工具。
+1. 确认 WorkBuddy 显示 `PromptaFlow` 连接器提供的工具。
 2. 让它调用 `list_workspaces`。
 3. 如果返回多个 Workspace，用 `select_workspace` 选择目标项；绝不要猜路径。
-4. 让它显示 Orbit 工作流或打开 Orbit，确认卡片能够渲染。
+4. 让它显示 PromptaFlow 工作流或打开 PromptaFlow，确认卡片能够渲染。
 
 不需要凭据：Hub 只在回环地址上，而回环上的调用方本来就是操作者。WorkBuddy 使用
 Streamable HTTP（`accept: application/json, text/event-stream`），以协议
-`2025-11-25` 与 Orbit 的 `2025-06-18` 协商并接受。它还会对该端点发起一个 GET
+`2025-11-25` 与 PromptaFlow 的 `2025-06-18` 协商并接受。它还会对该端点发起一个 GET
 以寻找服务端推流；返回的 `405` 是**答案**，不是故障。
 
-**不要在这里用 `orbit mcp`。** 它的 stdio 传输虽然是 WorkBuddy 自家文档描述的形状，
+**不要在这里用 `promptaflow mcp`。** 它的 stdio 传输虽然是 WorkBuddy 自家文档描述的形状，
 但它启动的进程要的是 Hub 所管理的 Runtime 已经持有的项目数据库，会以
 `Runtime database is already owned` 退出，而不是共享。
 
@@ -102,17 +102,17 @@ Streamable HTTP（`accept: application/json, text/event-stream`），以协议
 cd /绝对路径/稳定目录/orbit
 git pull --ff-only
 uv tool install --force /绝对路径/稳定目录/orbit
-./start-orbit.sh /绝对路径/目标项目
+./start-promptaflow.sh /绝对路径/目标项目
 ```
 
 连接器 URL 不变，因此通常无需修改 WorkBuddy 设置。如果它仍保留旧工具目录，请重新连接
 或重启 WorkBuddy。
 
-移除集成时，在 WorkBuddy 中禁用或删除 `Orbit` 自定义连接器。这不会删除 Runtime 数据。
-请通过 **停止 Orbit** 控件或你启动的精确 Runtime 进程单独停止 Orbit；不要把删除
-`~/.orbit` 当成卸载方式。
+移除集成时，在 WorkBuddy 中禁用或删除 `PromptaFlow` 自定义连接器。这不会删除 Runtime 数据。
+请通过 **停止 PromptaFlow** 控件或你启动的精确 Runtime 进程单独停止 PromptaFlow；不要把删除
+`~/.promptaflow` 当成卸载方式。
 
-WorkBuddy 会挂载 Orbit 的卡片，而**每张挂载的卡片都会开自己的 MCP 会话**并调用它需要
+WorkBuddy 会挂载 PromptaFlow 的卡片，而**每张挂载的卡片都会开自己的 MCP 会话**并调用它需要
 的工具——所以一个对话里挂着六张卡，就是六套这样的调用。有一个工具为此做了特别处理：
 `list_workflows` 把目录画成卡片，正文只回一个计数，所以当「答案是你要自己算出来的」
 而不是「给人看的」时候，请改用 `inspect_workflows` 读目录。
@@ -129,7 +129,7 @@ WorkBuddy 从连接器设置里自报 `workbuddy-third-party:custom-mcp:orbit`�
 
 每个工具打开哪张卡，见[卡片](../cards.zh-CN.md)。
 
-WorkBuddy 完整地挂载 Orbit 的 MCP App 卡片：列出资源、请求
+WorkBuddy 完整地挂载 PromptaFlow 的 MCP App 卡片：列出资源、请求
 `resources/templates/list`、再读取工具通过 `_meta.ui.resourceUri` 点名的那一个并绘制。
 由此有两个后果。
 
@@ -156,47 +156,47 @@ WorkBuddy 从 MCP 服务器的初始化指令里收到这条规则：第一个�
 | 你看到的 | 它是什么 |
 | --- | --- |
 | 对 `/mcp` 发 GET 得到 `405` | 这是「有没有服务端推流」这个问题的**答案**，不是故障。 |
-| `Runtime database is already owned` | 用了 `orbit mcp`。把连接器指向 Hub 的 HTTP 端点。 |
-| 连接器报告没有工具 | Hub 没在跑。用 `./start-orbit.sh /absolute/path/to/project` 启动。 |
+| `Runtime database is already owned` | 用了 `promptaflow mcp`。把连接器指向 Hub 的 HTTP 端点。 |
+| 连接器报告没有工具 | Hub 没在跑。用 `./start-promptaflow.sh /absolute/path/to/project` 启动。 |
 
 ## 示例：生成专家的提示词
 
-`Orbit` 连接器验证可用后，把下面的范文交给 WorkBuddy，即可生成一个可复用的专家，不必在
+`PromptaFlow` 连接器验证可用后，把下面的范文交给 WorkBuddy，即可生成一个可复用的专家，不必在
 每次对话中重复编排规则：
 
 ```text
 请创建一个 WorkBuddy 专家，配置如下：
 
-- 名称：Orbit 工作流编排专家
-- 描述：选择并运行本地 Orbit 工作流、跟踪运行、处理人工中断，并安全地接手 Agent 步骤。
-- 连接器：启用现有的、名为 Orbit 的自定义 MCP 连接器。
+- 名称：PromptaFlow 工作流编排专家
+- 描述：选择并运行本地 PromptaFlow 工作流、跟踪运行、处理人工中断，并安全地接手 Agent 步骤。
+- 连接器：启用现有的、名为 PromptaFlow 的自定义 MCP 连接器。
 
 以仓库中的最新指南为唯一依据：
 https://github.com/TNJ2026/orbit/blob/main/docs/hosts/workbuddy.zh-CN.md
 
 读取其中的「示例：一份工作流编排提示词」一节，把该节代码块中的完整提示词作为专家指令。
 保留所有工具名、首轮恢复检查、Workspace 选择、卡片使用规则、allowed_commands 与 revision
-检查、中断响应格式和委托规则。不要虚构 Orbit 工具，也不要把安装命令写进专家指令。
+检查、中断响应格式和委托规则。不要虚构 PromptaFlow 工具，也不要把安装命令写进专家指令。
 
 如果你不能直接创建专家，请按可直接复制的格式输出准确的「名称、描述、专家指令、已启用
-连接器」四项配置。若 Orbit 连接器缺失或未启用，请明确报告，不要静默换成其他连接器。
+连接器」四项配置。若 PromptaFlow 连接器缺失或未启用，请明确报告，不要静默换成其他连接器。
 ```
 
 保存前请检查生成结果，尤其是已启用的连接器，以及首轮调用 `list_delegations` 的规则。这段
-提示词只负责生成专家，不负责安装或启动 Orbit。
+提示词只负责生成专家，不负责安装或启动 PromptaFlow。
 
 ## 示例：一份工作流编排提示词
 
-可以直接粘进那个挂着 Orbit 连接器的 agent。这是**示例不是规范** —— 按你实际要做的事
+可以直接粘进那个挂着 PromptaFlow 连接器的 agent。这是**示例不是规范** —— 按你实际要做的事
 裁剪它 —— 但里面每一条规则，Runtime 都会用「拒绝你」的方式来执行。
 
 ````text
-你通过 Orbit 编排工作。Orbit 是一个通过 MCP 接入的本地工作流 Runtime，你以自定义
+你通过 PromptaFlow 编排工作。PromptaFlow 是一个通过 MCP 接入的本地工作流 Runtime，你以自定义
 连接器的身份连着它。**什么能跑、什么能改，由 Runtime 说了算，你是它的客户端。**
 
 ## 你在哪儿
 
-Orbit 按 workspace 划分，而这个连接器接进来时并不带 workspace。如果还没选过，先调
+PromptaFlow 按 workspace 划分，而这个连接器接进来时并不带 workspace。如果还没选过，先调
 `list_workspaces` 和 `select_workspace`；选定后在本 MCP 会话内一直有效。**绝不要猜路径。**
 
 ## 读目录

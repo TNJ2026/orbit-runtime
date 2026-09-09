@@ -27,7 +27,7 @@ class PackageContentTests(unittest.TestCase):
     def test_the_modular_ui_ships(self) -> None:
         root = ORBIT.joinpath("static/workflow-ui")
         index = root.joinpath("index.html").read_text(encoding="utf-8")
-        self.assertIn("Orbit Runtime", index)
+        self.assertIn("PromptaFlow Runtime", index)
         self.assertIn('src="assets/app.js"', index)
         for asset in (
             "app.css", "app.js", "api.js", "i18n.js",

@@ -1,19 +1,19 @@
-# Orbit in the DeepSeek Harness
+# PromptaFlow in the DeepSeek Harness
 
-[简体中文](./deepseek-harness.zh-CN.md) | **English** · [Hosts](./README.md) · [Orbit](../../README.md)
+[简体中文](./deepseek-harness.zh-CN.md) | **English** · [Hosts](./README.md) · [PromptaFlow](../../README.md)
 
 | | |
 | --- | --- |
-| Reaches Orbit through | a Host Profile Bundle with its own Gateway |
+| Reaches PromptaFlow through | a Host Profile Bundle with its own Gateway |
 | Registers as | a per-Session `harness:session:*` actor |
-| Draws Orbit's cards | no — it draws its own panel |
+| Draws PromptaFlow's cards | no — it draws its own panel |
 | MCP tool profile | `harness`, a subset of the full surface |
 
 ## Install from the repository
 
 `integrations/deepseek-harness` is the installable Host Profile Bundle. This
-installation keeps Orbit Runtime as an independent local process and adds the
-Orbit panel and tools to the Harness Web Profile.
+installation keeps PromptaFlow Runtime as an independent local process and adds the
+PromptaFlow panel and tools to the Harness Web Profile.
 
 ### Install with a simple prompt
 
@@ -21,7 +21,7 @@ Paste this into a DeepSeek Harness Agent that can read public repositories and
 run local commands:
 
 ```text
-Install the Orbit DeepSeek Harness integration from https://github.com/TNJ2026/orbit.
+Install the PromptaFlow DeepSeek Harness integration from https://github.com/TNJ2026/orbit.
 ```
 
 The Agent should find this document from the repository's host index and
@@ -31,7 +31,7 @@ Profile and tell you when that restart is required.
 ### 1. Check the prerequisites
 
 - Git and `uv`.
-- Python 3.10 or newer for Orbit Runtime.
+- Python 3.10 or newer for PromptaFlow Runtime.
 - Node.js 22 or newer for the integration bundle.
 - A working `dsh` command and a Harness Web Profile named `web`.
 
@@ -44,7 +44,7 @@ node --version
 dsh --version
 ```
 
-### 2. Clone Orbit into a stable directory
+### 2. Clone PromptaFlow into a stable directory
 
 ```bash
 git clone https://github.com/TNJ2026/orbit.git /absolute/stable/path/orbit
@@ -54,7 +54,7 @@ cd /absolute/stable/path/orbit
 If the repository already exists, inspect its changes before updating it. Do
 not discard local work; update a clean checkout with `git pull --ff-only`.
 
-### 3. Install Orbit Runtime
+### 3. Install PromptaFlow Runtime
 
 ```bash
 uv tool install /absolute/stable/path/orbit
@@ -83,15 +83,15 @@ above.
 1. Restart the Harness Web Profile.
 2. Open a workspace backed by a real directory.
 3. Run `/orbit`.
-4. Confirm the Orbit panel appears and its Settings row reports **connected**.
-5. Open one historical Run or ask the Agent to list Orbit workflows to verify
+4. Confirm the PromptaFlow panel appears and its Settings row reports **connected**.
+5. Open one historical Run or ask the Agent to list PromptaFlow workflows to verify
    the Host-to-Runtime path.
 
-Opening `/orbit` starts Orbit for the Harness Workspace when necessary; a
+Opening `/orbit` starts PromptaFlow for the Harness Workspace when necessary; a
 Runtime started this way stays up after the panel or Profile closes. The
-Gateway looks for ownership records under `~/.orbit` — set
+Gateway looks for ownership records under `~/.promptaflow` — set
 `ORBIT_RUNTIME_ROOT` for the Profile if the Runtime database lives elsewhere.
-The Orbit CLI holds a non-blocking ownership lock on that database and
+The PromptaFlow CLI holds a non-blocking ownership lock on that database and
 publishes its Workspace and MCP endpoint in the ownership record; Harness
 never owns that lock and never creates a second writer.
 
@@ -110,7 +110,7 @@ dsh --profile web --dump-config
 
 Restart the Profile and repeat the verification above. To roll back, check out
 the intended released tag in a clean checkout, reinstall that Runtime and
-bundle, then restart. Do not delete the Orbit Runtime database during a bundle
+bundle, then restart. Do not delete the PromptaFlow Runtime database during a bundle
 rollback.
 
 Remove only the Harness integration with:
@@ -121,12 +121,12 @@ dsh --profile web --dump-config
 ```
 
 The second command should no longer list the bundle. Removing it does not stop
-or delete an independent Orbit Runtime.
+or delete an independent PromptaFlow Runtime.
 
 | Component | Supported range |
 | --- | --- |
-| Orbit Runtime | `>=0.4.0 <0.5.0` |
-| Orbit integration protocol | `orbit-harness/1` |
+| PromptaFlow Runtime | `>=0.4.0 <0.5.0` |
+| PromptaFlow integration protocol | `orbit-harness/1` |
 | Harness packages | `>=0.1.1-rc.2 <0.2.0` (alpha prereleases are not supported) |
 | React | `^18.2.0` |
 | Node.js | `>=22` |
@@ -135,7 +135,7 @@ The bundle contributes a resident panel to the Harness shell overlay. It folds
 down to a badge saying whether anything is running and opens to the Runtime's
 own four pages — Goal, Workflows, History, Agents. It can be docked or
 detached, and remembers which. Graphs, Artifacts and Workflow authoring are
-not redrawn here: the panel opens Orbit's own UI for those.
+not redrawn here: the panel opens PromptaFlow's own UI for those.
 
 Runs are started by asking the Agent, not from the panel. The Agent has a
 bounded native tool surface — `orbit_list_workflows`, `orbit_list_runs`,
@@ -152,9 +152,9 @@ be a Run the Agent knows nothing about, and could not report on afterwards or
 take the next step from.
 
 Harness runs this Runtime under the `harness` MCP tool profile, a subset of the
-full surface. It does not execute Orbit workflow nodes: Agent discovery, CLI
+full surface. It does not execute PromptaFlow workflow nodes: Agent discovery, CLI
 credentials, sandboxing, process cleanup, retry semantics and effects all
-remain the Runtime's. Orbit accepts the `x-orbit-actor` header only from
+remain the Runtime's. PromptaFlow accepts the `x-orbit-actor` header only from
 loopback, only on `/mcp`, and only under `harness:session:*`.
 
 ## The panel
@@ -168,14 +168,14 @@ follow.
 
 A Run can be cancelled, an interrupted one continued, and a step waiting on a
 person ruled on, all from the panel. Every mutation carries the revision the
-panel was displaying and is refused if Orbit has moved past it: a button that
+panel was displaying and is refused if PromptaFlow has moved past it: a button that
 quietly acted on a newer Run than the one being read would be worse than one
 that fails.
 
 The panel lists the Workspace's Runs, not the chat's. Every Gateway call
 carries a per-Session actor and `list_runs` scopes to its caller by default —
 right for the Agent's account of its own work, wrong for a panel standing
-beside Orbit's UI, where it showed an empty History next to a Runtime holding
+beside PromptaFlow's UI, where it showed an empty History next to a Runtime holding
 twenty-five Runs. The panel passes `owner: workspace`; the Agent tool keeps
 the default.
 
@@ -209,12 +209,12 @@ Graph, Edges, cursor-based output, bounded Artifact content and Attachment
 import. Every call carries a Workspace and the Host trusts none of them: each
 is checked against the Session it claims to belong to, or against the
 Workspace registry, before any Gateway call. It never lets a caller reach
-Orbit loopback directly, and client code never receives the Runtime endpoint,
-child process handle, actor header or Orbit credentials.
+PromptaFlow loopback directly, and client code never receives the Runtime endpoint,
+child process handle, actor header or PromptaFlow credentials.
 
 Image Artifacts can be imported into Harness Attachment storage once both
-Orbit's 2 MiB proxy bound and Harness image admission pass; the Attachment
-contract covers PNG, JPEG, WebP and GIF, and other media stays in Orbit.
+PromptaFlow's 2 MiB proxy bound and Harness image admission pass; the Attachment
+contract covers PNG, JPEG, WebP and GIF, and other media stays in PromptaFlow.
 
 The diagnostics document carries only Workspace/Session ids, protocol
 capabilities, aggregate counts, Gateway counters and Bridge state — never the
@@ -237,7 +237,7 @@ by the integration rather than supplied by the model. See
 
 ## Failure and reconnection
 
-The Gateway refuses an incompatible Orbit integration protocol at startup, and
+The Gateway refuses an incompatible PromptaFlow integration protocol at startup, and
 runtime codecs reject malformed core DTOs before they reach the Client — a
 malformed Run, Step, Output or Artifact payload fails at the Gateway boundary
 rather than flowing through TypeScript assertions. When an MCP transport

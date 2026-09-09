@@ -1,4 +1,4 @@
-"""Compact Orbit MCP App for current-task feedback.
+"""Compact PromptaFlow MCP App for current-task feedback.
 
 The card is intentionally not an administration surface. Approval interrupts
 are offered as explicit approve/reject actions, then sent to the host
@@ -23,7 +23,7 @@ ORBIT_AUTHORING_URI = "ui://promptaflow/workflow-authoring-v15.html"
 ORBIT_RUN_URI = "ui://promptaflow/goal-run-v21.html"
 ORBIT_GOALS_URI = "ui://promptaflow/goals-v15.html"
 
-# The mark the full Orbit UI shows in its own top-left corner — the same
+# The mark the full PromptaFlow UI shows in its own top-left corner — the same
 # geometry as `workflow-ui/index.html`'s `.brand-mark`, not the favicon the
 # cards used to carry. The favicon is a tile: an opaque near-black plate with
 # the ring on it, drawn to survive being 16px in a browser tab. Beside a
@@ -118,7 +118,7 @@ _CARD_STYLE = r"""
   @media (min-height:360px){main{max-height:100vh;max-height:100dvh}}
   header{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex:none}
   .mark{display:block;width:28px;height:28px;flex:none}
-  /* The Orbit UI's own values for the three parts, in both themes. Brand
+  /* The PromptaFlow UI's own values for the three parts, in both themes. Brand
      colour, so it is the same mark everywhere rather than the card accent
      wearing the shape. */
   .mark .plate{fill:light-dark(#f7f8fb,#212121);stroke:light-dark(#e4e8f0,#2a2d35)}
@@ -254,7 +254,7 @@ __CARD_STYLE__
        bar that is the card's top level rather than a divider inside one, and
        the lists those tabs open. Everything above is the standard card
        theme — the palette, the buttons, the steps and the tab bar are the
-       ones every Orbit card uses, defined once. */
+       ones every PromptaFlow card uses, defined once. */
     .heading { min-width: 0; flex: 1; }
     #updated { margin-top: 1px; color: var(--muted); font-size: 11px; }
     #refresh:disabled { opacity: .55; cursor: default; }
@@ -280,7 +280,7 @@ __CARD_STYLE__
       font-size: 12px; }
     .stepName { min-width: 0; overflow: hidden; text-overflow: ellipsis;
       white-space: nowrap; }
-    /* One goal per card. Orbit runs one at a time per actor, so a second is
+    /* One goal per card. PromptaFlow runs one at a time per actor, so a second is
        a rarity rather than a list — a rule between them is enough. */
     .goalCard { border-bottom: 1px solid var(--line); }
     .goalCard:last-child { border-bottom: 0; }
@@ -344,7 +344,7 @@ __CARD_STYLE__
 </head>
 <body>
 <main>
-  <header>__ORBIT_LOGO__<div class="heading"><h1>Orbit</h1>
+  <header>__ORBIT_LOGO__<div class="heading"><h1>PromptaFlow</h1>
     <div id="updated"></div></div><button id="refresh" class="icon" type="button" aria-label="Refresh">↻</button></header>
   <nav id="tabs" class="tabs" role="tablist">
     <button class="tab" id="tabGoal" type="button" role="tab" data-tab="goal" aria-selected="false"></button>
@@ -389,17 +389,17 @@ __CARD_STYLE__
       durationShort: 'under 1 min', durationMinutes: minutes => `${minutes} min`,
       durationHours: (hours, minutes) => `${hours} h ${minutes} min`,
       runs: 'Runs', errors: 'Errors',
-      refreshed: 'Updated just now', error: 'Could not read the current Orbit task.',
+      refreshed: 'Updated just now', error: 'Could not read the current PromptaFlow task.',
       status: { succeeded:'Done', answered:'Answered', running:'Running', waiting:'Waiting', failed:'Failed', unknown:'Review', cancelled:'Cancelled', not_reached:'Pending' },
-      promptHandle: run => `Handle the pending human input for Orbit run ${run.run_id}. `
+      promptHandle: run => `Handle the pending human input for PromptaFlow run ${run.run_id}. `
         + `Before resuming, inspect the run and use its current interrupt_id, revision, and output_ports. `
         + `For approval, submit the declared output port object (for example {"result":{"decision":"approve","value":null}}); do not invent top-level fields.`,
-      promptApproval: (run,decision) => `${decision === 'approve' ? 'Approve' : 'Reject'} the pending approval for Orbit run ${run.run_id}. `
+      promptApproval: (run,decision) => `${decision === 'approve' ? 'Approve' : 'Reject'} the pending approval for PromptaFlow run ${run.run_id}. `
         + `Before resuming, inspect the run again and use its current interrupt_id, revision, allowed_commands, and output_ports. `
         + `Submit the declared output port object with decision="${decision}" and value=null; do not invent top-level fields.`,
-      promptCancel: id => `Cancel Orbit run ${id}.`,
-      promptCreateWorkflow: 'Create an Orbit workflow from the following requirements:',
-      promptAddAgent: 'Add an Agent CLI to Orbit: ',
+      promptCancel: id => `Cancel PromptaFlow run ${id}.`,
+      promptCreateWorkflow: 'Create an PromptaFlow workflow from the following requirements:',
+      promptAddAgent: 'Add an Agent CLI to PromptaFlow: ',
       promptGoal: (name,id) => `Run the workflow "${name}" (${id}) with this goal: `,
       promptModify: (name,id) => `Modify the workflow "${name}" (${id}) as follows: `,
     },
@@ -420,16 +420,16 @@ __CARD_STYLE__
       durationShort: '不足 1 分钟', durationMinutes: minutes => `${minutes} 分钟`,
       durationHours: (hours, minutes) => `${hours} 小时 ${minutes} 分钟`,
       runs: '运行', errors: '错误',
-      refreshed: '刚刚更新', error: '无法读取当前 Orbit 任务。',
+      refreshed: '刚刚更新', error: '无法读取当前 PromptaFlow 任务。',
       status: { succeeded:'完成', answered:'已回答', running:'运行中', waiting:'等待', failed:'失败', unknown:'检查', cancelled:'取消', not_reached:'未开始' },
-      promptHandle: run => `处理 Orbit 运行 ${run.run_id} 中等待人工输入的步骤。`
+      promptHandle: run => `处理 PromptaFlow 运行 ${run.run_id} 中等待人工输入的步骤。`
         + `恢复前请重新检查运行，并使用当前的 interrupt_id、revision 和 output_ports。`
         + `批准时提交已声明的输出端口对象（例如 {"result":{"decision":"approve","value":null}}），不要自创顶层字段。`,
-      promptApproval: (run,decision) => `${decision === 'approve' ? '批准' : '拒绝'} Orbit 运行 ${run.run_id} 中待处理的人工审批。`
+      promptApproval: (run,decision) => `${decision === 'approve' ? '批准' : '拒绝'} PromptaFlow 运行 ${run.run_id} 中待处理的人工审批。`
         + `恢复前请重新检查运行，并使用当前的 interrupt_id、revision、allowed_commands 和 output_ports。`
         + `按已声明的输出端口提交 decision="${decision}"、value=null 的对象，不要自创顶层字段。`,
-      promptCancel: id => `取消 Orbit 运行 ${id}。`,
-      promptCreateWorkflow: '按照下面的要求创建 Orbit 工作流：',
+      promptCancel: id => `取消 PromptaFlow 运行 ${id}。`,
+      promptCreateWorkflow: '按照下面的要求创建 PromptaFlow 工作流：',
       promptAddAgent: '给Orbit添加Agent cli：',
       promptGoal: (name,id) => `使用工作流「${name}」（${id}）执行：`,
       promptModify: (name,id) => `按照下面的要求修改工作流「${name}」（${id}）：`,
@@ -649,7 +649,7 @@ __CARD_STYLE__
 
   /* Read here when it is text and small — a workflow that wrote its reply as
      markdown wrote the reply, and a click to reach it is a click charged for
-     the thing that was asked for. Decided from what Orbit recorded, before
+     the thing that was asked for. Decided from what PromptaFlow recorded, before
      any bytes move. A preview that cannot be read is not worth a sentence:
      the artifact is still there, and still named below. */
   async function artifactRow(id) {
@@ -1021,7 +1021,7 @@ _WORKFLOW_LIST_STYLE = r"""
 """
 
 
-ORBIT_WORKFLOWS_HTML = _card("Orbit · Workflows", r"""
+ORBIT_WORKFLOWS_HTML = _card("PromptaFlow · Workflows", r"""
 const card=document.getElementById('card');let current=null;
 const t=strings({'en-US':{
  newGoal:'New goal',modify:'Modify',remove:'Delete',cancel:'Cancel',confirm:'Delete workflow',
@@ -1090,7 +1090,7 @@ async function refresh(){if(current?.workflow_id)await openDetail(current.workfl
 document.getElementById('refresh').onclick=refresh;onHostContext(()=>refresh());onToolResult(value=>{if(Array.isArray(value?.workflows))drawList(value.workflows);else if(value?.workflow_id){current=value;drawDetail(current)}});refresh();
 """, extra_style=_WORKFLOW_LIST_STYLE + _WORKFLOW_DETAIL_STYLE, extra_script=_XYFLOW_SCRIPT)
 
-ORBIT_AUTHORING_HTML = _card("Orbit · Workflow generation", r"""
+ORBIT_AUTHORING_HTML = _card("PromptaFlow · Workflow generation", r"""
 const card=document.getElementById('card');let job=initial(),timer=null;
 const t=strings({'en-US':{preparing:'Preparing',title:'Workflow generation',generated:'Generated',
  prepare:'Prepare request',generate:'Generate and validate',publish:'Publish workflow',
@@ -1121,7 +1121,7 @@ _RUN_STYLE = r"""
   overflow: hidden; }
 """
 
-ORBIT_RUN_HTML = _card("Orbit · Goal execution", r"""
+ORBIT_RUN_HTML = _card("PromptaFlow · Goal execution", r"""
 const card=document.getElementById('card');card.className='card goalRun';let run=initial(),timer=null,firstPaint=true;const terminal=new Set(['completed','failed','cancelled','unknown']);
 const t=strings({'en-US':{preparing:'Preparing',goal:'Goal',result:'Result',
  status:{queued:'Queued',running:'Running',waiting:'Needs your input',interrupted:'Needs your input',
@@ -1159,17 +1159,17 @@ _GOALS_STYLE = r"""
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 """
 
-ORBIT_GOALS_HTML = _card("Orbit · Goals", r"""
+ORBIT_GOALS_HTML = _card("PromptaFlow · Goals", r"""
 const card=document.getElementById('card');let timer=null;
 const live=new Set(['running','queued','waiting','interrupted']);
 const t=strings({'en-US':{goal:'Goal',empty:'No goals yet',
  status:{queued:'Queued',running:'Running',waiting:'Needs your input',interrupted:'Needs your input',
   completed:'Completed',failed:'Failed',cancelled:'Cancelled',unknown:'Needs review'},
- promptOpen:id=>`Show Orbit goal run ${id} using the goal execution card.`},
+ promptOpen:id=>`Show PromptaFlow goal run ${id} using the goal execution card.`},
 'zh-CN':{goal:'目标',empty:'暂无目标运行',
  status:{queued:'排队中',running:'运行中',waiting:'需要你的处理',interrupted:'需要你的处理',
   completed:'已完成',failed:'失败',cancelled:'已取消',unknown:'需要检查'},
- promptOpen:id=>`查看 Orbit 目标运行 ${id}，使用目标执行卡片展示详情。`}});
+ promptOpen:id=>`查看 PromptaFlow 目标运行 ${id}，使用目标执行卡片展示详情。`}});
 function css(s){return s==='running'||s==='queued'?'live':s==='waiting'||s==='interrupted'?'warn':s==='completed'?'good':s==='failed'||s==='cancelled'||s==='unknown'?'bad':''}
 function draw(rows){card.innerHTML=rows.length?rows.map(r=>`<button class="goalRow" type="button" data-run-id="${esc(r.run_id)}"><span class="goalTop"><span class="dot ${css(r.status)}"></span><span class="goalTitle">${esc(r.goal||r.workflow_id||t().goal)}</span><span class="goalStatus">${esc(t().status[r.status]||r.status||'')}</span></span><span class="goalMeta">${esc(r.workflow_id||'')} · ${esc(r.updated_at||'')}</span></button>`).join(''):`<div class="empty">${esc(t().empty)}</div>`;
  card.querySelectorAll('[data-run-id]').forEach(button=>button.onclick=()=>send(t().promptOpen(button.dataset.runId)))}
@@ -1178,9 +1178,9 @@ document.getElementById('refresh').onclick=refresh;document.addEventListener('vi
 """, extra_style=_GOALS_STYLE)
 
 ORBIT_MCP_APP_RESOURCES = (
-    {"uri": ORBIT_DASHBOARD_URI, "name": "Orbit workspace", "description": "Orbit goals, workflows, history, agents, and attention state.", "html": ORBIT_DASHBOARD_HTML, "prefers_border": False},
-    {"uri": ORBIT_WORKFLOWS_URI, "name": "Orbit workflows", "description": "Published workflow list.", "html": ORBIT_WORKFLOWS_HTML, "prefers_border": False},
-    {"uri": ORBIT_AUTHORING_URI, "name": "Orbit workflow generation", "description": "Workflow generation progress and result.", "html": ORBIT_AUTHORING_HTML, "prefers_border": False},
-    {"uri": ORBIT_RUN_URI, "name": "Orbit goal execution", "description": "Goal execution progress and result.", "html": ORBIT_RUN_HTML, "prefers_border": False},
-    {"uri": ORBIT_GOALS_URI, "name": "Orbit goals", "description": "Recent goal runs and their current status.", "html": ORBIT_GOALS_HTML, "prefers_border": False},
+    {"uri": ORBIT_DASHBOARD_URI, "name": "PromptaFlow workspace", "description": "PromptaFlow goals, workflows, history, agents, and attention state.", "html": ORBIT_DASHBOARD_HTML, "prefers_border": False},
+    {"uri": ORBIT_WORKFLOWS_URI, "name": "PromptaFlow workflows", "description": "Published workflow list.", "html": ORBIT_WORKFLOWS_HTML, "prefers_border": False},
+    {"uri": ORBIT_AUTHORING_URI, "name": "PromptaFlow workflow generation", "description": "Workflow generation progress and result.", "html": ORBIT_AUTHORING_HTML, "prefers_border": False},
+    {"uri": ORBIT_RUN_URI, "name": "PromptaFlow goal execution", "description": "Goal execution progress and result.", "html": ORBIT_RUN_HTML, "prefers_border": False},
+    {"uri": ORBIT_GOALS_URI, "name": "PromptaFlow goals", "description": "Recent goal runs and their current status.", "html": ORBIT_GOALS_HTML, "prefers_border": False},
 )

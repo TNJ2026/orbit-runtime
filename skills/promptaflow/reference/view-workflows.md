@@ -38,5 +38,5 @@ equivalents.
    construct a mutation URL.
 
 Do not call `open_orbit_dashboard` for a workflow-list request: the workspace card
-is the default for opening Orbit, while `list_workflows` is the dedicated list
+is the default for opening PromptaFlow, while `list_workflows` is the dedicated list
 card.

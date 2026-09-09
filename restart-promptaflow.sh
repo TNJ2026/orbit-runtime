@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Stop the Orbit Hub and the Runtimes it manages, then start it again the way
+# Stop the PromptaFlow Hub and the Runtimes it manages, then start it again the way
 # it is normally started.
 #
 # The start half is deliberately not implemented here. `agent-app.json` already
 # declares the command, the ready URL and how long a cold start may take, and
-# `orbit agent-app ensure` — what `start-orbit.sh` runs — owns the
+# `orbit agent-app ensure` — what `start-promptaflow.sh` runs — owns the
 # `pid.json` that records which process holds the port. A restart that starts
 # the Hub itself leaves that file naming a process it killed, and the next
 # `ensure` then refuses to run at all: the port answers, the recorded PID is
@@ -23,19 +23,19 @@ while [ "$#" -gt 0 ]; do
     --dry-run) DRY_RUN=1 ;;
     --stop-only) STOP_ONLY=1 ;;
     *)
-      echo "usage: ./restart-orbit.sh [--dry-run] [--stop-only]" >&2
+      echo "usage: ./restart-promptaflow.sh [--dry-run] [--stop-only]" >&2
       exit 2
       ;;
   esac
   shift
 done
 
-if [ -x "$ROOT_DIR/.venv/bin/orbit" ]; then
-  ORBIT=("$ROOT_DIR/.venv/bin/orbit")
+if [ -x "$ROOT_DIR/.venv/bin/promptaflow" ]; then
+  PROMPTAFLOW=("$ROOT_DIR/.venv/bin/promptaflow")
 elif command -v uv >/dev/null 2>&1; then
-  ORBIT=(uv run --project "$ROOT_DIR" orbit)
+  PROMPTAFLOW=(uv run --project "$ROOT_DIR" promptaflow)
 else
-  echo "Orbit CLI not found; create .venv or install uv first." >&2
+  echo "PromptaFlow CLI not found; create .venv or install uv first." >&2
   exit 127
 fi
 
@@ -48,7 +48,7 @@ pids="$temporary/pids"
 # reuses them, and a stale entry naming a PID something else now holds is how
 # a restart script destroys an unrelated program. `ps` is the only thing that
 # can say what a number is now, so nothing is signalled without asking it.
-"${ORBIT[@]}" runtimes --json > "$temporary/runtimes.json"
+"${PROMPTAFLOW[@]}" runtimes --json > "$temporary/runtimes.json"
 python3 - "$temporary/runtimes.json" "$STATE_ROOT" "$ROOT_DIR/agent-app.json" "$RUNTIME_ROOT" > "$pids" <<'PYTHON'
 import json
 import shutil
@@ -81,13 +81,25 @@ def identity_of(pid: int) -> str:
     return " ".join(answer.split())
 
 
-candidates: list[tuple[int, str, str]] = []
+# What each kind of process looks like on the command line. Both spellings:
+# a Hub or Runtime started by the build before the rename is still running as
+# `orbit`, and it is precisely the process a restart exists to stop — matching
+# only the new name would quietly leave the old one holding the port.
+HUB_COMMANDS = ("promptaflow hub serve", "orbit hub serve")
+RUNTIME_COMMANDS = ("promptaflow serve", "orbit serve")
+
+candidates: list[tuple[int, str, tuple[str, ...]]] = []
 # The Hub, as the Agent App host records it — not as whatever holds the port,
 # which is a different question with a worse answer when they disagree.
-for pid_file in sorted(state_root.glob("orbit/*/pid.json")):
+# Both app ids: the Agent App host keyed this directory by the manifest id,
+# and an install that predates the rename still has one named `orbit`.
+pid_files = sorted(
+    {*state_root.glob("promptaflow/*/pid.json"), *state_root.glob("orbit/*/pid.json")}
+)
+for pid_file in pid_files:
     try:
         payload = json.loads(pid_file.read_text(encoding="utf-8"))
-        candidates.append((int(payload["pid"]), "Orbit Hub", "orbit hub serve"))
+        candidates.append((int(payload["pid"]), "PromptaFlow Hub", HUB_COMMANDS))
     except (OSError, ValueError, KeyError, TypeError):
         continue
 
@@ -108,7 +120,7 @@ if port is not None and shutil.which("lsof"):
     ).stdout.split()
     for value in listeners:
         try:
-            candidates.append((int(value), "Orbit Hub", "orbit hub serve"))
+            candidates.append((int(value), "PromptaFlow Hub", "orbit hub serve"))
         except ValueError:
             continue
 
@@ -124,7 +136,7 @@ for entry in listed if isinstance(listed, list) else []:
     if not isinstance(entry, dict):
         continue
     try:
-        candidates.append((int(entry["pid"]), "Orbit Runtime", "orbit serve"))
+        candidates.append((int(entry["pid"]), "PromptaFlow Runtime", RUNTIME_COMMANDS))
     except (KeyError, TypeError, ValueError):
         continue
 
@@ -139,7 +151,7 @@ for lock_path in sorted(runtime_root.rglob("*.owner.lock")):
     for facts_path in (lock_path.with_suffix(".json"), lock_path):
         try:
             payload = json.loads(facts_path.read_text(encoding="utf-8"))
-            candidates.append((int(payload["pid"]), "Orbit Runtime", "orbit serve"))
+            candidates.append((int(payload["pid"]), "PromptaFlow Runtime", RUNTIME_COMMANDS))
             break
         except (OSError, ValueError, KeyError, TypeError):
             continue
@@ -152,7 +164,7 @@ for pid, label, expected in candidates:
     identity = identity_of(pid)
     if not identity:
         continue          # Already gone; nothing to stop and nothing to warn about.
-    if expected not in identity:
+    if not any(command in identity for command in expected):
         print(
             f"skipping PID {pid}: recorded as {label} but now runs {identity}",
             file=sys.stderr,
@@ -191,12 +203,12 @@ signal_if_unchanged() {
 }
 
 if [ ! -s "$pids" ]; then
-  echo "Nothing of Orbit's is running."
+  echo "Nothing of PromptaFlow's is running."
 else
-  # The Hub first — "Orbit Hub" sorts before "Orbit Runtime" — because a
+  # The Hub first — "PromptaFlow Hub" sorts before "PromptaFlow Runtime" — because a
   # connected Agent App can ask it to launch a replacement Runtime while this
   # is still stopping the old ones. The separator is explicit: the default
-  # splits on blanks, so `-k2,2` would compare the word "Orbit" on every line
+  # splits on blanks, so `-k2,2` would compare the word "PromptaFlow" on every line
   # and fall back to sorting by PID.
   while IFS=$'\t' read -r pid label identity; do
     [ -n "$pid" ] || continue
@@ -241,9 +253,9 @@ while IFS=$'\t' read -r pid label identity; do
 done <"$pids"
 
 if [ "$STOP_ONLY" -eq 1 ]; then
-  echo "Orbit Hub and all discovered Runtimes are stopped."
+  echo "PromptaFlow Hub and all discovered Runtimes are stopped."
   exit 0
 fi
 
-echo "Starting Orbit through the Agent App host..."
-exec "$ROOT_DIR/start-orbit.sh"
+echo "Starting PromptaFlow through the Agent App host..."
+exec "$ROOT_DIR/start-promptaflow.sh"

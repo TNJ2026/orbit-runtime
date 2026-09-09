@@ -109,7 +109,7 @@ Before a dry run or confirmation, show a compact preview containing:
 - workflow name, ID, and resolved version;
 - goal and validated input;
 - defaults or inferred assumptions that materially affect execution;
-- known effects when Orbit exposes them, otherwise any effects evident from
+- known effects when PromptaFlow exposes them, otherwise any effects evident from
   the published definition;
 - follow, missing-workflow, and confirmation behavior.
 

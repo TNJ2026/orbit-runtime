@@ -12,7 +12,7 @@ import { OrbitGateway } from '../lib/gateway.js'
 const here = dirname(fileURLToPath(import.meta.url))
 const orbit = process.env.ORBIT_BIN || resolve(
   here,
-  process.platform === 'win32' ? '../../../.venv/Scripts/orbit.exe' : '../../../.venv/bin/orbit',
+  process.platform === 'win32' ? '../../../.venv/Scripts/promptaflow.exe' : '../../../.venv/bin/promptaflow',
 )
 
 async function freePort() {

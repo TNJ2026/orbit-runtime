@@ -1,8 +1,8 @@
 # The cards
 
-[简体中文](./cards.zh-CN.md) | **English** · [Hosts](./hosts/README.md) · [Orbit](../README.md)
+[简体中文](./cards.zh-CN.md) | **English** · [Hosts](./hosts/README.md) · [PromptaFlow](../README.md)
 
-Orbit ships five small pages that a host can draw beside the conversation.
+PromptaFlow ships five small pages that a host can draw beside the conversation.
 They are MCP Apps (the MCP Apps extension, SEP-1865): each is published as an
 MCP resource with the mime type `text/html;profile=mcp-app`, and each is bound
 to the tool that opens it through `_meta.ui.resourceUri`.
@@ -12,28 +12,28 @@ to the tool that opens it through `_meta.ui.resourceUri`.
 Call the tool. There is no separate "open the card" call — the card is the
 tool's `_meta`, so a host that implements MCP Apps mounts it in a sandboxed
 iframe when the tool answers, and a host that does not shows only the JSON the
-tool returned. Whether anything is drawn is the host's decision, not Orbit's,
+tool returned. Whether anything is drawn is the host's decision, not PromptaFlow's,
 so treat the visible surface as a separate question from the call.
 
 | Call this | and this card appears | showing |
 | --- | --- | --- |
-| `open_orbit_dashboard` | Orbit workspace | goals, workflows, history, and agents |
-| `list_workflows` | Orbit workflows | the published catalogue |
-| `get_workflow_definition` | Orbit workflows | the same card, opened on one workflow |
-| `generate_workflow` | Orbit workflow generation | one authoring job's progress and result |
-| `start_run` | Orbit goal execution | that run's steps, attention state and result |
-| `open_orbit_goals` | Orbit goals | recent goal runs and their status |
+| `open_orbit_dashboard` | PromptaFlow workspace | goals, workflows, history, and agents |
+| `list_workflows` | PromptaFlow workflows | the published catalogue |
+| `get_workflow_definition` | PromptaFlow workflows | the same card, opened on one workflow |
+| `generate_workflow` | PromptaFlow workflow generation | one authoring job's progress and result |
+| `start_run` | PromptaFlow goal execution | that run's steps, attention state and result |
+| `open_orbit_goals` | PromptaFlow goals | recent goal runs and their status |
 
 Pick the card from the intent rather than opening the workspace card first: a
 request to see the workflows is `list_workflows`, and a request to run a goal
-is `start_run`. Opening Orbit itself is `open_orbit_dashboard`; the legacy tool
+is `start_run`. Opening PromptaFlow itself is `open_orbit_dashboard`; the legacy tool
 name remains stable for existing clients.
 
 ## What each one is
 
-![The Orbit workspace card, on its History tab](./images/cards/dashboard.png)
+![The PromptaFlow workspace card, on its History tab](./images/cards/dashboard.png)
 
-**Orbit workspace.** Four tabs — Goal, Workflows, History, Agents — with
+**PromptaFlow workspace.** Four tabs — Goal, Workflows, History, Agents — with
 **Create workflow** at the end of the tab row.
 
 Goal is what the card opens on: everything still running, or the goal that ran
@@ -45,26 +45,26 @@ into an empty screen. With nothing ever run, the page says so.
 History is the same project's goal runs, all of them, grouped by day; opening
 one shows the same thing the Goal page shows for a single run.
 
-![The Orbit workflows card](./images/cards/workflows.png)
+![The PromptaFlow workflows card](./images/cards/workflows.png)
 
-**Orbit workflows.** The published catalogue, with **New goal** on each row.
+**PromptaFlow workflows.** The published catalogue, with **New goal** on each row.
 Selecting a row switches the same card to that workflow's detail — the graph,
 the definition list, and **New goal**, **Modify**, **Delete** — rather than
 opening a second card.
 
 ![The workflow generation card](./images/cards/workflow-generation.png)
 
-**Orbit workflow generation.** One authoring job: queued, generating,
+**PromptaFlow workflow generation.** One authoring job: queued, generating,
 generated or failed, with the requirement it was given.
 
 ![The goal execution card](./images/cards/goal-execution.png)
 
-**Orbit goal execution.** One run: its steps, whether a person is needed, and
+**PromptaFlow goal execution.** One run: its steps, whether a person is needed, and
 its result.
 
 ![The goals card](./images/cards/goals.png)
 
-**Orbit goals.** Recent runs and their current status, as a list.
+**PromptaFlow goals.** Recent runs and their current status, as a list.
 
 Every card follows the host's locale — its labels, its empty states and the
 prompts it sends back. The host's own language wins when it sends one, and the
@@ -87,7 +87,7 @@ Hosts cache MCP App resources by URI. Every card's URI carries a version —
 changing a card means publishing it under a new one, because a host that has
 already fetched the old URI will keep rendering the previous document.
 
-The consequence for a user is small but real: **after upgrading Orbit, start a
+The consequence for a user is small but real: **after upgrading PromptaFlow, start a
 new conversation.** A session that has already mounted a card keeps the copy
 it fetched.
 

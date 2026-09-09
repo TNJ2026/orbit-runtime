@@ -118,7 +118,7 @@ class HelpTests(unittest.TestCase):
     def test_version_prints_and_exits(self) -> None:
         result = cli("--version")
         self.assertEqual(0, result.returncode, result.stderr)
-        self.assertIn("orbit", result.stdout)
+        self.assertIn("promptaflow", result.stdout)
 
     def test_no_subcommand_is_an_error(self) -> None:
         self.assertNotEqual(0, cli().returncode)
@@ -276,7 +276,7 @@ class RunCommandTests(CliMatrixTestCase):
             "run", "inspect", "langgraph_run:nope", "--db", str(self.db),
         )
         self.assertEqual(1, result.returncode)
-        self.assertIn("orbit run:", result.stderr)
+        self.assertIn("promptaflow run:", result.stderr)
         self.assertNotIn("Traceback", result.stderr)
 
     def test_an_empty_runtime_says_so(self) -> None:

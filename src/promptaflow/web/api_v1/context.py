@@ -141,7 +141,7 @@ class ApiContext:
         self.agent_fallback_policy = agent_fallback
         from ...workflow.catalogs.agent_proposal import source_checkout_root
 
-        # The Orbit source checkout, not the Workspace this Runtime executes
+        # The PromptaFlow source checkout, not the Workspace this Runtime executes
         # workflows against.  None means this installation can probe CLIs but
         # cannot safely apply a source-level allowlist proposal.
         self.agent_proposal_root = source_checkout_root(agent_proposal_root)

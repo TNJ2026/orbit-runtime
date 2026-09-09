@@ -1,4 +1,4 @@
-"""Cross-process ownership for one writable Orbit Runtime database.
+"""Cross-process ownership for one writable PromptaFlow Runtime database.
 
 The lock and its adjacent metadata file form the discovery record. A client
 that wants to talk to a Runtime it did not start — a plugin host, an editor,

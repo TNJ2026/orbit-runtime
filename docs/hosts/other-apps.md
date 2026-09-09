@@ -1,15 +1,15 @@
-# Orbit from any other MCP-capable App
+# PromptaFlow from any other MCP-capable App
 
-[简体中文](./other-apps.zh-CN.md) | **English** · [Hosts](./README.md) · [Orbit](../../README.md)
+[简体中文](./other-apps.zh-CN.md) | **English** · [Hosts](./README.md) · [PromptaFlow](../../README.md)
 
 | | |
 | --- | --- |
-| Reaches Orbit through | Orbit's stdio proxy |
+| Reaches PromptaFlow through | PromptaFlow's stdio proxy |
 | Registers as | its own stable name |
-| Draws Orbit's cards | host-dependent |
+| Draws PromptaFlow's cards | host-dependent |
 | Event tools | the proxy's `wait_app_event`, `list_app_events`, `ack_app_event` |
 
-Connect through Orbit's stdio proxy. Adapt this example to the App's MCP
+Connect through PromptaFlow's stdio proxy. Adapt this example to the App's MCP
 configuration format:
 
 ```json
@@ -17,7 +17,7 @@ configuration format:
   "mcpServers": {
     "orbit": {
       "command": "bash",
-      "args": ["/absolute/path/to/orbit/start-orbit.sh", "--mcp-proxy"],
+      "args": ["/absolute/path/to/orbit/start-promptaflow.sh", "--mcp-proxy"],
       "env": {
         "ORBIT_AGENT_APP_WORKSPACE": "/absolute/path/to/project"
       }
@@ -32,14 +32,14 @@ workspace's `.orbit/agent-apps/` directory, so a sandboxed App needs write
 access only to the selected workspace. Set `AGENT_APP_STATE_DIR` explicitly to
 keep that inbox elsewhere.
 
-For Orbit to recognize it as the connected Agent, the App must keep this call
+For PromptaFlow to recognize it as the connected Agent, the App must keep this call
 pending:
 
 ```text
 wait_authoring_request(client="claude-desktop", timeout_seconds=300)
 ```
 
-Orbit then shows `app:claude-desktop`. Connecting MCP alone does not register
+PromptaFlow then shows `app:claude-desktop`. Connecting MCP alone does not register
 an online App: the pending call is what makes one addressable. An App asked to
 write a Workflow submits the DSL with `submit_authoring_response` and processes
 compiler feedback through `get_authoring_job`.
@@ -61,7 +61,7 @@ is not. An `unknown` delegation is never executed again. See
 
 What the five cards are is in [the cards](../cards.md).
 
-Orbit publishes its workspace card as an MCP App (the MCP Apps extension,
+PromptaFlow publishes its workspace card as an MCP App (the MCP Apps extension,
 SEP-1865): the resource carries the mime type `text/html;profile=mcp-app` and
 is bound to the tool through `_meta.ui.resourceUri`. There is nothing
 host-specific in that — a host implementing MCP Apps mounts the card in a

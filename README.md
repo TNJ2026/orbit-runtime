@@ -1,14 +1,14 @@
-# Orbit
+# PromptaFlow
 
 <p align="center">
-  <img src="./docs/images/orbit-banner.png" alt="Orbit — Local Agent Workflow Runtime" width="100%">
+  <img src="./docs/images/promptaflow-banner.png" alt="PromptaFlow — Local Agent Workflow Runtime" width="100%">
 </p>
 
 [简体中文](./README.zh-CN.md) | **English**
 
-Orbit is a local, durable LangGraph workflow Runtime for Agent Apps. A stable
+PromptaFlow is a local, durable LangGraph workflow Runtime for Agent Apps. A stable
 Hub routes API, Web UI, workflow authoring, and MCP traffic to one managed
-Runtime process per Workspace. Project data is stored under `~/.orbit/projects/`.
+Runtime process per Workspace. Project data is stored under `~/.promptaflow/projects/`.
 
 It is reached today from the **Codex app**, from **WorkBuddy**, from the
 **DeepSeek Harness** panel, and from any other MCP-capable App — each through
@@ -18,17 +18,13 @@ the run, which needs no CLI at all.
 
 ## Install the CLI
 
-Orbit requires Python 3.10 or newer and
+PromptaFlow requires Python 3.10 or newer and
 [uv](https://docs.astral.sh/uv/).
 
 ```bash
-uv tool install orbit-runtime      # or: pipx install orbit-runtime
+uv tool install promptaflow      # or: pipx install promptaflow
 uv tool update-shell
 ```
-
-The distribution is `orbit-runtime`; the command it installs is `orbit`. The
-two names differ because `orbit` was taken on PyPI long before this project,
-and it is the name the integrations already publish under on npm.
 
 To work from source:
 
@@ -36,7 +32,7 @@ To work from source:
 git clone https://github.com/TNJ2026/orbit.git
 cd orbit
 uv sync --extra dev
-uv run orbit serve
+uv run promptaflow serve
 ```
 
 On Windows, native PowerShell launchers work without Git Bash. The start script
@@ -44,20 +40,20 @@ registers the current workspace; restart and stop act on the Hub and every
 Workspace Runtime they discover:
 
 ```bat
-start-orbit.cmd
-restart-orbit.cmd
-stop-orbit.cmd
+start-promptaflow.cmd
+restart-promptaflow.cmd
+stop-promptaflow.cmd
 ```
 
 The `.cmd` entry points run directly from PowerShell, Command Prompt, or
 Explorer without changing the machine's PowerShell execution policy. Use
-`restart-orbit.cmd -DryRun` or `stop-orbit.cmd -DryRun` to inspect the
+`restart-promptaflow.cmd -DryRun` or `stop-promptaflow.cmd -DryRun` to inspect the
 processes they would handle without stopping anything.
 
 Pass a path to start another workspace:
 
 ```bat
-start-orbit.cmd "D:\Develop\your-project"
+start-promptaflow.cmd "D:\Develop\your-project"
 ```
 
 The UI is available at `http://127.0.0.1:8848/ui`. That page lists the
@@ -87,14 +83,14 @@ it after the connected Agent has changed.
 
 ## Hosts
 
-Orbit is one Runtime with several front doors. Each host reaches it
+PromptaFlow is one Runtime with several front doors. Each host reaches it
 differently, registers under its own client name, and differs in whether it
-draws Orbit's cards. **[Each has its own page.](./docs/hosts/README.md)**
+draws PromptaFlow's cards. **[Each has its own page.](./docs/hosts/README.md)**
 
-| Host | How it reaches Orbit | Registers as | Draws the card |
+| Host | How it reaches PromptaFlow | Registers as | Draws the card |
 | --- | --- | --- | --- |
 | [Codex app](./docs/hosts/codex-app.md) | bundled plugin, stdio proxy → Hub | `codex-app` | yes |
-| [WorkBuddy](./docs/hosts/workbuddy.md) | custom connector, HTTP straight at the Hub | `orbit`, and `workbuddy-third-party:custom-mcp:orbit` | yes |
+| [WorkBuddy](./docs/hosts/workbuddy.md) | custom connector, HTTP straight at the Hub | `promptaflow`, and `workbuddy-third-party:custom-mcp:orbit` | yes |
 | [DeepSeek Harness](./docs/hosts/deepseek-harness.md) | Host Profile Bundle with its own Gateway and panel | per-Session `harness:session:*` actor | its own panel |
 | [Any other MCP App](./docs/hosts/other-apps.md) | stdio proxy | its own stable name | host-dependent |
 
@@ -103,7 +99,7 @@ CLIs as the Agents `codex`, `claude` and others, so an App registering as one
 of those is refused rather than renamed — which is what the `-app` suffix is
 for.
 
-Orbit also ships five small pages a host can draw beside the conversation
+PromptaFlow also ships five small pages a host can draw beside the conversation
 — **[the cards](./docs/cards.md)** — which tool opens each, and why one
 sometimes looks stale after an upgrade.
 
@@ -117,7 +113,7 @@ Everything below is the same wherever you connect from.
 4. Follow step progress in the workspace or inspect completed runs in
    **History**.
 
-Orbit can also be operated through MCP with `list_runs`, `inspect_run`,
+PromptaFlow can also be operated through MCP with `list_runs`, `inspect_run`,
 `start_run`, and `cancel_run`. Clients must follow the Runtime's
 `allowed_commands[]`; do not construct mutation URLs.
 
@@ -209,20 +205,20 @@ stream, written outside every transaction, and never something a replay reads.
 ## CLI quick reference
 
 ```bash
-orbit serve
-orbit serve --project-root /absolute/path/to/project
-orbit hub register /absolute/path/to/project --no-agent-project-access
+promptaflow serve
+promptaflow serve --project-root /absolute/path/to/project
+promptaflow hub register /absolute/path/to/project --no-agent-project-access
 orbit --version
-orbit runtimes --json                     # which Runtimes are up, and where
-orbit mcp
-orbit mcp --project-root /absolute/path/to/project
-orbit run list
-orbit run inspect <run_id>
-orbit workflow validate <file> --catalog <catalog.json>
-orbit workflow publish <file> --catalog <catalog.json> --expected-version <n>
+promptaflow runtimes --json                     # which Runtimes are up, and where
+promptaflow mcp
+promptaflow mcp --project-root /absolute/path/to/project
+promptaflow run list
+promptaflow run inspect <run_id>
+promptaflow workflow validate <file> --catalog <catalog.json>
+promptaflow workflow publish <file> --catalog <catalog.json> --expected-version <n>
 ```
 
-`orbit serve` is the unified entry point: it reuses or starts the Hub on
+`promptaflow serve` is the unified entry point: it reuses or starts the Hub on
 `127.0.0.1:8848`, registers the current Workspace, and waits for the Hub-managed
 Runtime to become ready. It no longer exposes a standalone Runtime mode. Runtime state and Artifacts are
 project-scoped; published Workflow definitions are host-wide and visible from
@@ -231,7 +227,7 @@ aggregates Agent statistics from live Workspace Runtimes.
 
 ## Codex plugin distribution
 
-Orbit is distributed as a repository/personal Marketplace plugin. It is not
+PromptaFlow is distributed as a repository/personal Marketplace plugin. It is not
 submitted to the universal public Plugins Directory.
 See the [complete Codex app installation guide](./docs/hosts/codex-app.md),
 including the one-line prompt that lets Codex install it from this repository.
@@ -239,7 +235,7 @@ including the one-line prompt that lets Codex install it from this repository.
 Each GitHub Release includes a Marketplace ZIP, a standalone Codex plugin ZIP,
 the Python wheel and source distribution, and the DeepSeek Harness bundle.
 Download and extract `orbit-marketplace-<version>.zip`, then register its root
-directory and install Orbit:
+directory and install PromptaFlow:
 
 ```bash
 unzip orbit-marketplace-<version>.zip

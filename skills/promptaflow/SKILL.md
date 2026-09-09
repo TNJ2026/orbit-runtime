@@ -1,22 +1,22 @@
 ---
 name: promptaflow
-description: Open Orbit or its workflow cards, generate or modify Workflow DSL, and execute user goals with the local workflow Runtime; also inspect workflows and runs, process Runtime events, connect other MCP-capable Agent Apps, and rebuild, refresh, or reinstall the local Orbit plugin in Codex during development.
+description: Open PromptaFlow or its workflow cards, generate or modify Workflow DSL, and execute user goals with the local workflow Runtime; also inspect workflows and runs, process Runtime events, connect other MCP-capable Agent Apps, and rebuild, refresh, or reinstall the local PromptaFlow plugin in Codex during development.
 ---
 
-# Orbit
+# PromptaFlow
 
-Use this skill for requests to open Orbit, create or modify a workflow, execute
-a goal through a published workflow, inspect local runs, or work with Orbit's
+Use this skill for requests to open PromptaFlow, create or modify a workflow, execute
+a goal through a published workflow, inspect local runs, or work with PromptaFlow's
 workflow UI.
 
 ## MCP App cards
 
 Choose the card from the user's intent. Do not open the workspace card first unless
-the user asked to open Orbit itself.
+the user asked to open PromptaFlow itself.
 
-- **Orbit workspace** — for `open Orbit`, `show Orbit`, `打开 Orbit`, and close
-  equivalents. Call `open_orbit_dashboard`. This remains the default Orbit
-  surface and covers goals, workflows, history, and Agents. Opening Orbit is
+- **PromptaFlow workspace** — for `open PromptaFlow`, `show PromptaFlow`, `打开 PromptaFlow`, and close
+  equivalents. Call `open_orbit_dashboard`. This remains the default PromptaFlow
+  surface and covers goals, workflows, history, and Agents. Opening PromptaFlow is
   display-only: do not register an authoring client or start listening for
   authoring requests unless the user explicitly asks for that connection.
 - **Workflow list** — for `open workflows`, `view workflows`, `list workflows`,
@@ -44,7 +44,7 @@ the user asked to open Orbit itself.
   `list_workflows`, so execution does not open the workflow-list card. Its MCP
   App shows only that run's steps, attention state, and result. Follow
   [execute-goal.md](reference/execute-goal.md); do not open the workspace card before
-  the run unless the user separately asked for Orbit itself.
+  the run unless the user separately asked for PromptaFlow itself.
 
 Cards are views, not authority. Suggested actions send a prompt back to the
 Agent, and the Agent must re-read current state and obey `allowed_commands[]`.
@@ -60,32 +60,32 @@ For opening or viewing workflows and workflow details, follow
 [view-workflows.md](reference/view-workflows.md).
 
 For generating or modifying a workflow with the current task, whether
-the request starts in chat or from the Orbit UI, follow
+the request starts in chat or from the PromptaFlow UI, follow
 [authoring-with-current-app.md](reference/authoring-with-current-app.md).
 
 For selecting a published workflow, starting a run from the user's goal, and
 following it through completion or an interrupt, follow
 [execute-goal.md](reference/execute-goal.md).
 
-For configuring or operating Orbit from another Agent App, follow
+For configuring or operating PromptaFlow from another Agent App, follow
 [using-from-other-agent-apps.md](reference/using-from-other-agent-apps.md).
 
 For waiting on or processing Runtime events captured by the App, follow
 [runtime-events.md](reference/runtime-events.md).
 
-For rebuilding or reinstalling the local Orbit plugin in Codex and preparing a
+For rebuilding or reinstalling the local PromptaFlow plugin in Codex and preparing a
 clean application restart, follow
 [refresh-codex-plugin.md](reference/refresh-codex-plugin.md). This procedure
 deliberately stops before fully quitting or reopening Codex.
 
-After a successful Orbit plugin install or reinstall, read
+After a successful PromptaFlow plugin install or reinstall, read
 [post-install-usage.md](reference/post-install-usage.md) and include its usage
 handoff in the final response. If the user did not name a host, show all three
 host sections: Codex, DeepSeek Harness, and WorkBuddy. List every card or native
 surface that host actually renders, what it does, the command or tool behind
 it, and a copyable prompt. Keep the distinction explicit: Codex and WorkBuddy
-render Orbit MCP App cards; DeepSeek Harness renders its own resident panel and
+render PromptaFlow MCP App cards; DeepSeek Harness renders its own resident panel and
 must not be described as rendering those cards.
 
-Use the registered Orbit MCP tools for workflow operations. Do not construct
+Use the registered PromptaFlow MCP tools for workflow operations. Do not construct
 mutation URLs: follow the Runtime's `allowed_commands[]` responses.

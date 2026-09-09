@@ -15,7 +15,7 @@ def reading_actor(_caller: str | None = None) -> None:
     one, and the two transports drew it differently: `/mcp` let a caller ask
     for the Workspace's work and the panel did, while `/api/v1` had no way to
     ask and every loopback caller is `local`. One database, thirty-five Runs,
-    and Orbit's own UI showing twenty-five of them with no sign that the rest
+    and PromptaFlow's own UI showing twenty-five of them with no sign that the rest
     existed. Neither surface was wrong about the rule; there were two rules.
 
     Deliberately not a policy this returns *sometimes*. An actor is still

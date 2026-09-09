@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "id": "orbit",
+  "id": "promptaflow",
   "scope": "global",
   "service": {
     "command": [
-      "{manifest_dir}/start-orbit.sh",
+      "{manifest_dir}/start-promptaflow.sh",
       "--hub-service"
     ],
     "cwd": ".",
-    "environment": ["HOME", "PATH", "ORBIT_CLI"],
+    "environment": ["HOME", "PATH", "PROMPTAFLOW_CLI"],
     "ready_url": "http://127.0.0.1:8848/health/ready",
     "timeout_seconds": 60,
     "discovery": null

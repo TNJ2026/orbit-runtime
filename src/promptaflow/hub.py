@@ -1,4 +1,4 @@
-"""Stable loopback entry point for workspace-scoped Orbit Runtimes."""
+"""Stable loopback entry point for workspace-scoped PromptaFlow Runtimes."""
 
 from __future__ import annotations
 
@@ -76,7 +76,7 @@ class WorkspaceRegistry:
         if create:
             requested.mkdir(parents=True, exist_ok=True)
         elif not requested.is_dir():
-            raise HubError(f"Orbit workspace is not an existing directory: {requested}")
+            raise HubError(f"PromptaFlow workspace is not an existing directory: {requested}")
         root = resolve_project_root(requested)
         identifier = project_id(root)
         with self._lock:
@@ -100,10 +100,10 @@ class WorkspaceRegistry:
             return root
         value = self._read().get(identifier)
         if value is None:
-            raise HubError(f"unknown Orbit workspace: {identifier}")
+            raise HubError(f"unknown PromptaFlow workspace: {identifier}")
         root = Path(value).expanduser().resolve()
         if not root.is_dir():
-            raise HubError(f"Orbit workspace is unavailable: {identifier}")
+            raise HubError(f"PromptaFlow workspace is unavailable: {identifier}")
         return root
 
     def _read(self) -> dict[str, str]:
@@ -207,12 +207,12 @@ class ProjectAccessGrants:
     a Runtime the Hub starts is never typed by anybody: `_serve_arguments`
     writes its whole argv. So a workflow node declaring a `workspace_access`
     policy was refused on every Runtime the Hub had ever launched — the
-    capability existed and the ordinary way of starting Orbit could not reach
+    capability existed and the ordinary way of starting PromptaFlow could not reach
     it. Consent is recorded here instead, and turned into that switch at
     launch.
 
     Per Workspace, because it is a decision about one project rather than
-    about Orbit, and durable, because the Hub relaunches Runtimes without
+    about PromptaFlow, and durable, because the Hub relaunches Runtimes without
     asking again. Kept apart from `workspaces.json`: that file is routing and
     is rewritten by every `hub register`, and permission that a routine
     re-registration could silently drop is not permission.
@@ -343,10 +343,10 @@ class WorkspaceRuntimeManager:
                 self.sleep(0.1)
         if multiple:
             raise MultipleRuntimesError(
-                f"multiple Orbit Runtimes remained live for {workspace} "
+                f"multiple PromptaFlow Runtimes remained live for {workspace} "
                 f"after {self.timeout_seconds:g}s"
             )
-        raise HubError(f"Orbit Runtime did not become ready for {workspace}")
+        raise HubError(f"PromptaFlow Runtime did not become ready for {workspace}")
 
     def _find(self, workspace: Path) -> str | None:
         expected = str(workspace.resolve())
@@ -360,7 +360,7 @@ class WorkspaceRuntimeManager:
                 matches.append(runtime.base_url.rstrip("/"))
         if len(matches) > 1:
             raise MultipleRuntimesError(
-                f"multiple Orbit Runtimes are live for {workspace}"
+                f"multiple PromptaFlow Runtimes are live for {workspace}"
             )
         return matches[0] if matches else None
 
@@ -457,7 +457,7 @@ def _forward(url: str, body: bytes, headers: dict[str, str]) -> tuple[int, bytes
     except HTTPError as exc:
         return exc.code, exc.read(), exc.headers.get("content-type", "application/json")
     except (OSError, URLError) as exc:
-        raise HubError(f"Orbit Runtime is unavailable: {exc}") from exc
+        raise HubError(f"PromptaFlow Runtime is unavailable: {exc}") from exc
 
 
 def _runtime_json(
@@ -476,11 +476,11 @@ def _runtime_json(
     except HTTPError as exc:
         status, payload = exc.code, exc.read()
     except (OSError, URLError) as exc:
-        raise HubError(f"Orbit Runtime is unavailable: {exc}") from exc
+        raise HubError(f"PromptaFlow Runtime is unavailable: {exc}") from exc
     try:
         decoded = json.loads(payload)
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        raise HubError("Orbit Runtime returned invalid JSON") from exc
+        raise HubError("PromptaFlow Runtime returned invalid JSON") from exc
     return status, decoded if isinstance(decoded, Mapping) else {}
 
 
@@ -558,10 +558,10 @@ def create_hub_app(
         try:
             decoded = json.loads(payload)
         except json.JSONDecodeError as exc:
-            raise HubError("Orbit Runtime returned an invalid tool response") from exc
+            raise HubError("PromptaFlow Runtime returned an invalid tool response") from exc
         if status >= 400 or not isinstance(decoded, Mapping):
             message = decoded.get("error") if isinstance(decoded, Mapping) else None
-            raise HubError(str(message or f"Orbit Runtime tool backend failed ({status})"))
+            raise HubError(str(message or f"PromptaFlow Runtime tool backend failed ({status})"))
         return decoded
 
     async def dispatch_gateway(
@@ -629,7 +629,7 @@ def create_hub_app(
             tools.extend((
                 {
                     "name": "list_workspaces",
-                    "description": "List Orbit workspaces registered with the local Gateway.",
+                    "description": "List PromptaFlow workspaces registered with the local Gateway.",
                     "inputSchema": {"type": "object", "properties": {}},
                     "outputSchema": {"type": "object"},
                 },
@@ -695,7 +695,7 @@ def create_hub_app(
         return result(request_id, backend.get("result", {}))
 
     async def ready(_request: Request) -> Response:
-        return JSONResponse({"status": "ready", "service": "orbit-hub"})
+        return JSONResponse({"status": "ready", "service": "promptaflow-hub"})
 
     async def register_workspace(request: Request) -> Response:
         """Persist workspace routing in the process that owns Hub state.

@@ -1,4 +1,4 @@
-"""`restart-orbit.sh` stops what it can prove is Orbit's, then hands over.
+"""`restart-promptaflow.sh` stops what it can prove is Orbit's, then hands over.
 
 The dangerous half of a restart script is the stopping: a PID from a record is
 a number that *was* a process, and the OS reuses them. These drive the script
@@ -17,8 +17,8 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "restart-orbit.sh"
-STOP_SCRIPT = ROOT / "stop-orbit.sh"
+SCRIPT = ROOT / "restart-promptaflow.sh"
+STOP_SCRIPT = ROOT / "stop-promptaflow.sh"
 
 
 class RestartOrbitScriptTests(unittest.TestCase):
@@ -32,16 +32,16 @@ class RestartOrbitScriptTests(unittest.TestCase):
 
         bin_dir = root / "bin"
         bin_dir.mkdir()
-        (root / "restart-orbit.sh").write_text(
+        (root / "restart-promptaflow.sh").write_text(
             SCRIPT.read_text(encoding="utf-8"), encoding="utf-8",
         )
         (root / "agent-app.json").write_text(
             json.dumps({"service": {"ready_url": "http://127.0.0.1:8848/health/ready"}}),
             encoding="utf-8",
         )
-        (root / "state" / "orbit" / "global").mkdir(parents=True)
-        (root / "state" / "orbit" / "global" / "pid.json").write_text(
-            json.dumps({"pid": recorded, "app_id": "orbit"}), encoding="utf-8",
+        (root / "state" / "promptaflow" / "global").mkdir(parents=True)
+        (root / "state" / "promptaflow" / "global" / "pid.json").write_text(
+            json.dumps({"pid": recorded, "app_id": "promptaflow"}), encoding="utf-8",
         )
         (root / "runtime-root").mkdir()
 
@@ -81,7 +81,7 @@ class RestartOrbitScriptTests(unittest.TestCase):
         self.write_ps_table(root / "ps-after.txt", ps_answers)
 
         # The start half is somebody else's; a stub keeps `exec` from failing.
-        start = root / "start-orbit.sh"
+        start = root / "start-promptaflow.sh"
         start.write_text("#!/bin/sh\necho started\n", encoding="utf-8")
         start.chmod(0o755)
 
@@ -125,7 +125,7 @@ class RestartOrbitScriptTests(unittest.TestCase):
 
     def run_dry(self, environment, root: Path):
         return subprocess.run(
-            ["bash", str(root / "restart-orbit.sh"), "--dry-run"],
+            ["bash", str(root / "restart-promptaflow.sh"), "--dry-run"],
             cwd=root, env=environment, text=True, capture_output=True, check=False,
         )
 
@@ -149,7 +149,7 @@ class RestartOrbitScriptTests(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stderr)
             self.assertNotIn("4242", result.stdout)
             self.assertIn("skipping PID 4242", result.stderr)
-            self.assertIn("Would stop Orbit Hub (PID 4243)", result.stdout)
+            self.assertIn("Would stop PromptaFlow Hub (PID 4243)", result.stdout)
 
     def test_the_hub_is_stopped_before_the_runtimes_it_would_relaunch(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -171,7 +171,7 @@ class RestartOrbitScriptTests(unittest.TestCase):
             ]
 
             self.assertEqual(3, len(lines), lines)
-            self.assertIn("Orbit Hub", lines[0])
+            self.assertIn("PromptaFlow Hub", lines[0])
 
     def test_a_pid_reused_during_the_wait_is_not_killed(self) -> None:
         """The gap between the check and the signal is up to 45 seconds long.
@@ -201,13 +201,13 @@ class RestartOrbitScriptTests(unittest.TestCase):
             environment["ORBIT_TEST_PS_SWITCH"] = "1"
 
             result = subprocess.run(
-                ["bash", str(root / "restart-orbit.sh")], cwd=root, env=environment,
+                ["bash", str(root / "restart-promptaflow.sh")], cwd=root, env=environment,
                 text=True, capture_output=True, check=False,
             )
 
             self.assertEqual(0, result.returncode, result.stderr)
-            self.assertIn(f"Stopping Orbit Hub (PID {bystander.pid})", result.stdout)
-            self.assertIn("no longer the Orbit Hub", result.stderr)
+            self.assertIn(f"Stopping PromptaFlow Hub (PID {bystander.pid})", result.stdout)
+            self.assertIn("no longer the PromptaFlow Hub", result.stderr)
             self.assertNotIn("Force stopping", result.stdout)
             self.assertIn("started", result.stdout)
             self.assertIsNone(
@@ -238,7 +238,7 @@ class RestartOrbitScriptTests(unittest.TestCase):
             environment["ORBIT_TEST_PS_SWITCH"] = "2"
 
             result = subprocess.run(
-                ["bash", str(root / "restart-orbit.sh")], cwd=root, env=environment,
+                ["bash", str(root / "restart-promptaflow.sh")], cwd=root, env=environment,
                 text=True, capture_output=True, check=False,
             )
 
@@ -257,7 +257,7 @@ class RestartOrbitScriptTests(unittest.TestCase):
             environment["ORBIT_TEST_PS_SWITCH"] = "1"
 
             result = subprocess.run(
-                ["bash", str(root / "restart-orbit.sh")], cwd=root, env=environment,
+                ["bash", str(root / "restart-promptaflow.sh")], cwd=root, env=environment,
                 text=True, capture_output=True, check=False,
             )
 
@@ -283,7 +283,7 @@ class RestartOrbitScriptTests(unittest.TestCase):
             )
 
             self.assertIn(
-                "Would stop Orbit Runtime (PID 6001)",
+                "Would stop PromptaFlow Runtime (PID 6001)",
                 self.run_dry(environment, root).stdout,
             )
 
@@ -298,7 +298,7 @@ class RestartOrbitScriptTests(unittest.TestCase):
             environment["ORBIT_TEST_PS_SWITCH"] = "1"
 
             result = subprocess.run(
-                ["bash", str(root / "restart-orbit.sh"), "--stop-only"],
+                ["bash", str(root / "restart-promptaflow.sh"), "--stop-only"],
                 cwd=root, env=environment, text=True, capture_output=True,
                 check=False,
             )
@@ -310,7 +310,7 @@ class RestartOrbitScriptTests(unittest.TestCase):
     def test_stop_script_delegates_to_the_safe_stop_only_path(self) -> None:
         contents = STOP_SCRIPT.read_text(encoding="utf-8")
 
-        self.assertIn('restart-orbit.sh" --stop-only "$@"', contents)
+        self.assertIn('restart-promptaflow.sh" --stop-only "$@"', contents)
 
     def test_owner_record_finds_a_runtime_missing_from_discovery(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -332,7 +332,7 @@ class RestartOrbitScriptTests(unittest.TestCase):
             result = self.run_dry(environment, root)
 
             self.assertEqual(0, result.returncode, result.stderr)
-            self.assertIn("Would stop Orbit Runtime (PID 9101)", result.stdout)
+            self.assertIn("Would stop PromptaFlow Runtime (PID 9101)", result.stdout)
 
 
 if __name__ == "__main__":

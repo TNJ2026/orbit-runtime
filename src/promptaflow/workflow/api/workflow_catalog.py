@@ -121,7 +121,7 @@ class WorkflowCatalogReadModelService:
     ) -> dict[str, str] | None:
         """Project the conventional Agent ingress as an explicit UI fact.
 
-        The browser must not guess from a port name alone. Orbit owns the
+        The browser must not guess from a port name alone. PromptaFlow owns the
         built-in Agent handler contracts, so the catalog can safely advertise
         when their conventional object input accepts the Run goal envelope:
         ``prompt`` for ``agent.*`` and ``task`` for App delegation handlers.

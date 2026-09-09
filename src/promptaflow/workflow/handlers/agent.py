@@ -49,7 +49,7 @@ Work within the available time and stop starting new operations when time is sho
 Prefer tests targeted at the changes; do not run the full test suite by default.
 When asked to wrap up, a test fails, or progress is blocked, return immediately with the current result.
 Always report completed changes, tests run, errors, and remaining work, even when the task is only partially complete.
-After the complete final response, print {marker} on a line by itself. Orbit treats that line as completion; do not print anything after it."""
+After the complete final response, print {marker} on a line by itself. PromptaFlow treats that line as completion; do not print anything after it."""
 
 
 AGENT_RUNTIME_COMPLETION_PROTOCOL = _completion_protocol(AGENT_COMPLETION_MARKER)
@@ -540,7 +540,7 @@ class TrustedCliAgentClient:
 class TrustedPromptCliAgentClient(TrustedCliAgentClient):
     """Adapter for CLIs that take a prompt and print prose.
 
-    No installed Agent CLI speaks Orbit's `{"input": ...}` → `{"output": ...}`
+    No installed Agent CLI speaks PromptaFlow's `{"input": ...}` → `{"output": ...}`
     protocol; they take a prompt and answer in text. This client renders the
     node's input into one prompt string, hands it to the CLI the way that CLI
     accepts it, and returns the reply on the port every discovered Agent
@@ -620,7 +620,7 @@ class TrustedPromptCliAgentClient(TrustedCliAgentClient):
             )
         timeout_args = ()
         if self.process_timeout_flag is not None:
-            # The CLI must give control back before Orbit's own process
+            # The CLI must give control back before PromptaFlow's own process
             # deadline. That leaves the adapter its reserved grace to stop any
             # descendants, drain output, and settle under the lease.
             internal = max(
@@ -673,7 +673,7 @@ def _strip_terminal_marker(stdout: str, marker: str) -> str:
     for index, line in enumerate(lines):
         if line.strip() == marker:
             # The marker commits everything before it as the result. Output
-            # racing in after that point belongs to a process Orbit is already
+            # racing in after that point belongs to a process PromptaFlow is already
             # stopping and must not leak into the committed response.
             lines = lines[:index]
             break

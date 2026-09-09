@@ -477,7 +477,7 @@ def build_routes(ctx, service) -> list[Route]:
     async def run_changes(request: Request) -> JSONResponse:
         """What one run changed, in the two kinds of answer there are (§5).
 
-        `git` is what Orbit compared for itself against the run's recovery
+        `git` is what PromptaFlow compared for itself against the run's recovery
         point. Everything outside that comparison — a non-git project,
         ignored files, submodule working trees — can only come from what the
         Agent said it did, so the payload keeps them apart and marks the whole
@@ -498,7 +498,7 @@ def build_routes(ctx, service) -> list[Route]:
             "complete_record": False,
             "git": summary,
             "note": (
-                "Paths the git comparison covers are Orbit's own observation. "
+                "Paths the git comparison covers are PromptaFlow's own observation. "
                 "Anything outside it — a non-git project, ignored files, "
                 "submodule working trees — is only what the Agent reported, "
                 "and this is not a complete filesystem diff."

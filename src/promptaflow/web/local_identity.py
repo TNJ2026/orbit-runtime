@@ -49,7 +49,7 @@ def loopback_scoped_mcp_authenticator(
 ) -> str | None:
     """Resolve a per-client MCP actor without trusting remote connections.
 
-    Orbit's local deployment already treats every loopback process as the one
+    PromptaFlow's local deployment already treats every loopback process as the one
     operator.  The header refines that operator into Session slots; it grants
     no scopes a loopback caller did not already have.  It is accepted only on
     the MCP doors in `SCOPED_ACTOR_PATHS`, only under the configured prefix,

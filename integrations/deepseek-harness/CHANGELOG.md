@@ -8,17 +8,17 @@
 - Added a same-origin bounded Host API for browser UI calls, keeping Runtime
   endpoints and actor credentials out of Client code.
 - Propagated the Host-resolved Harness Workspace id, canonical path and optional
-  isolation metadata to Orbit MCP calls; `/orbit` now rejects stale or forged
+  isolation metadata to PromptaFlow MCP calls; `/orbit` now rejects stale or forged
   browser Workspace identities before starting a Run.
-- Changed the Host Gateway to discover an independently started `orbit serve`
+- Changed the Host Gateway to discover an independently started `promptaflow serve`
   Runtime and communicate over HTTP MCP; it no longer owns a Runtime process.
 - Removed Harness Subagent execution from Session Bridge startup. CLI Agent
-  execution and credentials now stay entirely inside Orbit Runtime.
+  execution and credentials now stay entirely inside PromptaFlow Runtime.
 - Automatically attach and recover Session Bridges for live root Sessions,
   deriving the Runtime cursor from durable Session events.
 - Added loopback-only, prefix-restricted HTTP MCP Session actors so independent
   Runtime event streams remain isolated between Harness Sessions.
-- Added six Workspace-aware native Harness tools backed by Orbit MCP. Their
+- Added six Workspace-aware native Harness tools backed by PromptaFlow MCP. Their
   execution derives Session routing in Host code and owns idempotency and
   advertised-command revision checks.
 - Added a real-process independent Runtime E2E gate and endpoint rediscovery
@@ -26,7 +26,7 @@
 - Added cross-platform `ORBIT_RUNTIME_ROOT` discovery for custom Runtime database locations.
 - Expanded General Settings diagnostics with Runtime/protocol versions, tool
   profile, reconnect probing and a copyable independent-Runtime start command.
-- Added the native Orbit product workspace with Session Run history, full Run
+- Added the native PromptaFlow product workspace with Session Run history, full Run
   Drawer, Workflow and Artifact catalogs, Agent-backed workflow generation and
   modification, explicit image Attachment import, and downloadable diagnostics.
 - Removed the cancelled Harness Subagent executor, provider policy, Git effect
@@ -40,7 +40,7 @@
 
 ## 0.1.0
 
-- Added the Workspace-scoped Orbit stdio Gateway and Harness MCP profile.
+- Added the Workspace-scoped PromptaFlow stdio Gateway and Harness MCP profile.
 - Added Session Run cards, the Run Detail Drawer, cursor output, Artifacts and Human Resume.
 - Added durable `harness.subagent` delegation with Execution and Job Leases.
 - Added Effect Manifest observation, runtime DTO codecs and manual reconciliation.

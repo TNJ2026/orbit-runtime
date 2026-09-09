@@ -1,11 +1,11 @@
 # Runtime Events
 
-Orbit's MCP proxy listens to the Runtime event WebSocket in the background and
+PromptaFlow's MCP proxy listens to the Runtime event WebSocket in the background and
 stores notifications in a durable local Inbox.
 
 1. Use `wait_app_event` when the user wants this task to wait for Runtime work.
 2. Use `list_app_events` to inspect notifications captured while no task was active.
-3. Treat each event as a hint. Re-read the run or inbox through Orbit MCP tools.
+3. Treat each event as a hint. Re-read the run or inbox through PromptaFlow MCP tools.
    For `request_cancelled`, match `request_id`, abort cooperative App work,
    discard partial output, and never call `submit_authoring_response`.
 4. Execute only commands returned in `allowed_commands[]`; never construct a mutation URL.

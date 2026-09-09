@@ -6,7 +6,7 @@ it is not the sentence the reader needs.  They need to know whether to start
 something, wait, or go and look at a log.
 
 Only the proxy's own transport failures are read here.  A JSON-RPC error that
-Orbit itself returned is forwarded untouched: it is Orbit's answer to a
+PromptaFlow itself returned is forwarded untouched: it is PromptaFlow's answer to a
 question, already worded for the caller, and a proxy that rewrote it would be
 putting words in the Runtime's mouth.
 
@@ -27,26 +27,26 @@ from typing import Sequence
 _READINGS: Sequence[tuple[re.Pattern[str], str]] = (
     (
         re.compile(r"Connection refused|ConnectionRefused|\[Errno 61\]", re.I),
-        "Orbit is not listening on that address. Start it, or check the port in "
+        "PromptaFlow is not listening on that address. Start it, or check the port in "
         "the App manifest.",
     ),
     (
         re.compile(r"timed out|timeout", re.I),
-        "Orbit did not answer in time. It may still be working on the last "
+        "PromptaFlow did not answer in time. It may still be working on the last "
         "request.",
     ),
     (
         re.compile(r"returned HTTP 40[13]", re.I),
-        "Orbit refused that: this caller is not allowed to do it.",
+        "PromptaFlow refused that: this caller is not allowed to do it.",
     ),
     (
         re.compile(r"returned HTTP", re.I),
-        "Orbit answered with an error status. It may be starting up or "
+        "PromptaFlow answered with an error status. It may be starting up or "
         "shutting down.",
     ),
     (
         re.compile(r"returned invalid JSON", re.I),
-        "Orbit sent something this proxy could not read. This one is worth "
+        "PromptaFlow sent something this proxy could not read. This one is worth "
         "reporting.",
     ),
     (
@@ -56,7 +56,7 @@ _READINGS: Sequence[tuple[re.Pattern[str], str]] = (
     ),
     (
         re.compile(r"unavailable", re.I),
-        "Could not reach Orbit. It may have stopped, or never started.",
+        "Could not reach PromptaFlow. It may have stopped, or never started.",
     ),
 )
 

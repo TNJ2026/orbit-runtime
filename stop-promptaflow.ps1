@@ -8,5 +8,5 @@ $arguments = @{ StopOnly = $true }
 if ($DryRun) { $arguments.DryRun = $true }
 
 $global:LASTEXITCODE = 0
-& (Join-Path $PSScriptRoot "restart-orbit.ps1") @arguments
+& (Join-Path $PSScriptRoot "restart-promptaflow.ps1") @arguments
 exit $global:LASTEXITCODE

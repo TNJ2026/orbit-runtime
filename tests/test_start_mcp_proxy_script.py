@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "start-orbit.sh"
+SCRIPT = ROOT / "start-promptaflow.sh"
 
 
 class StartMcpProxyScriptTests(unittest.TestCase):
@@ -16,7 +16,7 @@ class StartMcpProxyScriptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture = root / "capture.txt"
-            fake_orbit = root / "orbit"
+            fake_orbit = root / "promptaflow"
             fake_orbit.write_text(
                 "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$ORBIT_TEST_CAPTURE\"\n",
                 encoding="utf-8",
@@ -26,7 +26,7 @@ class StartMcpProxyScriptTests(unittest.TestCase):
                 "HOME": str(root),
                 "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
                 "ORBIT_TEST_CAPTURE": str(capture),
-                "ORBIT_CLI": str(fake_orbit),
+                "PROMPTAFLOW_CLI": str(fake_orbit),
             }
 
             result = subprocess.run(
@@ -46,7 +46,7 @@ class StartMcpProxyScriptTests(unittest.TestCase):
             workspace = root / "workspace"
             workspace.mkdir()
             capture = root / "capture.txt"
-            fake_orbit = root / "orbit"
+            fake_orbit = root / "promptaflow"
             fake_orbit.write_text(
                 "#!/bin/sh\n"
                 "printf 'path=%s\\n' \"$PATH\" > \"$ORBIT_TEST_CAPTURE\"\n"
@@ -57,9 +57,9 @@ class StartMcpProxyScriptTests(unittest.TestCase):
             environment = {
                 "HOME": str(root),
                 "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
-                "ORBIT_AGENT_APP_WORKSPACE": str(workspace),
+                "PROMPTAFLOW_AGENT_APP_WORKSPACE": str(workspace),
                 "ORBIT_TEST_CAPTURE": str(capture),
-                "ORBIT_CLI": str(fake_orbit),
+                "PROMPTAFLOW_CLI": str(fake_orbit),
             }
 
             result = subprocess.run(
@@ -79,7 +79,7 @@ class StartMcpProxyScriptTests(unittest.TestCase):
 
     def test_missing_runtime_has_actionable_error(self):
         with tempfile.TemporaryDirectory() as temporary:
-            copied = Path(temporary) / "start-orbit.sh"
+            copied = Path(temporary) / "start-promptaflow.sh"
             copied.write_text(SCRIPT.read_text(encoding="utf-8"), encoding="utf-8")
             environment = {
                 "HOME": temporary,

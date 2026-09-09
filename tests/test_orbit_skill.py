@@ -87,7 +87,7 @@ class OrbitSkillCardRoutingTests(unittest.TestCase):
         text = (ROOT / "reference" / "open-orbit.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("Opening Orbit is display-only", text)
+        self.assertIn("Opening PromptaFlow is display-only", text)
         self.assertIn("Do not call `register_authoring_client`", text)
         self.assertIn("`wait_authoring_request`", text)
         self.assertIn("only when the user explicitly", text)
@@ -97,7 +97,7 @@ class OrbitSkillCardRoutingTests(unittest.TestCase):
         procedure = (ROOT / "reference" / "refresh-codex-plugin.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("rebuild, refresh, or reinstall the local Orbit plugin", skill)
+        self.assertIn("rebuild, refresh, or reinstall the local PromptaFlow plugin", skill)
         self.assertIn("refresh-codex-plugin.md", skill)
         for marker in (
             "Execute every safe step available to the Agent",
@@ -129,15 +129,15 @@ class OrbitSkillCardRoutingTests(unittest.TestCase):
         )
         self.assertIn("post-install-usage.md", skill)
         for marker in (
-            "Orbit workspace", "Orbit workflows", "Orbit workflow generation",
-            "Orbit goal execution", "Orbit goals", "Codex", "DeepSeek Harness",
+            "PromptaFlow workspace", "PromptaFlow workflows", "PromptaFlow workflow generation",
+            "PromptaFlow goal execution", "PromptaFlow goals", "Codex", "DeepSeek Harness",
             "WorkBuddy", "open_orbit_dashboard", "open_orbit_goals",
             "generate_workflow", "start_run", "/orbit", "/orbit-workflows",
             "orbit_list_workflows", "orbit_start_run", "list_workspaces",
             "select_workspace", "Copyable Chinese prompt",
         ):
             self.assertIn(marker, guide)
-        self.assertIn("renders **no Orbit MCP App cards**", guide)
+        self.assertIn("renders **no PromptaFlow MCP App cards**", guide)
 
 
 if __name__ == "__main__":

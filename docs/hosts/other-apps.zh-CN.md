@@ -1,22 +1,22 @@
-# 从其他支持 MCP 的 App 使用 Orbit
+# 从其他支持 MCP 的 App 使用 PromptaFlow
 
-**简体中文** | [English](./other-apps.md) · [宿主](./README.zh-CN.md) · [Orbit](../../README.zh-CN.md)
+**简体中文** | [English](./other-apps.md) · [宿主](./README.zh-CN.md) · [PromptaFlow](../../README.zh-CN.md)
 
 | | |
 | --- | --- |
-| 接入方式 | Orbit 的 stdio Proxy |
+| 接入方式 | PromptaFlow 的 stdio Proxy |
 | 注册名 | 自己的稳定名称 |
-| 是否绘制 Orbit 卡片 | 取决于宿主 |
+| 是否绘制 PromptaFlow 卡片 | 取决于宿主 |
 | 事件工具 | Proxy 的 `wait_app_event`、`list_app_events`、`ack_app_event` |
 
-通过 Orbit 的 stdio Proxy 连接。根据目标 App 的 MCP 配置格式调整以下示例：
+通过 PromptaFlow 的 stdio Proxy 连接。根据目标 App 的 MCP 配置格式调整以下示例：
 
 ```json
 {
   "mcpServers": {
     "orbit": {
       "command": "bash",
-      "args": ["/absolute/path/to/orbit/start-orbit.sh", "--mcp-proxy"],
+      "args": ["/absolute/path/to/orbit/start-promptaflow.sh", "--mcp-proxy"],
       "env": {
         "ORBIT_AGENT_APP_WORKSPACE": "/absolute/path/to/project"
       }
@@ -29,13 +29,13 @@ Proxy 请求本地 Hub 注册这个绝对 workspace 路径，它自己不写 Hub
 默认放在该 workspace 的 `.orbit/agent-apps/` 目录下，所以被沙箱限制的 App 只需要对选定
 的 workspace 有写权限。要放到别处，显式设置 `AGENT_APP_STATE_DIR`。
 
-App 必须保持下面的调用处于等待状态，才会被 Orbit 识别为当前在线 Agent：
+App 必须保持下面的调用处于等待状态，才会被 PromptaFlow 识别为当前在线 Agent：
 
 ```text
 wait_authoring_request(client="claude-desktop", timeout_seconds=300)
 ```
 
-Orbit 随后显示 `app:claude-desktop`。仅连接 MCP 不会注册在线 App——是这个等待调用让它
+PromptaFlow 随后显示 `app:claude-desktop`。仅连接 MCP 不会注册在线 App——是这个等待调用让它
 可被寻址。被请求撰写 Workflow 的 App 用 `submit_authoring_response` 提交 DSL，并通过
 `get_authoring_job` 处理编译反馈。
 
@@ -53,7 +53,7 @@ Run 的寿命长于对话，所以在每个对话的第一个用户轮次检查�
 
 五张卡分别是什么，见[卡片](../cards.zh-CN.md)。
 
-Orbit 把它的面板作为 MCP App 发布（MCP Apps 扩展，SEP-1865）：资源的 mime type 是
+PromptaFlow 把它的面板作为 MCP App 发布（MCP Apps 扩展，SEP-1865）：资源的 mime type 是
 `text/html;profile=mcp-app`，并通过 `_meta.ui.resourceUri` 绑定到工具上。这里没有任何
 宿主相关的东西 —— 实现了 MCP Apps 的宿主会把卡片挂进沙箱 iframe，没实现的则只显示工具
 返回的 JSON。

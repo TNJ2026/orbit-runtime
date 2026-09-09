@@ -54,7 +54,7 @@ jobs:
           fi
           package_version="$(python -c 'import ast; p=ast.parse(open("src/promptaflow/__init__.py").read()); print(next(n.value.value for n in p.body if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "__version__" for t in n.targets)))')"
           test "$package_version" = "$version"
-          echo "ORBIT_RELEASE_VERSION=$version" >> "$GITHUB_ENV"
+          echo "PROMPTAFLOW_RELEASE_VERSION=$version" >> "$GITHUB_ENV"
           echo "ORBIT_RELEASE_TAG=$release_tag" >> "$GITHUB_ENV"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
@@ -80,9 +80,9 @@ jobs:
       - name: Build local Marketplace archive
         run: |
           uv run python scripts/build-marketplace-release.py \
-            --version "$ORBIT_RELEASE_VERSION" \
-            --output "dist/orbit-marketplace-$ORBIT_RELEASE_VERSION.zip" \
-            --plugin-output "dist/orbit-plugin-$ORBIT_RELEASE_VERSION.zip"
+            --version "$PROMPTAFLOW_RELEASE_VERSION" \
+            --output "dist/promptaflow-marketplace-$PROMPTAFLOW_RELEASE_VERSION.zip" \
+            --plugin-output "dist/promptaflow-plugin-$PROMPTAFLOW_RELEASE_VERSION.zip"
 
       - name: Create GitHub Release
         env:
@@ -119,7 +119,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/orbit-runtime
+      url: https://pypi.org/p/promptaflow
     permissions:
       id-token: write
     steps:

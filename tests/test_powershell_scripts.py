@@ -68,7 +68,7 @@ class PowerShellScriptTests(unittest.TestCase):
             fake, capture = self.fake_orbit(Path(temporary))
             environment = {
                 **os.environ,
-                "ORBIT_CLI": str(fake),
+                "PROMPTAFLOW_CLI": str(fake),
                 "ORBIT_TEST_CAPTURE": str(capture),
                 "ORBIT_TEST_RUNTIME_JSON": json.dumps([{
                     "project_root": str(workspace.resolve()),
@@ -77,7 +77,7 @@ class PowerShellScriptTests(unittest.TestCase):
             }
 
             result = self.run_script(
-                ROOT / "start-orbit.ps1", str(workspace / "."),
+                ROOT / "start-promptaflow.ps1", str(workspace / "."),
                 cwd=ROOT, env=environment,
             )
 
@@ -93,7 +93,7 @@ class PowerShellScriptTests(unittest.TestCase):
             self.assertEqual(
                 ["hub", "register", str(workspace.resolve())], calls[1],
             )
-            self.assertIn("Orbit Hub: http://127.0.0.1:8848", result.stdout)
+            self.assertIn("PromptaFlow Hub: http://127.0.0.1:8848", result.stdout)
             self.assertIn(
                 "Workspace UI: "
                 "http://127.0.0.1:8848/workspaces/example/ui/",
@@ -108,12 +108,12 @@ class PowerShellScriptTests(unittest.TestCase):
             fake, capture = self.fake_orbit(Path(temporary))
             environment = {
                 **os.environ,
-                "ORBIT_CLI": str(fake),
+                "PROMPTAFLOW_CLI": str(fake),
                 "ORBIT_TEST_CAPTURE": str(capture),
             }
 
             result = self.run_script(
-                ROOT / "start-orbit.ps1", str(Path(temporary) / "missing"),
+                ROOT / "start-promptaflow.ps1", str(Path(temporary) / "missing"),
                 cwd=ROOT, env=environment,
             )
 
@@ -126,12 +126,12 @@ class PowerShellScriptTests(unittest.TestCase):
             fake, capture = self.fake_orbit(Path(temporary))
             environment = {
                 **os.environ,
-                "ORBIT_CLI": str(fake),
+                "PROMPTAFLOW_CLI": str(fake),
                 "ORBIT_TEST_CAPTURE": str(capture),
             }
 
             result = self.run_script(
-                ROOT / "start-orbit.ps1", "-HubService",
+                ROOT / "start-promptaflow.ps1", "-HubService",
                 cwd=ROOT, env=environment,
             )
 
@@ -146,8 +146,8 @@ class PowerShellScriptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             isolated = Path(temporary)
             fake, capture = self.fake_orbit(isolated)
-            (isolated / "restart-orbit.ps1").write_text(
-                (ROOT / "restart-orbit.ps1").read_text(encoding="utf-8"),
+            (isolated / "restart-promptaflow.ps1").write_text(
+                (ROOT / "restart-promptaflow.ps1").read_text(encoding="utf-8"),
                 encoding="utf-8",
             )
             manifest = json.loads(
@@ -165,19 +165,19 @@ class PowerShellScriptTests(unittest.TestCase):
             runtime.mkdir()
             environment = {
                 **os.environ,
-                "ORBIT_CLI": str(fake),
+                "PROMPTAFLOW_CLI": str(fake),
                 "ORBIT_TEST_CAPTURE": str(capture),
                 "AGENT_APP_STATE_DIR": str(state),
                 "ORBIT_RUNTIME_ROOT": str(runtime),
             }
 
             result = self.run_script(
-                isolated / "restart-orbit.ps1", "-DryRun",
+                isolated / "restart-promptaflow.ps1", "-DryRun",
                 cwd=isolated, env=environment,
             )
 
             self.assertEqual(0, result.returncode, result.stderr)
-            self.assertIn("Nothing of Orbit's is running.", result.stdout)
+            self.assertIn("Nothing of PromptaFlow's is running.", result.stdout)
             self.assertIn("nothing was stopped or started", result.stdout)
 
     def test_windows_manifest_launches_the_powershell_hub_mode(self):
@@ -191,7 +191,7 @@ class PowerShellScriptTests(unittest.TestCase):
 
         self.assertEqual("promptaflow", loaded.app_id)
         self.assertEqual("powershell.exe", command[0])
-        self.assertIn("{manifest_dir}/start-orbit.ps1", command)
+        self.assertIn("{manifest_dir}/start-promptaflow.ps1", command)
         self.assertEqual("-HubService", command[-1])
         self.assertIn("USERPROFILE", manifest["service"]["environment"])
         self.assertIn("USERNAME", manifest["service"]["environment"])
@@ -207,7 +207,7 @@ class PowerShellScriptTests(unittest.TestCase):
         self.assertEqual("uv", server["command"])
         self.assertEqual(
             [
-                "run", "--project", ".", "orbit",
+                "run", "--project", ".", "promptaflow",
                 "agent-app", "mcp-proxy",
             ],
             server["args"],
@@ -225,7 +225,7 @@ class PowerShellScriptTests(unittest.TestCase):
             "PATHEXT",
             "COMSPEC",
             "USERNAME",
-            "ORBIT_AGENT_APP_WORKSPACE",
+            "PROMPTAFLOW_AGENT_APP_WORKSPACE",
             "SYSTEMROOT",
             "WINDIR",
             "TEMP",
@@ -247,14 +247,14 @@ class PowerShellScriptTests(unittest.TestCase):
             )
             environment = {
                 **os.environ,
-                "ORBIT_CLI": str(fake),
+                "PROMPTAFLOW_CLI": str(fake),
                 "ORBIT_TEST_CAPTURE": str(capture),
                 "PYTHONUTF8": "0",
                 "PYTHONIOENCODING": "cp936",
             }
 
             result = self.run_script(
-                ROOT / "start-orbit.ps1", "-McpProxy",
+                ROOT / "start-promptaflow.ps1", "-McpProxy",
                 cwd=ROOT, env=environment,
             )
 
@@ -264,9 +264,9 @@ class PowerShellScriptTests(unittest.TestCase):
             self.assertEqual("utf-8", encoding["PYTHONIOENCODING"])
 
     def test_stop_delegates_to_the_identity_checked_restart_path(self):
-        contents = (ROOT / "stop-orbit.ps1").read_text(encoding="utf-8")
+        contents = (ROOT / "stop-promptaflow.ps1").read_text(encoding="utf-8")
 
-        self.assertIn('"restart-orbit.ps1"', contents)
+        self.assertIn('"restart-promptaflow.ps1"', contents)
         self.assertIn("StopOnly = $true", contents)
 
     def test_cmd_launchers_bypass_policy_for_only_the_child_process(self):

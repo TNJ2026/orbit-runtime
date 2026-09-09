@@ -28,7 +28,7 @@ export class OrbitGateway {
     telemetry = {
         discoveryAttempts: 0, rpcCalls: 0, transportFailures: 0,
     };
-    constructor(command = 'orbit', commandPrefix = [], fetchImpl = globalThis.fetch, discoveryRoot = process.env.ORBIT_RUNTIME_ROOT || undefined, hubUrl = process.env.ORBIT_HUB_URL || 'http://127.0.0.1:8848') {
+    constructor(command = 'promptaflow', commandPrefix = [], fetchImpl = globalThis.fetch, discoveryRoot = process.env.ORBIT_RUNTIME_ROOT || undefined, hubUrl = process.env.ORBIT_HUB_URL || 'http://127.0.0.1:8848') {
         this.command = command;
         this.commandPrefix = commandPrefix;
         this.fetchImpl = fetchImpl;

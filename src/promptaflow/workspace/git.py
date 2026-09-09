@@ -232,7 +232,7 @@ class GitWorkspaceProvider:
         """Capture the visible checkout in a commit without changing it or its index.
 
         A linked worktree can only start from a Git object. A temporary index
-        lets Orbit include staged, unstaged and non-ignored untracked files in
+        lets PromptaFlow include staged, unstaged and non-ignored untracked files in
         that object while leaving the operator's working tree and real index
         byte-for-byte alone.
         """
@@ -247,9 +247,9 @@ class GitWorkspaceProvider:
         Path(index_name).unlink(missing_ok=True)  # read-tree creates the index.
         snapshot_env = {
             "GIT_INDEX_FILE": index_name,
-            "GIT_AUTHOR_NAME": "Orbit",
+            "GIT_AUTHOR_NAME": "PromptaFlow",
             "GIT_AUTHOR_EMAIL": "orbit@localhost",
-            "GIT_COMMITTER_NAME": "Orbit",
+            "GIT_COMMITTER_NAME": "PromptaFlow",
             "GIT_COMMITTER_EMAIL": "orbit@localhost",
         }
         try:
@@ -268,7 +268,7 @@ class GitWorkspaceProvider:
                 )
             commit = _git(
                 self.project_root, "commit-tree", tree.stdout.strip(),
-                "-p", base, "-m", f"Orbit Run snapshot {workspace_ref}",
+                "-p", base, "-m", f"PromptaFlow Run snapshot {workspace_ref}",
                 env=snapshot_env,
             )
             if commit.returncode != 0 or not commit.stdout.strip():

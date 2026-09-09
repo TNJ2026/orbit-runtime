@@ -40,7 +40,7 @@ from .git import GIT_TIMEOUT_SECONDS, WorkspaceError, _git, is_git_repo
 
 
 # Objects a recovery point needs must survive `git gc`, so they hang off a
-# ref of Orbit's own rather than being written and orphaned.
+# ref of PromptaFlow's own rather than being written and orphaned.
 RECOVERY_REF_PREFIX = "refs/orbit/recovery"
 # Room the object store is left after a recovery point is written. A baseline
 # that fills the disk has taken the project down to save it.
@@ -343,7 +343,7 @@ def _stamp() -> str:
 
 
 class GitRecoveryPoints(_RecoveryHistory):
-    """Recovery points for a git project, kept on an Orbit-owned ref."""
+    """Recovery points for a git project, kept on an PromptaFlow-owned ref."""
 
     def __init__(
         self, project_root: Path | str, *,
@@ -449,7 +449,7 @@ class GitRecoveryPoints(_RecoveryHistory):
         self, ref: str, tree: str, head: str | None, run_id: str,
         *, index_tree: str | None = None,
     ) -> None:
-        """Point an Orbit ref at a commit for the baseline tree.
+        """Point an PromptaFlow ref at a commit for the baseline tree.
 
         Without a ref the tree is unreachable and `git gc` is entitled to
         delete it — a recovery point that evaporates on a housekeeping run is
@@ -461,7 +461,7 @@ class GitRecoveryPoints(_RecoveryHistory):
             args.extend(["-p", head])
         if index_tree is not None:
             index_commit = _checked(
-                _run_git(self.project_root, "commit-tree", index_tree, "-m", "Orbit index baseline"),
+                _run_git(self.project_root, "commit-tree", index_tree, "-m", "PromptaFlow index baseline"),
                 "anchoring staged baseline",
             )
             args.extend(["-p", index_commit])
@@ -719,7 +719,7 @@ class GitRecoveryPoints(_RecoveryHistory):
         run's way back is the whole point of having one — and the point must
         have outlived the retention period, because "the run finished" is not
         the moment somebody stops wanting to undo it. Between them they mean
-        this only ever removes Orbit's own recovery data for settled runs; it
+        this only ever removes PromptaFlow's own recovery data for settled runs; it
         never touches project files.
 
         These refs pin a tree of the whole project, so leaving them forever
@@ -968,7 +968,7 @@ class FileBackupRecoveryPoints(_RecoveryHistory):
             kind="agent_report_only",
             scope="run_cumulative",
             uncovered=(
-                "this project is not a git repository; Orbit made no "
+                "this project is not a git repository; PromptaFlow made no "
                 "independent comparison, so the change record is the Agent's "
                 "own account plus the workflow's acceptance",
             ),

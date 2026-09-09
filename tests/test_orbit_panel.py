@@ -91,7 +91,7 @@ class CurrentTaskCardTests(unittest.TestCase):
         self.assertIn("promptGoal:(n,i)=>`Run the workflow", ORBIT_WORKFLOWS_HTML)
         self.assertIn("promptModify: (name,id) => `Modify the workflow", ORBIT_DASHBOARD_HTML)
         self.assertIn("promptModify:(n,i)=>`Modify the workflow", ORBIT_WORKFLOWS_HTML)
-        self.assertIn("promptOpen:id=>`Show Orbit goal run", ORBIT_GOALS_HTML)
+        self.assertIn("promptOpen:id=>`Show PromptaFlow goal run", ORBIT_GOALS_HTML)
         # And the Chinese half is still there, unchanged.
         self.assertIn("我确认删除工作流", ORBIT_WORKFLOWS_HTML)
         self.assertIn("使用工作流「", ORBIT_WORKFLOWS_HTML)

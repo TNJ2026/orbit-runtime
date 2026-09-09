@@ -2297,7 +2297,7 @@ export function createViews(context) {
     root.append(list);
   }
 
-  /* A selected registered Agent interprets the request; Orbit then probes
+  /* A selected registered Agent interprets the request; PromptaFlow then probes
    * only the candidate executable names it returned and produces an inert,
    * reviewable patch. */
   function agentFinderLauncher(allowedCommands) {
@@ -2758,7 +2758,7 @@ export function createViews(context) {
   /* What a run changed in the real project, when it worked in one.
    *
    * Two sources, drawn apart because they are not the same kind of claim:
-   * the git comparison is Orbit's own observation against the run's recovery
+   * the git comparison is PromptaFlow's own observation against the run's recovery
    * point; everything else is the Agent's account of itself. Presenting one
    * as the other is how "no changes shown" comes to mean both "nothing
    * happened" and "nobody looked".

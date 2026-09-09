@@ -31,7 +31,7 @@ EVENT_TOOLS = (
     {
         "name": "wait_app_event",
         "description": (
-            "Wait for the next Orbit Runtime event already captured by this App. "
+            "Wait for the next PromptaFlow Runtime event already captured by this App. "
             "Re-read the relevant resource before acting."
         ),
         "inputSchema": {
@@ -144,27 +144,27 @@ def register_workspace_with_hub(
     except HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace").strip()
         raise HubWorkspaceRegistrationError(
-            detail or f"Orbit Hub workspace registration returned HTTP {exc.code}"
+            detail or f"PromptaFlow Hub workspace registration returned HTTP {exc.code}"
         ) from exc
     except (OSError, URLError) as exc:
         detail = exc.reason if isinstance(exc, URLError) else exc
-        raise HubUnavailableError(f"Orbit Hub is unavailable: {detail}") from exc
+        raise HubUnavailableError(f"PromptaFlow Hub is unavailable: {detail}") from exc
     try:
         decoded = json.loads(payload)
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise HubWorkspaceRegistrationError(
-            "Orbit Hub workspace registration returned invalid JSON"
+            "PromptaFlow Hub workspace registration returned invalid JSON"
         ) from exc
     required = ("workspace_id", "workspace_path", "mcp_url", "ui_url", "events_url")
     if not isinstance(decoded, Mapping) or not all(
         isinstance(decoded.get(key), str) and decoded.get(key) for key in required
     ):
         raise HubWorkspaceRegistrationError(
-            "Orbit Hub workspace registration returned an incomplete response"
+            "PromptaFlow Hub workspace registration returned an incomplete response"
         )
     if Path(decoded["workspace_path"]).resolve() != resolved:
         raise HubWorkspaceRegistrationError(
-            "Orbit Hub registered a different workspace than the one requested"
+            "PromptaFlow Hub registered a different workspace than the one requested"
         )
     return dict(decoded)
 

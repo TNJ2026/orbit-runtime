@@ -1,8 +1,8 @@
 # integration-core
 
-Everything an Orbit integration needs that is not about one host.
+Everything an PromptaFlow integration needs that is not about one host.
 
-Orbit is reached the same way from anywhere: find the Runtime serving a
+PromptaFlow is reached the same way from anywhere: find the Runtime serving a
 project, start one if none is, speak MCP to it, decode what comes back, and
 say something useful when any of that fails. None of that is about panels,
 slash commands, or composers — and all of it was written twice the first time
@@ -44,8 +44,8 @@ property of one panel's copy. It is not. A host supplies the wording, and the
 panel's "Reopen the panel to start it" is not a sentence a background process
 can say.
 
-A second consumer is the thing that would prove the rest. Note that Orbit
-already carries one route for other hosts — `orbit agent-app mcp-proxy`, a
+A second consumer is the thing that would prove the rest. Note that PromptaFlow
+already carries one route for other hosts — `promptaflow agent-app mcp-proxy`, a
 stdio adapter in Python — so a second *TypeScript* host is not automatically
 the next thing to build.
 

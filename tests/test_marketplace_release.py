@@ -25,38 +25,38 @@ class MarketplaceReleaseTests(unittest.TestCase):
     def test_archive_contains_the_mcp_launcher_and_plugin_metadata(self) -> None:
         builder = load_builder()
         with tempfile.TemporaryDirectory() as directory:
-            archive = Path(directory) / "orbit-marketplace.zip"
+            archive = Path(directory) / "promptaflow-marketplace.zip"
             builder.build(archive, None)
             with zipfile.ZipFile(archive) as package:
                 names = set(package.namelist())
 
-        root = "orbit-marketplace/plugins/orbit/"
-        self.assertIn("orbit-marketplace/.agents/plugins/marketplace.json", names)
+        root = "promptaflow-marketplace/plugins/promptaflow/"
+        self.assertIn("promptaflow-marketplace/.agents/plugins/marketplace.json", names)
         self.assertIn(root + ".codex-plugin/plugin.json", names)
         self.assertIn(root + ".mcp.json", names)
         self.assertIn(root + "agent-app.windows.json", names)
-        self.assertIn(root + "restart-orbit.cmd", names)
-        self.assertIn(root + "restart-orbit.ps1", names)
-        self.assertIn(root + "start-orbit.cmd", names)
-        self.assertIn(root + "start-orbit.ps1", names)
-        self.assertIn(root + "start-orbit.sh", names)
-        self.assertIn(root + "stop-orbit.cmd", names)
-        self.assertIn(root + "stop-orbit.ps1", names)
+        self.assertIn(root + "restart-promptaflow.cmd", names)
+        self.assertIn(root + "restart-promptaflow.ps1", names)
+        self.assertIn(root + "start-promptaflow.cmd", names)
+        self.assertIn(root + "start-promptaflow.ps1", names)
+        self.assertIn(root + "start-promptaflow.sh", names)
+        self.assertIn(root + "stop-promptaflow.cmd", names)
+        self.assertIn(root + "stop-promptaflow.ps1", names)
         self.assertIn(root + "skills/promptaflow/SKILL.md", names)
 
     def test_standalone_plugin_archive_contains_a_plugin_root(self) -> None:
         builder = load_builder()
         with tempfile.TemporaryDirectory() as directory:
-            archive = Path(directory) / "orbit-plugin.zip"
+            archive = Path(directory) / "promptaflow-plugin.zip"
             builder.build_plugin(archive, None)
             with zipfile.ZipFile(archive) as package:
                 names = set(package.namelist())
 
-        root = "orbit-plugin/"
+        root = "promptaflow-plugin/"
         self.assertIn(root + ".codex-plugin/plugin.json", names)
         self.assertIn(root + ".mcp.json", names)
         self.assertIn(root + "skills/promptaflow/SKILL.md", names)
-        self.assertNotIn("orbit-marketplace/.agents/plugins/marketplace.json", names)
+        self.assertNotIn("promptaflow-marketplace/.agents/plugins/marketplace.json", names)
 
 
 if __name__ == "__main__":
