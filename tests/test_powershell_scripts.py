@@ -141,6 +141,7 @@ class PowerShellScriptTests(unittest.TestCase):
                 json.loads(capture.read_text(encoding="utf-8-sig").strip()),
             )
 
+    @unittest.skipUnless(os.name == "nt", "requires Windows process APIs")
     def test_restart_dry_run_with_empty_state_changes_nothing(self):
         with tempfile.TemporaryDirectory() as temporary:
             isolated = Path(temporary)
