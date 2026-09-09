@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import PurePosixPath, PureWindowsPath
 import re
 from types import MappingProxyType
 from typing import Any, Mapping
@@ -45,6 +45,20 @@ def _duplicates(values: list[str]) -> set[str]:
             repeated.add(value)
         seen.add(value)
     return repeated
+
+
+def _is_safe_relative_path(value: str) -> bool:
+    """Reject absolute and parent paths in either supported path syntax."""
+
+    posix = PurePosixPath(value)
+    windows = PureWindowsPath(value)
+    return (
+        not posix.is_absolute()
+        and not windows.root
+        and not windows.drive
+        and ".." not in posix.parts
+        and ".." not in windows.parts
+    )
 
 
 def _port_policy(value: Mapping[str, Any]) -> PortDataPolicy:
@@ -695,7 +709,7 @@ def analyze_dsl(
                         isinstance(item, str) and item.strip() for item in protect
                     )
                     or any(
-                        ".." in Path(item).parts or Path(item).is_absolute()
+                        not _is_safe_relative_path(item)
                         for item in protect if isinstance(item, str)
                     )
                 )
@@ -726,8 +740,10 @@ def analyze_dsl(
                     not isinstance(files, list)
                     or not files
                     or not all(isinstance(item, str) and item.strip() for item in files)
-                    or any(".." in Path(item).parts for item in files if isinstance(item, str))
-                    or any(Path(item).is_absolute() for item in files if isinstance(item, str))
+                    or any(
+                        not _is_safe_relative_path(item)
+                        for item in files if isinstance(item, str)
+                    )
                 )
                 if invalid:
                     diagnostics.append(_diagnostic(
@@ -777,7 +793,7 @@ def analyze_dsl(
                         isinstance(item, str) and item.strip() for item in value
                     )
                     or any(
-                        ".." in Path(item).parts or Path(item).is_absolute()
+                        not _is_safe_relative_path(item)
                         for item in value if isinstance(item, str)
                     )
                 )

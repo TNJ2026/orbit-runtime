@@ -1144,10 +1144,11 @@ class WorkspaceAccessPolicyTests(unittest.TestCase):
         self.assertIn("DSL_POLICY_INVALID", codes)
 
     def test_an_absolute_path_in_files_is_refused(self) -> None:
-        with self.assertRaises(DiagnosticError) as caught:
-            self.analyze({"mode": "read_only", "files": ["/etc/passwd"]})
-        codes = {item.code for item in caught.exception.diagnostics}
-        self.assertIn("DSL_POLICY_INVALID", codes)
+        for value in ("/etc/passwd", r"C:\Windows\system.ini", r"\\server\share\file"):
+            with self.subTest(value=value), self.assertRaises(DiagnosticError) as caught:
+                self.analyze({"mode": "read_only", "files": [value]})
+            codes = {item.code for item in caught.exception.diagnostics}
+            self.assertIn("DSL_POLICY_INVALID", codes)
 
     def test_a_non_string_entry_in_files_is_refused(self) -> None:
         with self.assertRaises(DiagnosticError) as caught:
@@ -1462,10 +1463,11 @@ class AcceptancePolicyTests(unittest.TestCase):
         )
 
     def test_an_absolute_path_is_refused(self) -> None:
-        with self.assertRaises(DiagnosticError) as caught:
-            self.compile({"files_exist": ["/etc/passwd"]})
-        codes = {item.code for item in caught.exception.diagnostics}
-        self.assertIn("DSL_POLICY_INVALID", codes)
+        for value in ("/etc/passwd", r"C:\Windows\system.ini", r"\\server\share\file"):
+            with self.subTest(value=value), self.assertRaises(DiagnosticError) as caught:
+                self.compile({"files_exist": [value]})
+            codes = {item.code for item in caught.exception.diagnostics}
+            self.assertIn("DSL_POLICY_INVALID", codes)
 
     def test_an_empty_list_is_refused(self) -> None:
         with self.assertRaises(DiagnosticError) as caught:
