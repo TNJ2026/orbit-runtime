@@ -622,6 +622,107 @@ class SimplifiedGoalUITests(BrowserE2ETestCase):
         self.assertEqual(0, page.locator(".simplified-step-output:visible").count())
         self.assertEqual(0, page.locator(".simplified-step-prompt:visible").count())
 
+    def test_a_later_step_gains_its_log_while_the_run_modal_stays_open(self) -> None:
+        """A live status patch must also mount UI the step did not need yet."""
+
+        context = self.browser.new_context(locale="en-US")
+        self.addCleanup(context.close)
+        # Keep the production polling path but make its one fixed interval
+        # short enough for a focused browser test.
+        context.add_init_script("""
+          const nativeSetTimeout = window.setTimeout.bind(window);
+          window.setTimeout = (callback, delay, ...args) =>
+            nativeSetTimeout(callback, delay === 15000 ? 25 : delay, ...args);
+        """)
+        page = context.new_page()
+        run_id = "langgraph_run:live-console"
+        step_reads = {"count": 0}
+        live_reads = {"count": 0}
+        release_change = {"ready": False}
+
+        def envelope(data):
+            return {
+                "schema_version": "1.0", "projection_version": None,
+                "data": data, "next_cursor": None,
+            }
+
+        def serve_run(route):
+            route.fulfill(json=envelope({
+                "run_id": run_id, "workflow_id": "workflow:linear",
+                "workflow_version": 1, "status": "running", "revision": 0,
+                "goal": "Watch both steps", "interrupts": [], "error": None,
+                "agent_binding": None, "allowed_commands": [],
+            }))
+
+        def serve_steps(route):
+            step_reads["count"] += 1
+            later_status = "not_reached" if step_reads["count"] == 1 else "running"
+            route.fulfill(json=envelope({"steps": [
+                {
+                    "node_id": "first", "label": "First", "status": "running",
+                    "kind": "action", "handler": {"name": "agent.test"},
+                    "runs": 1, "prompt": "first prompt",
+                },
+                {
+                    "node_id": "second", "label": "Second", "status": later_status,
+                    "kind": "action", "handler": {"name": "agent.test"},
+                    "runs": 1, "prompt": "second prompt",
+                },
+            ]}))
+
+        def serve_live(route):
+            live_reads["count"] += 1
+            changed = release_change["ready"]
+            release_change["ready"] = False
+            route.fulfill(json=envelope({
+                "cursor": f"cursor-{live_reads['count']}", "changed": changed,
+                "changed_parts": ["event_position"] if changed else [],
+                "run_changes": [{
+                    "run_id": run_id, "event_type": "langgraph_node.started",
+                    "position": live_reads["count"],
+                }] if changed else [],
+                "observed_at": datetime.now(timezone.utc).isoformat(),
+            }))
+
+        def serve_output(route):
+            second = "node_id=second" in route.request.url
+            route.fulfill(json=envelope({
+                "after": 1 if second else 0,
+                "chunks": [{
+                    "chunk_id": 1, "stream": "stdout", "text": "second output",
+                }] if second else [],
+                "has_more": False,
+            }))
+
+        # Specific routes are installed after the broad Run route because
+        # Playwright evaluates handlers in reverse registration order.
+        page.route(f"**/api/v1/langgraph-runs/{quote(run_id, safe='')}", serve_run)
+        page.route("**/api/v1/langgraph-runs/*/output*", serve_output)
+        page.route("**/api/v1/langgraph-runs/*/edges*", lambda route: route.fulfill(
+            json=envelope({"edges": []}),
+        ))
+        page.route("**/api/v1/langgraph-runs/*/graph*", lambda route: route.fulfill(
+            json=envelope({"graph": {"nodes": [], "edges": []}}),
+        ))
+        page.route("**/api/v1/langgraph-runs/*/steps*", serve_steps)
+        page.route("**/api/v1/live*", serve_live)
+
+        page.goto(f"{self.base}/ui/#/runs/{quote(run_id, safe='')}")
+        second = page.locator(".step-row", has_text="Second")
+        second.wait_for()
+        self.assertEqual(0, second.locator(".simplified-step-output").count())
+        release_change["ready"] = True
+
+        page.wait_for_function("""() => {
+          const rows = [...document.querySelectorAll('.step-row')];
+          return rows.some((row) => row.textContent.includes('Second')
+            && row.classList.contains('running')
+            && row.querySelector('.simplified-step-output'));
+        }""")
+        second.locator("summary").click()
+        second.locator(".console-log").wait_for()
+        self.assertIn("second output", second.locator(".console-log").inner_text())
+
     def test_the_run_page_shows_every_step_and_where_it_got_to(self) -> None:
         """The rows are the definition's, so what is left is on the page too."""
 

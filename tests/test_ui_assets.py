@@ -443,6 +443,14 @@ class SelfContainedAssetTests(unittest.TestCase):
 
 
 class StepListRenderingTests(unittest.TestCase):
+    def test_a_later_step_gets_its_console_when_it_becomes_reachable(self) -> None:
+        views = (ASSETS / "views" / "index.js").read_text(encoding="utf-8")
+
+        self.assertIn(
+            'step.status !== "not_reached" && !handle.console', views,
+        )
+        self.assertIn("handle.row.append(handle.console)", views)
+
     def test_the_steps_still_to_come_are_drawn_too(self) -> None:
         """A list that grew as the run progressed would hide how much is left.
 

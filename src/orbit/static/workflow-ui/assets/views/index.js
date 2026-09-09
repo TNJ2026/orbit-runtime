@@ -673,6 +673,17 @@ export function createViews(context) {
             handle.status.textContent = i18n.t(
               `simplified.steps.status.${step.status}`,
             );
+            // Steps still to come have no console on the first paint. Once a
+            // step becomes reachable, mount its console exactly once; merely
+            // changing the row's status left every step after the first with
+            // no way to open output until History rebuilt the whole list.
+            if (step.status !== "not_reached" && !handle.console) {
+              handle.console = runConsole(run.run_id, {
+                live: true, nodeId: step.node_id, prompt: step.prompt,
+                hideWhenEmpty: true,
+              });
+              handle.row.append(handle.console);
+            }
           }
           drawn.canvas?.updateStatuses?.(Object.fromEntries(
             steps.map((step) => [step.node_id, step.status]),
@@ -772,6 +783,11 @@ export function createViews(context) {
         text: STEP_MARKS[step.status] || "○" });
       const status = el("span", { class: `pill ${step.status}`,
         text: i18n.t(`simplified.steps.status.${step.status}`) });
+      const console = step.status !== "not_reached"
+        ? runConsole(runId, {
+          live, nodeId: step.node_id, prompt: step.prompt,
+          hideWhenEmpty: true,
+        }) : null;
       const row = el(
       "li", { class: `step-row ${step.status}` }, [
         mark,
@@ -789,16 +805,12 @@ export function createViews(context) {
         // Its own word list rather than the run's: a step is "working" or
         // "not started", and a run is never either.
         status,
-        step.status !== "not_reached"
-          // A step that printed nothing has no log to view, and a fold that
-          // opens on "nothing yet" is a promise the row could have kept to
-          // itself. The goal detail already withheld it; this row did not.
-          ? runConsole(runId, {
-            live, nodeId: step.node_id, prompt: step.prompt,
-            hideWhenEmpty: true,
-          }) : null,
+        // A step that printed nothing has no log to view, and a fold that
+        // opens on "nothing yet" is a promise the row could have kept to
+        // itself. The goal detail already withheld it; this row did not.
+        console,
       ]);
-      rows.set(step.node_id, { row, mark, status });
+      rows.set(step.node_id, { row, mark, status, console });
       return row;
     })));
     if (canvas) root.append(canvas);
