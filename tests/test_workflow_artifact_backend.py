@@ -66,11 +66,12 @@ class LocalCASBackendTests(unittest.TestCase):
         self.assertEqual(b"abc", backend.read(key))
 
     def test_directory_fsync_is_skipped_on_windows(self):
+        directory = Path(self.temp.name)
         with (
             patch.object(local_cas.os, "name", "nt"),
             patch.object(local_cas.os, "open") as open_directory,
         ):
-            local_cas._fsync_directory(Path(self.temp.name))
+            local_cas._fsync_directory(directory)
 
         open_directory.assert_not_called()
 

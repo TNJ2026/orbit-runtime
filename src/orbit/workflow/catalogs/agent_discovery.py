@@ -185,22 +185,17 @@ class AgentCliSpec:
 # actually work, or it gets none because it never prompted to begin with —
 # pi, hermes and opencode all write without asking.
 #
-# The user has chosen each CLI's maximum unattended permission mode. Nothing
-# here is an OS boundary — see TrustedCliAgentClient.workspace_root. A CLI
-# sandbox or approval prompt is deliberately not relied upon for isolation.
+# Permission settings are reviewed per CLI. Most clients need their unattended
+# mode because a workflow has nobody available to answer an approval prompt.
+# Codex is the exception: its workspace-write sandbox is a real boundary worth
+# retaining because TrustedCliAgentClient.workspace_root only chooses a cwd and
+# does not confine the child process to it.
 TRUSTED_AGENT_CLIS: tuple[AgentCliSpec, ...] = (
     AgentCliSpec("claude", "claude", invocation=AgentInvocation(
         args=("--dangerously-skip-permissions",), prompt_flag="-p",
     )),
     AgentCliSpec("codex", "codex", invocation=AgentInvocation(
-        # Workflow steps are unattended. The user explicitly chose Codex's
-        # maximum-permission mode; external workspace/process isolation is the
-        # remaining boundary, not Codex's approval UI or sandbox.
-        args=(
-            "exec", "--skip-git-repo-check",
-            "--dangerously-bypass-approvals-and-sandbox",
-            "--dangerously-bypass-hook-trust",
-        ),
+        args=("exec", "--skip-git-repo-check", "--sandbox", "workspace-write"),
         prompt_positional=True,
     )),
     AgentCliSpec("gemini", "gemini", invocation=AgentInvocation(

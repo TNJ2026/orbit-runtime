@@ -89,15 +89,16 @@ class SpecValidationTests(unittest.TestCase):
         the fix and also a real widening, which is why the set is written down
         here and not left to whoever next edits the allowlist.
 
-        These are deliberately the maximum unattended modes the installed CLI
-        advertised. The Runtime's workspace/process isolation is the remaining
-        boundary.
+        These are the reviewed unattended modes for each CLI. Codex retains its
+        own workspace-write sandbox because the Runtime does not otherwise
+        confine a CLI process to its working directory.
         """
 
         settings = {
             spec.name: tuple(
                 argument for argument in (spec.invocation.args if spec.invocation else ())
                 if "permission" in argument or "sandbox" in argument
+                or argument == "workspace-write"
                 or argument in {
                     "--dangerously-bypass-approvals-and-sandbox",
                     "--dangerously-bypass-hook-trust", "--yolo",
@@ -113,10 +114,7 @@ class SpecValidationTests(unittest.TestCase):
             {
                 "claude": ("--dangerously-skip-permissions",),
                 "antigravity": ("--dangerously-skip-permissions",),
-                "codex": (
-                    "--dangerously-bypass-approvals-and-sandbox",
-                    "--dangerously-bypass-hook-trust",
-                ),
+                "codex": ("--sandbox", "workspace-write"),
                 # Probed writing a file with no prompt of their own, so there
                 # is nothing here to waive.
                 "hermes": (), "pi": (), "opencode": (),

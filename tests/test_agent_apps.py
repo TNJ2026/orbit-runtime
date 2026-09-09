@@ -23,6 +23,9 @@ from orbit.platform.projects import project_db_path
 from orbit.platform.runtime_ownership import DiscoveredRuntime
 
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
 def write_manifest(root: Path, **overrides) -> Path:
     payload = {
         "schema_version": 1,
@@ -940,6 +943,31 @@ class OrbitMcpProxyStartupTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.temp.cleanup()
+
+    def test_default_manifest_is_selected_for_each_platform(self) -> None:
+        from orbit.__main__ import _default_agent_app_manifest
+
+        self.assertEqual(
+            ROOT / "agent-app.json",
+            _default_agent_app_manifest(None, source_root=ROOT, platform="posix"),
+        )
+        self.assertEqual(
+            ROOT / "agent-app.windows.json",
+            _default_agent_app_manifest(None, source_root=ROOT, platform="nt"),
+        )
+
+    def test_repository_mcp_config_uses_a_cross_platform_command(self) -> None:
+        config = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
+        server = config["mcpServers"]["orbit"]
+
+        self.assertEqual("uv", server["command"])
+        self.assertEqual(
+            [
+                "run", "--project", ".", "orbit",
+                "agent-app", "mcp-proxy",
+            ],
+            server["args"],
+        )
 
     def test_ready_hub_path_neither_writes_home_nor_uses_the_local_host(self) -> None:
         registration = {

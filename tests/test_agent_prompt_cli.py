@@ -494,13 +494,13 @@ class InvocationSpecTests(unittest.TestCase):
             spec.invocation.args,
         )
 
-    def test_codex_uses_its_advertised_maximum_permission_mode(self) -> None:
+    def test_codex_retains_workspace_confinement(self) -> None:
         spec = next(item for item in TRUSTED_AGENT_CLIS if item.name == "codex")
 
-        self.assertIn(
-            "--dangerously-bypass-approvals-and-sandbox", spec.invocation.args,
+        self.assertEqual(
+            ("exec", "--skip-git-repo-check", "--sandbox", "workspace-write"),
+            spec.invocation.args,
         )
-        self.assertIn("--dangerously-bypass-hook-trust", spec.invocation.args)
 
     def test_pi_print_mode_reads_the_prompt_from_stdin(self) -> None:
         """Large authoring prompts must not cross Windows' argv boundary."""

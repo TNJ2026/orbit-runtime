@@ -45,8 +45,10 @@ invocation and cancellation cross that private worker boundary.
 
 **Claude Code.** There is no plugin. The skill is reached through the
 `.claude/skills/orbit` symlink in the checkout, and the MCP server comes from
-the repo-root `.mcp.json`, which runs `start-orbit.sh --mcp-proxy`. When no
-workspace is supplied, the proxy uses `ORBIT_DEFAULT_WORKSPACE` or
+the repo-root `.mcp.json`. Its cross-platform `uv` command lets Orbit select
+`agent-app.json` on POSIX and `agent-app.windows.json` on Windows before
+starting the MCP proxy. When no workspace is supplied, the proxy uses
+`ORBIT_DEFAULT_WORKSPACE` or
 `~/.orbit/workspaces/default`; it does not guess from the process cwd.
 
 Because this depends on the checkout, the skill is active only for someone

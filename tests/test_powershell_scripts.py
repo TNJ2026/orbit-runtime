@@ -199,19 +199,15 @@ class PowerShellScriptTests(unittest.TestCase):
         self.assertIn("APPDATA", manifest["service"]["environment"])
         self.assertIn("LOCALAPPDATA", manifest["service"]["environment"])
 
-    def test_codex_mcp_config_uses_the_native_windows_launcher(self):
+    def test_codex_mcp_config_uses_the_cross_platform_launcher(self):
         config = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
         server = config["mcpServers"]["orbit"]
 
-        self.assertEqual("cmd.exe", server["command"])
+        self.assertEqual("uv", server["command"])
         self.assertEqual(
             [
-                "/d",
-                "/s",
-                "/c",
-                "call",
-                "./start-orbit.cmd",
-                "-McpProxy",
+                "run", "--project", ".", "orbit",
+                "agent-app", "mcp-proxy",
             ],
             server["args"],
         )

@@ -811,6 +811,27 @@ def _mcp(args) -> None:
             print(f"loops still running at exit: {stragglers}", file=sys.stderr)
 
 
+def _default_agent_app_manifest(
+    manifest: str | Path | None,
+    *,
+    source_root: str | Path | None = None,
+    platform: str | None = None,
+) -> Path:
+    """Resolve the repository manifest without putting an OS shell in MCP config."""
+
+    if manifest is not None:
+        return Path(manifest).expanduser().resolve()
+    root = Path(
+        source_root or os.environ.get("ORBIT_SOURCE_ROOT") or Path.cwd()
+    ).expanduser().resolve()
+    filename = (
+        "agent-app.windows.json"
+        if (platform or os.name) == "nt"
+        else "agent-app.json"
+    )
+    return root / filename
+
+
 def _agent_app(args) -> None:
     """Run the generic local Agent App host without coupling it to Orbit Runtime."""
 
@@ -827,6 +848,7 @@ def _agent_app(args) -> None:
     from .hub import WorkspaceRegistry, workspace_urls
     from .platform.projects import project_state_dir
 
+    manifest_path = _default_agent_app_manifest(args.manifest)
     host = AgentAppHost(state_root=args.state_dir)
     workspace = (
         Path(args.workspace).expanduser().resolve()
@@ -837,14 +859,14 @@ def _agent_app(args) -> None:
             workspace, create=args.workspace is None,
         )
         try:
-            host.ensure(args.manifest)
+            host.ensure(manifest_path)
         except (AgentAppHostError, ValueError) as exc:
             raise SystemExit(f"orbit agent-app: {exc}") from None
         print(workspace_urls(identifier)["ui_url"])
         return
 
     try:
-        manifest = load_manifest(args.manifest)
+        manifest = load_manifest(manifest_path)
     except ValueError as exc:
         raise SystemExit(f"orbit agent-app: {exc}") from None
     if manifest.mcp is None:
@@ -858,7 +880,7 @@ def _agent_app(args) -> None:
         # the manifest-declared service. Preserve that self-starting behavior,
         # but only after the read-only Hub request proves nothing is listening.
         try:
-            host.ensure(args.manifest)
+            host.ensure(manifest_path)
         except (AgentAppHostError, ValueError) as exc:
             raise SystemExit(f"orbit agent-app: {exc}") from None
         try:
@@ -1174,7 +1196,13 @@ def build_parser() -> argparse.ArgumentParser:
         ("mcp-proxy", "Carry its HTTP JSON-RPC MCP endpoint over stdio"),
     ):
         command = agent_app_sub.add_parser(action, help=help_text)
-        command.add_argument("manifest", help="Path to agent-app.json")
+        command.add_argument(
+            "manifest", nargs="?", default=None,
+            help=(
+                "Path to an Agent App manifest (default: agent-app.json, or "
+                "agent-app.windows.json on Windows, in the source root)"
+            ),
+        )
         command.add_argument(
             "--workspace", default=None,
             help=(

@@ -584,7 +584,7 @@ wheels = [
 ]
 
 [[package]]
-name = "orbit"
+name = "orbit-runtime"
 source = { editable = "." }
 dependencies = [
     { name = "anyio" },

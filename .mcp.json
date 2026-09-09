@@ -1,14 +1,14 @@
 {
   "mcpServers": {
     "orbit": {
-      "command": "cmd.exe",
+      "command": "uv",
       "args": [
-        "/d",
-        "/s",
-        "/c",
-        "call",
-        "./start-orbit.cmd",
-        "-McpProxy"
+        "run",
+        "--project",
+        ".",
+        "orbit",
+        "agent-app",
+        "mcp-proxy"
       ],
       "cwd": ".",
       "env": {
