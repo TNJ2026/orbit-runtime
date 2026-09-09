@@ -42,7 +42,7 @@ class MarketplaceReleaseTests(unittest.TestCase):
         self.assertIn(root + "start-orbit.sh", names)
         self.assertIn(root + "stop-orbit.cmd", names)
         self.assertIn(root + "stop-orbit.ps1", names)
-        self.assertIn(root + "skills/orbit/SKILL.md", names)
+        self.assertIn(root + "skills/promptaflow/SKILL.md", names)
 
     def test_standalone_plugin_archive_contains_a_plugin_root(self) -> None:
         builder = load_builder()
@@ -55,7 +55,7 @@ class MarketplaceReleaseTests(unittest.TestCase):
         root = "orbit-plugin/"
         self.assertIn(root + ".codex-plugin/plugin.json", names)
         self.assertIn(root + ".mcp.json", names)
-        self.assertIn(root + "skills/orbit/SKILL.md", names)
+        self.assertIn(root + "skills/promptaflow/SKILL.md", names)
         self.assertNotIn("orbit-marketplace/.agents/plugins/marketplace.json", names)
 
 

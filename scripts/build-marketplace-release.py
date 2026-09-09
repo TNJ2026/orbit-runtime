@@ -163,7 +163,7 @@ def build(output: Path, version: str | None) -> None:
             (PLUGIN_ROOT / "start-orbit.sh").as_posix(),
             (PLUGIN_ROOT / "stop-orbit.cmd").as_posix(),
             (PLUGIN_ROOT / "stop-orbit.ps1").as_posix(),
-            (PLUGIN_ROOT / "skills/orbit/SKILL.md").as_posix(),
+            (PLUGIN_ROOT / "skills/promptaflow/SKILL.md").as_posix(),
         }
         missing = required - names
         if missing:
@@ -184,7 +184,7 @@ def build_plugin(output: Path, version: str | None) -> None:
         required = {
             (STANDALONE_PLUGIN_ROOT / ".codex-plugin/plugin.json").as_posix(),
             (STANDALONE_PLUGIN_ROOT / ".mcp.json").as_posix(),
-            (STANDALONE_PLUGIN_ROOT / "skills/orbit/SKILL.md").as_posix(),
+            (STANDALONE_PLUGIN_ROOT / "skills/promptaflow/SKILL.md").as_posix(),
         }
         missing = required - names
         if missing:
