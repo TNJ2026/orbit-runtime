@@ -15,6 +15,11 @@ PromptaFlow 通过每个 [GitHub Release](https://github.com/TNJ2026/promptaflow
 Marketplace 压缩包分发。安装后只对当前用户生效，不会把 PromptaFlow 发布到公共 Plugins
 Directory。
 
+每个 Release 都包含本地 Marketplace ZIP、独立 Codex 插件 ZIP、Python wheel 与源码包，
+以及 DeepSeek Harness bundle。Codex 用户通常应安装
+`promptaflow-marketplace-<版本>.zip`；独立插件压缩包主要提供给已经能够管理本地插件 bundle
+的工具使用。
+
 ### 使用提示词安装
 
 把下面的提示词粘贴到一个 Codex 任务中即可。Codex 会读取仓库里持续维护的安装文档，

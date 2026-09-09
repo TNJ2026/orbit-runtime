@@ -16,6 +16,12 @@ PromptaFlow is distributed through a local Marketplace archive attached to each
 archive registers it for the current user only; it does not publish PromptaFlow to
 the public Plugins Directory.
 
+Each Release includes the local Marketplace ZIP, a standalone Codex plugin ZIP,
+the Python wheel and source distribution, and the DeepSeek Harness bundle. Codex
+users should normally install `promptaflow-marketplace-<version>.zip`; the
+standalone plugin archive is intended for tooling that already manages local
+plugin bundles.
+
 ### Install with a Codex prompt
 
 Paste the following prompt into a Codex task. Codex will read the maintained
