@@ -96,7 +96,7 @@ class PowerShellScriptTests(unittest.TestCase):
                 calls[0],
             )
             self.assertEqual(
-                ["hub", "register", str(workspace.resolve())], calls[1],
+                ["hub", "register", str(workspace)], calls[1],
             )
             self.assertIn("PromptaFlow Hub: http://127.0.0.1:8848", result.stdout)
             self.assertIn(
