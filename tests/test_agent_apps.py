@@ -726,6 +726,15 @@ class HostHelperTests(unittest.TestCase):
                 self.assertFalse(host_module._process_exists(pid))
         self.assertTrue(host_module._process_exists(os.getpid()))
 
+    def test_a_windows_process_check_never_sends_ctrl_c(self) -> None:
+        with mock.patch.object(host_module.os, "name", "nt"), mock.patch.object(
+            host_module, "process_identity", return_value="win:birth"
+        ) as identity, mock.patch.object(host_module.os, "kill") as kill:
+            self.assertTrue(host_module._process_exists(12345))
+
+        identity.assert_called_once_with(12345)
+        kill.assert_not_called()
+
     def test_health_is_false_when_nothing_answers(self) -> None:
         """A connection timeout is ordinary failed health, not a host error."""
 

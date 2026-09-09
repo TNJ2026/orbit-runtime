@@ -20,6 +20,7 @@ from ..platform.process import (
     descendant_pids,
     detached_process_kwargs,
     kill_pid_tree,
+    process_identity,
     terminate_pid_tree,
 )
 from ..platform.runtime_ownership import DiscoveredRuntime, discover_runtimes
@@ -92,6 +93,12 @@ def _health_check(url: str, timeout: float = 1.0) -> bool:
 def _process_exists(pid: int) -> bool:
     if pid <= 0:
         return False
+    if os.name == "nt":
+        # On Windows signal 0 is CTRL_C_EVENT, not the harmless existence
+        # probe POSIX defines. Calling os.kill(pid, 0) can therefore interrupt
+        # this process and every peer sharing its console. The birth-token
+        # query opens the target read-only and also proves it is still alive.
+        return process_identity(pid) is not None
     try:
         os.kill(pid, 0)
         return True
