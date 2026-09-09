@@ -14,9 +14,10 @@ import uuid
 from typing import Any, Callable, Mapping
 
 from .workflow.dsl.schema import ID_PATTERN
+from .paths import home_root
 
 
-DEFAULT_GLOBAL_ROOT = Path.home() / ".orbit" / "global"
+DEFAULT_GLOBAL_ROOT = home_root() / "global"
 # How long a receipt can still be replayed.
 #
 # A receipt makes a *retry* idempotent, and a retry belongs to the request it

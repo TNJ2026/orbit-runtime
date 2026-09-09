@@ -37,6 +37,7 @@ from .web.mcp import (
 )
 from .web.mcp_app import ORBIT_DASHBOARD_MIME_TYPE, ORBIT_MCP_APP_RESOURCES
 from .environment import env
+from .paths import home_root
 
 
 def default_hub_root() -> Path:
@@ -52,7 +53,7 @@ def default_hub_root() -> Path:
     configured = env("HUB_ROOT")
     if configured:
         return Path(configured).expanduser()
-    return Path.home() / ".orbit" / "hub"
+    return home_root() / "hub"
 
 
 class HubError(RuntimeError):

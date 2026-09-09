@@ -41,11 +41,28 @@ class ProjectResolutionTests(unittest.TestCase):
             path = Path(bare).resolve()
             self.assertEqual(path, projects.resolve_project_root(path))
 
-    def test_state_dir_has_no_legacy_fallback(self) -> None:
+    def test_state_dir_is_the_current_name_and_ignores_dev_loop(self) -> None:
         """`.dev_loop` must not resurrect itself as a state directory."""
 
         (self.root / ".dev_loop").mkdir()
-        self.assertEqual(self.root / ".orbit", projects.project_state_dir(self.root))
+        self.assertEqual(
+            self.root / ".promptaflow", projects.project_state_dir(self.root),
+        )
+
+    def test_an_existing_orbit_state_dir_is_kept_rather_than_renamed(self) -> None:
+        """A directory inside the user's repository is read, never moved."""
+
+        (self.root / ".orbit").mkdir()
+        self.assertEqual(
+            self.root / ".orbit", projects.project_state_dir(self.root),
+        )
+
+    def test_the_current_name_wins_when_both_are_present(self) -> None:
+        (self.root / ".orbit").mkdir()
+        (self.root / ".promptaflow").mkdir()
+        self.assertEqual(
+            self.root / ".promptaflow", projects.project_state_dir(self.root),
+        )
 
     def test_project_id_is_stable_and_path_specific(self) -> None:
         first = projects.project_id(self.root)

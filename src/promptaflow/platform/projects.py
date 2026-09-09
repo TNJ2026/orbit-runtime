@@ -20,6 +20,8 @@ import re
 from typing import Any, Callable
 from urllib.error import URLError
 from urllib.request import urlopen
+from ..paths import DIR_NAME, home_root
+from ..paths import project_state_dir as _resolve_state_dir
 
 
 # The new Runtime keeps one database per project.  The name is deliberately
@@ -27,14 +29,14 @@ from urllib.request import urlopen
 # belongs to the old engine, so the two can never be confused.
 RUNTIME_DB_NAME = "runtime.db"
 
-STATE_DIR_NAME = ".orbit"
+STATE_DIR_NAME = DIR_NAME
 
 # Home-level root holding per-project databases and the project index.
-DEFAULT_STATE_ROOT = Path.home() / STATE_DIR_NAME / "projects"
+DEFAULT_STATE_ROOT = home_root() / "projects"
 DEFAULT_PROJECT_INDEX_PATH = DEFAULT_STATE_ROOT / "index.json"
-DEFAULT_WORKFLOW_LIBRARY_PATH = Path.home() / STATE_DIR_NAME / "workflows" / "library.db"
+DEFAULT_WORKFLOW_LIBRARY_PATH = home_root() / "workflows" / "library.db"
 DEFAULT_SINGLE_AGENT_WORKFLOW_LIBRARY_PATH = (
-    Path.home() / STATE_DIR_NAME / "workflows" / "single-agent-library.db"
+    home_root() / "workflows" / "single-agent-library.db"
 )
 
 
@@ -77,10 +79,12 @@ def resolve_project_root(project_dir: Path | str | None = None) -> Path:
 
 
 def project_state_dir(project_root: Path | str) -> Path:
-    """Per-project state directory. Always `.orbit`; the legacy `.dev_loop`
-    fallback is gone with the legacy engine."""
+    """Per-project state directory: `.promptaflow`, or an existing `.orbit`.
 
-    return Path(project_root) / STATE_DIR_NAME
+    Never moved — see :mod:`promptaflow.paths` for why a directory inside the
+    user's own repository is read under both names rather than renamed."""
+
+    return _resolve_state_dir(project_root)
 
 
 def project_id(project_root: Path | str) -> str:

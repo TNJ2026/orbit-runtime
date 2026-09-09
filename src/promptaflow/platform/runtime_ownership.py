@@ -18,6 +18,7 @@ from pathlib import Path
 import threading
 from typing import Iterator, Mapping, TextIO
 import weakref
+from ..paths import home_root
 
 
 class RuntimeOwnershipError(RuntimeError):
@@ -170,7 +171,7 @@ class RuntimeOwnership:
         self.release()
 
 
-DEFAULT_RUNTIME_ROOT = Path.home() / ".orbit"
+DEFAULT_RUNTIME_ROOT = home_root()
 _LOCK_SUFFIX = ".owner.lock"
 
 

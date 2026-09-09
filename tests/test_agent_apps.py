@@ -997,7 +997,7 @@ class OrbitMcpProxyStartupTests(unittest.TestCase):
         self.assertEqual(registration["ui_url"], selected.ui_url)
         self.assertEqual(registration["events_url"], selected.events.url)
         self.assertEqual(
-            self.workspace / ".orbit" / "agent-apps" / "sample-app",
+            self.workspace / ".promptaflow" / "agent-apps" / "sample-app",
             serve.call_args.kwargs["state_dir"],
         )
 

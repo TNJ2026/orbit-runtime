@@ -35,6 +35,7 @@ from ..workflow.persistence.database import connect_workflow_database
 from ..workflow.persistence.migrations import migrate_workflow_database
 from ..workflow.authoring import AuthoringUnavailableError
 from .schema_guard import MixedSchemaError, assert_runtime_schema
+from ..paths import project_state_dir
 
 
 DEFAULT_POLL_SECONDS = 0.5
@@ -588,7 +589,7 @@ def create_app(
                 try:
                     GitWorkspaceProvider(
                         project_root_for_agents,
-                        project_root_for_agents / ".orbit",
+                        project_state_dir(project_root_for_agents),
                     ).ensure_state_dir_ignored()
                 except OSError as exc:
                     raise ValueError(
