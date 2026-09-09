@@ -125,16 +125,16 @@ class EventInbox:
             events = self.pending(limit=1, event_types=event_types)
             if events:
                 return events[0]
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                return None
             with self._condition:
                 # An accept between pending() and acquiring this lock already
                 # changed the revision. Re-query instead of missing its notify
-                # and sleeping until the caller's full timeout.
+                # or expiring the timeout before observing the queued event.
                 if self._revision != observed_revision:
                     observed_revision = self._revision
                     continue
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return None
                 self._condition.wait(timeout=remaining)
                 observed_revision = self._revision
 

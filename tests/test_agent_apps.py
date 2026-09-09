@@ -605,7 +605,7 @@ class EventBridgeTests(unittest.TestCase):
             return original_pending(*args, **kwargs)
 
         self.inbox.pending = racing_pending
-        self.assertEqual(frame, self.inbox.wait(timeout_seconds=0.1))
+        self.assertEqual(frame, self.inbox.wait(timeout_seconds=0))
 
     def test_bridge_resumes_from_persisted_cursor(self) -> None:
         self.inbox.accept({"type": "ready", "cursor": "resume-me"})
