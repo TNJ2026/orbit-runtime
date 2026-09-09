@@ -10,19 +10,20 @@
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import test from "node:test";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const assets = resolve(here, "../../src/promptaflow/static/workflow-ui/assets");
+const assetUrl = (name) => pathToFileURL(resolve(assets, name)).href;
 
-const { Api, ApiError } = await import(`${assets}/api.js`);
-const { I18n, preferredLocale, LOCALES } = await import(`${assets}/i18n.js`);
-const { readRoute, routeHash } = await import(`${assets}/router.js`);
-const { dataState } = await import(`${assets}/components/data-state.js`);
-const { semanticWorkflowDiff } = await import(`${assets}/workflow-diff.js`);
-const { humanResponseValue, resumeActions } = await import(`${assets}/run-resume.js`);
+const { Api, ApiError } = await import(assetUrl("api.js"));
+const { I18n, preferredLocale, LOCALES } = await import(assetUrl("i18n.js"));
+const { readRoute, routeHash } = await import(assetUrl("router.js"));
+const { dataState } = await import(assetUrl("components/data-state.js"));
+const { semanticWorkflowDiff } = await import(assetUrl("workflow-diff.js"));
+const { humanResponseValue, resumeActions } = await import(assetUrl("run-resume.js"));
 
 function catalog(locale) {
   return JSON.parse(readFileSync(`${assets}/i18n.${locale}.json`, "utf8"));
