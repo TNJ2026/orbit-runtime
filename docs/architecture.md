@@ -388,7 +388,7 @@ LOCAL_SCOPES  = runtime.read · runtime.write · runtime.read.sensitive
 flowchart TB
     subgraph ts["TypeScript 宿主"]
         DSH["integrations/deepseek-harness<br/>面板 · 命令 · 输入框"]
-        IC["integration-core<br/>@orbit-runtime/integration-core"]
+        IC["integration-core<br/>@promptaflow/integration-core"]
         DSH --> IC
     end
 

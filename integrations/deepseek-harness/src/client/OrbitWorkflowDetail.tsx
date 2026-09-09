@@ -2,8 +2,8 @@
  * as Orbit's MCP App card. */
 
 import { useEffect, useState } from 'react'
-import { panelError, type PanelError } from '@orbit-runtime/integration-core'
-import type { OrbitRunRow as RunRowData, WorkflowNode, WorkflowSummary } from '@orbit-runtime/integration-core'
+import { panelError, type PanelError } from '@promptaflow/integration-core'
+import type { OrbitRunRow as RunRowData, WorkflowNode, WorkflowSummary } from '@promptaflow/integration-core'
 import styles from './OrbitPanel.module.css'
 import { BackButton, OrbitRunListRow, PanelErrorText } from './OrbitRunRow.tsx'
 import { OrbitWorkflowGraph, type WorkflowGraph } from './OrbitWorkflowGraph.tsx'

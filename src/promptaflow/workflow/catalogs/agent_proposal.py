@@ -25,6 +25,7 @@ from .agent_discovery import (
     TRUSTED_AGENT_CLIS, AgentCliSpec, AgentInvocation, CandidateProbe,
     probe_executable,
 )
+from ...environment import env
 
 
 DISCOVERY_FILE = "src/promptaflow/workflow/catalogs/agent_discovery.py"
@@ -53,7 +54,7 @@ def source_checkout_root(configured: Path | str | None = None) -> Path | None:
 
     explicit = configured
     if explicit is None:
-        explicit = os.environ.get("ORBIT_SOURCE_ROOT")
+        explicit = env("SOURCE_ROOT")
     candidates = (
         (Path(explicit).expanduser(),)
         if explicit

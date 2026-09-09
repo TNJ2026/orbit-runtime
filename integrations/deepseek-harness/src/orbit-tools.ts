@@ -3,8 +3,8 @@ import type { Session } from '@deepseek-ai/dsh-session'
 import type { ToolDefinition, ToolRunContext, ToolRuntime } from '@deepseek-ai/dsh-tools'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 import type { WorkspaceRegistry } from '@deepseek-ai/dsh-workspace'
-import { OrbitGateway } from '@orbit-runtime/integration-core'
-import type { AuthoringJob, RunDto, WorkspaceRef } from '@orbit-runtime/integration-core'
+import { OrbitGateway } from '@promptaflow/integration-core'
+import type { AuthoringJob, RunDto, WorkspaceRef } from '@promptaflow/integration-core'
 
 const JSON_OUTPUT = {
   schema: {} as const,

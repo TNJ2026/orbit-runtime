@@ -153,8 +153,12 @@ def load_manifest(path: Path | str) -> AgentAppManifest:
             else _string(service_data.get("discovery"), "service.discovery")
         ),
     )
-    if service.discovery not in {None, "orbit-runtime"}:
-        raise ManifestError("service.discovery must be orbit-runtime when provided")
+    # `orbit-runtime` is the name this field was published under before the
+    # rename; manifests in the wild still carry it, so it stays accepted.
+    if service.discovery not in {None, "promptaflow", "orbit-runtime"}:
+        raise ManifestError(
+            "service.discovery must be promptaflow (or the legacy orbit-runtime) when provided"
+        )
     ui_data = _mapping(document.get("ui"), "ui")
     mcp_data = document.get("mcp")
     mcp = None

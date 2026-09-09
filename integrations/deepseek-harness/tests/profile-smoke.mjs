@@ -63,7 +63,7 @@ try {
   // has loaded fine.
   const clientBundle = await readFile(resolve(bundle, 'lib/client.js'), 'utf8')
   assert.match(clientBundle, /window\.__ModuleLoader__\.load\(\{/)
-  assert.match(clientBundle, /id:\s*["']@orbit-runtime\/dsh-orbit["']/)
+  assert.match(clientBundle, /id:\s*["']@promptaflow\/dsh["']/)
   assert.match(clientBundle, /require\("react"\)/)
   assert.doesNotMatch(clientBundle, /@deepseek-ai\/dsh-client-(runtime|ui-slots|ui-primitives|locale)['"]?\s*[:=]/)
   // Module CSS is injected by the factory, not shipped as a second asset.
@@ -71,7 +71,7 @@ try {
 
   await run(['plugin', '--profile', 'web', 'add', installSpec])
   const installed = await run(['--profile', 'web', '--dump-config'])
-  assert.match(installed.stdout, /name: '@orbit-runtime\/dsh-orbit'/)
+  assert.match(installed.stdout, /name: '@promptaflow\/dsh'/)
 
   web = await startWeb()
   // Some profiles put a one-time authentication token in the printed URL;
@@ -87,9 +87,9 @@ try {
   assert.equal(response.status, 200)
   await stop(web.child); web = undefined
 
-  await run(['plugin', '--profile', 'web', 'remove', '@orbit-runtime/dsh-orbit'])
+  await run(['plugin', '--profile', 'web', 'remove', '@promptaflow/dsh'])
   const removed = await run(['--profile', 'web', '--dump-config'])
-  assert.doesNotMatch(removed.stdout, /name: '@orbit-runtime\/dsh-orbit'/)
+  assert.doesNotMatch(removed.stdout, /name: '@promptaflow\/dsh'/)
   process.stdout.write('Harness Profile install/start/remove smoke passed\n')
 } finally {
   await stop(web?.child)

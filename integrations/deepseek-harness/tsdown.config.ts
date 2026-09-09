@@ -69,7 +69,7 @@ const ORBIT_CORE_ENTRY = fileURLToPath(
 const ORBIT_CORE_TYPES = fileURLToPath(
   new URL('../../integration-core/src/types.ts', import.meta.url),
 )
-const ORBIT_CORE_ALIAS = { '@orbit-runtime/integration-core': ORBIT_CORE_ENTRY }
+const ORBIT_CORE_ALIAS = { '@promptaflow/integration-core': ORBIT_CORE_ENTRY }
 
 /** Wire/type layers a client bundle may inline (no shared runtime identity). */
 const INLINE_SAFE = /^@deepseek-ai\/dsh-(session|tools|brand)(\/|$)/
@@ -101,10 +101,10 @@ export default defineConfig([{
     // Host and Node dependencies stay external; integration-core resolves to
     // local source through the alias above and is therefore bundled.
     neverBundle: true,
-    alwaysBundle: /^@orbit-runtime\/integration-core$/,
+    alwaysBundle: /^@promptaflow\/integration-core$/,
     dts: {
       neverBundle: true,
-      alwaysBundle: /^@orbit-runtime\/integration-core$/,
+      alwaysBundle: /^@promptaflow\/integration-core$/,
     },
   },
 }, {
@@ -122,10 +122,10 @@ export default defineConfig([{
   codeSplitting: false,
   deps: {
     neverBundle: true,
-    alwaysBundle: /^@orbit-runtime\/integration-core$/,
+    alwaysBundle: /^@promptaflow\/integration-core$/,
     dts: {
       neverBundle: true,
-      alwaysBundle: /^@orbit-runtime\/integration-core$/,
+      alwaysBundle: /^@promptaflow\/integration-core$/,
     },
   },
 }, {

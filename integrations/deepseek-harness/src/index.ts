@@ -1,7 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol'
-import { OrbitGateway, OrbitSessionBridge, WorkflowCatalog, advertisedAt, artifactFilename, commandTool, goalRuns, isLive, readableAsText, sessionCanBridge, type OrbitCursorStore, type OrbitRunCommand } from '@orbit-runtime/integration-core'
-import type { AgentSummary, ArtifactContent, ArtifactSummary, AuthoringJob, AuthoringOutputPage, AuthoringSummary, EdgeSummary, ImportedArtifact, IntegrationDiagnostics, OrbitCommandRequest, OutputPage, RunDto, RunGraph, RuntimeSummary, StepSummary, WorkflowNode, WorkflowSummary, WorkspaceRef } from '@orbit-runtime/integration-core'
+import { OrbitGateway, OrbitSessionBridge, WorkflowCatalog, advertisedAt, artifactFilename, commandTool, goalRuns, isLive, readableAsText, sessionCanBridge, type OrbitCursorStore, type OrbitRunCommand } from '@promptaflow/integration-core'
+import type { AgentSummary, ArtifactContent, ArtifactSummary, AuthoringJob, AuthoringOutputPage, AuthoringSummary, EdgeSummary, ImportedArtifact, IntegrationDiagnostics, OrbitCommandRequest, OutputPage, RunDto, RunGraph, RuntimeSummary, StepSummary, WorkflowNode, WorkflowSummary, WorkspaceRef } from '@promptaflow/integration-core'
 import { OrbitToolBridge } from './orbit-tools.js'
 import type { Session, SessionStore } from '@deepseek-ai/dsh-session'
 import type { WorkspaceRegistry } from '@deepseek-ai/dsh-workspace'
@@ -17,9 +17,9 @@ import {
   CLAIM_RETRY_MS, CLAIM_WAIT_SECONDS, answerFrom, authoringClientForSession,
   claimOnce, isUnknownToolError,
   type ClaimedRequest,
-} from '@orbit-runtime/integration-core'
+} from '@promptaflow/integration-core'
 
-declare module '@deepseek-ai/cordis' { interface Context { orbit: OrbitRemoteService } }
+declare module '@deepseek-ai/cordis' { interface Context { promptaflow: OrbitRemoteService } }
 
 /** The slice of the Agent registry this Host uses to drive one Session. */
 interface AgentLookup {
@@ -101,7 +101,7 @@ export class OrbitRemoteService extends TypertRemoteService {
   private readonly attachments: AttachmentStore
   private readonly workspaceRegistry: WorkspaceRegistry
   constructor(ctx: Context) {
-    super(ctx, 'orbit')
+    super(ctx, 'promptaflow')
     this.hostSessions = ctx.get('sessions') as unknown as SessionStore
     this.attachments = ctx.get('attachments') as unknown as AttachmentStore
     this.workspaceRegistry = ctx.get('workspaceRegistry') as unknown as WorkspaceRegistry
@@ -635,7 +635,7 @@ export class OrbitRemoteService extends TypertRemoteService {
     const mark = agent.session.events.length
     agent.followup(createUserMessage({
       content: [{ type: 'text', text: prompt }],
-      source: { kind: 'plugin', plugin: 'orbit' },
+      source: { kind: 'plugin', plugin: 'promptaflow' },
     }))
     /* `whenIdle` follows whole-agent quiescence, not this message: a Session
        busy with the person's own turn reaches idle when *that* turn ends,

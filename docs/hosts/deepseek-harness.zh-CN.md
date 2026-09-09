@@ -70,7 +70,7 @@ dsh plugin --profile web add /绝对路径/稳定目录/orbit/integrations/deeps
 dsh --profile web --dump-config
 ```
 
-输出的 Profile 配置中必须包含 `@orbit-runtime/dsh-orbit`，其来源路径应指向上面使用的
+输出的 Profile 配置中必须包含 `@promptaflow/dsh`，其来源路径应指向上面使用的
 checkout。
 
 ### 5. 重启并验证
@@ -106,7 +106,7 @@ dsh --profile web --dump-config
 仅移除 Harness 集成：
 
 ```bash
-dsh plugin --profile web remove @orbit-runtime/dsh-orbit
+dsh plugin --profile web remove @promptaflow/dsh
 dsh --profile web --dump-config
 ```
 

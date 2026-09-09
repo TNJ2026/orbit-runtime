@@ -38,8 +38,8 @@ for (const path of ['lib/index.js', 'lib/index.d.ts', 'lib/client.js']) {
   const output = await readFile(new URL(path, root), 'utf8')
   assert.doesNotMatch(
     output,
-    /@orbit-runtime\/integration-core/,
-    `${path} must inline @orbit-runtime/integration-core`,
+    /@promptaflow\/integration-core/,
+    `${path} must inline @promptaflow/integration-core`,
   )
 }
 

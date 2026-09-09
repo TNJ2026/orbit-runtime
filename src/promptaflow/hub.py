@@ -36,6 +36,7 @@ from .web.mcp import (
     McpSessionRegistry,
 )
 from .web.mcp_app import ORBIT_DASHBOARD_MIME_TYPE, ORBIT_MCP_APP_RESOURCES
+from .environment import env
 
 
 def default_hub_root() -> Path:
@@ -48,7 +49,7 @@ def default_hub_root() -> Path:
     there. Every e2e run added one, and none was ever removed.
     """
 
-    configured = os.environ.get("ORBIT_HUB_ROOT")
+    configured = env("HUB_ROOT")
     if configured:
         return Path(configured).expanduser()
     return Path.home() / ".orbit" / "hub"
@@ -427,7 +428,7 @@ class WorkspaceRuntimeManager:
             return subprocess.Popen(
                 self._serve_arguments(workspace),
                 cwd=workspace,
-                env={**os.environ, "ORBIT_HUB_CHILD": "1"},
+                env={**os.environ, "PROMPTAFLOW_HUB_CHILD": "1"},
                 stdin=subprocess.DEVNULL,
                 stdout=stdout,
                 stderr=stderr,

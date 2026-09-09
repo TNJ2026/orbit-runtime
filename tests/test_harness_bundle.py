@@ -35,8 +35,8 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
     def test_patch_registers_the_host_gateway(self) -> None:
         patch = yaml.safe_load((BUNDLE / "cordis.patch.yml").read_text(encoding="utf-8"))
         plugin = patch[0]["insert"][0]
-        self.assertEqual("@orbit-runtime/dsh-orbit", plugin["name"])
-        self.assertEqual("orbit", plugin["id"])
+        self.assertEqual("@promptaflow/dsh", plugin["name"])
+        self.assertEqual("promptaflow", plugin["id"])
 
     def test_host_sources_include_gateway_and_remote_contract(self) -> None:
         gateway = (CORE / "src" / "gateway.ts").read_text(encoding="utf-8")
@@ -203,7 +203,7 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
 
         built_client = (BUNDLE / "lib" / "client.js").read_text(encoding="utf-8")
         self.assertIn("window.__ModuleLoader__.load({", built_client)
-        self.assertIn('id: "@orbit-runtime/dsh-orbit"', built_client)
+        self.assertIn('id: "@promptaflow/dsh"', built_client)
 
 
 if __name__ == "__main__":

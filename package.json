@@ -1,5 +1,5 @@
 {
-  "name": "orbit-runtime-ui-tests",
+  "name": "promptaflow-ui-tests",
   "private": true,
   "type": "module",
   "dsh": {

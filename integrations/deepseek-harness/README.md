@@ -24,7 +24,7 @@ Install this directory into the target Harness Web Profile with one command:
 `dsh plugin --profile web add /absolute/path/to/orbit/integrations/deepseek-harness`
 
 Then restart that Profile. Remove it with
-`dsh plugin --profile web remove @orbit-runtime/dsh-orbit`. Client code uses the
+`dsh plugin --profile web remove @promptaflow/dsh`. Client code uses the
 bundle's same-origin Host API; it never receives the Runtime endpoint, child
 process handle, actor header, or Orbit loopback credentials.
 

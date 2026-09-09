@@ -26,6 +26,7 @@ from .platform.projects import (
     resolve_project_root,
     upsert_project,
 )
+from .environment import env
 
 
 def _workflow_db_path(
@@ -822,7 +823,7 @@ def _default_agent_app_manifest(
     if manifest is not None:
         return Path(manifest).expanduser().resolve()
     root = Path(
-        source_root or os.environ.get("ORBIT_SOURCE_ROOT") or Path.cwd()
+        source_root or env("SOURCE_ROOT") or Path.cwd()
     ).expanduser().resolve()
     filename = (
         "agent-app.windows.json"
@@ -1136,7 +1137,7 @@ def build_parser() -> argparse.ArgumentParser:
     hub_serve.add_argument("--port", type=int, default=8848)
     hub_serve.add_argument(
         "--background-agent-command",
-        default=os.environ.get("ORBIT_BACKGROUND_AGENT_COMMAND"),
+        default=env("BACKGROUND_AGENT_COMMAND"),
         help=(
             "Start one machine background Agent worker using this JSON "
             "stdin/stdout child command (or ORBIT_BACKGROUND_AGENT_COMMAND)"
@@ -1144,7 +1145,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     hub_serve.add_argument(
         "--background-agent-backend", choices=("codex",),
-        default=os.environ.get("ORBIT_BACKGROUND_AGENT_BACKEND"),
+        default=env("BACKGROUND_AGENT_BACKEND"),
         help="Enable the supervised worker with a built-in backend (or set the environment variable)",
     )
     hub_serve.add_argument(
@@ -1335,7 +1336,7 @@ def main() -> None:
     # child. Translate that private protocol before argparse sees the public
     # `serve` surface; interactive callers never receive the old Runtime mode.
     if (
-        os.environ.get("ORBIT_HUB_CHILD") == "1"
+        env("HUB_CHILD") == "1"
         and argv
         and argv[0] == "serve"
     ):

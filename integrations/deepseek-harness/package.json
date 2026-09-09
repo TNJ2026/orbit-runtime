@@ -1,5 +1,5 @@
 {
-  "name": "@orbit-runtime/dsh-orbit",
+  "name": "@promptaflow/dsh",
   "description": "DeepSeek Harness Host bundle for the Orbit MCP runtime",
   "version": "0.1.0",
   "publishConfig": {

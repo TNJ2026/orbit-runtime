@@ -7,7 +7,7 @@
  * renders. Showing Orbit's own page instead means there is one interface, and
  * this module's whole job is deciding when it is visible.
  *
- * @module @orbit-runtime/dsh-orbit/client
+ * @module @promptaflow/dsh/client
  */
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client';
 export declare function registerOrbitSlashSource(ctx: ClientContext): void;

@@ -7,13 +7,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, IconChevronDownOutline14, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
-import { panelError, type PanelError } from '@orbit-runtime/integration-core'
-import type { OutputChunk, StepSummary } from '@orbit-runtime/integration-core'
+import { panelError, type PanelError } from '@promptaflow/integration-core'
+import type { OutputChunk, StepSummary } from '@promptaflow/integration-core'
 import styles from './OrbitPanel.module.css'
 import {
   approvalValue, artifactHref, artifactLabel, commandRevision, dotState, mergeChunks,
   outputText, resultOutcome, stepDotState, toStepRow, type OrbitRunRow as RunRowData,
-} from '@orbit-runtime/integration-core'
+} from '@promptaflow/integration-core'
 import type { OrbitLocaleKey } from './locales.ts'
 
 type Translate = (key: OrbitLocaleKey, values?: Record<string, string | number>) => string

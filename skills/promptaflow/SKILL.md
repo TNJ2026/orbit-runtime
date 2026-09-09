@@ -1,5 +1,5 @@
 ---
-name: orbit
+name: promptaflow
 description: Open Orbit or its workflow cards, generate or modify Workflow DSL, and execute user goals with the local workflow Runtime; also inspect workflows and runs, process Runtime events, connect other MCP-capable Agent Apps, and rebuild, refresh, or reinstall the local Orbit plugin in Codex during development.
 ---
 

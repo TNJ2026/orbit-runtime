@@ -75,7 +75,7 @@ dsh --profile web --dump-config
 ```
 
 The dumped Profile configuration must contain
-`@orbit-runtime/dsh-orbit`. The source path should resolve to the checkout used
+`@promptaflow/dsh`. The source path should resolve to the checkout used
 above.
 
 ### 5. Restart and verify
@@ -116,7 +116,7 @@ rollback.
 Remove only the Harness integration with:
 
 ```bash
-dsh plugin --profile web remove @orbit-runtime/dsh-orbit
+dsh plugin --profile web remove @promptaflow/dsh
 dsh --profile web --dump-config
 ```
 

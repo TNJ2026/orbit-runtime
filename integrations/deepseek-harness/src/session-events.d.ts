@@ -8,7 +8,7 @@
 
 import type {
   OrbitRunStarted, OrbitRunCheckpoint, OrbitRunEnded,
-} from '@orbit-runtime/integration-core'
+} from '@promptaflow/integration-core'
 
 declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {

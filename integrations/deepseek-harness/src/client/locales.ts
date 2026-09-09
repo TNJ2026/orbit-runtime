@@ -1,6 +1,6 @@
 /** Panel copy, registered with the Harness locale service. */
 
-export const ORBIT_LOCALE_NAMESPACE = 'orbit'
+export const ORBIT_LOCALE_NAMESPACE = 'promptaflow'
 
 export const en = {
   title: 'Orbit',

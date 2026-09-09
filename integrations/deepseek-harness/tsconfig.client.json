@@ -4,7 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "paths": {
-      "@orbit-runtime/integration-core": [
+      "@promptaflow/integration-core": [
         "../../integration-core/lib/index.d.ts"
       ]
     },

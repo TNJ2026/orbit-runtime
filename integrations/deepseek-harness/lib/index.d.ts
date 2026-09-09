@@ -212,7 +212,7 @@ interface OrbitCursorStore {
 //#region src/index.d.ts
 declare module '@deepseek-ai/cordis' {
   interface Context {
-    orbit: OrbitRemoteService;
+    promptaflow: OrbitRemoteService;
   }
 }
 interface WorkflowGraph {

@@ -24,6 +24,7 @@ from ..platform.process import (
 )
 from ..platform.runtime_ownership import DiscoveredRuntime, discover_runtimes
 from .manifest import AgentAppManifest, load_manifest
+from ..environment import env
 
 
 class AgentAppHostError(RuntimeError):
@@ -56,7 +57,7 @@ def default_state_root() -> Path:
 def default_workspace() -> Path:
     """Cross-platform workspace for Agent Apps without project context."""
 
-    configured = os.environ.get("ORBIT_DEFAULT_WORKSPACE")
+    configured = env("DEFAULT_WORKSPACE")
     if configured:
         return Path(configured).expanduser().resolve()
     return (Path.home() / ".orbit" / "workspaces" / "default").resolve()

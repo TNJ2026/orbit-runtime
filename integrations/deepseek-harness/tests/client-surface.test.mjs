@@ -524,7 +524,7 @@ test('the Goal page and the Host agree on which Runs it is about', async () => {
   // copies of "which Runs is this Goal page about" is the disagreement this
   // test exists to prevent.
   assert.match(host, /goalRuns[^\n]*|[^\n]*goalRuns/)
-  assert.match(host, /from '@orbit-runtime\/integration-core'/)
+  assert.match(host, /from '@promptaflow\/integration-core'/)
   const panel = sources[names.indexOf('OrbitPanel.tsx')]
   const from = panel.indexOf("tab === 'goal' ? (")
   const until = panel.indexOf("tab === 'history' ? (")

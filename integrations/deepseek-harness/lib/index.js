@@ -1731,7 +1731,7 @@ var OrbitRemoteService = (() => {
 		attachments;
 		workspaceRegistry;
 		constructor(ctx) {
-			super(ctx, "orbit");
+			super(ctx, "promptaflow");
 			this.hostSessions = ctx.get("sessions");
 			this.attachments = ctx.get("attachments");
 			this.workspaceRegistry = ctx.get("workspaceRegistry");
@@ -2200,7 +2200,7 @@ var OrbitRemoteService = (() => {
 				}],
 				source: {
 					kind: "plugin",
-					plugin: "orbit"
+					plugin: "promptaflow"
 				}
 			}));
 			const deadline = Date.now() + AUTHORING_TURN_MS;

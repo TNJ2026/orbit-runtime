@@ -6,7 +6,7 @@
  * own graphs, Artifacts and Workflow authoring, and a second drawing of those
  * here would be a second answer to the same question.
  *
- * @module @orbit-runtime/dsh-orbit/client
+ * @module @promptaflow/dsh/client
  */
 
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
@@ -20,19 +20,19 @@ import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { OrbitPanel } from './OrbitPanel.tsx'
 import { ORBIT_LOCALE_NAMESPACE, en, zh, type OrbitLocaleKey } from './locales.ts'
-import { panelError } from '@orbit-runtime/integration-core'
+import { panelError } from '@promptaflow/integration-core'
 import { caretToEnd } from './composer-caret.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
-    /** Orbit resident panel copy. */
-    orbit: OrbitLocaleKey
+    /** PromptaFlow resident panel copy. */
+    promptaflow: OrbitLocaleKey
   }
 }
 
-const PANEL_COMMAND = 'orbit'
-const LIST_COMMAND = 'orbit-workflows'
-const GENERATE_COMMAND = 'orbit-generate'
+const PANEL_COMMAND = 'promptaflow'
+const LIST_COMMAND = 'promptaflow-workflows'
+const GENERATE_COMMAND = 'promptaflow-generate'
 
 interface InputTriggerRegistry { registerSource(source: Record<string, unknown>): () => void }
 type SubmitResult = { kind: 'success'; text?: string } | { kind: 'error'; text: string }
@@ -51,7 +51,7 @@ function registerOrbitSlashSource(ctx: ClientContext, t: Translate): void {
     },
   })
   ctx.effect(() => inputTriggers.registerSource({
-    trigger: '/', name: 'orbit', order: -10, showGroupTitle: false,
+    trigger: '/', name: 'promptaflow', order: -10, showGroupTitle: false,
     candidates: async (_session: unknown, request: { query: string }) =>
       PANEL_COMMAND.includes(request.query.toLowerCase())
         ? [{ name: PANEL_COMMAND, description: t('togglePanel') }] : [],
@@ -319,7 +319,7 @@ export function apply(ctx: ClientContext): void {
   registerOrbitSlashSource(ctx, t)
   registerGenerateSlashSource(ctx, t)
   registerWorkflowPopup(ctx, t)
-  const Panel = ({ t, useSessions }: PropsLocale<'orbit'> & {
+  const Panel = ({ t, useSessions }: PropsLocale<'promptaflow'> & {
     useSessions: <T>(selector: (state: { current?: string }) => T) => T
   }) => <OrbitPanel
     t={t}

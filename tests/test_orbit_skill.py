@@ -6,7 +6,7 @@ from pathlib import Path
 import unittest
 
 
-ROOT = Path(__file__).parents[1] / "skills" / "orbit"
+ROOT = Path(__file__).parents[1] / "skills" / "promptaflow"
 
 
 class OrbitSkillCardRoutingTests(unittest.TestCase):
