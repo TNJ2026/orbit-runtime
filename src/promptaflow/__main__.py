@@ -1142,7 +1142,8 @@ def build_parser() -> argparse.ArgumentParser:
         default=env("BACKGROUND_AGENT_COMMAND"),
         help=(
             "Start one machine background Agent worker using this JSON "
-            "stdin/stdout child command (or ORBIT_BACKGROUND_AGENT_COMMAND)"
+            "stdin/stdout child command (or PROMPTAFLOW_BACKGROUND_AGENT_COMMAND; "
+            "ORBIT_BACKGROUND_AGENT_COMMAND is the legacy alias)"
         ),
     )
     hub_serve.add_argument(

@@ -57,7 +57,7 @@ def build_routes(ctx) -> list[Route]:
         if additions and ctx.agent_proposal_root is None:
             raise ValueError(
                 "PromptaFlow source checkout is unavailable; start PromptaFlow through "
-                "the repository's start-orbit.sh before applying an Agent CLI proposal"
+                "the repository's start-promptaflow.sh before applying an Agent CLI proposal"
             )
         patch = (
             render_patch(proposals, root=ctx.agent_proposal_root)

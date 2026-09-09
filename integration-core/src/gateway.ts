@@ -43,8 +43,8 @@ export class OrbitGateway {
     private readonly command = 'promptaflow',
     private readonly commandPrefix: readonly string[] = [],
     private readonly fetchImpl: Fetch = globalThis.fetch,
-    private readonly discoveryRoot = process.env.ORBIT_RUNTIME_ROOT || undefined,
-    private readonly hubUrl = process.env.ORBIT_HUB_URL || 'http://127.0.0.1:8848',
+    private readonly discoveryRoot = process.env.PROMPTAFLOW_RUNTIME_ROOT || process.env.ORBIT_RUNTIME_ROOT || undefined,
+    private readonly hubUrl = process.env.PROMPTAFLOW_HUB_URL || process.env.ORBIT_HUB_URL || 'http://127.0.0.1:8848',
   ) {}
 
   diagnostics(): GatewayDiagnostics {

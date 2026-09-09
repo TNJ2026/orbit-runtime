@@ -37,14 +37,14 @@ Directory。
 
 ### 2. 下载并解压 Marketplace
 
-从对应的 Release 下载 `orbit-marketplace-<版本>.zip`。请解压到稳定目录：Codex 会一直把
+从对应的 Release 下载 `promptaflow-marketplace-<版本>.zip`。请解压到稳定目录：Codex 会一直把
 该目录作为 Marketplace 源，不要把它留在临时下载目录中。
 
 macOS 或 Linux：
 
 ```bash
-mkdir -p "$HOME/.local/share/orbit-codex"
-unzip orbit-marketplace-<版本>.zip -d "$HOME/.local/share/orbit-codex"
+mkdir -p "$HOME/.local/share/promptaflow-codex"
+unzip promptaflow-marketplace-<版本>.zip -d "$HOME/.local/share/promptaflow-codex"
 ```
 
 Windows PowerShell：
@@ -52,22 +52,22 @@ Windows PowerShell：
 ```powershell
 $installRoot = Join-Path $env:LOCALAPPDATA "PromptaFlow\Codex"
 New-Item -ItemType Directory -Force -Path $installRoot
-Expand-Archive -Path .\orbit-marketplace-<版本>.zip -DestinationPath $installRoot -Force
+Expand-Archive -Path .\promptaflow-marketplace-<版本>.zip -DestinationPath $installRoot -Force
 ```
 
 解压后的 Marketplace 根目录必须包含以下路径：
 
 ```text
-orbit-marketplace/
+promptaflow-marketplace/
 ├── .agents/plugins/marketplace.json
-└── plugins/orbit/
+└── plugins/promptaflow/
     ├── .codex-plugin/plugin.json
     ├── .mcp.json
     ├── start-promptaflow.sh
-    └── skills/orbit/SKILL.md
+    └── skills/promptaflow/SKILL.md
 ```
 
-如果解压后多出了一层目录，下一步应使用内层的 `orbit-marketplace` 目录。
+如果解压后多出了一层目录，下一步应使用内层的 `promptaflow-marketplace` 目录。
 
 ### 3. 注册 Marketplace
 
@@ -76,19 +76,19 @@ orbit-marketplace/
 macOS 或 Linux：
 
 ```bash
-codex plugin marketplace add "$HOME/.local/share/orbit-codex/orbit-marketplace"
+codex plugin marketplace add "$HOME/.local/share/promptaflow-codex/promptaflow-marketplace"
 codex plugin marketplace list
 ```
 
 Windows PowerShell：
 
 ```powershell
-codex plugin marketplace add (Join-Path $installRoot "orbit-marketplace")
+codex plugin marketplace add (Join-Path $installRoot "promptaflow-marketplace")
 codex plugin marketplace list
 ```
 
-列表中应该出现名为 `orbit-local` 的 Marketplace，并指向刚添加的目录。如果已有另一个
-`orbit-local` 指向其他位置，请先运行 `codex plugin marketplace remove orbit-local` 删除旧
+列表中应该出现名为 `promptaflow-local` 的 Marketplace，并指向刚添加的目录。如果已有另一个
+`promptaflow-local` 指向其他位置，请先运行 `codex plugin marketplace remove promptaflow-local` 删除旧
 来源，再添加正确目录。
 
 ### 4. 安装 PromptaFlow
@@ -96,11 +96,11 @@ codex plugin marketplace list
 通过 CLI 安装：
 
 ```bash
-codex plugin add orbit@orbit-local
-codex plugin list --marketplace orbit-local
+codex plugin add promptaflow@promptaflow-local
+codex plugin list --marketplace promptaflow-local
 ```
 
-列表应显示 `orbit` 已安装且已启用。也可以在注册 Marketplace 后通过界面安装：
+列表应显示 `promptaflow` 已安装且已启用。也可以在注册 Marketplace 后通过界面安装：
 
 1. 打开 Codex App 的 **Plugins**。
 2. 选择 **PromptaFlow Local** 来源。
@@ -118,27 +118,27 @@ codex plugin list --marketplace orbit-local
 
 ### 升级现有安装
 
-1. 下载新的 `orbit-marketplace-<版本>.zip`。
+1. 下载新的 `promptaflow-marketplace-<版本>.zip`。
 2. 完全退出 Codex。
-3. 备份或删除旧的 `orbit-marketplace` 解压目录，再把新压缩包解压到相同位置。不要直接
+3. 备份或删除旧的 `promptaflow-marketplace` 解压目录，再把新压缩包解压到相同位置。不要直接
    覆盖合并旧文件。
 4. 重新安装并检查插件：
 
    ```bash
-   codex plugin add orbit@orbit-local
-   codex plugin list --marketplace orbit-local
+   codex plugin add promptaflow@promptaflow-local
+   codex plugin list --marketplace promptaflow-local
    ```
 
 5. 重新打开 Codex 并新建任务。
 
-如果 Marketplace 路径发生变化，请先删除 `orbit-local`，添加新的绝对路径，再重新安装
+如果 Marketplace 路径发生变化，请先删除 `promptaflow-local`，添加新的绝对路径，再重新安装
 PromptaFlow。
 
 ### 移除安装
 
 ```bash
-codex plugin remove orbit@orbit-local
-codex plugin marketplace remove orbit-local
+codex plugin remove promptaflow@promptaflow-local
+codex plugin marketplace remove promptaflow-local
 ```
 
 命令成功后即可删除解压出的 Marketplace 目录。完全重启 Codex 后，新任务将不再加载该
@@ -148,18 +148,18 @@ codex plugin marketplace remove orbit-local
 
 - **找不到 Marketplace：**运行 `codex plugin marketplace list`，确认注册的根目录内直接
   包含 `.agents/plugins/marketplace.json`。
-- **列表里没有 PromptaFlow：**运行 `codex plugin list --available --json`，确认 `orbit` 可从
-  `orbit-local` 获取，然后再次执行安装命令。
+- **列表里没有 PromptaFlow：**运行 `codex plugin list --available --json`，确认 `promptaflow` 可从
+  `promptaflow-local` 获取，然后再次执行安装命令。
 - **找不到 `bash`：**安装 Bash，并确保启动 Codex 时使用的环境能够找到它。
 - **没有虚拟环境或找不到 `uv`：**安装 `uv`，然后重启 Codex，让新环境识别该程序。
 - **仍然看到旧指令或旧工具：**完全退出并重新打开 Codex，再新建任务；已有任务不会重新
   加载插件元数据。
 
-插件自带 MCP Proxy，插件宿主会把 `ORBIT_AGENT_APP_WORKSPACE` 设为当前打开的项目。
+插件自带 MCP Proxy，插件宿主会把 `PROMPTAFLOW_AGENT_APP_WORKSPACE` 设为当前打开的项目。
 Proxy 把这个 workspace 注册到 8848 端口的本地 Hub，并使用它的 workspace 级 MCP
 地址；Hub 为该 workspace 启动或发现一个动态端口的 Runtime。PromptaFlow 必须获得明确的
 项目目录，绝不会把进程碰巧所在的目录当作项目——没有项目的聊天会使用
-`ORBIT_DEFAULT_WORKSPACE`（若已配置），否则用 `~/.promptaflow/workspaces/default`。
+`PROMPTAFLOW_DEFAULT_WORKSPACE`（若已配置），否则用 `~/.promptaflow/workspaces/default`。
 
 「打开 PromptaFlow」会启动或复用 Runtime，并在对话旁打开原生面板。它**只是展示**：不会把
 本 App 注册为撰写者，也不会开始监听撰写请求。需要的话请明说，Codex 才会调用

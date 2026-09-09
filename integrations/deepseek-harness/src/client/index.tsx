@@ -38,14 +38,14 @@ interface InputTriggerRegistry { registerSource(source: Record<string, unknown>)
 type SubmitResult = { kind: 'success'; text?: string } | { kind: 'error'; text: string }
 type Translate = (key: OrbitLocaleKey, values?: Record<string, string | number>) => string
 
-/** `/orbit` folds the resident panel; it never opens a second one. */
+/** `/promptaflow` folds the resident panel; it never opens a second one. */
 function registerOrbitSlashSource(ctx: ClientContext, t: Translate): void {
   const inputTriggers = ctx.get('inputTriggers') as unknown as InputTriggerRegistry | undefined
-  if (!inputTriggers) throw new Error('Orbit /orbit requires the Harness inputTriggers service')
+  if (!inputTriggers) throw new Error('PromptaFlow /promptaflow requires the Harness inputTriggers service')
   const claim = () => ({
     token: `/${PANEL_COMMAND}`,
     submit: async (args: string): Promise<SubmitResult> => {
-      if (args.trim()) return { kind: 'error', text: '/orbit takes no argument; it shows or hides the Orbit panel' }
+      if (args.trim()) return { kind: 'error', text: '/promptaflow takes no argument; it shows or hides the PromptaFlow panel' }
       window.dispatchEvent(new Event('orbit:toggle-panel'))
       return { kind: 'success' }
     },
@@ -80,10 +80,10 @@ interface SelectOption { readonly id: string; readonly label: string; readonly d
 interface SessionContext { readonly sessionId: string }
 interface TriggerPick { readonly session: SessionContext }
 
-/** `/orbit-generate` starts the existing authoring flow and reveals its row. */
+/** `/promptaflow-generate` starts the existing authoring flow and reveals its row. */
 function registerGenerateSlashSource(ctx: ClientContext, t: Translate): void {
   const inputTriggers = ctx.get('inputTriggers') as unknown as InputTriggerRegistry | undefined
-  if (!inputTriggers) throw new Error('Orbit /orbit-generate requires the Harness inputTriggers service')
+  if (!inputTriggers) throw new Error('PromptaFlow /promptaflow-generate requires the Harness inputTriggers service')
   const claim = (session: SessionContext) => ({
     // The claim token is also what a menu pick inserts into the composer.
     // Keep the argument separator in it so the person can type the Workflow
@@ -159,7 +159,7 @@ function writeDraft(ctx: ClientContext, sessionId: string, text: string): void {
  * Workflow rows live in the resident panel, but the goal belongs in the
  * conversation composer. Keeping this bridge in the host-facing module means
  * the panel stays a presentational component and the draft is written through
- * the same session-scoped input API used by `/orbit-workflows`.
+ * the same session-scoped input API used by `/promptaflow-workflows`.
  */
 function writeWorkflowDraft(
   ctx: ClientContext,
@@ -223,7 +223,7 @@ async function hostCall<T>(action: string, args: unknown[], signal: AbortSignal)
 }
 
 /**
- * `/orbit-workflows` opens the shell's own popup — the one `/model` uses.
+ * `/promptaflow-workflows` opens the shell's own popup — the one `/model` uses.
  *
  * Selecting writes the request into the draft for the person to finish. A
  * popupSelect is one list and one pick, with nowhere to put the goal these
@@ -248,7 +248,7 @@ function registerWorkflowPopup(ctx: ClientContext, t: Translate): void {
         // Run they are about to describe starts reporting.
         showOrbitPanel()
         // `startIfMissing`, because typing the command is the asking. The
-        // panel starts a Runtime when it is expanded and `/orbit-generate`
+        // panel starts a Runtime when it is expanded and `/promptaflow-generate`
         // starts one to write into; this list was the one entry point that
         // required a Runtime to already be there, and answered a person who
         // asked what could run with an error about nothing running.

@@ -208,7 +208,7 @@ stream, written outside every transaction, and never something a replay reads.
 promptaflow serve
 promptaflow serve --project-root /absolute/path/to/project
 promptaflow hub register /absolute/path/to/project --no-agent-project-access
-orbit --version
+promptaflow --version
 promptaflow runtimes --json                     # which Runtimes are up, and where
 promptaflow mcp
 promptaflow mcp --project-root /absolute/path/to/project
@@ -234,22 +234,22 @@ including the one-line prompt that lets Codex install it from this repository.
 
 Each GitHub Release includes a Marketplace ZIP, a standalone Codex plugin ZIP,
 the Python wheel and source distribution, and the DeepSeek Harness bundle.
-Download and extract `orbit-marketplace-<version>.zip`, then register its root
+Download and extract `promptaflow-marketplace-<version>.zip`, then register its root
 directory and install PromptaFlow:
 
 ```bash
-unzip orbit-marketplace-<version>.zip
-codex plugin marketplace add ./orbit-marketplace
-codex plugin add orbit@orbit-local
+unzip promptaflow-marketplace-<version>.zip
+codex plugin marketplace add ./promptaflow-marketplace
+codex plugin add promptaflow@promptaflow-local
 codex plugin list
 ```
 
-Keep the extracted `orbit-marketplace` directory in a stable location: the
+Keep the extracted `promptaflow-marketplace` directory in a stable location: the
 configured Marketplace source refers to it. To update, download and extract the
 new release, replace the previous directory, then run:
 
 ```bash
-codex plugin add orbit@orbit-local
+codex plugin add promptaflow@promptaflow-local
 ```
 
 Fully quit and reopen the ChatGPT desktop app, then start a new task so Codex
@@ -269,8 +269,8 @@ Build the Python package with:
 uv build
 python scripts/build-marketplace-release.py \
   --version 2.0.0 \
-  --output dist/orbit-marketplace-2.0.0.zip \
-  --plugin-output dist/orbit-plugin-2.0.0.zip
+  --output dist/promptaflow-marketplace-2.0.0.zip \
+  --plugin-output dist/promptaflow-plugin-2.0.0.zip
 ```
 
 Pushing a tag such as `2.0` or `v2.0.0` runs the Release workflow. It normalizes

@@ -59,10 +59,10 @@ not discard local work; update a clean checkout with `git pull --ff-only`.
 ```bash
 uv tool install /absolute/stable/path/promptaflow
 uv tool update-shell
-orbit --version
+promptaflow --version
 ```
 
-Open a new terminal if `orbit` is not immediately visible after
+Open a new terminal if `promptaflow` is not immediately visible after
 `uv tool update-shell`.
 
 ### 4. Add the Harness bundle
@@ -82,15 +82,16 @@ above.
 
 1. Restart the Harness Web Profile.
 2. Open a workspace backed by a real directory.
-3. Run `/orbit`.
+3. Run `/promptaflow`.
 4. Confirm the PromptaFlow panel appears and its Settings row reports **connected**.
 5. Open one historical Run or ask the Agent to list PromptaFlow workflows to verify
    the Host-to-Runtime path.
 
-Opening `/orbit` starts PromptaFlow for the Harness Workspace when necessary; a
+Opening `/promptaflow` starts PromptaFlow for the Harness Workspace when necessary; a
 Runtime started this way stays up after the panel or Profile closes. The
 Gateway looks for ownership records under `~/.promptaflow` — set
-`ORBIT_RUNTIME_ROOT` for the Profile if the Runtime database lives elsewhere.
+`PROMPTAFLOW_RUNTIME_ROOT` for the Profile if the Runtime database lives elsewhere
+(`ORBIT_RUNTIME_ROOT` remains a compatibility alias).
 The PromptaFlow CLI holds a non-blocking ownership lock on that database and
 publishes its Workspace and MCP endpoint in the ownership record; Harness
 never owns that lock and never creates a second writer.
@@ -144,7 +145,7 @@ bounded native tool surface — `orbit_list_workflows`, `orbit_list_runs`,
 model never supplies an endpoint, actor, idempotency key or mutation revision:
 the Host derives Workspace and Session from the tool run context, creates
 idempotency keys, and re-reads `allowed_commands[]` before cancel or resume.
-`/orbit-workflows` opens the shell's own picker and drops the chosen Workflow
+`/promptaflow-workflows` opens the shell's own picker and drops the chosen Workflow
 into the draft as a reference chip.
 
 The panel has no start button on purpose. A Run the panel started itself would
@@ -189,7 +190,7 @@ Harness theme rather than holding an opinion about it.
 
 Selecting a Workflow in the panel writes an invocation sentence into the
 active conversation draft; you add the goal and submit it there, so the Agent
-owns the Run. `/orbit-workflows` opens the shell's own picker — the one
+owns the Run. `/promptaflow-workflows` opens the shell's own picker — the one
 `/model` uses — and drops the choice in as a reference chip.
 
 The chip has two faces: you see the name, and the model receives

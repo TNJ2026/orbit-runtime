@@ -18,7 +18,7 @@ export interface PanelLayout {
    * still watching. This is a person saying they are done with Orbit here: the
    * close button sets it after stopping the Runtime, because a badge still
    * sitting there would be an offer to reopen a page about a service that is
-   * no longer running. `/orbit` brings it back.
+   * no longer running. `/promptaflow` brings it back.
    */
   readonly dismissed: boolean
   readonly x: number

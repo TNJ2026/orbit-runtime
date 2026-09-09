@@ -17,9 +17,9 @@ configuration format:
   "mcpServers": {
     "orbit": {
       "command": "bash",
-      "args": ["/absolute/path/to/orbit/start-promptaflow.sh", "--mcp-proxy"],
+      "args": ["/absolute/path/to/promptaflow/start-promptaflow.sh", "--mcp-proxy"],
       "env": {
-        "ORBIT_AGENT_APP_WORKSPACE": "/absolute/path/to/project"
+        "PROMPTAFLOW_AGENT_APP_WORKSPACE": "/absolute/path/to/project"
       }
     }
   }
@@ -27,10 +27,9 @@ configuration format:
 ```
 
 The proxy asks the loopback Hub to register the absolute workspace path; it
-does not write the Hub registry itself. Its event inbox defaults to the
-workspace's `.orbit/agent-apps/` directory, so a sandboxed App needs write
-access only to the selected workspace. Set `AGENT_APP_STATE_DIR` explicitly to
-keep that inbox elsewhere.
+does not write the Hub registry itself. Its event inbox defaults to the local
+Agent App state directory, so a sandboxed App must be allowed to write there.
+Set `AGENT_APP_STATE_DIR` explicitly to choose a different location.
 
 For PromptaFlow to recognize it as the connected Agent, the App must keep this call
 pending:

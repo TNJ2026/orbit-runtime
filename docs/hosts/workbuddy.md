@@ -43,7 +43,7 @@ Keep the checkout in a stable location:
 git clone https://github.com/TNJ2026/promptaflow.git /absolute/stable/path/promptaflow
 uv tool install /absolute/stable/path/promptaflow
 uv tool update-shell
-orbit --version
+promptaflow --version
 ```
 
 If the checkout already exists, inspect and preserve local changes. Update a

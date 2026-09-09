@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -29,10 +30,19 @@ class MarketplaceReleaseTests(unittest.TestCase):
             builder.build(archive, None)
             with zipfile.ZipFile(archive) as package:
                 names = set(package.namelist())
+                marketplace = json.loads(
+                    package.read("promptaflow-marketplace/.agents/plugins/marketplace.json")
+                )
+                plugin = json.loads(package.read(
+                    "promptaflow-marketplace/plugins/promptaflow/.codex-plugin/plugin.json"
+                ))
 
         root = "promptaflow-marketplace/plugins/promptaflow/"
         self.assertIn("promptaflow-marketplace/.agents/plugins/marketplace.json", names)
         self.assertIn(root + ".codex-plugin/plugin.json", names)
+        self.assertEqual("promptaflow-local", marketplace["name"])
+        self.assertEqual("promptaflow", marketplace["plugins"][0]["name"])
+        self.assertEqual("promptaflow", plugin["name"])
         self.assertIn(root + ".mcp.json", names)
         self.assertIn(root + "agent-app.windows.json", names)
         self.assertIn(root + "restart-promptaflow.cmd", names)

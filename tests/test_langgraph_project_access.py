@@ -704,6 +704,7 @@ class NonGitRecoveryTests(unittest.TestCase):
 
         recovery = c.status("r1")["recovery"]
         self.assertEqual("file_backup", recovery["kind"])
+        self.assertTrue((self.project / ".promptaflow").is_dir())
         self.assertEqual(["important.conf"], recovery["covered"])
         self.assertIn(
             "every file the workflow did not name in workspace_access.protect",
@@ -720,7 +721,7 @@ class NonGitRecoveryTests(unittest.TestCase):
         self.addCleanup(c.release, "r1", "completed")
         (self.project / "important.conf").write_text("WRECKED\n")
 
-        points = FileBackupRecoveryPoints(self.project, self.project / ".orbit")
+        points = FileBackupRecoveryPoints(self.project, self.project / ".promptaflow")
         point = points.load("r1")
         points.restore(point, points.plan_restore(point))
 

@@ -40,8 +40,9 @@ import tempfile
 from typing import Iterable, TextIO
 import weakref
 
+from ..paths import home_root
 
-DEFAULT_OCCUPANCY_ROOT = Path.home() / ".orbit" / "project-occupancy"
+DEFAULT_OCCUPANCY_ROOT = home_root() / "project-occupancy"
 REGISTRY_LOCK_NAME = "registry.lock"
 
 

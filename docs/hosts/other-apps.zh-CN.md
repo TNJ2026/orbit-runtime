@@ -16,9 +16,9 @@
   "mcpServers": {
     "orbit": {
       "command": "bash",
-      "args": ["/absolute/path/to/orbit/start-promptaflow.sh", "--mcp-proxy"],
+      "args": ["/absolute/path/to/promptaflow/start-promptaflow.sh", "--mcp-proxy"],
       "env": {
-        "ORBIT_AGENT_APP_WORKSPACE": "/absolute/path/to/project"
+        "PROMPTAFLOW_AGENT_APP_WORKSPACE": "/absolute/path/to/project"
       }
     }
   }
@@ -26,8 +26,8 @@
 ```
 
 Proxy 请求本地 Hub 注册这个绝对 workspace 路径，它自己不写 Hub 注册表。它的事件收件箱
-默认放在该 workspace 的 `.orbit/agent-apps/` 目录下，所以被沙箱限制的 App 只需要对选定
-的 workspace 有写权限。要放到别处，显式设置 `AGENT_APP_STATE_DIR`。
+默认放在本地 Agent App 状态目录下；被沙箱限制的 App 需要获得该目录的写权限。要放到
+别处，显式设置 `AGENT_APP_STATE_DIR`。
 
 App 必须保持下面的调用处于等待状态，才会被 PromptaFlow 识别为当前在线 Agent：
 

@@ -73,7 +73,7 @@ SEP-1865）：每一张都作为 MCP 资源发布、mime type 为 `text/html;pro
 ## 为什么卡片有时看起来是旧的
 
 **宿主按 URI 缓存 MCP App 资源。** 每张卡的 URI 都带版本 ——
-`ui://orbit/current-task-v45.html`、`ui://orbit/workflows-v22.html` —— 改动一张卡就
+`ui://promptaflow/current-task-v45.html`、`ui://promptaflow/workflows-v22.html` —— 改动一张卡就
 意味着换一个新 URI 发布，因为已经取过旧 URI 的宿主会一直渲染那份旧文档。
 
 对使用者的影响很小但真实：**升级 PromptaFlow 之后，开一个新对话。** 已经挂载过卡片的会话

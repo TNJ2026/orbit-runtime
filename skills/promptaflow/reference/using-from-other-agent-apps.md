@@ -12,9 +12,9 @@ the field names to the App's MCP configuration format:
   "mcpServers": {
     "orbit": {
       "command": "bash",
-      "args": ["/absolute/path/to/orbit/start-promptaflow.sh", "--mcp-proxy"],
+      "args": ["/absolute/path/to/promptaflow/start-promptaflow.sh", "--mcp-proxy"],
       "env": {
-        "ORBIT_AGENT_APP_WORKSPACE": "/absolute/path/to/the/project"
+        "PROMPTAFLOW_AGENT_APP_WORKSPACE": "/absolute/path/to/the/project"
       }
     }
   }

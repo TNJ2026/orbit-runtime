@@ -39,13 +39,13 @@ flowchart TB
         CLI["orbit CLI"]
     end
 
-    subgraph edge["接口层 · src/orbit/web"]
+    subgraph edge["接口层 · src/promptaflow/web"]
         REST["/api/v1<br/>REST"]
         MCP["/mcp<br/>JSON-RPC 2.0"]
         WS["/events · /authoring/events<br/>WebSocket"]
     end
 
-    subgraph core["Runtime · src/orbit/workflow"]
+    subgraph core["Runtime · src/promptaflow/workflow"]
         DSL["定义期<br/>dsl/ · application/"]
         LG["执行期<br/>langgraph_runtime/"]
         HR["Handler 注册表<br/>handlers/"]
@@ -422,13 +422,13 @@ flowchart TB
 用换行分隔的 JSON-RPC 抬到 stdio 上,顺带注入三个事件工具
 (`wait_app_event` / `list_app_events` / `ack_app_event`)。
 它由 `agent-app.json` 清单驱动:`service.command` 说怎么起、`ready_url` 说怎么算就绪、
-`discovery: "orbit-runtime"` 说怎么找到已经在跑的那一个。
+`discovery: "promptaflow"` 说怎么找到已经在跑的那一个（旧值 `orbit-runtime` 仍兼容）。
 
 工作区注册由常驻 Hub 独占写入。代理把绝对路径发给 Hub 的内部环回端点，拿回
 workspace-scoped MCP/UI/events URL；它不直接改 `~/.promptaflow/hub/workspaces.json`。
-Hub 已就绪时代理也不会进入 `AgentAppHost` 的用户级锁目录。事件收件箱默认放在
-工作区 `.orbit/agent-apps/<app-id>/`，因此受限宿主只需对当前工作区有写权限；显式设置
-`AGENT_APP_STATE_DIR` 或 `--state-dir` 时仍尊重调用方指定的位置。只有 Hub 确实离线时，
+Hub 已就绪时代理也不会进入 `AgentAppHost` 的用户级锁目录。事件收件箱默认放在本地
+Agent App 状态目录；显式设置 `AGENT_APP_STATE_DIR` 或 `--state-dir` 时仍尊重调用方指定的
+位置。只有 Hub 确实离线时，
 代理才回退到 `AgentAppHost`，以保留没有独立服务管理器的宿主原有的自启动能力。
 
 > `integrations/claude-app` 目录现在**只剩 `node_modules`**,源码已删除、git 也不跟踪它。
@@ -440,8 +440,8 @@ Hub 已就绪时代理也不会进入 `AgentAppHost` 的用户级锁目录。事
 
 | | 技术 | 路径 | 暗色画布 |
 |---|---|---|---|
-| Runtime UI | 手写 ES 模块 + CSS,无构建步骤 | `src/orbit/static/workflow-ui/` | `#181818`(6 个 token 共用一张画布) |
-| 图编辑器 | Vite + React Flow,构建产物 | 源 `ui/editor/` → 产物 `src/orbit/static/workflow-editor/` | `#0f1115`,**自成一套** |
+| Runtime UI | 手写 ES 模块 + CSS,无构建步骤 | `src/promptaflow/static/workflow-ui/` | `#181818`(6 个 token 共用一张画布) |
+| 图编辑器 | Vite + React Flow,构建产物 | 源 `ui/editor/` → 产物 `src/promptaflow/static/workflow-editor/` | `#0f1115`,**自成一套** |
 
 编辑器嵌在页面里,由宿主页面 `postMessage` 告知主题;它单独打开时才跟随系统偏好。
 两套暗色底色并不一致,这是既有状态,不是本次引入的。
@@ -469,7 +469,7 @@ Hub 已就绪时代理也不会进入 `AgentAppHost` 的用户级锁目录。事
 | 引用方 | 目标 | 状态 |
 |---|---|---|
 | `AGENTS.md` | `./CLAUDE.md` | 不存在 |
-| `src/orbit/workflow/README.md` | `docs/adr/001-self-built-durable-kernel.md` | 不存在 |
+| `src/promptaflow/workflow/README.md` | `docs/adr/001-self-built-durable-kernel.md` | 不存在 |
 
 **空目录**(只有 `__pycache__`,无 `.py`)
 
@@ -481,7 +481,7 @@ Hub 已就绪时代理也不会进入 `AgentAppHost` 的用户级锁目录。事
 
 ## 附:本文的证据来源
 
-- 代码:`src/orbit/{web,workflow,platform,agent_apps}`、`integration-core/src`、`integrations/`
+- 代码:`src/promptaflow/{web,workflow,platform,agent_apps}`、`integration-core/src`、`integrations/`
 - 各包自带 README:`workflow/`、`workflow/dsl/`、`workflow/handlers/`、`workflow/persistence/`、`workflow/langgraph_runtime/`、`integration-core/`
 - **运行中的 Runtime**:`GET /api/v1/capabilities`、`GET /health/ready`、MCP `tools/list` 与 `get_capabilities`(工具计数、引擎能力、已发现的 11 个 Agent CLI 均来自实测,非推断)
 - 磁盘:`~/.promptaflow/projects/<slug>/`、`~/.promptaflow/workflows/`

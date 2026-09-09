@@ -1,17 +1,17 @@
 {
-  "name": "orbit",
+  "name": "promptaflow",
   "version": "2.0.0",
   "description": "Local durable workflow Runtime with a browser UI and MCP tools.",
   "author": {
-    "name": "Orbit"
+    "name": "PromptaFlow"
   },
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
   "interface": {
-    "displayName": "Orbit",
+    "displayName": "PromptaFlow",
     "shortDescription": "Run and inspect local durable workflows.",
-    "longDescription": "Start one local Orbit Runtime for an explicitly selected workspace, inspect durable workflow runs in the browser UI, and use the same Runtime through MCP.",
-    "developerName": "Orbit",
+    "longDescription": "Start one local PromptaFlow Runtime for an explicitly selected workspace, inspect durable workflow runs in the browser UI, and use the same Runtime through MCP.",
+    "developerName": "PromptaFlow",
     "category": "Productivity",
     "capabilities": [
       "Local web service",
@@ -19,8 +19,8 @@
       "MCP tools"
     ],
     "defaultPrompt": [
-      "Open Orbit",
-      "List my Orbit runs"
+      "Open PromptaFlow",
+      "List my PromptaFlow runs"
     ]
   }
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a self-contained local Codex Marketplace archive for Orbit."""
+"""Build a self-contained local Codex Marketplace archive for PromptaFlow."""
 
 from __future__ import annotations
 
@@ -60,7 +60,7 @@ def base_version(value: str) -> str:
 def marketplace_document() -> dict[str, object]:
     return {
         "name": "promptaflow-local",
-        "interface": {"displayName": "Orbit Local"},
+        "interface": {"displayName": "PromptaFlow Local"},
         "plugins": [
             {
                 "name": "promptaflow",

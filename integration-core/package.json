@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Everything an Orbit integration needs that is not about one host.",
+  "description": "Everything a PromptaFlow integration needs that is not about one host.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {

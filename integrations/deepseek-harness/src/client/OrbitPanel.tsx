@@ -303,7 +303,7 @@ export function OrbitPanel({ t, useSessions, onSelectWorkflow, onEditWorkflow, o
     const toggle = () => update(
       layout.dismissed
         // Toggling the fold of something that is not on screen would look like
-        // the command did nothing. Put away, `/orbit` means "bring it back".
+        // the command did nothing. Put away, `/promptaflow` means "bring it back".
         ? { ...readLayoutSafely(layout), dismissed: false, collapsed: false }
         : { ...readLayoutSafely(layout), collapsed: !layout.collapsed },
     )
@@ -347,7 +347,7 @@ export function OrbitPanel({ t, useSessions, onSelectWorkflow, onEditWorkflow, o
           steps: Record<string, StepSummary[]>
         }>(
           // A folded resident badge may observe an existing Runtime, but only
-          // an explicit open — `/orbit` or the badge — may start a new one.
+          // an explicit open — `/promptaflow` or the badge — may start a new one.
           'getPanelState', [sessionId, forced, !layout.collapsed], controller.signal,
         )
         if (controller.signal.aborted) return
@@ -410,7 +410,7 @@ export function OrbitPanel({ t, useSessions, onSelectWorkflow, onEditWorkflow, o
   const box = placePanel(layout, bounds)
 
   // Put away means gone: no panel, and no badge offering to reopen a page
-  // about a Runtime the same press stopped. `/orbit` is the way back.
+  // about a Runtime the same press stopped. `/promptaflow` is the way back.
   if (layout.dismissed) return null
 
   if (layout.collapsed) {

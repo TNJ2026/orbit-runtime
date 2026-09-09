@@ -101,7 +101,7 @@ export const en = {
   togglePanel: 'Show or hide the Orbit panel',
   askWhatRuns: 'List the workflows that can run here',
   generateCommandDescription: 'Generate an Orbit workflow from a description',
-  generateUsage: 'Usage: /orbit-generate <workflow description>',
+  generateUsage: 'Usage: /promptaflow-generate <workflow description>',
   runHead: 'Run workflow ',
   runTail: ': ',
 
@@ -206,7 +206,7 @@ export const zh = {
   togglePanel: '显示或收起 Orbit 面板',
   askWhatRuns: '列出这里可运行的工作流',
   generateCommandDescription: '根据描述生成 Orbit 工作流',
-  generateUsage: '用法：/orbit-generate <工作流描述>',
+  generateUsage: '用法：/promptaflow-generate <工作流描述>',
   runHead: '使用工作流',
   runTail: '执行：',
 

@@ -88,15 +88,14 @@ class ManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ManifestError, "loopback"):
             load_manifest(path)
 
-    def test_manifest_accepts_declared_orbit_runtime_discovery(self) -> None:
-        path = write_manifest(self.root)
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        payload["service"]["discovery"] = "orbit-runtime"
-        path.write_text(json.dumps(payload), encoding="utf-8")
-
-        self.assertEqual(
-            "orbit-runtime", load_manifest(path).service.discovery,
-        )
+    def test_manifest_accepts_runtime_discovery_names(self) -> None:
+        for discovery in ("promptaflow", "orbit-runtime"):
+            with self.subTest(discovery=discovery):
+                path = write_manifest(self.root)
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                payload["service"]["discovery"] = discovery
+                path.write_text(json.dumps(payload), encoding="utf-8")
+                self.assertEqual(discovery, load_manifest(path).service.discovery)
 
 
 class _Process:
@@ -144,7 +143,7 @@ class HostTests(unittest.TestCase):
     def test_discovered_workspace_runtime_is_reused_at_its_published_port(self) -> None:
         path = write_manifest(self.root)
         payload = json.loads(path.read_text(encoding="utf-8"))
-        payload["service"]["discovery"] = "orbit-runtime"
+        payload["service"]["discovery"] = "promptaflow"
         payload["events"] = {
             "transport": "websocket", "url": "ws://127.0.0.1:9911/events",
         }
@@ -172,7 +171,7 @@ class HostTests(unittest.TestCase):
     def test_active_workspace_can_be_recovered_from_runtime_discovery(self) -> None:
         path = write_manifest(self.root)
         payload = json.loads(path.read_text(encoding="utf-8"))
-        payload["service"]["discovery"] = "orbit-runtime"
+        payload["service"]["discovery"] = "promptaflow"
         path.write_text(json.dumps(payload), encoding="utf-8")
         runtime = DiscoveredRuntime(Path("owner.lock"), {
             "base_url": "http://127.0.0.1:51325",
@@ -502,7 +501,7 @@ class McpProxyTests(unittest.TestCase):
         self.assertIn("does not recognise", error["message"])
         self.assertEqual("weird", error["data"]["detail"])
 
-    def test_orbits_own_error_is_forwarded_rather_than_reworded(self) -> None:
+    def test_promptaflows_own_error_is_forwarded_rather_than_reworded(self) -> None:
         """Orbit answered the question; a proxy that rewrote it would be
         putting words in the Runtime's mouth."""
 
@@ -708,7 +707,7 @@ class HostHelperTests(unittest.TestCase):
             "pathlib.Path.home", return_value=Path("/users/example"),
         ):
             self.assertEqual(
-                Path("/users/example/.orbit/workspaces/default"),
+                Path("/users/example/.promptaflow/workspaces/default"),
                 host_module.default_workspace(),
             )
 
@@ -871,7 +870,7 @@ class McpProxyTransportTests(unittest.TestCase):
         with self.assertRaises(HubUnavailableError):
             register_workspace_with_hub(url, self.root)
 
-    def test_an_error_orbit_answered_with_is_forwarded_not_swallowed(self) -> None:
+    def test_an_error_promptaflow_answered_with_is_forwarded_not_swallowed(self) -> None:
         """A 4xx carrying a JSON-RPC error is Orbit's answer, not a transport
         failure. Raising here would replace what Orbit said with what the proxy
         guessed, and the caller would never see the reason it was refused."""
@@ -931,7 +930,7 @@ class McpProxyTransportTests(unittest.TestCase):
         held.set()
 
 
-class OrbitMcpProxyStartupTests(unittest.TestCase):
+class PromptaflowMcpProxyStartupTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.root = Path(self.temp.name)

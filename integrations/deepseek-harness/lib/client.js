@@ -13238,7 +13238,7 @@ window.__ModuleLoader__.load({
 			togglePanel: "Show or hide the Orbit panel",
 			askWhatRuns: "List the workflows that can run here",
 			generateCommandDescription: "Generate an Orbit workflow from a description",
-			generateUsage: "Usage: /orbit-generate <workflow description>",
+			generateUsage: "Usage: /promptaflow-generate <workflow description>",
 			runHead: "Run workflow ",
 			runTail: ": "
 		};
@@ -13368,7 +13368,7 @@ window.__ModuleLoader__.load({
 			togglePanel: "显示或收起 Orbit 面板",
 			askWhatRuns: "列出这里可运行的工作流",
 			generateCommandDescription: "根据描述生成 Orbit 工作流",
-			generateUsage: "用法：/orbit-generate <工作流描述>",
+			generateUsage: "用法：/promptaflow-generate <工作流描述>",
 			runHead: "使用工作流",
 			runTail: "执行："
 		};
@@ -13461,16 +13461,16 @@ window.__ModuleLoader__.load({
 		const PANEL_COMMAND = "promptaflow";
 		const LIST_COMMAND = "promptaflow-workflows";
 		const GENERATE_COMMAND = "promptaflow-generate";
-		/** `/orbit` folds the resident panel; it never opens a second one. */
+		/** `/promptaflow` folds the resident panel; it never opens a second one. */
 		function registerOrbitSlashSource(ctx, t) {
 			const inputTriggers = ctx.get("inputTriggers");
-			if (!inputTriggers) throw new Error("Orbit /orbit requires the Harness inputTriggers service");
+			if (!inputTriggers) throw new Error("PromptaFlow /promptaflow requires the Harness inputTriggers service");
 			const claim = () => ({
 				token: `/${PANEL_COMMAND}`,
 				submit: async (args) => {
 					if (args.trim()) return {
 						kind: "error",
-						text: "/orbit takes no argument; it shows or hides the Orbit panel"
+						text: "/promptaflow takes no argument; it shows or hides the PromptaFlow panel"
 					};
 					window.dispatchEvent(new Event("orbit:toggle-panel"));
 					return { kind: "success" };
@@ -13494,10 +13494,10 @@ window.__ModuleLoader__.load({
 				}
 			}), "orbit: slash command folding the panel");
 		}
-		/** `/orbit-generate` starts the existing authoring flow and reveals its row. */
+		/** `/promptaflow-generate` starts the existing authoring flow and reveals its row. */
 		function registerGenerateSlashSource(ctx, t) {
 			const inputTriggers = ctx.get("inputTriggers");
-			if (!inputTriggers) throw new Error("Orbit /orbit-generate requires the Harness inputTriggers service");
+			if (!inputTriggers) throw new Error("PromptaFlow /promptaflow-generate requires the Harness inputTriggers service");
 			const claim = (session) => ({
 				token: `/${GENERATE_COMMAND} `,
 				submit: async (args) => {
@@ -13554,7 +13554,7 @@ window.__ModuleLoader__.load({
 		* Workflow rows live in the resident panel, but the goal belongs in the
 		* conversation composer. Keeping this bridge in the host-facing module means
 		* the panel stays a presentational component and the draft is written through
-		* the same session-scoped input API used by `/orbit-workflows`.
+		* the same session-scoped input API used by `/promptaflow-workflows`.
 		*/
 		function writeWorkflowDraft(ctx, t, workflow, sessionId) {
 			const label = workflow.name || workflow.workflow_id;
@@ -13593,7 +13593,7 @@ window.__ModuleLoader__.load({
 			return payload.result;
 		}
 		/**
-		* `/orbit-workflows` opens the shell's own popup — the one `/model` uses.
+		* `/promptaflow-workflows` opens the shell's own popup — the one `/model` uses.
 		*
 		* Selecting writes the request into the draft for the person to finish. A
 		* popupSelect is one list and one pick, with nowhere to put the goal these

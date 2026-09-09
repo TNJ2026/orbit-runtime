@@ -121,7 +121,7 @@ class PowerShellScriptTests(unittest.TestCase):
             self.assertIn("is not a directory", result.stderr)
             self.assertFalse(capture.exists())
 
-    def test_internal_hub_mode_uses_the_same_orbit_executable(self):
+    def test_internal_hub_mode_uses_the_same_promptaflow_executable(self):
         with tempfile.TemporaryDirectory() as temporary:
             fake, capture = self.fake_orbit(Path(temporary))
             environment = {
@@ -233,7 +233,7 @@ class PowerShellScriptTests(unittest.TestCase):
         ):
             self.assertIn(variable, server["env_vars"])
 
-    def test_mcp_proxy_forces_utf8_for_the_orbit_child(self):
+    def test_mcp_proxy_forces_utf8_for_the_promptaflow_child(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture = root / "encoding.json"
@@ -272,9 +272,9 @@ class PowerShellScriptTests(unittest.TestCase):
     def test_cmd_launchers_bypass_policy_for_only_the_child_process(self):
         for action in ("start", "restart", "stop"):
             with self.subTest(action=action):
-                contents = (ROOT / f"{action}-orbit.cmd").read_text(encoding="utf-8")
+                contents = (ROOT / f"{action}-promptaflow.cmd").read_text(encoding="utf-8")
                 self.assertIn("powershell.exe -NoProfile -ExecutionPolicy Bypass", contents)
-                self.assertIn(f'"%~dp0{action}-orbit.ps1" %*', contents)
+                self.assertIn(f'"%~dp0{action}-promptaflow.ps1" %*', contents)
                 self.assertIn("exit /b %ERRORLEVEL%", contents)
 
 

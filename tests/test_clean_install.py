@@ -11,6 +11,7 @@ Slow and dependency-bound, so it skips when the build tooling is absent.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -44,18 +45,29 @@ class CleanInstallTests(unittest.TestCase):
         cls.wheel = wheels[-1]
 
         cls.venv = cls.dir / "venv"
+        cls.home = cls.dir / "home"
+        cls.home.mkdir()
+        cls.environment = {
+            **os.environ,
+            "HOME": str(cls.home),
+            "USERPROFILE": str(cls.home),
+        }
+        scripts = "Scripts" if os.name == "nt" else "bin"
+        python = cls.venv / scripts / ("python.exe" if os.name == "nt" else "python")
         subprocess.run(
             [UV, "venv", str(cls.venv)], capture_output=True, text=True,
             cwd=str(ROOT), timeout=300, check=True,
         )
         install = subprocess.run(
-            [UV, "pip", "install", "--python", str(cls.venv / "bin" / "python"),
+            [UV, "pip", "install", "--python", str(python),
              str(cls.wheel)],
-            capture_output=True, text=True, timeout=600,
+            capture_output=True, text=True, timeout=600, env=cls.environment,
         )
         if install.returncode != 0:
             raise unittest.SkipTest(f"install failed:\n{install.stderr[-2000:]}")
-        cls.orbit = cls.venv / "bin" / "promptaflow"
+        cls.orbit = cls.venv / scripts / (
+            "promptaflow.exe" if os.name == "nt" else "promptaflow"
+        )
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -64,7 +76,7 @@ class CleanInstallTests(unittest.TestCase):
     def orbit_cli(self, *args: str) -> subprocess.CompletedProcess:
         return subprocess.run(
             [str(self.orbit), *args], capture_output=True, text=True,
-            cwd=str(self.dir), timeout=180,
+            cwd=str(self.dir), timeout=180, env=self.environment,
         )
 
     def test_the_console_script_is_installed(self) -> None:
@@ -144,9 +156,8 @@ class CleanInstallTests(unittest.TestCase):
             text=True,
             # An isolated HOME so the cutover gate does not see the developer's
             # own legacy database and refuse to start.
-            env={"HOME": str(self.dir / "home"), "PATH": "/usr/bin:/bin"},
+            env=self.environment,
         )
-        (self.dir / "home").mkdir(exist_ok=True)
         try:
             base = f"http://127.0.0.1:{port}"
             for _ in range(200):

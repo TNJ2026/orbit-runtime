@@ -21,7 +21,7 @@ SCRIPT = ROOT / "restart-promptaflow.sh"
 STOP_SCRIPT = ROOT / "stop-promptaflow.sh"
 
 
-class RestartOrbitScriptTests(unittest.TestCase):
+class RestartPromptaflowScriptTests(unittest.TestCase):
     def environment(self, root: Path, *, listed, recorded, ps_answers):
         """A copy of the script with fake `uv`, `ps` and `lsof` around it.
 
@@ -287,7 +287,7 @@ class RestartOrbitScriptTests(unittest.TestCase):
                 self.run_dry(environment, root).stdout,
             )
 
-    def test_stop_only_never_starts_orbit_again(self) -> None:
+    def test_stop_only_never_starts_promptaflow_again(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             environment = self.environment(

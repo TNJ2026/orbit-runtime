@@ -89,6 +89,8 @@ class CliMigrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temporary:
             home = Path(temporary)
             (home / ".orbit" / "projects").mkdir(parents=True)
+            (home / ".orbit" / "project-occupancy").mkdir()
+            (home / ".orbit" / "project-occupancy" / "claim.json").write_text("{}")
             environment = {**os.environ, "HOME": str(home), "USERPROFILE": str(home)}
 
             first = subprocess.run(
@@ -99,6 +101,9 @@ class CliMigrationTests(unittest.TestCase):
             self.assertIn("Run the command again", first.stderr)
             self.assertNotIn("promptaflow 2", first.stdout)
             self.assertTrue((home / ".promptaflow" / "projects").is_dir())
+            self.assertTrue(
+                (home / ".promptaflow" / "project-occupancy" / "claim.json").is_file()
+            )
             self.assertFalse((home / ".orbit").exists())
 
             # And the run after it is an ordinary one.
@@ -109,6 +114,20 @@ class CliMigrationTests(unittest.TestCase):
             self.assertEqual(0, second.returncode, second.stderr)
             self.assertIn("promptaflow", second.stdout)
             self.assertNotIn("Run the command again", second.stderr)
+
+            occupancy = subprocess.run(
+                [
+                    sys.executable, "-c",
+                    "from promptaflow.platform.project_occupancy import "
+                    "DEFAULT_OCCUPANCY_ROOT; print(DEFAULT_OCCUPANCY_ROOT)",
+                ],
+                capture_output=True, text=True, env=environment, timeout=60,
+            )
+            self.assertEqual(0, occupancy.returncode, occupancy.stderr)
+            self.assertEqual(
+                str(home / ".promptaflow" / "project-occupancy"),
+                occupancy.stdout.strip(),
+            )
 
 
 if __name__ == "__main__":

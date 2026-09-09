@@ -43,7 +43,7 @@ the user answers.
    plugin.
 3. Run `scripts/update_plugin_cachebuster.py <absolute-plugin-root>`. Never
    hand-edit the generated `+codex.<timestamp>` suffix.
-4. Reinstall with `codex plugin add orbit@<resolved-marketplace-name>`. Do not
+4. Reinstall with `codex plugin add promptaflow@<resolved-marketplace-name>`. Do not
    add the default personal marketplace again and do not edit Codex config by
    hand.
 5. Run `codex plugin list`. Confirm PromptaFlow is enabled, its source resolves to the

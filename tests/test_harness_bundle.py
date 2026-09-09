@@ -45,8 +45,10 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
         self.assertIn("entry.project_root === workspaceRoot", gateway)
         self.assertIn("['hub', 'register', workspaceRoot]", gateway)
         self.assertIn("/workspaces/${workspaceId}/mcp", gateway)
+        self.assertIn("process.env.PROMPTAFLOW_HUB_URL", gateway)
         self.assertIn("process.env.ORBIT_HUB_URL", gateway)
         self.assertIn("'x-promptaflow-actor': actor", gateway)
+        self.assertIn("process.env.PROMPTAFLOW_RUNTIME_ROOT", gateway)
         self.assertIn("process.env.ORBIT_RUNTIME_ROOT", gateway)
         self.assertNotIn("'mcp', '--transport'", gateway)
         self.assertIn("@Remote('getRuntime')", remote)
@@ -64,7 +66,7 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
         self.assertIn("item.expected_version === expectedRevision", commands)
         self.assertEqual(2, remote.count("advertisedAt("))
 
-    def test_no_orbit_event_type_is_written_into_a_Session_log(self) -> None:
+    def test_no_promptaflow_event_type_is_written_into_a_Session_log(self) -> None:
         """The Harness refuses a log carrying a type it does not know.
 
         `orbit/run-started` and its siblings are not in the Harness's own event
@@ -108,7 +110,7 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
         self.assertIn("orbit/run-started", (CORE / "src" / "types.ts").read_text(encoding="utf-8"))
         self.assertFalse((BUNDLE / "src" / "run-card.ts").exists())
 
-    def test_the_panel_stops_where_orbits_own_UI_begins(self) -> None:
+    def test_the_panel_stops_where_promptaflows_own_UI_begins(self) -> None:
         """A resident panel of Runs, and a link out for everything deeper.
 
         The boundary is the whole reason this is not the 685-line duplicate it

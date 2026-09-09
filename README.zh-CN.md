@@ -174,7 +174,7 @@ scope。它是控制台而非日志：按尝试和流分别限量、写在所有
 promptaflow serve
 promptaflow serve --project-root /absolute/path/to/project
 promptaflow hub register /absolute/path/to/project --no-agent-project-access
-orbit --version
+promptaflow --version
 promptaflow runtimes --json                     # 哪些 Runtime 在跑、在哪
 promptaflow mcp
 promptaflow mcp --project-root /absolute/path/to/project
@@ -195,21 +195,21 @@ PromptaFlow 仅通过仓库/个人 Marketplace 分发，不提交到通用公共
 完整步骤见 [Codex App 安装指南](./docs/hosts/codex-app.zh-CN.md)，其中也提供了让 Codex
 直接从本仓库安装的一行提示词。
 
-每个 GitHub Release 都包含 `orbit-marketplace-<version>.zip`。下载并解压后，注册解压目录并
+每个 GitHub Release 都包含 `promptaflow-marketplace-<version>.zip`。下载并解压后，注册解压目录并
 安装 PromptaFlow：
 
 ```bash
-unzip orbit-marketplace-<version>.zip
-codex plugin marketplace add ./orbit-marketplace
-codex plugin add orbit@orbit-local
+unzip promptaflow-marketplace-<version>.zip
+codex plugin marketplace add ./promptaflow-marketplace
+codex plugin add promptaflow@promptaflow-local
 codex plugin list
 ```
 
-请把解压出的 `orbit-marketplace` 目录保存在稳定位置，因为已配置的 Marketplace 源会引用
+请把解压出的 `promptaflow-marketplace` 目录保存在稳定位置，因为已配置的 Marketplace 源会引用
 该目录。升级时下载并解压新版本、替换旧目录，然后运行：
 
 ```bash
-codex plugin add orbit@orbit-local
+codex plugin add promptaflow@promptaflow-local
 ```
 
 最后完全退出并重新打开 Codex 桌面应用，再新建任务，让 Codex 重新加载插件元数据和技能。
@@ -229,8 +229,8 @@ node --test tests/ui/client_modules.test.mjs
 uv build
 python scripts/build-marketplace-release.py \
   --version 2.0.0 \
-  --output dist/orbit-marketplace-2.0.0.zip \
-  --plugin-output dist/orbit-plugin-2.0.0.zip
+  --output dist/promptaflow-marketplace-2.0.0.zip \
+  --plugin-output dist/promptaflow-plugin-2.0.0.zip
 ```
 
 推送 `2.0` 或 `v2.0.0` 这样的标签后，Release workflow 会把两段版本规范化为

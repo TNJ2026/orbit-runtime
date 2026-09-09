@@ -22,6 +22,7 @@ from typing import Any, Iterable, Mapping
 from ...platform.project_occupancy import (
     ProjectClaim, ProjectOccupancyRegistry,
 )
+from ...paths import project_state_dir
 
 
 # Terminal for the purposes of the project: nothing more will run, so the
@@ -198,7 +199,7 @@ class ProjectAccessCoordinator:
                 GitRecoveryPoints(self.project_root)
                 if is_git_repo(self.project_root)
                 else FileBackupRecoveryPoints(
-                    self.project_root, self.project_root / ".orbit",
+                    self.project_root, project_state_dir(self.project_root),
                 )
             )
         self.recovery_points = recovery_points

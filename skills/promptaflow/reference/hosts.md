@@ -29,10 +29,10 @@ paths made the call. Neither shadows a discovered CLI, so neither is refused.
 ## How the Runtime and its MCP proxy are reached
 
 **Codex.** The bundled plugin ships the proxy, and the plugin host sets
-`ORBIT_AGENT_APP_WORKSPACE` to the open project. The proxy registers that
+`PROMPTAFLOW_AGENT_APP_WORKSPACE` to the open project. The proxy registers that
 workspace with the fixed loopback Hub and uses its workspace-scoped MCP URL.
 The Hub starts or discovers a dynamic-port Runtime for that workspace. In a
-projectless chat, the Host uses `ORBIT_DEFAULT_WORKSPACE` when configured,
+projectless chat, the Host uses `PROMPTAFLOW_DEFAULT_WORKSPACE` when configured,
 otherwise `~/.promptaflow/workspaces/default`.
 
 The Hub is the public MCP Gateway, not a transparent MCP proxy. It owns MCP
@@ -44,11 +44,11 @@ adapters. The Control Runtime compiles and advances LangGraph, while Handler
 invocation and cancellation cross that private worker boundary.
 
 **Claude Code.** There is no plugin. The skill is reached through the
-`.claude/skills/orbit` symlink in the checkout, and the MCP server comes from
+`.claude/skills/promptaflow` symlink in the checkout, and the MCP server comes from
 the repo-root `.mcp.json`. Its cross-platform `uv` command lets PromptaFlow select
 `agent-app.json` on POSIX and `agent-app.windows.json` on Windows before
 starting the MCP proxy. When no workspace is supplied, the proxy uses
-`ORBIT_DEFAULT_WORKSPACE` or
+`PROMPTAFLOW_DEFAULT_WORKSPACE` or
 `~/.promptaflow/workspaces/default`; it does not guess from the process cwd.
 
 Because this depends on the checkout, the skill is active only for someone
@@ -77,9 +77,9 @@ current run list. Whether it also *draws* anything is the host's decision, not
 PromptaFlow's, so treat the visible surface as a separate question from the call.
 
 The card it offers is an MCP App (the MCP Apps extension, SEP-1865). PromptaFlow
-serves it as the resource `ui://orbit/current-task-v39.html` with mime type
+serves it as the resource `ui://promptaflow/current-task-v39.html` with mime type
 `text/html;profile=mcp-app`, and binds it to the tool through
-`_meta.ui.resourceUri` — see `src/orbit/web/mcp_app.py`. There is nothing
+`_meta.ui.resourceUri` — see `src/promptaflow/web/mcp_app.py`. There is nothing
 host-specific in any of that: a host that implements MCP Apps mounts the card
 in a sandboxed iframe and the user sees the current-task card; a host that does not
 shows only the JSON the tool returned.

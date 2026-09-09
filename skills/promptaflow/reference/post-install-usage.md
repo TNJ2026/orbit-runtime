@@ -62,8 +62,8 @@ as Harness native surfaces, never as the five MCP cards.
 
 | Harness surface or function | Command or native tool | Copyable Chinese prompt |
 | --- | --- | --- |
-| Open or focus the resident PromptaFlow panel | `/orbit` | `打开 PromptaFlow 面板` |
-| Open the workflow picker and insert a workflow reference chip | `/orbit-workflows` | `选择一个 PromptaFlow 工作流` |
+| Open or focus the resident PromptaFlow panel | `/promptaflow` | `打开 PromptaFlow 面板` |
+| Open the workflow picker and insert a workflow reference chip | `/promptaflow-workflows` | `选择一个 PromptaFlow 工作流` |
 | List workflows for the Agent | `orbit_list_workflows` | `列出当前 Workspace 的 PromptaFlow 工作流` |
 | List Runs | `orbit_list_runs` | `列出我最近的 PromptaFlow 运行` |
 | Inspect one Run | `orbit_inspect_run` | `查看 PromptaFlow 运行 run:<id>` |

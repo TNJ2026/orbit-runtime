@@ -27,6 +27,7 @@ from ..domain.handlers import (
 )
 from ..domain.serialization import to_primitive
 from ...workspace import GitWorktreeGrant, WorkspaceError, WorkspaceUnavailable
+from ...paths import project_state_dir
 
 
 # The single output port every discovered Agent's manifest declares. The
@@ -442,7 +443,7 @@ class TrustedCliAgentClient:
         if self.project_root is None:
             return None
         run_id = str(getattr(context.request, "run_id", "") or "shared")
-        scratch = self.project_root / ".orbit" / "run-tmp" / _safe_name(run_id)
+        scratch = project_state_dir(self.project_root) / "run-tmp" / _safe_name(run_id)
         try:
             scratch.mkdir(parents=True, exist_ok=True)
         except OSError:

@@ -9,19 +9,19 @@ after the panel or Harness Profile closes.
 
 ## Prerequisites
 
-- Install `orbit` so the executable is on the Harness Host's `PATH`.
-Opening `/orbit` starts PromptaFlow for the Harness Workspace when necessary. You may
+- Install `promptaflow` so the executable is on the Harness Host's `PATH`.
+Opening `/promptaflow` starts PromptaFlow for the Harness Workspace when necessary. You may
 still start it independently to choose additional `promptaflow serve` options.
 
 By default the Gateway discovers ownership records below `~/.promptaflow`. If PromptaFlow
-uses a database outside that tree, set `ORBIT_RUNTIME_ROOT` for the Harness
+uses a database outside that tree, set `PROMPTAFLOW_RUNTIME_ROOT` for the Harness
 Profile to the directory containing the Runtime ownership record. The same
 setting works on macOS, Linux and Windows; no platform-specific socket path is
-required.
+required. `ORBIT_RUNTIME_ROOT` remains supported as a compatibility alias.
 
 Install this directory into the target Harness Web Profile with one command:
 
-`dsh plugin --profile web add /absolute/path/to/orbit/integrations/deepseek-harness`
+`dsh plugin --profile web add /absolute/path/to/promptaflow/integrations/deepseek-harness`
 
 Then restart that Profile. Remove it with
 `dsh plugin --profile web remove @promptaflow/dsh`. Client code uses the
@@ -76,7 +76,7 @@ revision against PromptaFlow's current `allowed_commands[]`.
 This bundle contributes a resident PromptaFlow panel to the Harness shell overlay. It
 folds down to a badge that says whether anything is running and opens to the
 Runtime's own four pages — Goal, Workflows, History, Agents: what is running,
-what could, what did, and who by. `/orbit` takes no argument and folds it either
+what could, what did, and who by. `/promptaflow` takes no argument and folds it either
 way.
 The panel can be docked to the side or detached and dragged, and remembers
 which between browser sessions.
@@ -129,7 +129,7 @@ Workflows of every bridged Workspace in the model's context — with the inputs
 each one needs, which is the mistake it exists to prevent — so the Agent can
 answer "which of these did you mean" instead of asking what PromptaFlow is. The panel
 lists the same catalog below the Runs, for the person doing the asking, and
-`/orbit-workflows` opens the shell's own popup — the one `/model` uses, with its
+`/promptaflow-workflows` opens the shell's own popup — the one `/model` uses, with its
 search box and empty state — and selecting a Workflow drops it into the draft as
 a reference chip: `用 [覆盖 A：分支与条件] 执行：`, for you to finish.
 

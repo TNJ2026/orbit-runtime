@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "start-promptaflow.sh"
 
 
-class StartOrbitScriptTests(unittest.TestCase):
+class StartPromptaflowScriptTests(unittest.TestCase):
     def test_missing_project_path_registers_the_current_directory(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -111,7 +111,7 @@ class StartOrbitScriptTests(unittest.TestCase):
         self.assertNotIn("uv", manifest["service"]["command"])
         self.assertIn("PROMPTAFLOW_CLI", manifest["service"]["environment"])
 
-    def test_internal_hub_mode_accepts_an_explicit_orbit_executable(self):
+    def test_internal_hub_mode_accepts_an_explicit_promptaflow_executable(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             capture = root / "arguments.txt"

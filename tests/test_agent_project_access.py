@@ -573,7 +573,7 @@ class DirectProjectAccessTests(unittest.TestCase):
             context(run_id="langgraph_run:abc")
         )
         self.assertEqual(
-            self.project.resolve() / ".orbit" / "run-tmp" / "langgraph_run_abc",
+            self.project.resolve() / ".promptaflow" / "run-tmp" / "langgraph_run_abc",
             scratch,
         )
         self.assertTrue(scratch.is_dir())

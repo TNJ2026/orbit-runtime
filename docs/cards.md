@@ -83,7 +83,7 @@ logs and workflow management; a card shows the task that currently matters.
 ## Why a card sometimes looks stale
 
 Hosts cache MCP App resources by URI. Every card's URI carries a version —
-`ui://orbit/current-task-v45.html`, `ui://orbit/workflows-v22.html` — and
+`ui://promptaflow/current-task-v45.html`, `ui://promptaflow/workflows-v22.html` — and
 changing a card means publishing it under a new one, because a host that has
 already fetched the old URI will keep rendering the previous document.
 

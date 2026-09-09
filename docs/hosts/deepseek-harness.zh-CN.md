@@ -44,8 +44,8 @@ dsh --version
 ### 2. 把 PromptaFlow 克隆到稳定目录
 
 ```bash
-git clone https://github.com/TNJ2026/promptaflow.git /绝对路径/稳定目录/orbit
-cd /绝对路径/稳定目录/orbit
+git clone https://github.com/TNJ2026/promptaflow.git /绝对路径/稳定目录/promptaflow
+cd /绝对路径/稳定目录/promptaflow
 ```
 
 如果仓库已经存在，更新前先检查本地修改，不要丢弃未提交工作；干净的 checkout 可使用
@@ -54,19 +54,19 @@ cd /绝对路径/稳定目录/orbit
 ### 3. 安装 PromptaFlow Runtime
 
 ```bash
-uv tool install /绝对路径/稳定目录/orbit
+uv tool install /绝对路径/稳定目录/promptaflow
 uv tool update-shell
-orbit --version
+promptaflow --version
 ```
 
-如果执行 `uv tool update-shell` 后仍暂时找不到 `orbit`，请打开一个新终端。
+如果执行 `uv tool update-shell` 后仍暂时找不到 `promptaflow`，请打开一个新终端。
 
 ### 4. 添加 Harness Bundle
 
 替换已有 Bundle 前先停止正在运行的 Web Profile，然后执行：
 
 ```bash
-dsh plugin --profile web add /绝对路径/稳定目录/orbit/integrations/deepseek-harness
+dsh plugin --profile web add /绝对路径/稳定目录/promptaflow/integrations/deepseek-harness
 dsh --profile web --dump-config
 ```
 
@@ -77,13 +77,13 @@ checkout。
 
 1. 重启 Harness Web Profile。
 2. 打开一个由真实目录支持的 Workspace。
-3. 执行 `/orbit`。
+3. 执行 `/promptaflow`。
 4. 确认 PromptaFlow 面板出现，且 Settings 行显示 **connected**。
 5. 打开一个历史 Run，或让 Agent 列出 PromptaFlow 工作流，验证 Host 到 Runtime 的链路。
 
-打开 `/orbit` 时，必要则为该 Harness Workspace 启动 PromptaFlow；这样启动的 Runtime 在面板或
+打开 `/promptaflow` 时，必要则为该 Harness Workspace 启动 PromptaFlow；这样启动的 Runtime 在面板或
 Profile 关闭后依然存活。Gateway 默认在 `~/.promptaflow` 下寻找归属记录——如果 Runtime 数据库
-在别处，为该 Profile 设置 `ORBIT_RUNTIME_ROOT`。PromptaFlow CLI 对该数据库持有一把非阻塞的
+在别处，为该 Profile 设置 `PROMPTAFLOW_RUNTIME_ROOT`（`ORBIT_RUNTIME_ROOT` 仍作为兼容别名）。PromptaFlow CLI 对该数据库持有一把非阻塞的
 归属锁，并在归属记录里公布自己的 Workspace 和 MCP 端点；Harness 从不持有这把锁，也不
 制造第二个写入者。
 
@@ -92,10 +92,10 @@ Profile 关闭后依然存活。Gateway 默认在 `~/.promptaflow` 下寻找归�
 升级时停止 Profile，更新干净的 checkout，刷新 Runtime 工具，再次添加 Bundle：
 
 ```bash
-cd /绝对路径/稳定目录/orbit
+cd /绝对路径/稳定目录/promptaflow
 git pull --ff-only
-uv tool install --force /绝对路径/稳定目录/orbit
-dsh plugin --profile web add /绝对路径/稳定目录/orbit/integrations/deepseek-harness
+uv tool install --force /绝对路径/稳定目录/promptaflow
+dsh plugin --profile web add /绝对路径/稳定目录/promptaflow/integrations/deepseek-harness
 dsh --profile web --dump-config
 ```
 
@@ -130,7 +130,7 @@ PromptaFlow 自己的 UI。
 `orbit_cancel_run`、`orbit_resume_run`——所以「用 CSV 清洗流跑一下今天的导出」就是全部
 接口。模型从不提供端点、actor、幂等键或变更版本号：Host 从工具运行上下文推导 Workspace
 与 Session、自己生成幂等键，并在 cancel 或 resume 前重新读取 `allowed_commands[]`。
-`/orbit-workflows` 会打开外壳自己的选择弹窗，把选中的工作流作为引用 chip 放进草稿。
+`/promptaflow-workflows` 会打开外壳自己的选择弹窗，把选中的工作流作为引用 chip 放进草稿。
 
 面板**故意没有启动按钮**。面板自己启动的 Run，是 Agent 一无所知的 Run——事后无法汇报，
 也无法从它接着往下做。
@@ -163,7 +163,7 @@ PromptaFlow UI 旁边的面板」是错的：曾经出现过 Runtime 里有二�
 ## 怎么点名一个工作流
 
 在面板里选一个工作流，会把一句调用语写进当前对话草稿；你在那里补上目标并提交，于是 Run
-归 Agent 所有。`/orbit-workflows` 打开外壳自己的选择弹窗（就是 `/model` 用的那个），
+归 Agent 所有。`/promptaflow-workflows` 打开外壳自己的选择弹窗（就是 `/model` 用的那个），
 把选择作为**引用 chip** 放进草稿。
 
 这个 chip 有两张面孔：你看到的是名字，模型收到的是

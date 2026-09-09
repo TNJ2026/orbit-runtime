@@ -37,21 +37,21 @@ Agent 应通过仓库的宿主索引找到本文，安装并启动 PromptaFlow�
 把 checkout 保存在稳定目录：
 
 ```bash
-git clone https://github.com/TNJ2026/promptaflow.git /绝对路径/稳定目录/orbit
-uv tool install /绝对路径/稳定目录/orbit
+git clone https://github.com/TNJ2026/promptaflow.git /绝对路径/稳定目录/promptaflow
+uv tool install /绝对路径/稳定目录/promptaflow
 uv tool update-shell
-orbit --version
+promptaflow --version
 ```
 
 如果 checkout 已存在，请先检查并保留本地修改。干净的 checkout 可用 `git pull --ff-only`
-更新，再运行 `uv tool install --force /绝对路径/稳定目录/orbit` 刷新已安装工具。
+更新，再运行 `uv tool install --force /绝对路径/稳定目录/promptaflow` 刷新已安装工具。
 
 ### 3. 为目标项目启动 PromptaFlow
 
 把需要拥有 Runtime 的项目路径交给仓库启动脚本：
 
 ```bash
-/绝对路径/稳定目录/orbit/start-promptaflow.sh /绝对路径/目标项目
+/绝对路径/稳定目录/promptaflow/start-promptaflow.sh /绝对路径/目标项目
 ```
 
 然后检查发现结果：
@@ -99,9 +99,9 @@ Streamable HTTP（`accept: application/json, text/event-stream`），以协议
 升级时更新干净的 checkout、重新安装工具，再为目标项目运行启动脚本：
 
 ```bash
-cd /绝对路径/稳定目录/orbit
+cd /绝对路径/稳定目录/promptaflow
 git pull --ff-only
-uv tool install --force /绝对路径/稳定目录/orbit
+uv tool install --force /绝对路径/稳定目录/promptaflow
 ./start-promptaflow.sh /绝对路径/目标项目
 ```
 

@@ -25,6 +25,7 @@ from ..platform.process import (
 from ..platform.runtime_ownership import DiscoveredRuntime, discover_runtimes
 from .manifest import AgentAppManifest, load_manifest
 from ..environment import env
+from ..paths import home_root
 
 
 class AgentAppHostError(RuntimeError):
@@ -45,6 +46,7 @@ class EnsuredApp:
 # loop for the whole readiness deadline.
 _RELAUNCH_BACKOFF_SECONDS = 0.2
 _RELAUNCH_BACKOFF_CEILING = 2.0
+_RUNTIME_DISCOVERY_NAMES = frozenset({"promptaflow", "orbit-runtime"})
 
 
 def default_state_root() -> Path:
@@ -60,7 +62,7 @@ def default_workspace() -> Path:
     configured = env("DEFAULT_WORKSPACE")
     if configured:
         return Path(configured).expanduser().resolve()
-    return (Path.home() / ".orbit" / "workspaces" / "default").resolve()
+    return (home_root() / "workspaces" / "default").resolve()
 
 
 def _scope_key(manifest: AgentAppManifest, workspace: Path | None) -> str:
@@ -112,7 +114,7 @@ def _manifest_at_runtime(
     manifest: AgentAppManifest, runtime: DiscoveredRuntime,
 ) -> AgentAppManifest | None:
     base_url = runtime.base_url
-    if manifest.service.discovery != "orbit-runtime" or base_url is None:
+    if manifest.service.discovery not in _RUNTIME_DISCOVERY_NAMES or base_url is None:
         return None
     parsed = urlsplit(base_url)
     if parsed.scheme not in {"http", "https"} or parsed.hostname not in {
@@ -286,7 +288,7 @@ class AgentAppHost:
         if manifest.scope == "global":
             return None
         candidates: set[Path] = set()
-        if manifest.service.discovery == "orbit-runtime":
+        if manifest.service.discovery in _RUNTIME_DISCOVERY_NAMES:
             for runtime in self.runtime_discovery():
                 project_root = runtime.facts.get("project_root")
                 if not isinstance(project_root, str):
@@ -328,7 +330,7 @@ class AgentAppHost:
     def _discover_runtime(
         self, manifest: AgentAppManifest, workspace: Path | None,
     ) -> AgentAppManifest | None:
-        if manifest.service.discovery != "orbit-runtime" or workspace is None:
+        if manifest.service.discovery not in _RUNTIME_DISCOVERY_NAMES or workspace is None:
             return None
         requested = self._workspace_identity(workspace)
         matches: list[AgentAppManifest] = []

@@ -42,15 +42,15 @@ Install these before continuing:
 
 ### 2. Download and extract the Marketplace
 
-Download `orbit-marketplace-<version>.zip` from the matching release. Extract
+Download `promptaflow-marketplace-<version>.zip` from the matching release. Extract
 it into a stable directory: Codex keeps this directory as the Marketplace
 source, so do not leave it in a temporary download directory.
 
 On macOS or Linux:
 
 ```bash
-mkdir -p "$HOME/.local/share/orbit-codex"
-unzip orbit-marketplace-<version>.zip -d "$HOME/.local/share/orbit-codex"
+mkdir -p "$HOME/.local/share/promptaflow-codex"
+unzip promptaflow-marketplace-<version>.zip -d "$HOME/.local/share/promptaflow-codex"
 ```
 
 On Windows PowerShell:
@@ -58,23 +58,23 @@ On Windows PowerShell:
 ```powershell
 $installRoot = Join-Path $env:LOCALAPPDATA "PromptaFlow\Codex"
 New-Item -ItemType Directory -Force -Path $installRoot
-Expand-Archive -Path .\orbit-marketplace-<version>.zip -DestinationPath $installRoot -Force
+Expand-Archive -Path .\promptaflow-marketplace-<version>.zip -DestinationPath $installRoot -Force
 ```
 
 The extracted Marketplace root must contain all of these paths:
 
 ```text
-orbit-marketplace/
+promptaflow-marketplace/
 ├── .agents/plugins/marketplace.json
-└── plugins/orbit/
+└── plugins/promptaflow/
     ├── .codex-plugin/plugin.json
     ├── .mcp.json
     ├── start-promptaflow.sh
-    └── skills/orbit/SKILL.md
+    └── skills/promptaflow/SKILL.md
 ```
 
 If extraction creates an additional directory level, use the inner
-`orbit-marketplace` directory in the next step.
+`promptaflow-marketplace` directory in the next step.
 
 ### 3. Register the Marketplace
 
@@ -83,20 +83,20 @@ Pass the absolute extracted Marketplace path to Codex.
 On macOS or Linux:
 
 ```bash
-codex plugin marketplace add "$HOME/.local/share/orbit-codex/orbit-marketplace"
+codex plugin marketplace add "$HOME/.local/share/promptaflow-codex/promptaflow-marketplace"
 codex plugin marketplace list
 ```
 
 On Windows PowerShell:
 
 ```powershell
-codex plugin marketplace add (Join-Path $installRoot "orbit-marketplace")
+codex plugin marketplace add (Join-Path $installRoot "promptaflow-marketplace")
 codex plugin marketplace list
 ```
 
-The list should include a Marketplace named `orbit-local` whose root is the
-directory added above. If another `orbit-local` entry points elsewhere, remove
-that stale source with `codex plugin marketplace remove orbit-local`, then add
+The list should include a Marketplace named `promptaflow-local` whose root is the
+directory added above. If another `promptaflow-local` entry points elsewhere, remove
+that stale source with `codex plugin marketplace remove promptaflow-local`, then add
 the intended directory again.
 
 ### 4. Install PromptaFlow
@@ -104,11 +104,11 @@ the intended directory again.
 Install from the CLI:
 
 ```bash
-codex plugin add orbit@orbit-local
-codex plugin list --marketplace orbit-local
+codex plugin add promptaflow@promptaflow-local
+codex plugin list --marketplace promptaflow-local
 ```
 
-The list should show `orbit` as installed and enabled. Alternatively, after
+The list should show `promptaflow` as installed and enabled. Alternatively, after
 registering the Marketplace:
 
 1. Open **Plugins** in the Codex app.
@@ -128,27 +128,27 @@ environment and install its locked Python dependencies.
 
 ### Upgrade an existing installation
 
-1. Download the new `orbit-marketplace-<version>.zip`.
+1. Download the new `promptaflow-marketplace-<version>.zip`.
 2. Fully quit Codex.
-3. Back up or remove the old extracted `orbit-marketplace` directory, then
+3. Back up or remove the old extracted `promptaflow-marketplace` directory, then
    extract the new archive at the same path. Do not merge it over old files.
 4. Reinstall and verify the plugin:
 
    ```bash
-   codex plugin add orbit@orbit-local
-   codex plugin list --marketplace orbit-local
+   codex plugin add promptaflow@promptaflow-local
+   codex plugin list --marketplace promptaflow-local
    ```
 
 5. Reopen Codex and start a new task.
 
-If the Marketplace path changes, remove `orbit-local`, add the new absolute
+If the Marketplace path changes, remove `promptaflow-local`, add the new absolute
 path, and then reinstall PromptaFlow.
 
 ### Remove the installation
 
 ```bash
-codex plugin remove orbit@orbit-local
-codex plugin marketplace remove orbit-local
+codex plugin remove promptaflow@promptaflow-local
+codex plugin marketplace remove promptaflow-local
 ```
 
 After those commands succeed, the extracted Marketplace directory can be
@@ -159,7 +159,7 @@ deleted. Fully restart Codex to clear the plugin from new tasks.
 - **Marketplace not found:** run `codex plugin marketplace list` and verify the
   registered root directly contains `.agents/plugins/marketplace.json`.
 - **PromptaFlow is absent:** run `codex plugin list --available --json` and confirm
-  `orbit` is available from `orbit-local`, then repeat the install command.
+  `promptaflow` is available from `promptaflow-local`, then repeat the install command.
 - **`bash` not found:** install Bash and ensure it is visible in the environment
   used to launch Codex.
 - **No virtualenv or `uv` executable:** install `uv`, then restart Codex so its
@@ -168,11 +168,11 @@ deleted. Fully restart Codex to clear the plugin from new tasks.
   after reopening it; an existing task does not reload plugin metadata.
 
 The plugin ships the MCP proxy, and the plugin host sets
-`ORBIT_AGENT_APP_WORKSPACE` to the open project. The proxy registers that
+`PROMPTAFLOW_AGENT_APP_WORKSPACE` to the open project. The proxy registers that
 workspace with the loopback Hub on port 8848 and uses its workspace-scoped MCP
 URL; the Hub starts or discovers a dynamic-port Runtime for it. PromptaFlow requires
 an explicit project directory and never uses an incidental process working
-directory — in a projectless chat it uses `ORBIT_DEFAULT_WORKSPACE` when
+directory — in a projectless chat it uses `PROMPTAFLOW_DEFAULT_WORKSPACE` when
 configured, otherwise `~/.promptaflow/workspaces/default`.
 
 Opening PromptaFlow starts or reuses the Runtime and opens the native workspace card

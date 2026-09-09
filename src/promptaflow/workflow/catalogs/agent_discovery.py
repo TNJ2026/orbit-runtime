@@ -36,13 +36,14 @@ from ..domain.durable_execution import ExecutionSafety
 from ..handlers.agent import AGENT_RESULT_PORT
 from ..domain.handlers import ResourceProfile
 from .handlers import HandlerManifest
+from ...paths import home_root
 
 
 VERSION_PROBE_TIMEOUT_SECONDS = 10
 PERMISSION_PROBE_TIMEOUT_SECONDS = 10
 AGENT_DISCOVERY_CACHE_SECONDS = 300
 AGENT_DISCOVERY_FAILURE_CACHE_SECONDS = 30
-DEFAULT_AGENT_DISCOVERY_CACHE = Path.home() / ".orbit" / "cache" / "agents.json"
+DEFAULT_AGENT_DISCOVERY_CACHE = home_root() / "cache" / "agents.json"
 _VERSION_PATTERN = re.compile(r"(\d+\.\d+(?:\.\d+)?)")
 _SAFE_NAME = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
 

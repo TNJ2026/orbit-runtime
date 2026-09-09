@@ -9,7 +9,7 @@ import unittest
 ROOT = Path(__file__).parents[1] / "skills" / "promptaflow"
 
 
-class OrbitSkillCardRoutingTests(unittest.TestCase):
+class PromptaflowSkillCardRoutingTests(unittest.TestCase):
     def test_main_skill_names_each_card_and_tool(self) -> None:
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         for marker in (
@@ -83,7 +83,7 @@ class OrbitSkillCardRoutingTests(unittest.TestCase):
         ):
             self.assertIn(marker, text)
 
-    def test_opening_orbit_does_not_register_or_listen(self) -> None:
+    def test_opening_promptaflow_does_not_register_or_listen(self) -> None:
         text = (ROOT / "reference" / "open-orbit.md").read_text(
             encoding="utf-8"
         )
@@ -104,7 +104,7 @@ class OrbitSkillCardRoutingTests(unittest.TestCase):
             "Do not turn these Agent-executable steps into commands",
             "read_marketplace_name.py",
             "update_plugin_cachebuster.py",
-            "codex plugin add orbit@<resolved-marketplace-name>",
+            "codex plugin add promptaflow@<resolved-marketplace-name>",
             "codex plugin list",
             "lsof -nP -iTCP:8848 -sTCP:LISTEN",
             "kill <exact-pid>",
@@ -132,7 +132,7 @@ class OrbitSkillCardRoutingTests(unittest.TestCase):
             "PromptaFlow workspace", "PromptaFlow workflows", "PromptaFlow workflow generation",
             "PromptaFlow goal execution", "PromptaFlow goals", "Codex", "DeepSeek Harness",
             "WorkBuddy", "open_orbit_dashboard", "open_orbit_goals",
-            "generate_workflow", "start_run", "/orbit", "/orbit-workflows",
+            "generate_workflow", "start_run", "/promptaflow", "/promptaflow-workflows",
             "orbit_list_workflows", "orbit_start_run", "list_workspaces",
             "select_workspace", "Copyable Chinese prompt",
         ):
