@@ -1,3 +1,3 @@
 """orbit — local multi-agent workflow orchestrator over agent CLIs."""
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"

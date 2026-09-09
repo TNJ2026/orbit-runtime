@@ -44,6 +44,20 @@ class MarketplaceReleaseTests(unittest.TestCase):
         self.assertIn(root + "stop-orbit.ps1", names)
         self.assertIn(root + "skills/orbit/SKILL.md", names)
 
+    def test_standalone_plugin_archive_contains_a_plugin_root(self) -> None:
+        builder = load_builder()
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory) / "orbit-plugin.zip"
+            builder.build_plugin(archive, None)
+            with zipfile.ZipFile(archive) as package:
+                names = set(package.namelist())
+
+        root = "orbit-plugin/"
+        self.assertIn(root + ".codex-plugin/plugin.json", names)
+        self.assertIn(root + ".mcp.json", names)
+        self.assertIn(root + "skills/orbit/SKILL.md", names)
+        self.assertNotIn("orbit-marketplace/.agents/plugins/marketplace.json", names)
+
 
 if __name__ == "__main__":
     unittest.main()

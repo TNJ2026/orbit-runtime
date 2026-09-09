@@ -15,6 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE_ROOT = Path("orbit-marketplace")
 PLUGIN_ROOT = ARCHIVE_ROOT / "plugins" / "orbit"
+STANDALONE_PLUGIN_ROOT = Path("orbit-plugin")
 INCLUDE_FILES = (
     ".mcp.json",
     "README.md",
@@ -98,7 +99,7 @@ def zip_info(name: str, mode: int = 0o644) -> zipfile.ZipInfo:
     return info
 
 
-def build(output: Path, version: str | None) -> None:
+def release_manifest(version: str | None) -> dict[str, object]:
     manifest_path = ROOT / ".codex-plugin" / "plugin.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     source_version = package_version()
@@ -117,6 +118,27 @@ def build(output: Path, version: str | None) -> None:
             f"version {source_version!r}"
         )
     manifest["version"] = release_version
+    return manifest
+
+
+def _write_plugin_files(
+    archive: zipfile.ZipFile,
+    destination_root: Path,
+    manifest: dict[str, object],
+) -> None:
+    for source in source_files():
+        relative = source.relative_to(ROOT)
+        destination = destination_root / relative
+        if relative == Path(".codex-plugin/plugin.json"):
+            payload = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
+            archive.writestr(zip_info(destination.as_posix()), payload)
+            continue
+        mode = 0o755 if source.stat().st_mode & stat.S_IXUSR else 0o644
+        archive.writestr(zip_info(destination.as_posix(), mode), source.read_bytes())
+
+
+def build(output: Path, version: str | None) -> None:
+    manifest = release_manifest(version)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, "w") as archive:
@@ -125,15 +147,7 @@ def build(output: Path, version: str | None) -> None:
             zip_info(marketplace_name.as_posix()),
             json.dumps(marketplace_document(), ensure_ascii=False, indent=2) + "\n",
         )
-        for source in source_files():
-            relative = source.relative_to(ROOT)
-            destination = PLUGIN_ROOT / relative
-            if relative == Path(".codex-plugin/plugin.json"):
-                payload = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
-                archive.writestr(zip_info(destination.as_posix()), payload)
-                continue
-            mode = 0o755 if source.stat().st_mode & stat.S_IXUSR else 0o644
-            archive.writestr(zip_info(destination.as_posix(), mode), source.read_bytes())
+        _write_plugin_files(archive, PLUGIN_ROOT, manifest)
 
     with zipfile.ZipFile(output) as archive:
         names = set(archive.namelist())
@@ -157,12 +171,39 @@ def build(output: Path, version: str | None) -> None:
     print(output)
 
 
+def build_plugin(output: Path, version: str | None) -> None:
+    """Build the same self-contained plugin without the Marketplace wrapper."""
+
+    manifest = release_manifest(version)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(output, "w") as archive:
+        _write_plugin_files(archive, STANDALONE_PLUGIN_ROOT, manifest)
+
+    with zipfile.ZipFile(output) as archive:
+        names = set(archive.namelist())
+        required = {
+            (STANDALONE_PLUGIN_ROOT / ".codex-plugin/plugin.json").as_posix(),
+            (STANDALONE_PLUGIN_ROOT / ".mcp.json").as_posix(),
+            (STANDALONE_PLUGIN_ROOT / "skills/orbit/SKILL.md").as_posix(),
+        }
+        missing = required - names
+        if missing:
+            raise SystemExit(f"plugin archive is incomplete: {sorted(missing)}")
+    print(output)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--plugin-output", type=Path,
+        help="optional standalone Codex plugin ZIP",
+    )
     parser.add_argument("--version", help="release semver written into plugin.json")
     args = parser.parse_args()
     build(args.output.resolve(), args.version)
+    if args.plugin_output is not None:
+        build_plugin(args.plugin_output.resolve(), args.version)
 
 
 if __name__ == "__main__":

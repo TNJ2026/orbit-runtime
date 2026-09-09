@@ -236,8 +236,10 @@ submitted to the universal public Plugins Directory.
 See the [complete Codex app installation guide](./docs/hosts/codex-app.md),
 including the one-line prompt that lets Codex install it from this repository.
 
-Each GitHub Release includes `orbit-marketplace-<version>.zip`. Download and
-extract that archive, then register its root directory and install Orbit:
+Each GitHub Release includes a Marketplace ZIP, a standalone Codex plugin ZIP,
+the Python wheel and source distribution, and the DeepSeek Harness bundle.
+Download and extract `orbit-marketplace-<version>.zip`, then register its root
+directory and install Orbit:
 
 ```bash
 unzip orbit-marketplace-<version>.zip
@@ -270,10 +272,13 @@ Build the Python package with:
 ```bash
 uv build
 python scripts/build-marketplace-release.py \
-  --version 0.4.0 \
-  --output dist/orbit-marketplace-0.4.0.zip
+  --version 2.0.0 \
+  --output dist/orbit-marketplace-2.0.0.zip \
+  --plugin-output dist/orbit-plugin-2.0.0.zip
 ```
 
-Pushing a tag such as `v0.4.0` runs the Release workflow, verifies that the tag
-matches `src/orbit/__init__.py`, runs the tests, and uploads the wheel, source
-distribution, and local Marketplace ZIP to the GitHub Release.
+Pushing a tag such as `2.0` or `v2.0.0` runs the Release workflow. It normalizes
+a two-part tag to `2.0.0`, verifies that it matches `src/orbit/__init__.py`, runs
+the tests, and uploads all distribution assets to the GitHub Release. The same
+workflow can be started manually for an existing tag; repeated runs replace its
+uploaded assets.

@@ -4,6 +4,13 @@ on:
   push:
     tags:
       - "v*"
+      - "[0-9]*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing Git tag to release (for example 2.0 or v2.0.0)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -15,6 +22,8 @@ jobs:
       version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
 
       - uses: astral-sh/setup-uv@v6
         with:
@@ -26,11 +35,22 @@ jobs:
 
       - name: Resolve and verify release version
         id: version
+        env:
+          REQUESTED_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          release_tag="$REQUESTED_TAG"
+          version="${release_tag#v}"
+          if [[ "$version" =~ ^[0-9]+\.[0-9]+$ ]]; then
+            version="$version.0"
+          fi
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "unsupported release tag: $release_tag" >&2
+            exit 2
+          fi
           package_version="$(python -c 'import ast; p=ast.parse(open("src/orbit/__init__.py").read()); print(next(n.value.value for n in p.body if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "__version__" for t in n.targets)))')"
           test "$package_version" = "$version"
           echo "ORBIT_RELEASE_VERSION=$version" >> "$GITHUB_ENV"
+          echo "ORBIT_RELEASE_TAG=$release_tag" >> "$GITHUB_ENV"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Install development dependencies
@@ -56,16 +76,21 @@ jobs:
         run: |
           uv run python scripts/build-marketplace-release.py \
             --version "$ORBIT_RELEASE_VERSION" \
-            --output "dist/orbit-marketplace-$ORBIT_RELEASE_VERSION.zip"
+            --output "dist/orbit-marketplace-$ORBIT_RELEASE_VERSION.zip" \
+            --plugin-output "dist/orbit-plugin-$ORBIT_RELEASE_VERSION.zip"
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/* \
-            --verify-tag \
-            --generate-notes \
-            --title "Orbit $GITHUB_REF_NAME"
+          if gh release view "$ORBIT_RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$ORBIT_RELEASE_TAG" dist/* --clobber
+          else
+            gh release create "$ORBIT_RELEASE_TAG" dist/* \
+              --verify-tag \
+              --generate-notes \
+              --title "Orbit $ORBIT_RELEASE_TAG"
+          fi
 
       # Only the wheel and the sdist. By this point `dist/` also holds the npm
       # tarball and the Marketplace ZIP, and PyPI takes neither.
@@ -85,6 +110,7 @@ jobs:
     # to publish: it runs with `id-token: write` and nothing else, and it can
     # be gated on a GitHub Environment that requires a review.
     needs: release
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment:
       name: pypi

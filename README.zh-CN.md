@@ -222,15 +222,18 @@ uv sync --extra dev
 node --test tests/ui/client_modules.test.mjs
 ```
 
-构建 Python 包：
+每个 GitHub Release 都包含 Marketplace ZIP、独立 Codex 插件 ZIP、Python wheel
+和源码包，以及 DeepSeek Harness bundle。构建 Python 包和插件包：
 
 ```bash
 uv build
 python scripts/build-marketplace-release.py \
-  --version 0.4.0 \
-  --output dist/orbit-marketplace-0.4.0.zip
+  --version 2.0.0 \
+  --output dist/orbit-marketplace-2.0.0.zip \
+  --plugin-output dist/orbit-plugin-2.0.0.zip
 ```
 
-推送 `v0.4.0` 这样的标签后，Release workflow 会检查标签与
-`src/orbit/__init__.py` 的版本是否一致、运行测试，并把 wheel、源码包和本地
-Marketplace ZIP 一起上传到 GitHub Release。
+推送 `2.0` 或 `v2.0.0` 这样的标签后，Release workflow 会把两段版本规范化为
+`2.0.0`，检查它与 `src/orbit/__init__.py` 的版本是否一致、运行测试，并把全部
+分发产物上传到 GitHub Release。也可以为已有标签手动运行；重复运行会覆盖上传的
+产物。
