@@ -62,6 +62,14 @@ test('a Harness with no writer says so rather than blaming Orbit', () => {
   assert.equal(reading('this Harness exposes no Agent registry'), 'errNoAgent')
 })
 
+test('protocol failures from either side of the product rename remain readable', () => {
+  for (const product of ['PromptaFlow', 'Orbit']) {
+    assert.equal(reading(`invalid ${product} DTO at run`), 'errProtocol')
+    assert.equal(reading(`${product} workflow generation failed`), 'errProtocol')
+    assert.equal(reading(`Unknown ${product} client action`), 'errProtocol')
+  }
+})
+
 test('an unrecognised failure is not dressed up as a known one', () => {
   // A wrong diagnosis sends somebody to fix the wrong thing, which is worse
   // than saying plainly that this one is not understood.
@@ -110,4 +118,3 @@ test('the vocabulary and the readings describe the same failures', async () => {
   }
   assert.ok(declared.has('errUnknown'))
 })
-

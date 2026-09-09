@@ -209,6 +209,14 @@ def _failure(request_id: Any, code: int, message: str) -> dict[str, Any]:
 # until that is known, this stays at one tool.
 SUMMARISED_TOOLS = {"list_workflows"}
 
+# Tool names are public protocol surface.  Keep accepting the two names that
+# were advertised before the product rename, without putting them back in the
+# catalogue returned to new clients.
+LEGACY_TOOL_NAMES = {
+    "open_orbit_dashboard": "open_promptaflow_dashboard",
+    "open_orbit_goals": "open_promptaflow_goals",
+}
+
 
 def _summary(payload: Any) -> str:
     """What the card is showing, in a sentence, and where the values are."""
@@ -1055,11 +1063,6 @@ def build_mcp_dispatcher(
         name = {
             "open_promptaflow_dashboard": "list_runs",
             "open_promptaflow_goals": "list_runs",
-            # Only the current names are advertised. These are still answered
-            # because a client calls the name it discovered, and a tool list
-            # read before an upgrade outlives the upgrade.
-            "open_promptaflow_dashboard": "list_runs",
-            "open_promptaflow_goals": "list_runs",
         }.get(name, name)
         if name == "list_runs":
             owner = reading_actor(actor)
@@ -1645,10 +1648,15 @@ def build_mcp_dispatcher(
         if method != "tools/call":
             return _failure(request_id, METHOD_NOT_FOUND, f"unknown method {method}")
 
-        name = str(params.get("name", ""))
+        requested_name = str(params.get("name", ""))
+        # A client calls the name it discovered, and a tool list read before an
+        # upgrade can outlive that upgrade.  Resolve legacy names before the
+        # advertised-tool and authorisation checks so they retain the exact
+        # contract and scope of their current counterparts.
+        name = LEGACY_TOOL_NAMES.get(requested_name, requested_name)
         tool = by_name.get(name)
         if tool is None:
-            return _failure(request_id, INVALID_PARAMS, f"unknown tool {name}")
+            return _failure(request_id, INVALID_PARAMS, f"unknown tool {requested_name}")
         if actor is None:
             return _failure(request_id, NOT_AUTHORIZED, "valid actor credentials are required")
         if not guard.allows(actor, tool["scope"]):

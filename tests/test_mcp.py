@@ -488,6 +488,20 @@ class ToolCallTests(ApiTestCase):
         payload = payload_of(result)
         self.assertEqual([], payload["runs"])
 
+    def test_dashboard_tools_keep_their_pre_rename_call_aliases(self) -> None:
+        """A cached pre-upgrade tool catalogue remains callable after upgrade."""
+
+        with AsgiHarness(self.app) as client:
+            listed = rpc(client, "tools/list", actor="reader").json()["result"]["tools"]
+            names = {item["name"] for item in listed}
+            dashboard = tool(client, "open_orbit_dashboard", {}, actor="reader")
+            goals = tool(client, "open_orbit_goals", {}, actor="reader")
+
+        self.assertNotIn("open_orbit_dashboard", names)
+        self.assertNotIn("open_orbit_goals", names)
+        self.assertEqual([], payload_of(dashboard)["runs"])
+        self.assertEqual([], payload_of(goals)["runs"])
+
     def test_write_tool_starts_a_run(self) -> None:
         with AsgiHarness(self.app) as client:
             started = self._start(client)
