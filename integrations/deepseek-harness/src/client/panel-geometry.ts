@@ -1,4 +1,4 @@
-/** Pure, persisted geometry for the Orbit shell-overlay panel.
+/** Pure, persisted geometry for the PromptaFlow shell-overlay panel.
  *
  * Kept free of React and of the DOM so the rules can be read and tested as
  * rules. Everything here answers one question — where does the panel sit, and
@@ -15,7 +15,7 @@ export interface PanelLayout {
    * Put away entirely — no panel and no badge.
    *
    * Distinct from `collapsed`, which is the panel folded down to its mark and
-   * still watching. This is a person saying they are done with Orbit here: the
+   * still watching. This is a person saying they are done with PromptaFlow here: the
    * close button sets it after stopping the Runtime, because a badge still
    * sitting there would be an offer to reopen a page about a service that is
    * no longer running. `/promptaflow` brings it back.

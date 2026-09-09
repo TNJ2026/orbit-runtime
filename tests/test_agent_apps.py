@@ -281,7 +281,7 @@ class HostTests(unittest.TestCase):
             sleep=lambda _seconds: None,
         )
         with mock.patch.dict(
-            "os.environ", {"ORBIT_DEFAULT_WORKSPACE": str(default)}, clear=False,
+            "os.environ", {"PROMPTAFLOW_DEFAULT_WORKSPACE": str(default)}, clear=False,
         ):
             ensured = host.ensure(self.manifest_path)
 
@@ -502,7 +502,7 @@ class McpProxyTests(unittest.TestCase):
         self.assertEqual("weird", error["data"]["detail"])
 
     def test_promptaflows_own_error_is_forwarded_rather_than_reworded(self) -> None:
-        """Orbit answered the question; a proxy that rewrote it would be
+        """PromptaFlow answered the question; a proxy that rewrote it would be
         putting words in the Runtime's mouth."""
 
         source = io.StringIO('{"jsonrpc":"2.0","id":"x","method":"ping"}\n')
@@ -701,7 +701,7 @@ class HostHelperTests(unittest.TestCase):
     def test_the_default_workspace_is_under_the_user_home(self) -> None:
         environment = {
             key: value for key, value in os.environ.items()
-            if key != "ORBIT_DEFAULT_WORKSPACE"
+            if key != "PROMPTAFLOW_DEFAULT_WORKSPACE"
         }
         with mock.patch.dict("os.environ", environment, clear=True), mock.patch(
             "pathlib.Path.home", return_value=Path("/users/example"),
@@ -713,7 +713,7 @@ class HostHelperTests(unittest.TestCase):
 
     def test_the_default_workspace_can_be_overridden(self) -> None:
         with mock.patch.dict(
-            "os.environ", {"ORBIT_DEFAULT_WORKSPACE": "~/orbit-default"}, clear=False,
+            "os.environ", {"PROMPTAFLOW_DEFAULT_WORKSPACE": "~/orbit-default"}, clear=False,
         ):
             self.assertEqual(
                 Path("~/orbit-default").expanduser().resolve(),
@@ -871,8 +871,8 @@ class McpProxyTransportTests(unittest.TestCase):
             register_workspace_with_hub(url, self.root)
 
     def test_an_error_promptaflow_answered_with_is_forwarded_not_swallowed(self) -> None:
-        """A 4xx carrying a JSON-RPC error is Orbit's answer, not a transport
-        failure. Raising here would replace what Orbit said with what the proxy
+        """A 4xx carrying a JSON-RPC error is PromptaFlow's answer, not a transport
+        failure. Raising here would replace what PromptaFlow said with what the proxy
         guessed, and the caller would never see the reason it was refused."""
 
         refusal = {

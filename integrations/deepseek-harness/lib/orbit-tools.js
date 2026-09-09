@@ -7,7 +7,7 @@ const object = (properties, required = []) => ({
 });
 function args(value) {
     if (value === null || typeof value !== 'object' || Array.isArray(value))
-        throw new Error('Orbit tool arguments must be an object');
+        throw new Error('PromptaFlow tool arguments must be an object');
     return value;
 }
 export class OrbitToolBridge {
@@ -29,15 +29,15 @@ export class OrbitToolBridge {
     }
     definitions() {
         return [
-            this.definition('orbit_list_workflows', 'List published Orbit workflows available in this Session Workspace.', object({ ready_only: { type: 'boolean' } }), 'list_workflows', true),
-            this.definition('orbit_list_runs', 'List Orbit workflow runs owned by this Harness Session.', object({ status: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: 200 } }), 'list_runs', true),
-            this.definition('orbit_list_delegations', 'Check once on the first turn of this Session for resumable Orbit Agent work. Stay silent when the returned list is empty.', object({
+            this.definition('orbit_list_workflows', 'List published PromptaFlow workflows available in this Session Workspace.', object({ ready_only: { type: 'boolean' } }), 'list_workflows', true),
+            this.definition('orbit_list_runs', 'List PromptaFlow workflow runs owned by this Harness Session.', object({ status: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: 200 } }), 'list_runs', true),
+            this.definition('orbit_list_delegations', 'Check once on the first turn of this Session for resumable PromptaFlow Agent work. Stay silent when the returned list is empty.', object({
                 statuses: { type: 'array', items: { type: 'string' }, maxItems: 6 },
                 limit: { type: 'integer', minimum: 1, maximum: 200 },
             }), 'list_delegations', true),
             {
                 name: 'orbit_claim_delegation',
-                description: 'Claim the next queued Orbit Agent step for this Harness Session.',
+                description: 'Claim the next queued PromptaFlow Agent step for this Harness Session.',
                 parameters: object({ lease_seconds: { type: 'integer', minimum: 5, maximum: 300 } }),
                 output: JSON_OUTPUT, timeoutMs: 60_000,
                 execute: async (value, exec) => {
@@ -50,7 +50,7 @@ export class OrbitToolBridge {
             },
             {
                 name: 'orbit_renew_delegation',
-                description: 'Renew an Orbit Agent-step lease held by this Harness Session.',
+                description: 'Renew an PromptaFlow Agent-step lease held by this Harness Session.',
                 parameters: object({
                     delegation_id: { type: 'string' },
                     lease_seconds: { type: 'integer', minimum: 5, maximum: 300 },
@@ -66,7 +66,7 @@ export class OrbitToolBridge {
             },
             {
                 name: 'orbit_complete_delegation',
-                description: 'Return exactly one result object or error for an Orbit Agent step.',
+                description: 'Return exactly one result object or error for an PromptaFlow Agent step.',
                 parameters: object({
                     delegation_id: { type: 'string' }, result: { type: 'object' },
                     error: { type: 'string' },
@@ -78,16 +78,16 @@ export class OrbitToolBridge {
                     });
                 },
             },
-            this.definition('orbit_reconcile_delegation', 'Submit a user-verified outcome for unknown Orbit Agent work; never execute unknown work again.', object({
+            this.definition('orbit_reconcile_delegation', 'Submit a user-verified outcome for unknown PromptaFlow Agent work; never execute unknown work again.', object({
                 delegation_id: { type: 'string' },
                 outcome: { type: 'string', enum: ['confirmed_succeeded', 'confirmed_failed'] },
                 note: { type: 'string' }, result: { type: 'object' }, error: { type: 'string' },
                 idempotency_key: { type: 'string' },
             }, ['delegation_id', 'outcome', 'idempotency_key']), 'reconcile_delegation', false),
-            this.definition('orbit_inspect_run', 'Inspect one Orbit Run, including status, revision, interrupts and allowed commands.', object({ run_id: { type: 'string' } }, ['run_id']), 'inspect_run', true),
+            this.definition('orbit_inspect_run', 'Inspect one PromptaFlow Run, including status, revision, interrupts and allowed commands.', object({ run_id: { type: 'string' } }, ['run_id']), 'inspect_run', true),
             {
                 name: 'orbit_start_run',
-                description: 'Start a published Orbit workflow in the current Workspace. Returns immediately so progress appears in the Orbit Run Card.',
+                description: 'Start a published PromptaFlow workflow in the current Workspace. Returns immediately so progress appears in the PromptaFlow Run Card.',
                 parameters: object({
                     workflow_id: { type: 'string' }, workflow_version: { type: 'integer' },
                     input: { type: 'object' }, goal: { type: 'string', maxLength: 4000 },
@@ -101,11 +101,11 @@ export class OrbitToolBridge {
             },
             {
                 name: 'orbit_generate_workflow',
-                description: 'Draft a new Orbit workflow from a description and publish it if the compiler accepts it. '
+                description: 'Draft a new PromptaFlow workflow from a description and publish it if the compiler accepts it. '
                     + 'Returns a job immediately — authoring takes a while — so poll orbit_get_authoring_job '
                     + 'with the job_id until its status leaves queued/running. Nothing is published until the '
                     + 'compiler accepts the draft, so a failed job has changed nothing. Progress also appears '
-                    + 'in the Orbit panel.',
+                    + 'in the PromptaFlow panel.',
                 parameters: object({
                     prompt: { type: 'string', maxLength: 4000 },
                     agent: { type: 'string', description: 'Which Agent writes it; the Runtime picks one if omitted.' },
@@ -124,11 +124,11 @@ export class OrbitToolBridge {
                     return job;
                 },
             },
-            this.definition('orbit_get_authoring_job', 'Check an Orbit authoring job started by orbit_generate_workflow. Status queued or running '
+            this.definition('orbit_get_authoring_job', 'Check an PromptaFlow authoring job started by orbit_generate_workflow. Status queued or running '
                 + 'means it is still going; done carries the published workflow, failed carries why.', object({ job_id: { type: 'string' } }, ['job_id']), 'get_authoring_job', true),
             {
                 name: 'orbit_cancel_run',
-                description: 'Cancel an Orbit Run if its latest server-advertised commands allow cancellation.',
+                description: 'Cancel an PromptaFlow Run if its latest server-advertised commands allow cancellation.',
                 parameters: object({ run_id: { type: 'string' } }, ['run_id']), output: JSON_OUTPUT, timeoutMs: 60_000,
                 execute: async (value, exec) => {
                     const runId = String(args(value).run_id);
@@ -137,7 +137,7 @@ export class OrbitToolBridge {
             },
             {
                 name: 'orbit_resume_run',
-                description: 'Resume an interrupted Orbit Run using its latest server-advertised revision.',
+                description: 'Resume an interrupted PromptaFlow Run using its latest server-advertised revision.',
                 parameters: object({ run_id: { type: 'string' }, value: {}, interrupt_id: { type: 'string' } }, ['run_id']),
                 output: JSON_OUTPUT, timeoutMs: 60_000,
                 execute: async (value, exec) => {
@@ -159,7 +159,7 @@ export class OrbitToolBridge {
         const run = await this.gateway.run(workspace, String(session.id), runId);
         const advertised = run.allowed_commands.find(item => item.command === command);
         if (!advertised)
-            throw new Error(`Orbit no longer advertises ${command} for Run ${runId}`);
+            throw new Error(`PromptaFlow no longer advertises ${command} for Run ${runId}`);
         return await this.gateway.call(workspace, String(session.id), command === 'langgraph_run.cancel' ? 'cancel_run' : 'resume_run', {
             run_id: runId, expected_version: advertised.expected_version,
             idempotency_key: crypto.randomUUID(), ...(value === undefined ? {} : { value }),
@@ -173,10 +173,10 @@ export class OrbitToolBridge {
     async route(exec) {
         const session = exec.agent?.session;
         if (!session)
-            throw new Error('Orbit tools require a live Harness Agent Session');
+            throw new Error('PromptaFlow tools require a live Harness Agent Session');
         const cwd = session.header.cwd;
         if (!cwd)
-            throw new Error('Orbit tools require the Session to have a Workspace cwd');
+            throw new Error('PromptaFlow tools require the Session to have a Workspace cwd');
         const registered = await this.registry.resolveByPath(cwd);
         return { session, workspace: {
                 id: registered ? String(registered.id) : `cwd:${cwd}`,

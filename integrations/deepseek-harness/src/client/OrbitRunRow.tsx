@@ -350,7 +350,7 @@ function FoldedText(
  * link, these were the thing that would have gone with it — a running Goal
  * with no way to stop it.
  *
- * Draws nothing when Orbit advertises neither command, which is most of the
+ * Draws nothing when PromptaFlow advertises neither command, which is most of the
  * time: a Run that is not interrupted cannot be resumed, and a finished one
  * cannot be cancelled.
  */
@@ -367,7 +367,7 @@ function RunControls(
   const resumeAt = commandRevision(run, 'langgraph_run.resume')
   const approval = run.interrupts.find(item => item.taskKind === 'approval')
   /* The revision comes from what this Run advertises, not from what the panel
-     last drew, and the Host refuses the call if Orbit has moved on. A button
+     last drew, and the Host refuses the call if PromptaFlow has moved on. A button
      that quietly acted on a newer Run than the one being read would be worse
      than a button that fails. */
   const act = (
@@ -435,7 +435,7 @@ function RunControls(
         )}
       </div>
       {/* The second step of a rejection, in the panel's own confirm surface
-          rather than a platform prompt box — the same one Stop Orbit uses.
+          rather than a platform prompt box — the same one Stop PromptaFlow uses.
           Empty is allowed and arrives as no reason at all: a reviewer with
           nothing to add should not be held at a dialog, and the workflow that
           reads this has to handle its absence anyway. */}
@@ -489,7 +489,7 @@ function RunControls(
  *
  * Two different needs. The link opens the bytes in a tab, which answers "what
  * does it say" for anything a browser renders. The export answers "give me the
- * file" — because the path Orbit already has for it is a content-addressed
+ * file" — because the path PromptaFlow already has for it is a content-addressed
  * blob named by its own sha256, shared with every Artifact holding the same
  * bytes and collected when nothing references it. Editing that in place would
  * corrupt the store, so what a person gets is a copy that belongs to them.

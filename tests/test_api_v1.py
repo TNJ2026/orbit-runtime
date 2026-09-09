@@ -1689,7 +1689,7 @@ class WorkflowDraftApiTests(ApiTestCase):
             ["planning the flow\n", "writing nodes\n"],
             [
                 chunk["text"] for chunk in chunks
-                if not chunk["text"].startswith("\x1eorbit-progress:")
+                if not chunk["text"].startswith("\x1epromptaflow-progress:")
             ],
         )
         self.assertEqual({"stderr"}, {chunk["stream"] for chunk in chunks})
@@ -3066,7 +3066,7 @@ class WorkspaceScopedReadsTests(ApiTestCase):
 
     It used to be two rules at once: `/mcp` let a caller ask for the
     Workspace's work and the panel did, while `/api/v1` had no way to ask and
-    every loopback caller is `local`. One database, and Orbit's own UI showing
+    every loopback caller is `local`. One database, and PromptaFlow's own UI showing
     the Runs it had started with no sign that the others existed.
 
     An actor is still recorded on everything and still scopes every write —

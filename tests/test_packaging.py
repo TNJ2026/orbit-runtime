@@ -54,7 +54,7 @@ class PackageContentTests(unittest.TestCase):
         `app.css` is compiled into both the standalone editor and this bundle,
         and its `:root` palette and `body` rule describe the editor's *page*.
         Shipped here they replaced the card's own: the workflow card's accent
-        became #2563eb while every other Orbit card stayed #7772ff, and the
+        became #2563eb while every other PromptaFlow card stayed #7772ff, and the
         card's body font and background came from the editor too. The tokens
         are scoped to `.mcp-xyflow-viewer` now, so the graph keeps its colours
         and the card keeps its own.

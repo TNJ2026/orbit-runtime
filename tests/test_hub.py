@@ -112,7 +112,7 @@ class WorkspaceRegistryTests(unittest.TestCase):
             default = root / "default"
             registry = WorkspaceRegistry(root / "workspaces.json")
             with mock.patch.dict(
-                "os.environ", {"ORBIT_DEFAULT_WORKSPACE": str(default)}, clear=False,
+                "os.environ", {"PROMPTAFLOW_DEFAULT_WORKSPACE": str(default)}, clear=False,
             ):
                 self.assertEqual(default.resolve(), registry.resolve(None))
             self.assertTrue(default.is_dir())
@@ -137,7 +137,7 @@ class WorkspaceRegistryTests(unittest.TestCase):
             workspace.rmdir()
 
             with mock.patch.dict(
-                "os.environ", {"ORBIT_DEFAULT_WORKSPACE": str(root / "default")},
+                "os.environ", {"PROMPTAFLOW_DEFAULT_WORKSPACE": str(root / "default")},
                 clear=False,
             ):
                 listed = next(
@@ -170,7 +170,7 @@ class ProjectAccessGrantTests(unittest.TestCase):
     The persisted Hub grant decides whether a `workspace_access` policy can be
     satisfied at all, and the Hub writes the whole argv of every
     Runtime it launches. Until this, the switch was unreachable through the
-    ordinary way of starting Orbit, and a workflow declaring the policy was
+    ordinary way of starting PromptaFlow, and a workflow declaring the policy was
     refused on a Runtime that could never have been started to allow it.
     """
 
@@ -656,7 +656,7 @@ class HubHttpTests(unittest.TestCase):
         class Registry:
             def list(self):
                 return [{
-                    "workspace_id": "project-a", "name": "Orbit Project",
+                    "workspace_id": "project-a", "name": "PromptaFlow Project",
                     "path": "/projects/orbit", "kind": "registered",
                 }]
 
@@ -679,7 +679,7 @@ class HubHttpTests(unittest.TestCase):
                 "jsonrpc": "2.0", "id": 2, "method": "tools/call",
                 "params": {
                     "name": "select_workspace",
-                    "arguments": {"name": "Orbit Project"},
+                    "arguments": {"name": "PromptaFlow Project"},
                 },
             })
             client.request("POST", "/mcp", headers=headers, body={
@@ -687,7 +687,7 @@ class HubHttpTests(unittest.TestCase):
             })
 
         self.assertFalse(selected.json()["result"]["isError"])
-        self.assertEqual({"path": None, "name": "Orbit Project"}, manager.registry.selection)
+        self.assertEqual({"path": None, "name": "PromptaFlow Project"}, manager.registry.selection)
         self.assertEqual(["project-a"], manager.identifiers)
 
     def test_ui_redirects_to_the_selected_runtime(self) -> None:

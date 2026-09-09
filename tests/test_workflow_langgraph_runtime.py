@@ -6040,7 +6040,7 @@ class LangGraphHttpApiTests(unittest.TestCase):
         # is what still separates looking from acting.
         self.assertEqual(200, foreign_view.status_code)
         # Both Runs, because both happened here. The list used to hold only
-        # the reader's own, which is what left Orbit's UI showing part of its
+        # the reader's own, which is what left PromptaFlow's UI showing part of its
         # own database with no sign that the rest existed.
         self.assertIn(own.run_id, [item["run_id"] for item in foreign_list])
         self.assertEqual(2, len(foreign_list))

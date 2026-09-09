@@ -70,7 +70,7 @@ adapts only this Run, including every parallel Agent branch.
    non-empty value; the Runtime materializes `run.goal` into the declared
    binding.
    This call opens the dedicated goal-execution MCP App, which shows only this
-   run's progress and result. Do not call `open_orbit_dashboard` first unless
+   run's progress and result. Do not call `open_promptaflow_dashboard` first unless
    the user separately asked to open PromptaFlow.
 4. Report the run identifier, then call `inspect_run`. Treat its status,
    revision, interrupts, and `allowed_commands[]` as authoritative.

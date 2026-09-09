@@ -38,7 +38,7 @@ test('nobody saying anything is `.bin`, which is a statement rather than a guess
 test('the copy is named for the Artifact, so exporting twice writes one file', () => {
   // The name an Artifact came from *is* the hash of its bytes, so the same id
   // is the same content — a second export is the same file, not a `(1)` copy.
-  assert.equal(artifactFilename(ART, 'text/markdown'), 'orbit-4c1e5281cb5f.md')
+  assert.equal(artifactFilename(ART, 'text/markdown'), 'promptaflow-4c1e5281cb5f.md')
   assert.equal(artifactFilename(ART, 'text/markdown'), artifactFilename(ART, 'text/markdown'))
 })
 
@@ -53,10 +53,10 @@ test('a filename can never escape the directory it is written into', () => {
   ]) {
     const name = artifactFilename(hostile, 'text/plain')
     assert.equal(/[/\\]|\.\./.test(name.slice(0, -4)), false, `${hostile} -> ${name}`)
-    assert.match(name, /^orbit-[A-Za-z0-9]*\.[a-z0-9]+$/)
+    assert.match(name, /^promptaflow-[A-Za-z0-9]*\.[a-z0-9]+$/)
   }
   // And a name a workflow supplied cannot bring a path with it either.
-  assert.equal(artifactFilename(ART, '', '../../evil.sh'), 'orbit-4c1e5281cb5f.sh')
+  assert.equal(artifactFilename(ART, '', '../../evil.sh'), 'promptaflow-4c1e5281cb5f.sh')
 })
 
 

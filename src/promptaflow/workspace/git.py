@@ -26,7 +26,12 @@ import time
 
 GIT_TIMEOUT_SECONDS = 30.0
 LOCK_RETRIES = 5
-BRANCH_PREFIX = "orbit/ws-"
+BRANCH_PREFIX = "promptaflow/ws-"
+# Branches this created before the rename, in the user's own repository. New
+# ones are never written under it, and cleanup still has to find it: a reclaim
+# that only knew the current prefix would leave one dead branch behind per
+# workspace, in a repository that is not ours to litter.
+LEGACY_BRANCH_PREFIXES = ("orbit/ws-",)
 WORKTREES_DIRNAME = "worktrees"
 
 _SAFE_SLUG = re.compile(r"[^A-Za-z0-9_.-]+")
@@ -410,6 +415,10 @@ class GitWorkspaceProvider:
                 ("worktree", "remove", "--force", str(path)),
                 ("worktree", "prune"),
                 ("branch", "-D", f"{BRANCH_PREFIX}{slug}"),
+                *(
+                    ("branch", "-D", f"{prefix}{slug}")
+                    for prefix in LEGACY_BRANCH_PREFIXES
+                ),
             ):
                 try:
                     _git(self.project_root, *args)

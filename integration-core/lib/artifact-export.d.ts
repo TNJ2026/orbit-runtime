@@ -1,6 +1,6 @@
 /** Handing an Artifact over as a file somebody can open.
  *
- * Orbit keeps Artifacts in a content-addressed store: the file on disk is
+ * PromptaFlow keeps Artifacts in a content-addressed store: the file on disk is
  * named by the sha256 of its own bytes, carries no extension, is shared by
  * every Artifact with identical content, and is collected when nothing
  * references it. It is a real path, and it is the wrong path to hand anybody —
@@ -35,7 +35,7 @@ export declare const READABLE_MAX_BYTES = 2048;
 /**
  * Whether an Artifact should be read here or handed over as a file.
  *
- * Decided from what Orbit recorded, before any bytes move: asking for a 2 MiB
+ * Decided from what PromptaFlow recorded, before any bytes move: asking for a 2 MiB
  * PDF in order to discover it is a 2 MiB PDF is the round trip this exists to
  * avoid. Anything not plainly text, or not small, is a file — including the
  * types a browser could render, because rendering someone else's HTML inside

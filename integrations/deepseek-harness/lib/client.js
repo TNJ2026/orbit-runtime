@@ -33,22 +33,11 @@ window.__ModuleLoader__.load({
 		let react_jsx_runtime = require("react/jsx-runtime");
 		require("react-dom");
 		//#region ../../integration-core/lib/authoring-progress.js
-		/** How far a Workflow being written has got, read from what it printed.
-		*
-		* Authoring has stages the way a Run has steps — it drafts, it compiles what
-		* came back, it goes round again when the compiler refuses, and it publishes —
-		* and the Runtime has always said so: `AuthoringJobService` writes a marker
-		* into the job's console at each turn. Nothing read them. The panel matched
-		* them only to drop them, so a job that spent a minute on its second attempt
-		* showed one unchanging line, and the one question a person watching has —
-		* *is it stuck or is it working* — had no answer on the page.
-		*
-		* A marker is a whole chunk whose text is the sentinel followed by JSON, so
-		* this reads chunks rather than scanning text: an Agent that prints the
-		* sentinel itself is printing inside a chunk of its own output, not writing a
-		* marker, and must not be able to move the ladder.
-		*/
-		const SENTINEL = "orbit-progress:";
+		const SENTINELS = ["promptaflow-progress:", "orbit-progress:"];
+		/** The sentinel this chunk carries, if it carries one. */
+		function sentinelOf(text) {
+			return SENTINELS.find((candidate) => text.startsWith(candidate));
+		}
 		/** The three things authoring does. Repairing is not among them — see below. */
 		const AUTHORING_STAGES = [
 			"generating",
@@ -64,12 +53,14 @@ window.__ModuleLoader__.load({
 		};
 		/** Whether this chunk is a progress marker rather than Agent output. */
 		function isProgressMarker(chunk) {
-			return chunk.text.startsWith(SENTINEL);
+			return sentinelOf(chunk.text) !== void 0;
 		}
 		function marker(chunk) {
 			if (!isProgressMarker(chunk)) return null;
 			try {
-				const value = JSON.parse(chunk.text.slice(16));
+				const marker = sentinelOf(chunk.text);
+				if (marker === void 0) return null;
+				const value = JSON.parse(chunk.text.slice(marker.length));
 				const stage = typeof value.stage === "string" ? value.stage : "";
 				if (!(stage in LANDS_ON)) return null;
 				return {
@@ -127,14 +118,14 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region ../../integration-core/lib/error-text.js
 		const READINGS = [
-			[/Hub workspace registration returned invalid JSON|Orbit command failed/i, "errDiscoveryFailed"],
+			[/Hub workspace registration returned invalid JSON|(PromptaFlow|Orbit) command failed/i, "errDiscoveryFailed"],
 			[/Hub auto-start requires a loopback HTTP URL/i, "errRuntimeAddress"],
-			[/No independent Orbit Runtime is serving/i, "errNoRuntime"],
+			[/No independent (PromptaFlow|Orbit) Runtime is serving/i, "errNoRuntime"],
 			[/auto-start (failed|timed out)/i, "errStartFailed"],
 			[/Runtime discovery (failed|returned invalid JSON|must return an array)/i, "errDiscoveryFailed"],
-			[/Multiple Orbit Runtimes claim/i, "errRuntimeConflict"],
+			[/Multiple (PromptaFlow|Orbit) Runtimes claim/i, "errRuntimeConflict"],
 			[/not reachable over HTTP MCP|published no HTTP address|did not publish a browser address/i, "errRuntimeAddress"],
-			[/incompatible Orbit integration protocol/i, "errVersionMismatch"],
+			[/incompatible (PromptaFlow|Orbit) integration protocol/i, "errVersionMismatch"],
 			[/only a Runtime operator|valid actor credentials|HTTP 40[13]/i, "errNotAllowed"],
 			[/refused to stop/i, "errStopRefused"],
 			[/timed out/i, "errTimeout"],
@@ -157,9 +148,9 @@ window.__ModuleLoader__.load({
 			[/supports images only/i, "errImageOnly"],
 			[/request aborted|operation was aborted|AbortError/i, "errAborted"],
 			[/produced no answer to submit/i, "errNoAnswer"],
-			[/invalid Orbit DTO|not canonical base64|arguments must be an object/i, "errProtocol"],
-			[/Orbit workflow generation (?:failed|\$\{workflow\.status\})|completed workflow generation without/i, "errProtocol"],
-			[/Unknown Orbit client action|requires action and args|Workflow id is required/i, "errProtocol"],
+			[/invalid PromptaFlow DTO|not canonical base64|arguments must be an object/i, "errProtocol"],
+			[/PromptaFlow workflow generation (?:failed|\$\{workflow\.status\})|completed workflow generation without/i, "errProtocol"],
+			[/Unknown PromptaFlow client action|requires action and args|Workflow id is required/i, "errProtocol"],
 			[/invalid authoring output (cursor|address)|authoring output returned invalid JSON/i, "errProtocol"],
 			[/returned an invalid authoring output address/i, "errProtocol"]
 		];
@@ -416,10 +407,10 @@ window.__ModuleLoader__.load({
 		* Where an Artifact can be opened: through this Host, as the Session that owns
 		* it.
 		*
-		* Not Orbit's own address for it. Artifacts belong to the actor that produced
+		* Not PromptaFlow's own address for it. Artifacts belong to the actor that produced
 		* them, a browser reaching `/api/v1` on loopback is `local`, and a Run this
-		* panel started belongs to `harness:session:<id>` — so Orbit's link is a 404
-		* for every Artifact this Harness ever made, and so is Orbit's own UI. The
+		* panel started belongs to `harness:session:<id>` — so PromptaFlow's link is a 404
+		* for every Artifact this Harness ever made, and so is PromptaFlow's own UI. The
 		* Host holds the identity that can read it, and hands the bytes to the
 		* browser unchanged.
 		*
@@ -461,7 +452,7 @@ window.__ModuleLoader__.load({
 				total: rows.length
 			};
 		}
-		/** The four states the shell's StateDot draws, from an Orbit status.
+		/** The four states the shell's StateDot draws, from an PromptaFlow status.
 		*
 		* `unknown` is amber rather than red on purpose: it is the outcome nobody has
 		* ruled on yet, and colouring it as a failure would answer a question the
@@ -504,7 +495,7 @@ window.__ModuleLoader__.load({
 		/** The revision a command may be issued at, or undefined if it may not be.
 		*
 		* Read from what the Run advertises rather than from what the panel last drew:
-		* a button offered for a command Orbit has since withdrawn is a button that
+		* a button offered for a command PromptaFlow has since withdrawn is a button that
 		* fails, and one offered at a stale revision is worse — it succeeds against a
 		* Run the reader was not looking at.
 		*/
@@ -1105,7 +1096,7 @@ window.__ModuleLoader__.load({
 		* link, these were the thing that would have gone with it — a running Goal
 		* with no way to stop it.
 		*
-		* Draws nothing when Orbit advertises neither command, which is most of the
+		* Draws nothing when PromptaFlow advertises neither command, which is most of the
 		* time: a Run that is not interrupted cannot be resumed, and a finished one
 		* cannot be cancelled.
 		*/
@@ -1221,7 +1212,7 @@ window.__ModuleLoader__.load({
 		*
 		* Two different needs. The link opens the bytes in a tab, which answers "what
 		* does it say" for anything a browser renders. The export answers "give me the
-		* file" — because the path Orbit already has for it is a content-addressed
+		* file" — because the path PromptaFlow already has for it is a content-addressed
 		* blob named by its own sha256, shared with every Artifact holding the same
 		* bytes and collected when nothing references it. Editing that in place would
 		* corrupt the store, so what a person gets is a copy that belongs to them.
@@ -12178,7 +12169,7 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region src/client/OrbitWorkflowDetail.tsx
 		/** One Workflow as the panel's body, using the same graph/definition hierarchy
-		* as Orbit's MCP App card. */
+		* as PromptaFlow's MCP App card. */
 		/** The kinds that carry work, and so are the ones a missing prompt is news about. */
 		const PROMPTED = /* @__PURE__ */ new Set(["action", "human"]);
 		function StepRow({ t, step }) {
@@ -12376,8 +12367,8 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region src/client/OrbitPanel.tsx
-		/** The resident Orbit panel: what is running, and a way into Orbit itself. */
-		/** Orbit's ring-and-satellite mark, kept inline so the folded control is self-contained. */
+		/** The resident PromptaFlow panel: what is running, and a way into PromptaFlow itself. */
+		/** PromptaFlow's ring-and-satellite mark, kept inline so the folded control is self-contained. */
 		function OrbitMark() {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
 				className: OrbitPanel_module_css_default.orbitMark,
@@ -12441,7 +12432,7 @@ window.__ModuleLoader__.load({
 		}
 		/** Two letters and a colour, derived so the same Agent always looks the same.
 		*
-		* Orbit gives each Agent a coloured mark; this reproduces the idea without
+		* PromptaFlow gives each Agent a coloured mark; this reproduces the idea without
 		* shipping a palette that would drift from it. The hue is the name's own, and
 		* the colours stay inside the shell's theme by being expressed as one.
 		*/
@@ -12458,7 +12449,7 @@ window.__ModuleLoader__.load({
 			};
 		}
 		/** One page's heading, the line under it, and anything it counts. */
-		/** The letter a step wears in the chain, as Orbit's own card assigns it. */
+		/** The letter a step wears in the chain, as PromptaFlow's own card assigns it. */
 		function glyph(kind) {
 			if (kind === "terminal") return "✓";
 			if (kind === "human") return "H";
@@ -13113,20 +13104,20 @@ window.__ModuleLoader__.load({
 		/** Panel copy, registered with the Harness locale service. */
 		const ORBIT_LOCALE_NAMESPACE = "promptaflow";
 		const en = {
-			title: "Orbit",
-			expand: "Show Orbit runs",
-			collapse: "Hide Orbit runs",
-			openRuntime: "Open Orbit in a new tab",
-			stopRuntime: "Stop Orbit",
-			stopRuntimeAsk: "Stop Orbit for this Workspace? Runs in flight are interrupted, and Orbit’s own UI and any other Session lose it too.",
+			title: "PromptaFlow",
+			expand: "Show PromptaFlow runs",
+			collapse: "Hide PromptaFlow runs",
+			openRuntime: "Open PromptaFlow in a new tab",
+			stopRuntime: "Stop PromptaFlow",
+			stopRuntimeAsk: "Stop PromptaFlow for this Workspace? Runs in flight are interrupted, and PromptaFlow’s own UI and any other Session lose it too.",
 			stopCancel: "Keep it running",
-			stopConfirm: "Stop Orbit",
+			stopConfirm: "Stop PromptaFlow",
 			dock: "Dock to the side",
 			float: "Detach",
 			empty: "No runs in this Workspace yet.",
-			loading: "Asking Orbit…",
-			connectingRuntime: "Starting Orbit and connecting to MCP…",
-			disconnected: "No Orbit Runtime is serving this Workspace.",
+			loading: "Asking PromptaFlow…",
+			connectingRuntime: "Starting PromptaFlow and connecting to MCP…",
+			disconnected: "No PromptaFlow Runtime is serving this Workspace.",
 			liveCount: "{live} running of {total}",
 			idleCount: "{total} runs",
 			status: "Status",
@@ -13165,25 +13156,25 @@ window.__ModuleLoader__.load({
 			noPrompt: "This step was authored without a prompt.",
 			noOutput: "No output from this step.",
 			errHostGone: "This page has lost the app behind it. Restart it, then reload.",
-			errNoRuntime: "Orbit is not running for this Workspace. Reopen the panel to start it.",
-			errStartFailed: "Orbit would not start here. Hover for what it said on the way out.",
+			errNoRuntime: "PromptaFlow is not running for this Workspace. Reopen the panel to start it.",
+			errStartFailed: "PromptaFlow would not start here. Hover for what it said on the way out.",
 			errDiscoveryFailed: "The orbit command did not answer properly. Check that it is installed and on PATH.",
-			errRuntimeAddress: "Orbit is running but published no address this panel can use.",
-			errRuntimeConflict: "More than one Orbit Runtime claims this Workspace. Stop the extra one.",
-			errNoWorkspace: "This Session has no project folder open, so there is nothing for Orbit to work on.",
+			errRuntimeAddress: "PromptaFlow is running but published no address this panel can use.",
+			errRuntimeConflict: "More than one PromptaFlow Runtime claims this Workspace. Stop the extra one.",
+			errNoWorkspace: "This Session has no project folder open, so there is nothing for PromptaFlow to work on.",
 			errNoSession: "The panel lost its Harness Session. Reopen it.",
 			errWorkspaceMismatch: "That request is for a different project than this Session has open.",
-			errRunElsewhere: "This run was started somewhere else. Act on it there, or in Orbit.",
-			errStopRefused: "Orbit would not stop. It may be finishing something first.",
+			errRunElsewhere: "This run was started somewhere else. Act on it there, or in PromptaFlow.",
+			errStopRefused: "PromptaFlow would not stop. It may be finishing something first.",
 			errRequestTooLarge: "That request is too big to send from here.",
 			errPromptLength: "The prompt has to be between 1 and 20000 characters.",
 			errImageOnly: "Only images can be brought into the conversation this way.",
 			errNoAnswer: "The Agent finished without an answer to submit.",
 			errAborted: "That request was cancelled.",
-			errProtocol: "Orbit sent something this panel could not read. This one is worth reporting.",
-			errVersionMismatch: "This Orbit speaks a version of the integration this panel does not.",
-			errTimeout: "Orbit did not answer in time. It may still be busy — try again.",
-			errUnreachable: "Could not reach Orbit. It may have stopped or be restarting.",
+			errProtocol: "PromptaFlow sent something this panel could not read. This one is worth reporting.",
+			errVersionMismatch: "This PromptaFlow speaks a version of the integration this panel does not.",
+			errTimeout: "PromptaFlow did not answer in time. It may still be busy — try again.",
+			errUnreachable: "Could not reach PromptaFlow. It may have stopped or be restarting.",
 			errWorkflowDeleted: "That workflow has been deleted.",
 			errWorkflowGone: "That workflow is no longer published. The list may be out of date — refresh.",
 			errRunMoved: "This run moved on while the page was open. Refresh and try again.",
@@ -13191,8 +13182,8 @@ window.__ModuleLoader__.load({
 			errGoalActive: "A goal is already running here. Wait for it, or cancel it first.",
 			errAuthoringActive: "A workflow is already being written here. Wait for it to finish.",
 			errNoAgent: "No Agent is available in this Session to do that.",
-			errNotAllowed: "Orbit refused that. This Session is not allowed to do it.",
-			errArtifactTooLarge: "That file is too large to hand over here. Open it from Orbit.",
+			errNotAllowed: "PromptaFlow refused that. This Session is not allowed to do it.",
+			errArtifactTooLarge: "That file is too large to hand over here. Open it from PromptaFlow.",
 			errUnknown: "Something went wrong. Hover for the details.",
 			result: "Result",
 			resultFailed: "Why it failed",
@@ -13235,28 +13226,28 @@ window.__ModuleLoader__.load({
 			agentRuns: "{count} times",
 			agentFailedLabel: "Failed",
 			agentFailed: "{count} times",
-			togglePanel: "Show or hide the Orbit panel",
+			togglePanel: "Show or hide the PromptaFlow panel",
 			askWhatRuns: "List the workflows that can run here",
-			generateCommandDescription: "Generate an Orbit workflow from a description",
+			generateCommandDescription: "Generate an PromptaFlow workflow from a description",
 			generateUsage: "Usage: /promptaflow-generate <workflow description>",
 			runHead: "Run workflow ",
 			runTail: ": "
 		};
 		const zh = {
-			title: "Orbit",
-			expand: "显示 Orbit 运行",
-			collapse: "收起 Orbit 运行",
-			openRuntime: "在新标签页打开 Orbit",
-			stopRuntime: "停止 Orbit",
-			stopRuntimeAsk: "停止这个 Workspace 的 Orbit？进行中的 Run 会被中断，Orbit 自己的 UI 和其他会话也会一起失去它。",
+			title: "PromptaFlow",
+			expand: "显示 PromptaFlow 运行",
+			collapse: "收起 PromptaFlow 运行",
+			openRuntime: "在新标签页打开 PromptaFlow",
+			stopRuntime: "停止 PromptaFlow",
+			stopRuntimeAsk: "停止这个 Workspace 的 PromptaFlow？进行中的 Run 会被中断，PromptaFlow 自己的 UI 和其他会话也会一起失去它。",
 			stopCancel: "继续运行",
-			stopConfirm: "停止 Orbit",
+			stopConfirm: "停止 PromptaFlow",
 			dock: "停靠到侧边",
 			float: "浮动",
 			empty: "这个 Workspace 还没有运行记录。",
-			loading: "正在询问 Orbit…",
-			connectingRuntime: "正在启动 Orbit 并连接 MCP…",
-			disconnected: "没有 Orbit Runtime 在服务这个 Workspace。",
+			loading: "正在询问 PromptaFlow…",
+			connectingRuntime: "正在启动 PromptaFlow 并连接 MCP…",
+			disconnected: "没有 PromptaFlow Runtime 在服务这个 Workspace。",
 			liveCount: "{total} 个运行中有 {live} 个进行中",
 			idleCount: "{total} 个运行",
 			status: "状态",
@@ -13295,25 +13286,25 @@ window.__ModuleLoader__.load({
 			noPrompt: "这一步没有写提示词。",
 			noOutput: "这个步骤没有输出。",
 			errHostGone: "这个页面背后的服务已经停止。重启它，然后刷新页面。",
-			errNoRuntime: "Orbit 没有在这个 Workspace 上运行。重新打开面板会启动它。",
-			errStartFailed: "Orbit 在这里启动失败了。把鼠标移上去可以看到它退出前说了什么。",
+			errNoRuntime: "PromptaFlow 没有在这个 Workspace 上运行。重新打开面板会启动它。",
+			errStartFailed: "PromptaFlow 在这里启动失败了。把鼠标移上去可以看到它退出前说了什么。",
 			errDiscoveryFailed: "orbit 命令没有正常返回。检查它是否已安装、是否在 PATH 中。",
-			errRuntimeAddress: "Orbit 在运行，但没有公布面板可以使用的地址。",
-			errRuntimeConflict: "有多个 Orbit 运行时都声称管理这个 Workspace。请停掉多余的那个。",
-			errNoWorkspace: "当前会话没有打开项目目录，Orbit 没有可以工作的对象。",
+			errRuntimeAddress: "PromptaFlow 在运行，但没有公布面板可以使用的地址。",
+			errRuntimeConflict: "有多个 PromptaFlow 运行时都声称管理这个 Workspace。请停掉多余的那个。",
+			errNoWorkspace: "当前会话没有打开项目目录，PromptaFlow 没有可以工作的对象。",
 			errNoSession: "面板与 Harness 会话断开了。重新打开面板。",
 			errWorkspaceMismatch: "这个请求指向的项目，和当前会话打开的不是同一个。",
-			errRunElsewhere: "这个运行是在别处启动的。请回到启动它的地方操作，或者去 Orbit 里操作。",
-			errStopRefused: "Orbit 拒绝停止。它可能正在收尾。",
+			errRunElsewhere: "这个运行是在别处启动的。请回到启动它的地方操作，或者去 PromptaFlow 里操作。",
+			errStopRefused: "PromptaFlow 拒绝停止。它可能正在收尾。",
 			errRequestTooLarge: "这个请求太大，没法从这里发出去。",
 			errPromptLength: "提示词长度必须在 1 到 20000 个字符之间。",
 			errImageOnly: "只有图片可以用这种方式带进对话。",
 			errNoAnswer: "Agent 结束了，但没有产出可以提交的回答。",
 			errAborted: "这个请求被取消了。",
-			errProtocol: "Orbit 返回了面板无法解析的内容。这一类值得反馈。",
-			errVersionMismatch: "这个 Orbit 的集成协议版本和面板对不上。",
-			errTimeout: "Orbit 没有及时回应。它可能还在忙，可以再试一次。",
-			errUnreachable: "连不上 Orbit。它可能已经停了，或者正在重启。",
+			errProtocol: "PromptaFlow 返回了面板无法解析的内容。这一类值得反馈。",
+			errVersionMismatch: "这个 PromptaFlow 的集成协议版本和面板对不上。",
+			errTimeout: "PromptaFlow 没有及时回应。它可能还在忙，可以再试一次。",
+			errUnreachable: "连不上 PromptaFlow。它可能已经停了，或者正在重启。",
 			errWorkflowDeleted: "这个工作流已经被删除了。",
 			errWorkflowGone: "这个工作流已不在发布列表里。列表可能过期了，刷新一下。",
 			errRunMoved: "这个运行在页面打开期间发生了变化。刷新后再试。",
@@ -13321,8 +13312,8 @@ window.__ModuleLoader__.load({
 			errGoalActive: "这里已经有一个目标在执行。等它结束，或者先取消。",
 			errAuthoringActive: "这里已经有一个工作流在生成。等它完成。",
 			errNoAgent: "这个会话里没有可用的 Agent 来做这件事。",
-			errNotAllowed: "Orbit 拒绝了这个操作。这个会话没有权限。",
-			errArtifactTooLarge: "这个文件太大，没法从这里递出来。请在 Orbit 里打开。",
+			errNotAllowed: "PromptaFlow 拒绝了这个操作。这个会话没有权限。",
+			errArtifactTooLarge: "这个文件太大，没法从这里递出来。请在 PromptaFlow 里打开。",
 			errUnknown: "出错了。把鼠标移上去可以看到原始信息。",
 			result: "结果",
 			resultFailed: "失败原因",
@@ -13365,9 +13356,9 @@ window.__ModuleLoader__.load({
 			agentRuns: "{count} 次",
 			agentFailedLabel: "失败",
 			agentFailed: "{count} 次",
-			togglePanel: "显示或收起 Orbit 面板",
+			togglePanel: "显示或收起 PromptaFlow 面板",
 			askWhatRuns: "列出这里可运行的工作流",
-			generateCommandDescription: "根据描述生成 Orbit 工作流",
+			generateCommandDescription: "根据描述生成 PromptaFlow 工作流",
 			generateUsage: "用法：/promptaflow-generate <工作流描述>",
 			runHead: "使用工作流",
 			runTail: "执行："
@@ -13565,10 +13556,10 @@ window.__ModuleLoader__.load({
 		*
 		* Distinct from `orbit:toggle-panel`, which flips: a command that toggles is a
 		* command that hides the panel for anyone who already had it open. This one
-		* only ever shows, so running an Orbit command twice is not a way to lose
+		* only ever shows, so running an PromptaFlow command twice is not a way to lose
 		* sight of what it did.
 		*
-		* The panel is where an Orbit command's result actually appears — a Run's
+		* The panel is where an PromptaFlow command's result actually appears — a Run's
 		* steps, a Workflow being written — so a command that starts work behind a
 		* hidden panel has reported nothing. Called before the work rather than after
 		* it, so a failure is met by an open panel too.
@@ -13674,7 +13665,7 @@ window.__ModuleLoader__.load({
 				name: "shell.overlay",
 				id: "orbit-runs",
 				order: 80,
-				label: "Orbit runs",
+				label: "PromptaFlow runs",
 				locale: ORBIT_LOCALE_NAMESPACE
 			}, Panel));
 		}

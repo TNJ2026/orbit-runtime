@@ -1,10 +1,10 @@
 /** Writing a Workflow with the Agent that is already here.
  *
- * Orbit will hand a generation prompt to a connected MCP client rather than
+ * PromptaFlow will hand a generation prompt to a connected MCP client rather than
  * fork an Agent CLI for it — but only to a client that has shown up on the
  * queue. Being connected is not enough: the broker counts a client as present
  * because it is *waiting for work*, not because it once called a tool. Nothing
- * in this Host had ever waited, so Orbit forked a CLI every time, and the
+ * in this Host had ever waited, so PromptaFlow forked a CLI every time, and the
  * Agent that wrote the Workflow was one nobody could see working.
  *
  * This is the waiting. The loop lives in the Host; the parts that decide what
@@ -12,7 +12,7 @@
  * read and tested without a Runtime, a model, or a session.
  */
 import { createHash } from 'node:crypto';
-/** The name this Host is offered under in Orbit's writer menu. */
+/** The name this Host is offered under in PromptaFlow's writer menu. */
 export const CLAIM_CLIENT = 'harness';
 /** Private, stable writer address for one Harness conversation. */
 export function authoringClientForSession(sessionId) {
@@ -49,7 +49,7 @@ export const CLAIM_RETRY_MS = 15_000;
  * One turn of the loop: wait, ask, answer.
  *
  * Whatever the model says is submitted, even when it does not look like a
- * document. Orbit extracts and compiles it exactly as it does a CLI's stdout,
+ * document. PromptaFlow extracts and compiles it exactly as it does a CLI's stdout,
  * and a document it refuses comes back as a fresh request carrying the
  * compiler's findings — so a chatty answer costs a round, not the job. Judging
  * the answer here would be a second, worse copy of that validator.
@@ -99,7 +99,7 @@ export async function claimOnce(deps) {
  *
  * Only `text` blocks of `assistant/message`. Reasoning blocks are the model
  * thinking rather than answering, and tool calls are it doing something else
- * entirely; including either would hand Orbit a document with the working-out
+ * entirely; including either would hand PromptaFlow a document with the working-out
  * wrapped around it. Every message is taken, not the last, because a turn that
  * used a tool answers across more than one.
  */

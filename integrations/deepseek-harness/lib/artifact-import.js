@@ -5,7 +5,7 @@ export function artifactImageInput(content) {
         throw new Error(`Harness Attachment import supports images only; Artifact is ${mediaType || 'unknown'}`);
     }
     if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(content.content)) {
-        throw new Error('Orbit Artifact content is not canonical base64');
+        throw new Error('PromptaFlow Artifact content is not canonical base64');
     }
     const data = Uint8Array.from(Buffer.from(content.content, 'base64'));
     return {

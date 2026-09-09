@@ -8,7 +8,7 @@ export interface GatewayDiagnostics {
     lastConnectedAt?: string;
     lastTransportError?: string;
 }
-/** Connect Harness to Orbit over HTTP MCP; explicit UI entry may start it. */
+/** Connect Harness to PromptaFlow over HTTP MCP; explicit UI entry may start it. */
 /**
  * How long any one MCP call may take before the transport gives up on it.
  *
@@ -47,7 +47,7 @@ export declare class OrbitGateway {
     /** Stable Hub UI namespace for this Workspace. */
     uiUrl(workspace: WorkspaceRef): Promise<string>;
     /**
-     * Read the same durable attempt totals as Orbit's Agent page.
+     * Read the same durable attempt totals as PromptaFlow's Agent page.
      *
      * This HTTP projection also keeps a newly upgraded Harness compatible with
      * a Runtime process started before `list_agents` grew the aggregate fields.

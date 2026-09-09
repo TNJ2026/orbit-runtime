@@ -193,7 +193,7 @@ class HandshakeTests(ApiTestCase):
     def test_resource_templates_are_an_empty_list_not_an_error(self) -> None:
         """Declaring `resources` is a promise to answer how they are addressed.
 
-        Orbit's five are fixed `ui://` documents with nothing templated about
+        PromptaFlow's five are fixed `ui://` documents with nothing templated about
         them, so the honest answer is an empty list. METHOD_NOT_FOUND is what
         a host reads as a resource surface that does not work, and it takes
         the panels down with it — observed against WorkBuddy 5.4.2, which asks
@@ -235,7 +235,7 @@ class DiscoveryTests(ApiTestCase):
             self.assertEqual(
                 {
                     "get_capabilities", "list_runs", "inspect_run", "start_run", "resume_run",
-                    "open_orbit_dashboard", "open_orbit_goals",
+                    "open_promptaflow_dashboard", "open_promptaflow_goals",
                     "list_runtime_events", "get_run_steps", "get_run_graph",
                     "get_run_edges", "read_run_output",
                     "recover_run", "cancel_run", "replay_langgraph_run",
@@ -260,7 +260,7 @@ class DiscoveryTests(ApiTestCase):
                 # the advertised tool contract.
                 self.assertNotIn("scope", item)
             dashboard = next(
-                item for item in tools if item["name"] == "open_orbit_dashboard"
+                item for item in tools if item["name"] == "open_promptaflow_dashboard"
             )
             self.assertEqual(
                 "ui://promptaflow/current-task-v51.html",
@@ -268,12 +268,12 @@ class DiscoveryTests(ApiTestCase):
             )
             self.assertEqual(
                 {
-                    "open_orbit_dashboard": "ui://promptaflow/current-task-v51.html",
-                    "open_orbit_goals": "ui://promptaflow/goals-v15.html",
+                    "open_promptaflow_dashboard": "ui://promptaflow/current-task-v51.html",
+                    "open_promptaflow_goals": "ui://promptaflow/goals-v15.html",
                 },
                 {
                     item["name"]: item["_meta"]["ui"]["resourceUri"]
-                    for item in tools if item["name"].startswith("open_orbit_")
+                    for item in tools if item["name"].startswith("open_promptaflow_")
                 },
             )
             card_bindings = {
@@ -288,7 +288,7 @@ class DiscoveryTests(ApiTestCase):
             self.assertIsNone(card_bindings["inspect_workflow_definition"])
             self.assertEqual("ui://promptaflow/workflow-authoring-v15.html", card_bindings["generate_workflow"])
             self.assertEqual("ui://promptaflow/goal-run-v21.html", card_bindings["start_run"])
-            self.assertEqual("ui://promptaflow/goals-v15.html", card_bindings["open_orbit_goals"])
+            self.assertEqual("ui://promptaflow/goals-v15.html", card_bindings["open_promptaflow_goals"])
             for item in tools:
                 resource_uri = item.get("_meta", {}).get("ui", {}).get("resourceUri")
                 if resource_uri is not None:
@@ -430,7 +430,7 @@ class ToolCallTests(ApiTestCase):
         """A Runtime serves one Workspace, and that is the whole of visibility.
 
         This asserted that a second actor saw none of it, while the panel asked
-        for `owner=workspace` and saw all of it, and Orbit's own UI could not
+        for `owner=workspace` and saw all of it, and PromptaFlow's own UI could not
         ask at all — two rules over one database, and a UI that showed
         twenty-five of thirty-five Runs with no sign the rest existed.
         """
@@ -483,7 +483,7 @@ class ToolCallTests(ApiTestCase):
 
     def test_dashboard_tool_returns_the_initial_current_task_projection(self) -> None:
         with AsgiHarness(self.app) as client:
-            result = tool(client, "open_orbit_dashboard", {}, actor="reader")
+            result = tool(client, "open_promptaflow_dashboard", {}, actor="reader")
 
         payload = payload_of(result)
         self.assertEqual([], payload["runs"])
@@ -645,7 +645,7 @@ class ToolCallTests(ApiTestCase):
 
         The Host's authoring loop parks on the queue with
         `wait_authoring_request` and answers with `submit_authoring_response`.
-        Standing on that queue is what makes it a writer Orbit prefers over
+        Standing on that queue is what makes it a writer PromptaFlow prefers over
         forking an Agent CLI — being connected is not enough, waiting is what
         counts. A profile that omits the wait leaves the Host permanently off
         the queue, and the preference silently never fires.

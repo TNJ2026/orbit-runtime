@@ -15,7 +15,7 @@ Choose the card from the user's intent. Do not open the workspace card first unl
 the user asked to open PromptaFlow itself.
 
 - **PromptaFlow workspace** — for `open PromptaFlow`, `show PromptaFlow`, `打开 PromptaFlow`, and close
-  equivalents. Call `open_orbit_dashboard`. This remains the default PromptaFlow
+  equivalents. Call `open_promptaflow_dashboard`. This remains the default PromptaFlow
   surface and covers goals, workflows, history, and Agents. Opening PromptaFlow is
   display-only: do not register an authoring client or start listening for
   authoring requests unless the user explicitly asks for that connection.
@@ -54,7 +54,7 @@ that read this skill — the client name to register under, how the MCP proxy
 finds the workspace, where the UI has to be opened, and when a listening call
 may be held open — read [hosts.md](reference/hosts.md).
 
-For opening the Runtime, follow [open-orbit.md](reference/open-orbit.md).
+For opening the Runtime, follow [open-promptaflow.md](reference/open-promptaflow.md).
 
 For opening or viewing workflows and workflow details, follow
 [view-workflows.md](reference/view-workflows.md).

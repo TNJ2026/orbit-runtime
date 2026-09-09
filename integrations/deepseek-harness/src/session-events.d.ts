@@ -1,4 +1,4 @@
-/** Teaching the Harness's Session store about Orbit's own events.
+/** Teaching the Harness's Session store about PromptaFlow's own events.
  *
  * A module augmentation names a package, so it can only live where that
  * package is a dependency. The shapes it refers to are host-agnostic and now

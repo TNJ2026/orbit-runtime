@@ -29,7 +29,7 @@ export interface OrbitRunRow {
     readonly result: unknown;
     /** Why it failed, when it did. */
     readonly error?: string;
-    /** What Orbit says may be done to this Run right now, at this revision. */
+    /** What PromptaFlow says may be done to this Run right now, at this revision. */
     readonly commands: readonly {
         command: string;
         expected_version: number;
@@ -122,10 +122,10 @@ export declare function resultOutcome(value: unknown): RunOutcome;
  * Where an Artifact can be opened: through this Host, as the Session that owns
  * it.
  *
- * Not Orbit's own address for it. Artifacts belong to the actor that produced
+ * Not PromptaFlow's own address for it. Artifacts belong to the actor that produced
  * them, a browser reaching `/api/v1` on loopback is `local`, and a Run this
- * panel started belongs to `harness:session:<id>` — so Orbit's link is a 404
- * for every Artifact this Harness ever made, and so is Orbit's own UI. The
+ * panel started belongs to `harness:session:<id>` — so PromptaFlow's link is a 404
+ * for every Artifact this Harness ever made, and so is PromptaFlow's own UI. The
  * Host holds the identity that can read it, and hands the bytes to the
  * browser unchanged.
  *
@@ -149,7 +149,7 @@ export declare function summarise(rows: readonly OrbitRunRow[]): {
     live: number;
     total: number;
 };
-/** The four states the shell's StateDot draws, from an Orbit status.
+/** The four states the shell's StateDot draws, from an PromptaFlow status.
  *
  * `unknown` is amber rather than red on purpose: it is the outcome nobody has
  * ruled on yet, and colouring it as a failure would answer a question the
@@ -174,7 +174,7 @@ export declare function mergeChunks(previous: readonly OutputChunk[], next: read
 /** The revision a command may be issued at, or undefined if it may not be.
  *
  * Read from what the Run advertises rather than from what the panel last drew:
- * a button offered for a command Orbit has since withdrawn is a button that
+ * a button offered for a command PromptaFlow has since withdrawn is a button that
  * fails, and one offered at a stale revision is worse — it succeeds against a
  * Run the reader was not looking at.
  */

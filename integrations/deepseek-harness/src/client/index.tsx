@@ -1,8 +1,8 @@
 /**
- * Browser plugin: a resident Orbit panel in the shell overlay.
+ * Browser plugin: a resident PromptaFlow panel in the shell overlay.
  *
- * The panel says what is running in this Workspace and links into Orbit for
- * anything deeper. It deliberately stops at that boundary — Orbit renders its
+ * The panel says what is running in this Workspace and links into PromptaFlow for
+ * anything deeper. It deliberately stops at that boundary — PromptaFlow renders its
  * own graphs, Artifacts and Workflow authoring, and a second drawing of those
  * here would be a second answer to the same question.
  *
@@ -64,7 +64,7 @@ function registerOrbitSlashSource(ctx: ClientContext, t: Translate): void {
     // blocks the send rather than degrading to the clipboard text, so both
     // projections must answer for any id at all.
     //
-    // Nothing mints an Orbit reference now that the Workflow goes into the
+    // Nothing mints an PromptaFlow reference now that the Workflow goes into the
     // draft as text, so in practice neither of these is called. They stay
     // because the contract is about what a source must be able to answer, not
     // about what it happens to produce today — and answering from the id is
@@ -180,10 +180,10 @@ function writeWorkflowDraft(
  *
  * Distinct from `orbit:toggle-panel`, which flips: a command that toggles is a
  * command that hides the panel for anyone who already had it open. This one
- * only ever shows, so running an Orbit command twice is not a way to lose
+ * only ever shows, so running an PromptaFlow command twice is not a way to lose
  * sight of what it did.
  *
- * The panel is where an Orbit command's result actually appears — a Run's
+ * The panel is where an PromptaFlow command's result actually appears — a Run's
  * steps, a Workflow being written — so a command that starts work behind a
  * hidden panel has reported nothing. Called before the work rather than after
  * it, so a failure is met by an open panel too.
@@ -340,7 +340,7 @@ export function apply(ctx: ClientContext): void {
     name: 'shell.overlay',
     id: 'orbit-runs',
     order: 80,
-    label: 'Orbit runs',
+    label: 'PromptaFlow runs',
     locale: ORBIT_LOCALE_NAMESPACE,
   }, Panel))
 }

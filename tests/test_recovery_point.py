@@ -334,7 +334,7 @@ class RetentionTests(GitRecoveryPointTests):
         self.assertEqual([point.ref], list(reclaimed))
         self.assertIsNone(self.points.load("run-1"))
 
-    def test_it_reclaims_only_orbits_own_refs(self) -> None:
+    def test_it_reclaims_only_promptaflows_own_refs(self) -> None:
         self.points.create("run-1")
         before = git(self.project, "rev-parse", "HEAD")
 

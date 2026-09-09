@@ -149,7 +149,7 @@ class AuthoringJobService:
             self._output.append(
                 job_id=job_id,
                 stream="stderr",
-                text="\x1eorbit-progress:" + json.dumps({
+                text="\x1epromptaflow-progress:" + json.dumps({
                     "stage": stage, "attempt": attempt,
                     "max_attempts": max_attempts,
                 }, separators=(",", ":")),

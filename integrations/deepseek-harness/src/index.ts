@@ -39,7 +39,7 @@ interface WorkflowGraph {
 }
 
 /** How long to let one authoring turn run before giving the request back.
- *  Under the broker's own lease, so this Host stops waiting before Orbit
+ *  Under the broker's own lease, so this Host stops waiting before PromptaFlow
  *  stops expecting it to. */
 const AUTHORING_TURN_MS = 240_000
 
@@ -80,7 +80,7 @@ export class OrbitRemoteService extends TypertRemoteService {
    *
    *  Held here because there is nothing to ask: a job is addressed by an id
    *  the starter was handed, and `get_authoring_job` is scoped to the actor
-   *  that created it. Jobs started in Orbit's own UI are shown by Orbit's own
+   *  that created it. Jobs started in PromptaFlow's own UI are shown by PromptaFlow's own
    *  UI, which has the whole authoring surface. */
   private readonly authoringByWorkspace = new Map<string, Map<string, TrackedAuthoring>>()
   private readonly bridges = new Map<string, AbortController>()
@@ -128,12 +128,12 @@ export class OrbitRemoteService extends TypertRemoteService {
 
   /**
    * Name the runnable Workflows in the model's context, so it does not have to
-   * ask before it can tell whether Orbit is relevant to what was just said.
+   * ask before it can tell whether PromptaFlow is relevant to what was just said.
    *
    * The contribution is read synchronously at every assembly, so it can only
    * ever report what has already been fetched: a stale entry answers now and
    * refreshes for next time. The alternative — blocking assembly on a Runtime
-   * that may not be running — would make a missing Orbit everyone's problem.
+   * that may not be running — would make a missing PromptaFlow everyone's problem.
    */
   private tellTheModelWhatCanRun(ctx: Context): void {
     const systemPrompt = ctx.get('systemPrompt') as unknown as {
@@ -152,7 +152,7 @@ export class OrbitRemoteService extends TypertRemoteService {
         // A delegated Session is never bridged — `sessionCanBridge` requires
         // depth 0 — but it works in the same directory, calls the same tools,
         // and `route` already resolves those by its cwd. Only the prompt went
-        // quiet, so a sub-agent had to discover Orbit by calling something
+        // quiet, so a sub-agent had to discover PromptaFlow by calling something
         // first: the exact cost this contribution exists to remove.
         //
         // Matched against Workspaces this Host has already derived from a live
@@ -281,7 +281,7 @@ export class OrbitRemoteService extends TypertRemoteService {
        * Hand a browser the bytes of one Artifact.
        *
        * A GET, because a link is what a person clicks and a browser is what
-       * renders the result. It exists because Orbit's own address for an
+       * renders the result. It exists because PromptaFlow's own address for an
        * Artifact cannot serve one: Artifacts are owned by the actor that
        * produced them, a browser reaching `/api/v1` on loopback is `local`,
        * and the Runs this panel starts belong to `harness:session:<id>`. So
@@ -289,8 +289,8 @@ export class OrbitRemoteService extends TypertRemoteService {
        *
        * This route is that identity. It reads the Artifact as the Session that
        * owns it and passes the bytes through unchanged — no gallery, no
-       * viewer, no second drawing of anything Orbit draws. The browser opens
-       * what it was given, exactly as it would have from Orbit's own URL.
+       * viewer, no second drawing of anything PromptaFlow draws. The browser opens
+       * what it was given, exactly as it would have from PromptaFlow's own URL.
        */
       ctx.effect(() => webServer.register({
         kind: 'exact', path: '/plugins/dsh-orbit/artifact',
@@ -313,8 +313,8 @@ export class OrbitRemoteService extends TypertRemoteService {
             ) as ArtifactContent
             const bytes = Buffer.from(held.content, 'base64')
             res.writeHead(200, {
-              // What Orbit recorded it as, so the browser treats it the way it
-              // would have coming from Orbit. A missing type is bytes, not a
+              // What PromptaFlow recorded it as, so the browser treats it the way it
+              // would have coming from PromptaFlow. A missing type is bytes, not a
               // guess: guessing is how a text file renders as a download and a
               // script renders as a script.
               'content-type': String(held.artifact.content_type || 'application/octet-stream'),
@@ -340,7 +340,7 @@ export class OrbitRemoteService extends TypertRemoteService {
         handler: async (req, res) => {
           if (req.method !== 'POST') { res.writeHead(405, { allow: 'POST' }); res.end(); return }
           const controller = new AbortController()
-          req.once('aborted', () => controller.abort(new Error('Orbit client request aborted')))
+          req.once('aborted', () => controller.abort(new Error('PromptaFlow client request aborted')))
           try {
             const chunks: Buffer[] = []; let size = 0
             for await (const chunk of req) {
@@ -348,12 +348,12 @@ export class OrbitRemoteService extends TypertRemoteService {
               size += buffer.length
               if (size > 256 * 1024) {
                 req.destroy()
-                throw new Error('Orbit client request exceeds 256 KiB')
+                throw new Error('PromptaFlow client request exceeds 256 KiB')
               }
               chunks.push(buffer)
             }
             const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as { action?: unknown; args?: unknown }
-            if (typeof body.action !== 'string' || !Array.isArray(body.args)) throw new Error('Orbit client request requires action and args')
+            if (typeof body.action !== 'string' || !Array.isArray(body.args)) throw new Error('PromptaFlow client request requires action and args')
             const result = await this.dispatchWebApi(body.action, body.args, controller.signal)
             res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
             res.end(JSON.stringify({ result: result === undefined ? null : result }))
@@ -399,7 +399,7 @@ export class OrbitRemoteService extends TypertRemoteService {
       case 'importArtifact': return await this.importArtifact(args[0] as WorkspaceRef, String(args[1]), String(args[2]), signal)
       case 'executeCommand': return await this.executeCommand(args[0] as OrbitCommandRequest, signal)
       case 'reconcileDelegation': return await this.reconcileDelegation(args[0] as WorkspaceRef, String(args[1]), String(args[2]), String(args[3]), args[4] as 'confirmed_succeeded' | 'confirmed_failed', String(args[5]), signal)
-      default: throw new Error(`Unknown Orbit client action: ${action}`)
+      default: throw new Error(`Unknown PromptaFlow client action: ${action}`)
     }
   }
 
@@ -414,7 +414,7 @@ export class OrbitRemoteService extends TypertRemoteService {
   private async verified(claimed: WorkspaceRef, sessionId: string): Promise<WorkspaceRef> {
     const actual = await this.workspaceForSession(this.liveSession(sessionId))
     if (claimed.id !== actual.id || claimed.canonicalPath !== actual.canonicalPath) {
-      throw new Error('Orbit request Workspace does not match the Harness Session')
+      throw new Error('PromptaFlow request Workspace does not match the Harness Session')
     }
     return actual
   }
@@ -427,7 +427,7 @@ export class OrbitRemoteService extends TypertRemoteService {
   private async registered(claimed: WorkspaceRef): Promise<WorkspaceRef> {
     const found = await this.workspaceRegistry.resolveByPath(claimed.canonicalPath)
     if (!found || String(found.id) !== claimed.id || found.path !== claimed.canonicalPath) {
-      throw new Error('Orbit request names a Workspace this Harness has not registered')
+      throw new Error('PromptaFlow request names a Workspace this Harness has not registered')
     }
     return { id: String(found.id), canonicalPath: found.path }
   }
@@ -478,15 +478,15 @@ export class OrbitRemoteService extends TypertRemoteService {
         // An inconsistent durable index grants no authority. Keep the same
         // classified failure as an absent live Session rather than exposing
         // registry internals in the panel.
-        throw new Error('Orbit requires a live Harness Session')
+        throw new Error('PromptaFlow requires a live Harness Session')
       }
     }
-    throw new Error('Orbit requires a live Harness Session')
+    throw new Error('PromptaFlow requires a live Harness Session')
   }
 
   private liveSession(sessionId: string): Session {
     const session = this.hostSessions.list().find(item => String(item.id) === sessionId)
-    if (!session) throw new Error('Orbit requires a live Harness Session')
+    if (!session) throw new Error('PromptaFlow requires a live Harness Session')
     return session
   }
 
@@ -552,9 +552,9 @@ export class OrbitRemoteService extends TypertRemoteService {
   }
 
   /**
-   * Stand on Orbit's authoring queue for this Workspace, and write what comes.
+   * Stand on PromptaFlow's authoring queue for this Workspace, and write what comes.
    *
-   * Being on the queue is what makes this Host a writer Orbit will choose:
+   * Being on the queue is what makes this Host a writer PromptaFlow will choose:
    * `_connected_client_first` prefers a connected client over forking an Agent
    * CLI, and it counts a client as connected because it is waiting here. A
    * Host that only ever called tools was never on the queue, so the preference
@@ -590,7 +590,7 @@ export class OrbitRemoteService extends TypertRemoteService {
               stage, error: String(error), at: new Date().toISOString(),
             })
             ctx.logger.warn(
-              `Orbit authoring ${stage} failed in ${scope.canonicalPath}: ${String(error)}`,
+              `PromptaFlow authoring ${stage} failed in ${scope.canonicalPath}: ${String(error)}`,
             )
           },
         })
@@ -642,7 +642,7 @@ export class OrbitRemoteService extends TypertRemoteService {
        which can be before the queued one has run. So idle is a prompt to look
        rather than an answer, and looking is asking whether anything was said.
        Bounded, because an Agent that never answers must give the request back
-       while Orbit is still willing to re-offer it. */
+       while PromptaFlow is still willing to re-offer it. */
     const deadline = Date.now() + AUTHORING_TURN_MS
     for (;;) {
       await agent.whenIdle()
@@ -739,7 +739,7 @@ export class OrbitRemoteService extends TypertRemoteService {
     const release = await this.gateway.acquire(scope, startIfMissing && live)
     try {
       // The panel is a view of the Workspace, not of one chat: a Run started in
-      // Orbit's own UI is the same Run, and a History that hid it would sit
+      // PromptaFlow's own UI is the same Run, and a History that hid it would sit
       // empty beside a Runtime full of work. It used to say so with
       // `owner: 'workspace'`; the Runtime says it now, because a Runtime
       // serves one Workspace and that is the whole of what a read may see.
@@ -763,7 +763,7 @@ export class OrbitRemoteService extends TypertRemoteService {
         agents: AgentSummary[]
       }
       // A Runtime already alive during a Harness upgrade may still expose the
-      // older identity-only MCP shape. Orbit's HTTP Agent page has always held
+      // older identity-only MCP shape. PromptaFlow's HTTP Agent page has always held
       // these totals, so merge that same projection instead of silently
       // rendering a missing value as zero until somebody restarts Runtime.
       const needsAttemptCounts = listed.agents.some(
@@ -805,7 +805,7 @@ export class OrbitRemoteService extends TypertRemoteService {
    * carry it, which go on executing and being opened. The catalog is the
    * wrong place to look one of those up — a catalog is what can be started —
    * so the panel had nothing to name them by and printed the id, which reads
-   * as a Goal pointed at something that is not there. Orbit keeps the
+   * as a Goal pointed at something that is not there. PromptaFlow keeps the
    * definition for exactly this, so ask it.
    *
    * Read once per id and remembered, negative answers included: a retired id
@@ -968,7 +968,7 @@ export class OrbitRemoteService extends TypertRemoteService {
    * Cancel or resume a Run from the panel.
    *
    * `expectedRevision` is what the panel had on screen, and it must still be
-   * what Orbit advertises. Re-reading here would make the call succeed against
+   * what PromptaFlow advertises. Re-reading here would make the call succeed against
    * a Run that changed under the reader — the refusal is the point: whoever
    * pressed the button was looking at something else.
    */
@@ -983,17 +983,17 @@ export class OrbitRemoteService extends TypertRemoteService {
     const scope = await this.sessionWorkspace(sessionId)
     const release = await this.gateway.acquire(scope)
     try {
-      // Read plainly. This used to translate Orbit's "not found" into "started
+      // Read plainly. This used to translate PromptaFlow's "not found" into "started
       // elsewhere; act on it where it began", because acting on a Run was
       // scoped to the Session that started it and the panel — a view of the
-      // Workspace — drew Runs it could not act on. Orbit bounds a write by the
+      // Workspace — drew Runs it could not act on. PromptaFlow bounds a write by the
       // Workspace now, the same as a read, so a Run this answer cannot find is
       // a Run that is not there, and saying anything else would send the
       // reader looking for a Session to go back to.
       const run = await this.gateway.run(scope, sessionId, runId)
       const advertised = advertisedAt(run, command, expectedRevision)
       if (advertised === undefined) {
-        throw new Error(`Orbit no longer offers ${command} at revision ${String(expectedRevision)}`)
+        throw new Error(`PromptaFlow no longer offers ${command} at revision ${String(expectedRevision)}`)
       }
       return await this.gateway.call(
         scope, sessionId, commandTool(command),
@@ -1028,7 +1028,7 @@ export class OrbitRemoteService extends TypertRemoteService {
   }
 
   /**
-   * Stop the Orbit Runtime serving this Session's Workspace.
+   * Stop the PromptaFlow Runtime serving this Session's Workspace.
    *
    * Session-scoped like every other call here: the Workspace is derived from
    * the Session rather than taken from the caller, so this can only ever stop
@@ -1078,7 +1078,7 @@ export class OrbitRemoteService extends TypertRemoteService {
 
   private async workspaceForSession(session: Session): Promise<WorkspaceRef> {
     const cwd = session.header.cwd
-    if (!cwd) throw new Error('Orbit requires the Harness Session to have a Workspace cwd')
+    if (!cwd) throw new Error('PromptaFlow requires the Harness Session to have a Workspace cwd')
     const registered = await this.workspaceRegistry.resolveByPath(cwd)
     return {
       id: registered ? String(registered.id) : `cwd:${cwd}`,
@@ -1122,7 +1122,7 @@ export class OrbitRemoteService extends TypertRemoteService {
     } finally { await release() }
   }
 
-  /** Register this exact Session route before asking Orbit to address work to it. */
+  /** Register this exact Session route before asking PromptaFlow to address work to it. */
   private async prepareAuthoringRoute(
     scope: WorkspaceRef, sessionId: string,
   ): Promise<string> {
@@ -1251,7 +1251,7 @@ export class OrbitRemoteService extends TypertRemoteService {
   /**
    * Write one Artifact out as an ordinary file and say where it went.
    *
-   * Not the path it already has. Orbit stores Artifacts content-addressed: the
+   * Not the path it already has. PromptaFlow stores Artifacts content-addressed: the
    * file on disk is named by the sha256 of its own bytes, has no extension, is
    * shared by every Artifact with identical content, and is collected when
    * nothing references it. Handing that path to a person invites them to open
@@ -1332,7 +1332,7 @@ export class OrbitRemoteService extends TypertRemoteService {
     try {
       const run = await this.gateway.run(scope, request.sessionId, request.runId)
       const advertised = advertisedAt(run, request.command, request.expectedVersion)
-      if (advertised === undefined) throw new Error('Orbit command is no longer advertised at this revision')
+      if (advertised === undefined) throw new Error('PromptaFlow command is no longer advertised at this revision')
       const tool = commandTool(request.command)
       return await this.gateway.call(scope, request.sessionId, tool, {
         run_id: request.runId, expected_version: request.expectedVersion,

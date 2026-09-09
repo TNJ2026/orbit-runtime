@@ -72,7 +72,7 @@ what leaves the rest of the machine working.
 
 ## Showing the UI beside the conversation
 
-`open_orbit_dashboard` always starts or discovers the Runtime and returns the
+`open_promptaflow_dashboard` always starts or discovers the Runtime and returns the
 current run list. Whether it also *draws* anything is the host's decision, not
 PromptaFlow's, so treat the visible surface as a separate question from the call.
 

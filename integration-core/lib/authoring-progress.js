@@ -13,7 +13,16 @@
  * sentinel itself is printing inside a chunk of its own output, not writing a
  * marker, and must not be able to move the ladder.
  */
-const SENTINEL = '\x1eorbit-progress:';
+const SENTINEL = '\x1epromptaflow-progress:';
+// The Runtime and this bundle upgrade separately, so a Runtime that predates
+// the rename is still emitting the old marker at a moment when the panel is
+// showing its progress. Reading both is the difference between a live ladder
+// and one that silently never moves.
+const SENTINELS = [SENTINEL, '\x1eorbit-progress:'];
+/** The sentinel this chunk carries, if it carries one. */
+function sentinelOf(text) {
+    return SENTINELS.find(candidate => text.startsWith(candidate));
+}
 /** The three things authoring does. Repairing is not among them — see below. */
 export const AUTHORING_STAGES = ['generating', 'validating', 'publishing'];
 /* Where each marker the Runtime emits leaves the ladder.
@@ -30,13 +39,16 @@ const LANDS_ON = {
 };
 /** Whether this chunk is a progress marker rather than Agent output. */
 export function isProgressMarker(chunk) {
-    return chunk.text.startsWith(SENTINEL);
+    return sentinelOf(chunk.text) !== undefined;
 }
 function marker(chunk) {
     if (!isProgressMarker(chunk))
         return null;
     try {
-        const value = JSON.parse(chunk.text.slice(SENTINEL.length));
+        const marker = sentinelOf(chunk.text);
+        if (marker === undefined)
+            return null;
+        const value = JSON.parse(chunk.text.slice(marker.length));
         const stage = typeof value.stage === 'string' ? value.stage : '';
         if (!(stage in LANDS_ON))
             return null;

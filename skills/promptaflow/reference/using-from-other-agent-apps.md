@@ -26,7 +26,7 @@ script. The workspace selects a workspace-scoped Hub URL; the Hub starts or
 discovers that project's dynamic-port Runtime and data directory.
 Restart or reconnect the App's MCP session after changing its configuration.
 When the App cannot supply a project path, omit the environment entry. PromptaFlow
-then creates and uses `ORBIT_DEFAULT_WORKSPACE` when configured, otherwise
+then creates and uses `PROMPTAFLOW_DEFAULT_WORKSPACE` when configured, otherwise
 `~/.promptaflow/workspaces/default`.
 
 An HTTP-only App should use `http://127.0.0.1:8848/mcp` for the default

@@ -5,8 +5,15 @@ import {
   AUTHORING_STAGES, authoringProgress, isProgressMarker,
 } from '../lib/authoring-progress.js'
 
+const body = (stage, attempt, max) => JSON.stringify({ stage, attempt, max_attempts: max })
 const mark = (stage, attempt = 1, max = 3) => ({
-  text: `\x1eorbit-progress:${JSON.stringify({ stage, attempt, max_attempts: max })}`,
+  text: `\x1epromptaflow-progress:${body(stage, attempt, max)}`,
+})
+// What a Runtime from before the rename emits. It upgrades separately from
+// this bundle, so the panel reads its markers during the overlap or shows a
+// ladder that never moves.
+const legacyMark = (stage, attempt = 1, max = 3) => ({
+  text: `\x1eorbit-progress:${body(stage, attempt, max)}`,
 })
 const said = text => ({ text })
 const names = p => p.stages.map(s => `${s.stage}:${s.status}`)
@@ -78,4 +85,12 @@ test('the attempt count is absent rather than invented', () => {
   const progress = authoringProgress([said('\x1eorbit-progress:{"stage":"publishing"}')], 'running')
   assert.equal(progress.attempt, 0)
   assert.equal(progress.maxAttempts, 0)
+})
+
+test('a marker from before the rename still moves the ladder', () => {
+  assert.equal(isProgressMarker(legacyMark('generating')), true)
+  assert.deepEqual(
+    names(authoringProgress([legacyMark('generating'), mark('validating')], 'running')),
+    names(authoringProgress([mark('generating'), mark('validating')], 'running')),
+  )
 })

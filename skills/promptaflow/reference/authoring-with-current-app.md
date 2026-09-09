@@ -13,7 +13,7 @@ When the user asks this task to generate a new workflow:
 2. Call `generate_workflow` with the user's prompt, `agent` set to your client
    name, the user's display language, and a fresh idempotency key.
    This call opens the dedicated workflow-generation MCP App. Do not call
-   `open_orbit_dashboard` first: the generation card shows only this job's
+   `open_promptaflow_dashboard` first: the generation card shows only this job's
    progress and result.
 3. Poll `claim_authoring_request` with `client` set to your client name until
    its `request` contains the generation prompt for that job.

@@ -525,7 +525,7 @@ class StepListRenderingTests(unittest.TestCase):
         """The edit page had a second, weaker console of its own.
 
         Two panels reading one job DTO drift: this one never showed the
-        instruction or the Agent, and printed the Runtime's `orbit-progress`
+        instruction or the Agent, and printed the Runtime's `promptaflow-progress`
         control lines as if they were output. Both surfaces mount the shared
         progress panel now, and nothing here should grow a console again.
         """

@@ -1,13 +1,13 @@
 import type { AgentSummary, ArtifactContent, ArtifactSummary, AuthoringJob, EdgeSummary, OutputPage, RunDto, StepSummary, WorkflowSummary } from './types.js'
 
 function object(value: unknown, path: string): Record<string, unknown> {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error(`invalid Orbit DTO at ${path}: expected object`)
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error(`invalid PromptaFlow DTO at ${path}: expected object`)
   return value as Record<string, unknown>
 }
-function string(value: unknown, path: string): string { if (typeof value !== 'string') throw new Error(`invalid Orbit DTO at ${path}: expected string`); return value }
-function number(value: unknown, path: string): number { if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(`invalid Orbit DTO at ${path}: expected number`); return value }
-function boolean(value: unknown, path: string): boolean { if (typeof value !== 'boolean') throw new Error(`invalid Orbit DTO at ${path}: expected boolean`); return value }
-function array(value: unknown, path: string): unknown[] { if (!Array.isArray(value)) throw new Error(`invalid Orbit DTO at ${path}: expected array`); return value }
+function string(value: unknown, path: string): string { if (typeof value !== 'string') throw new Error(`invalid PromptaFlow DTO at ${path}: expected string`); return value }
+function number(value: unknown, path: string): number { if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(`invalid PromptaFlow DTO at ${path}: expected number`); return value }
+function boolean(value: unknown, path: string): boolean { if (typeof value !== 'boolean') throw new Error(`invalid PromptaFlow DTO at ${path}: expected boolean`); return value }
+function array(value: unknown, path: string): unknown[] { if (!Array.isArray(value)) throw new Error(`invalid PromptaFlow DTO at ${path}: expected array`); return value }
 
 export function decodeRun(value: unknown): RunDto {
   const item = object(value, 'run')
@@ -28,13 +28,13 @@ function decodeStep(value: unknown, index: number): StepSummary {
   if (item.has_output !== undefined) boolean(item.has_output, `steps[${index}].has_output`)
   if (item.resolution !== undefined && item.resolution !== null) {
     const resolution = object(item.resolution, `steps[${index}].resolution`)
-    if (string(resolution.kind, `steps[${index}].resolution.kind`) !== 'reconciliation_required') throw new Error(`invalid Orbit DTO at steps[${index}].resolution.kind`)
+    if (string(resolution.kind, `steps[${index}].resolution.kind`) !== 'reconciliation_required') throw new Error(`invalid PromptaFlow DTO at steps[${index}].resolution.kind`)
     if (resolution.delegation_id !== undefined && resolution.delegation_id !== null) string(resolution.delegation_id, `steps[${index}].resolution.delegation_id`)
   }
   if (item.reconciliation !== undefined && item.reconciliation !== null) {
     const decision = object(item.reconciliation, `steps[${index}].reconciliation`)
     const outcome = string(decision.outcome, `steps[${index}].reconciliation.outcome`)
-    if (!['confirmed_succeeded', 'confirmed_failed'].includes(outcome)) throw new Error(`invalid Orbit DTO at steps[${index}].reconciliation.outcome`)
+    if (!['confirmed_succeeded', 'confirmed_failed'].includes(outcome)) throw new Error(`invalid PromptaFlow DTO at steps[${index}].reconciliation.outcome`)
     string(decision.note, `steps[${index}].reconciliation.note`)
     string(decision.created_at, `steps[${index}].reconciliation.created_at`)
   }
@@ -82,7 +82,7 @@ export function decodeToolResult(name: string, value: unknown): unknown {
   }
   if (name === 'list_artifacts') { array(item.artifacts, 'artifacts').forEach((v, i) => { const a = object(v, `artifacts[${i}]`); string(a.artifact_id, `artifacts[${i}].artifact_id`); string(a.run_id, `artifacts[${i}].run_id`) }); return item as { artifacts: ArtifactSummary[] } }
   if (name === 'read_artifact') { string(item.artifact_id, 'artifact.artifact_id'); string(item.run_id, 'artifact.run_id'); return item as ArtifactSummary }
-  if (name === 'read_artifact_content') { object(item.artifact, 'artifact_content.artifact'); if (string(item.encoding, 'artifact_content.encoding') !== 'base64') throw new Error('invalid Orbit DTO at artifact_content.encoding'); string(item.content, 'artifact_content.content'); return item as unknown as ArtifactContent }
+  if (name === 'read_artifact_content') { object(item.artifact, 'artifact_content.artifact'); if (string(item.encoding, 'artifact_content.encoding') !== 'base64') throw new Error('invalid PromptaFlow DTO at artifact_content.encoding'); string(item.content, 'artifact_content.content'); return item as unknown as ArtifactContent }
   if (name === 'list_runtime_events') { array(item.events, 'events'); number(item.next_position, 'next_position'); return item }
   return item
 }

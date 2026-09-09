@@ -1,4 +1,4 @@
-"""`restart-promptaflow.sh` stops what it can prove is Orbit's, then hands over.
+"""`restart-promptaflow.sh` stops what it can prove is PromptaFlow's, then hands over.
 
 The dangerous half of a restart script is the stopping: a PID from a record is
 a number that *was* a process, and the OS reuses them. These drive the script
@@ -221,7 +221,7 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
         ordinary path, not an edge: the assignment from that command
         substitution failed, errexit ended the script where it stood — after
         the Hub was told to quit and before anything started it again — and
-        the reported symptom was simply that Orbit did not come back.
+        the reported symptom was simply that PromptaFlow did not come back.
         """
 
         with tempfile.TemporaryDirectory() as temporary:

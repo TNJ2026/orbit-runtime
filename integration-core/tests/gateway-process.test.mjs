@@ -109,7 +109,7 @@ test('an incompatible Runtime behind the Hub fails readiness', async t => {
   const runtime = await target('incompatible', mcp('other/9'))
   t.after(() => runtime.server.close())
   const gateway = new OrbitGateway(process.execPath, [fixture], globalThis.fetch, undefined, runtime.hubUrl)
-  await assert.rejects(gateway.acquire(runtime.workspace), /incompatible Orbit integration protocol/)
+  await assert.rejects(gateway.acquire(runtime.workspace), /incompatible PromptaFlow integration protocol/)
 })
 
 test.skip('legacy direct Runtime auto-start is replaced by Hub auto-start', async t => {

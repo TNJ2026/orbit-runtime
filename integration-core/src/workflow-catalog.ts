@@ -2,7 +2,7 @@
  *
  * The Agent has `orbit_list_workflows`, but a tool it must call first cannot
  * help with the turn where someone says "clean this up" — by then the model has
- * already had to decide whether Orbit is even relevant. Naming the Workflows in
+ * already had to decide whether PromptaFlow is even relevant. Naming the Workflows in
  * the prompt turns that decision into a reading.
  */
 
@@ -91,10 +91,10 @@ export class WorkflowCatalog {
     const shown = ready.slice(0, CATALOG_LIMIT).map(line)
     const omitted = ready.length - shown.length
     return [
-      `Orbit Workflows ready in ${canonicalPath}:`,
+      `PromptaFlow Workflows ready in ${canonicalPath}:`,
       ...shown,
       ...(omitted > 0 ? [`- …and ${String(omitted)} more; call orbit_list_workflows for the rest.`] : []),
-      'Start one with orbit_start_run. Progress appears in the Orbit panel.',
+      'Start one with orbit_start_run. Progress appears in the PromptaFlow panel.',
     ].join('\n')
   }
 }

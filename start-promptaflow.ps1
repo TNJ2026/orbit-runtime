@@ -18,12 +18,19 @@ $ErrorActionPreference = "Stop"
 
 $promptaflowSourceRoot = [System.IO.Path]::GetFullPath($PSScriptRoot)
 $env:PROMPTAFLOW_SOURCE_ROOT = $promptaflowSourceRoot
+# Both names, matching the POSIX launcher: a Runtime from before the rename
+# reads the old one.
+$env:ORBIT_SOURCE_ROOT = $promptaflowSourceRoot
 
 function Resolve-PromptaflowCommand {
-    if ($env:PROMPTAFLOW_CLI) {
-        $explicit = Get-Command -Name $env:PROMPTAFLOW_CLI -ErrorAction SilentlyContinue
+    # `ORBIT_CLI` is what an Agent App manifest written before the rename
+    # still exports; the new name wins when both are set.
+    $cli = $env:PROMPTAFLOW_CLI
+    if (-not $cli) { $cli = $env:ORBIT_CLI }
+    if ($cli) {
+        $explicit = Get-Command -Name $cli -ErrorAction SilentlyContinue
         if ($null -eq $explicit) {
-            throw "PROMPTAFLOW_CLI is not executable: $($env:PROMPTAFLOW_CLI)"
+            throw "PROMPTAFLOW_CLI is not executable: $cli"
         }
         return [pscustomobject]@{ Executable = $explicit.Source; Prefix = @() }
     }

@@ -54,22 +54,27 @@ export const ORBIT_ERROR_KEYS = [
 /* Matched in order, because these overlap: a stopped Runtime answers a tool
    call with a transport failure, and a workflow that was deleted is also a
    workflow that is not found. The more specific reading goes first. */
+// Both spellings throughout. These read arbitrary text produced by another
+// process — a Runtime, a Host, a bundle on its own upgrade schedule — and a
+// reading that stops matching does not fail: it silently degrades every one
+// of those errors to the generic `errUnknown` the panel shows when it has
+// nothing useful to say.
 const READINGS = [
-    [/Hub workspace registration returned invalid JSON|Orbit command failed/i, 'errDiscoveryFailed'],
+    [/Hub workspace registration returned invalid JSON|(PromptaFlow|Orbit) command failed/i, 'errDiscoveryFailed'],
     [/Hub auto-start requires a loopback HTTP URL/i, 'errRuntimeAddress'],
     // The Runtime is not there. Nothing else can be true at the same time, and
     // it is the one a person can fix by opening the panel again.
-    [/No independent Orbit Runtime is serving/i, 'errNoRuntime'],
+    [/No independent (PromptaFlow|Orbit) Runtime is serving/i, 'errNoRuntime'],
     // Before the plain timeout below: a start that ran out of time is a failed
     // start, and the message now carries the Runtime's own last words. Those
     // words are arbitrary text, so this has to win before anything reads them.
     [/auto-start (failed|timed out)/i, 'errStartFailed'],
     // The `orbit` command itself, rather than the Runtime it was asked about.
     [/Runtime discovery (failed|returned invalid JSON|must return an array)/i, 'errDiscoveryFailed'],
-    [/Multiple Orbit Runtimes claim/i, 'errRuntimeConflict'],
+    [/Multiple (PromptaFlow|Orbit) Runtimes claim/i, 'errRuntimeConflict'],
     [/not reachable over HTTP MCP|published no HTTP address|did not publish a browser address/i,
         'errRuntimeAddress'],
-    [/incompatible Orbit integration protocol/i, 'errVersionMismatch'],
+    [/incompatible (PromptaFlow|Orbit) integration protocol/i, 'errVersionMismatch'],
     // Refused rather than failed. Above the transport readings and above the
     // refusal below, because these carry status codes of their own: a stop that
     // came back 403 is a permission fact, which is the actionable half, while
@@ -79,17 +84,17 @@ const READINGS = [
     // It is there and did not answer in time, or did not answer at all.
     [/timed out/i, 'errTimeout'],
     [/transport failed|MCP HTTP|HTTP 5\d\d|failed with HTTP/i, 'errUnreachable'],
-    // The host this surface lives in is gone — not Orbit, the thing that draws
-    // the panel. Below the readings above on purpose: `Orbit MCP transport
+    // The host this surface lives in is gone — not PromptaFlow, the thing that draws
+    // the panel. Below the readings above on purpose: `PromptaFlow MCP transport
     // failed: fetch failed` is a browser's network wording wrapped around a
-    // fact about Orbit, and it is Orbit that is unreachable there. What is left
+    // fact about PromptaFlow, and it is PromptaFlow that is unreachable there. What is left
     // by the time it reaches here names nothing — a bare `Failed to fetch`, or
     // the 404 a plugin route answers with when the plugin did not load — and
     // that is the panel's own server having stopped. Both used to fall through
     // to "something went wrong" while the reader looked at a dead page.
     [/Failed to fetch|fetch failed|NetworkError|Load failed|ECONNREFUSED|HTTP 40[04]/i,
         'errHostGone'],
-    // Nothing is wrong with Orbit; the panel has no Session or no project.
+    // Nothing is wrong with PromptaFlow; the panel has no Session or no project.
     // `cwd` first: "requires the Harness Session to have a Workspace cwd" is
     // both of these sentences, and the missing folder is the actionable half.
     [/Workspace cwd/i, 'errNoWorkspace'],
@@ -123,9 +128,9 @@ const READINGS = [
     // Last, because it is the widest: something arrived that could not be read.
     // A reader cannot act on any of these, but "this is a bug" is still a more
     // useful thing to be told than "something went wrong".
-    [/invalid Orbit DTO|not canonical base64|arguments must be an object/i, 'errProtocol'],
-    [/Orbit workflow generation (?:failed|\$\{workflow\.status\})|completed workflow generation without/i, 'errProtocol'],
-    [/Unknown Orbit client action|requires action and args|Workflow id is required/i, 'errProtocol'],
+    [/invalid PromptaFlow DTO|not canonical base64|arguments must be an object/i, 'errProtocol'],
+    [/PromptaFlow workflow generation (?:failed|\$\{workflow\.status\})|completed workflow generation without/i, 'errProtocol'],
+    [/Unknown PromptaFlow client action|requires action and args|Workflow id is required/i, 'errProtocol'],
     [/invalid authoring output (cursor|address)|authoring output returned invalid JSON/i, 'errProtocol'],
     [/returned an invalid authoring output address/i, 'errProtocol'],
 ];

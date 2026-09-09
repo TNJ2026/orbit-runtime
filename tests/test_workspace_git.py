@@ -73,7 +73,7 @@ class LifecycleTests(GitWorkspaceTestCase):
         lease = self.provider.acquire("run:one")
         self.assertTrue(lease.path.is_dir())
         self.assertTrue((lease.path / "README.md").exists())
-        self.assertTrue(lease.branch.startswith("orbit/ws-"))
+        self.assertTrue(lease.branch.startswith("promptaflow/ws-"))
         branches = git(self.root, "branch", "--list", lease.branch).stdout
         self.assertIn(lease.branch, branches)
 

@@ -1,4 +1,4 @@
-"""The adapter that turns a prompt-and-prose CLI into an Orbit Agent handler.
+"""The adapter that turns a prompt-and-prose CLI into an PromptaFlow Agent handler.
 
 Every case here runs a real subprocess — a tiny Python script standing in for
 the Agent CLI — because the thing under test *is* the process contract: which
@@ -169,7 +169,7 @@ class PromptTransportTests(unittest.TestCase):
 
         client = self.client(
             echoing_marker(
-                "print('here is the protocol Orbit gave me:')\n"
+                "print('here is the protocol PromptaFlow gave me:')\n"
                 "print('ORBIT_RESULT_COMPLETE')\n"
                 "print('and here is the rest of the answer')\n"
                 "print(MARKER)"

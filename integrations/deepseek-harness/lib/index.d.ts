@@ -246,7 +246,7 @@ declare class OrbitRemoteService extends TypertRemoteService {
    *
    *  Held here because there is nothing to ask: a job is addressed by an id
    *  the starter was handed, and `get_authoring_job` is scoped to the actor
-   *  that created it. Jobs started in Orbit's own UI are shown by Orbit's own
+   *  that created it. Jobs started in PromptaFlow's own UI are shown by PromptaFlow's own
    *  UI, which has the whole authoring surface. */
   private readonly authoringByWorkspace;
   private readonly bridges;
@@ -267,12 +267,12 @@ declare class OrbitRemoteService extends TypertRemoteService {
   constructor(ctx: Context);
   /**
    * Name the runnable Workflows in the model's context, so it does not have to
-   * ask before it can tell whether Orbit is relevant to what was just said.
+   * ask before it can tell whether PromptaFlow is relevant to what was just said.
    *
    * The contribution is read synchronously at every assembly, so it can only
    * ever report what has already been fetched: a stale entry answers now and
    * refreshes for next time. The alternative — blocking assembly on a Runtime
-   * that may not be running — would make a missing Orbit everyone's problem.
+   * that may not be running — would make a missing PromptaFlow everyone's problem.
    */
   private tellTheModelWhatCanRun;
   /**
@@ -349,9 +349,9 @@ declare class OrbitRemoteService extends TypertRemoteService {
    */
   private bindSessionWorkspace;
   /**
-   * Stand on Orbit's authoring queue for this Workspace, and write what comes.
+   * Stand on PromptaFlow's authoring queue for this Workspace, and write what comes.
    *
-   * Being on the queue is what makes this Host a writer Orbit will choose:
+   * Being on the queue is what makes this Host a writer PromptaFlow will choose:
    * `_connected_client_first` prefers a connected client over forking an Agent
    * CLI, and it counts a client as connected because it is waiting here. A
    * Host that only ever called tools was never on the queue, so the preference
@@ -432,7 +432,7 @@ declare class OrbitRemoteService extends TypertRemoteService {
    * carry it, which go on executing and being opened. The catalog is the
    * wrong place to look one of those up — a catalog is what can be started —
    * so the panel had nothing to name them by and printed the id, which reads
-   * as a Goal pointed at something that is not there. Orbit keeps the
+   * as a Goal pointed at something that is not there. PromptaFlow keeps the
    * definition for exactly this, so ask it.
    *
    * Read once per id and remembered, negative answers included: a retired id
@@ -486,7 +486,7 @@ declare class OrbitRemoteService extends TypertRemoteService {
    * Cancel or resume a Run from the panel.
    *
    * `expectedRevision` is what the panel had on screen, and it must still be
-   * what Orbit advertises. Re-reading here would make the call succeed against
+   * what PromptaFlow advertises. Re-reading here would make the call succeed against
    * a Run that changed under the reader — the refusal is the point: whoever
    * pressed the button was looking at something else.
    */
@@ -496,7 +496,7 @@ declare class OrbitRemoteService extends TypertRemoteService {
     steps: StepSummary[];
   }>;
   /**
-   * Stop the Orbit Runtime serving this Session's Workspace.
+   * Stop the PromptaFlow Runtime serving this Session's Workspace.
    *
    * Session-scoped like every other call here: the Workspace is derived from
    * the Session rather than taken from the caller, so this can only ever stop
@@ -516,7 +516,7 @@ declare class OrbitRemoteService extends TypertRemoteService {
   generateWorkflow(workspace: WorkspaceRef, sessionId: string, prompt: string, signal: AbortSignal): Promise<AuthoringJob>;
   /** Start authoring from a Slash command whose only authority is its Session. */
   generateWorkflowForSession(sessionId: string, prompt: string, signal: AbortSignal): Promise<AuthoringJob>;
-  /** Register this exact Session route before asking Orbit to address work to it. */
+  /** Register this exact Session route before asking PromptaFlow to address work to it. */
   private prepareAuthoringRoute;
   modifyWorkflow(workspace: WorkspaceRef, sessionId: string, workflowId: string, prompt: string, regenerate: boolean, signal: AbortSignal): Promise<AuthoringJob>;
   getAuthoringJob(workspace: WorkspaceRef, sessionId: string, jobId: string, signal: AbortSignal): Promise<AuthoringJob>;
@@ -546,7 +546,7 @@ declare class OrbitRemoteService extends TypertRemoteService {
   /**
    * Write one Artifact out as an ordinary file and say where it went.
    *
-   * Not the path it already has. Orbit stores Artifacts content-addressed: the
+   * Not the path it already has. PromptaFlow stores Artifacts content-addressed: the
    * file on disk is named by the sha256 of its own bytes, has no extension, is
    * shared by every Artifact with identical content, and is collected when
    * nothing references it. Handing that path to a person invites them to open

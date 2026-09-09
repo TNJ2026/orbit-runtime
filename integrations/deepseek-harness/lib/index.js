@@ -55,7 +55,7 @@ import { createUserMessage } from "@deepseek-ai/dsh-llm";
 //#region ../../integration-core/src/artifact-export.ts
 /** Handing an Artifact over as a file somebody can open.
 *
-* Orbit keeps Artifacts in a content-addressed store: the file on disk is
+* PromptaFlow keeps Artifacts in a content-addressed store: the file on disk is
 * named by the sha256 of its own bytes, carries no extension, is shared by
 * every Artifact with identical content, and is collected when nothing
 * references it. It is a real path, and it is the wrong path to hand anybody —
@@ -69,7 +69,7 @@ import { createUserMessage } from "@deepseek-ai/dsh-llm";
 */
 /** What each recorded content type is called on a filesystem.
 *
-* Recorded, not sniffed. Orbit wrote down what the workflow produced, and a
+* Recorded, not sniffed. PromptaFlow wrote down what the workflow produced, and a
 * guess made here would be a second opinion about the same bytes. */
 const EXTENSIONS = {
 	"text/markdown": ".md",
@@ -105,13 +105,13 @@ function artifactExtension(contentType, filename) {
 * they came from *is* their hash.
 */
 function artifactFilename(artifactId, contentType, filename) {
-	return `orbit-${artifactId.replace(/^langgraph_artifact:/, "").replace(/[^A-Za-z0-9]/g, "").slice(0, 12) || "artifact"}${artifactExtension(contentType, filename)}`;
+	return `promptaflow-${artifactId.replace(/^langgraph_artifact:/, "").replace(/[^A-Za-z0-9]/g, "").slice(0, 12) || "artifact"}${artifactExtension(contentType, filename)}`;
 }
 const READABLE_TYPES = ["text/markdown", "text/plain"];
 /**
 * Whether an Artifact should be read here or handed over as a file.
 *
-* Decided from what Orbit recorded, before any bytes move: asking for a 2 MiB
+* Decided from what PromptaFlow recorded, before any bytes move: asking for a 2 MiB
 * PDF in order to discover it is a 2 MiB PDF is the round trip this exists to
 * avoid. Anything not plainly text, or not small, is a file — including the
 * types a browser could render, because rendering someone else's HTML inside
@@ -126,18 +126,18 @@ function readableAsText(contentType, sizeBytes) {
 //#region ../../integration-core/src/authoring-claim.ts
 /** Writing a Workflow with the Agent that is already here.
 *
-* Orbit will hand a generation prompt to a connected MCP client rather than
+* PromptaFlow will hand a generation prompt to a connected MCP client rather than
 * fork an Agent CLI for it — but only to a client that has shown up on the
 * queue. Being connected is not enough: the broker counts a client as present
 * because it is *waiting for work*, not because it once called a tool. Nothing
-* in this Host had ever waited, so Orbit forked a CLI every time, and the
+* in this Host had ever waited, so PromptaFlow forked a CLI every time, and the
 * Agent that wrote the Workflow was one nobody could see working.
 *
 * This is the waiting. The loop lives in the Host; the parts that decide what
 * happens live here, taking their effects as arguments so the policy can be
 * read and tested without a Runtime, a model, or a session.
 */
-/** The name this Host is offered under in Orbit's writer menu. */
+/** The name this Host is offered under in PromptaFlow's writer menu. */
 const CLAIM_CLIENT = "harness";
 /** Private, stable writer address for one Harness conversation. */
 function authoringClientForSession(sessionId) {
@@ -157,7 +157,7 @@ const CLAIM_RETRY_MS = 15e3;
 * One turn of the loop: wait, ask, answer.
 *
 * Whatever the model says is submitted, even when it does not look like a
-* document. Orbit extracts and compiles it exactly as it does a CLI's stdout,
+* document. PromptaFlow extracts and compiles it exactly as it does a CLI's stdout,
 * and a document it refuses comes back as a fresh request carrying the
 * compiler's findings — so a chatty answer costs a round, not the job. Judging
 * the answer here would be a second, worse copy of that validator.
@@ -200,7 +200,7 @@ async function claimOnce(deps) {
 *
 * Only `text` blocks of `assistant/message`. Reasoning blocks are the model
 * thinking rather than answering, and tool calls are it doing something else
-* entirely; including either would hand Orbit a document with the working-out
+* entirely; including either would hand PromptaFlow a document with the working-out
 * wrapped around it. Every message is taken, not the last, because a turn that
 * used a tool answers across more than one.
 */
@@ -217,23 +217,23 @@ function answerFrom(events, afterIndex) {
 //#endregion
 //#region ../../integration-core/src/codecs.ts
 function object$1(value, path) {
-	if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error(`invalid Orbit DTO at ${path}: expected object`);
+	if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error(`invalid PromptaFlow DTO at ${path}: expected object`);
 	return value;
 }
 function string(value, path) {
-	if (typeof value !== "string") throw new Error(`invalid Orbit DTO at ${path}: expected string`);
+	if (typeof value !== "string") throw new Error(`invalid PromptaFlow DTO at ${path}: expected string`);
 	return value;
 }
 function number(value, path) {
-	if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(`invalid Orbit DTO at ${path}: expected number`);
+	if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(`invalid PromptaFlow DTO at ${path}: expected number`);
 	return value;
 }
 function boolean(value, path) {
-	if (typeof value !== "boolean") throw new Error(`invalid Orbit DTO at ${path}: expected boolean`);
+	if (typeof value !== "boolean") throw new Error(`invalid PromptaFlow DTO at ${path}: expected boolean`);
 	return value;
 }
 function array(value, path) {
-	if (!Array.isArray(value)) throw new Error(`invalid Orbit DTO at ${path}: expected array`);
+	if (!Array.isArray(value)) throw new Error(`invalid PromptaFlow DTO at ${path}: expected array`);
 	return value;
 }
 function decodeRun(value) {
@@ -266,13 +266,13 @@ function decodeStep(value, index) {
 	if (item.has_output !== void 0) boolean(item.has_output, `steps[${index}].has_output`);
 	if (item.resolution !== void 0 && item.resolution !== null) {
 		const resolution = object$1(item.resolution, `steps[${index}].resolution`);
-		if (string(resolution.kind, `steps[${index}].resolution.kind`) !== "reconciliation_required") throw new Error(`invalid Orbit DTO at steps[${index}].resolution.kind`);
+		if (string(resolution.kind, `steps[${index}].resolution.kind`) !== "reconciliation_required") throw new Error(`invalid PromptaFlow DTO at steps[${index}].resolution.kind`);
 		if (resolution.delegation_id !== void 0 && resolution.delegation_id !== null) string(resolution.delegation_id, `steps[${index}].resolution.delegation_id`);
 	}
 	if (item.reconciliation !== void 0 && item.reconciliation !== null) {
 		const decision = object$1(item.reconciliation, `steps[${index}].reconciliation`);
 		const outcome = string(decision.outcome, `steps[${index}].reconciliation.outcome`);
-		if (!["confirmed_succeeded", "confirmed_failed"].includes(outcome)) throw new Error(`invalid Orbit DTO at steps[${index}].reconciliation.outcome`);
+		if (!["confirmed_succeeded", "confirmed_failed"].includes(outcome)) throw new Error(`invalid PromptaFlow DTO at steps[${index}].reconciliation.outcome`);
 		string(decision.note, `steps[${index}].reconciliation.note`);
 		string(decision.created_at, `steps[${index}].reconciliation.created_at`);
 	}
@@ -366,7 +366,7 @@ function decodeToolResult(name, value) {
 	}
 	if (name === "read_artifact_content") {
 		object$1(item.artifact, "artifact_content.artifact");
-		if (string(item.encoding, "artifact_content.encoding") !== "base64") throw new Error("invalid Orbit DTO at artifact_content.encoding");
+		if (string(item.encoding, "artifact_content.encoding") !== "base64") throw new Error("invalid PromptaFlow DTO at artifact_content.encoding");
 		string(item.content, "artifact_content.content");
 		return item;
 	}
@@ -383,7 +383,7 @@ function decodeToolResult(name, value) {
 * The advertised entry for a command at the revision the caller was reading,
 * or undefined if there is none.
 *
-* Both halves matter. A command Orbit never offered is a call that would fail
+* Both halves matter. A command PromptaFlow never offered is a call that would fail
 * at the Runtime anyway; a command offered at a *different* revision is worse,
 * because it would succeed — against a Run that moved after the caller looked
 * at it, doing the thing they asked to a state they never saw.
@@ -400,7 +400,7 @@ function commandTool(command) {
 var OrbitTransportError = class extends Error {};
 const STARTUP_TIMEOUT_MS = 1e4;
 const STARTUP_POLL_MS = 100;
-/** Connect Harness to Orbit over HTTP MCP; explicit UI entry may start it. */
+/** Connect Harness to PromptaFlow over HTTP MCP; explicit UI entry may start it. */
 /**
 * How long any one MCP call may take before the transport gives up on it.
 *
@@ -456,7 +456,7 @@ var OrbitGateway = class {
 		if (!/^[A-Za-z0-9:_-]{1,180}$/.test(sessionId)) throw new Error("invalid Harness session id");
 		const key = await realpath(workspace.canonicalPath);
 		const runtime = await this.runtimeFor(key);
-		if (!runtime.baseUrl) throw new Error("this Orbit Runtime published no HTTP address");
+		if (!runtime.baseUrl) throw new Error("this PromptaFlow Runtime published no HTTP address");
 		try {
 			const response = await this.fetchImpl(`${runtime.baseUrl}/api/v1/runtime/shutdown`, {
 				method: "POST",
@@ -469,7 +469,7 @@ var OrbitGateway = class {
 			});
 			if (!response.ok) {
 				const detail = await response.text().catch(() => "");
-				throw new Error(`Orbit refused to stop: HTTP ${String(response.status)}${detail ? ` ${detail.slice(0, 200)}` : ""}`);
+				throw new Error(`PromptaFlow refused to stop: HTTP ${String(response.status)}${detail ? ` ${detail.slice(0, 200)}` : ""}`);
 			}
 		} finally {
 			this.runtimes.delete(key);
@@ -514,7 +514,7 @@ var OrbitGateway = class {
 		return (await this.runtime(workspace)).uiUrl;
 	}
 	/**
-	* Read the same durable attempt totals as Orbit's Agent page.
+	* Read the same durable attempt totals as PromptaFlow's Agent page.
 	*
 	* This HTTP projection also keeps a newly upgraded Harness compatible with
 	* a Runtime process started before `list_agents` grew the aggregate fields.
@@ -523,7 +523,7 @@ var OrbitGateway = class {
 		const runtime = await this.runtime(workspace);
 		if (!runtime.baseUrl) return /* @__PURE__ */ new Map();
 		const response = await this.fetchImpl(`${runtime.baseUrl.replace(/\/$/, "")}/api/v1/handler-catalog`, { headers: { "x-promptaflow-actor": `harness:session:${sessionId}` } });
-		if (!response.ok) throw new OrbitTransportError(`Orbit Handler catalog failed with HTTP ${String(response.status)}`);
+		if (!response.ok) throw new OrbitTransportError(`PromptaFlow Handler catalog failed with HTTP ${String(response.status)}`);
 		const envelope = await response.json();
 		const counts = /* @__PURE__ */ new Map();
 		for (const handler of envelope.data?.handlers ?? []) {
@@ -536,14 +536,14 @@ var OrbitGateway = class {
 		return counts;
 	}
 	async authoringOutput(workspace, sessionId, outputHref, after) {
-		if (!/^\/api\/v1\/workflow-authoring-jobs\/[^/?#]+\/output$/u.test(outputHref)) throw new Error("Orbit returned an invalid authoring output address");
+		if (!/^\/api\/v1\/workflow-authoring-jobs\/[^/?#]+\/output$/u.test(outputHref)) throw new Error("PromptaFlow returned an invalid authoring output address");
 		if (!Number.isSafeInteger(after) || after < 0) throw new Error("invalid authoring output cursor");
 		const runtime = await this.runtime(workspace);
-		if (!runtime.baseUrl) throw new Error("Orbit Runtime did not publish a browser address");
+		if (!runtime.baseUrl) throw new Error("PromptaFlow Runtime did not publish a browser address");
 		const response = await this.fetchImpl(`${runtime.baseUrl.replace(/\/$/, "")}${outputHref}?after=${String(after)}`, { headers: { "x-promptaflow-actor": `harness:session:${sessionId}` } });
-		if (!response.ok) throw new OrbitTransportError(`Orbit authoring output failed with HTTP ${String(response.status)}`);
+		if (!response.ok) throw new OrbitTransportError(`PromptaFlow authoring output failed with HTTP ${String(response.status)}`);
 		const envelope = await response.json();
-		if (!envelope.data || !Array.isArray(envelope.data.chunks)) throw new Error("Orbit authoring output returned invalid JSON");
+		if (!envelope.data || !Array.isArray(envelope.data.chunks)) throw new Error("PromptaFlow authoring output returned invalid JSON");
 		return envelope.data;
 	}
 	async run(workspace, sessionId, runId) {
@@ -564,8 +564,8 @@ var OrbitGateway = class {
 			...options.displayLanguage === void 0 ? {} : { display_language: options.displayLanguage }
 		});
 		const workflow = await this.waitForAuthoringJob(workspace, sessionId, generated.job_id, options);
-		if (workflow.status !== "done") throw new Error(`Orbit workflow generation ${workflow.status}: ${workflow.error?.message ?? workflow.job_id}`);
-		if (typeof workflow.workflow_id !== "string" || !workflow.workflow_id) throw new Error("Orbit completed workflow generation without a workflow_id");
+		if (workflow.status !== "done") throw new Error(`PromptaFlow workflow generation ${workflow.status}: ${workflow.error?.message ?? workflow.job_id}`);
+		if (typeof workflow.workflow_id !== "string" || !workflow.workflow_id) throw new Error("PromptaFlow completed workflow generation without a workflow_id");
 		const started = await this.call(workspace, sessionId, "start_run", {
 			workflow_id: workflow.workflow_id,
 			goal,
@@ -584,7 +584,7 @@ var OrbitGateway = class {
 		while (true) {
 			const job = await this.call(workspace, sessionId, "get_authoring_job", { job_id: jobId });
 			if (job.status === "done" || job.status === "failed" || job.status === "cancelled") return job;
-			if (Date.now() >= deadline) throw new Error(`Orbit workflow generation timed out: ${jobId}`);
+			if (Date.now() >= deadline) throw new Error(`PromptaFlow workflow generation timed out: ${jobId}`);
 			await new Promise((resolve) => setTimeout(resolve, pollMs));
 		}
 	}
@@ -599,7 +599,7 @@ var OrbitGateway = class {
 				"cancelled",
 				"unknown"
 			].includes(run.status)) return run;
-			if (Date.now() >= deadline) throw new Error(`Orbit Goal execution timed out: ${runId}`);
+			if (Date.now() >= deadline) throw new Error(`PromptaFlow Goal execution timed out: ${runId}`);
 			await new Promise((resolve) => setTimeout(resolve, pollMs));
 		}
 	}
@@ -639,7 +639,7 @@ var OrbitGateway = class {
 					}
 				});
 				runtime.capabilities = await this.callRaw(runtime, "get_capabilities", {});
-				if (runtime.capabilities.integration_protocol !== "orbit-harness/1") throw new Error("incompatible Orbit integration protocol");
+				if (runtime.capabilities.integration_protocol !== "orbit-harness/1") throw new Error("incompatible PromptaFlow integration protocol");
 				this.telemetry.lastConnectedAt = (/* @__PURE__ */ new Date()).toISOString();
 				this.telemetry.lastTransportError = void 0;
 				runtime.baseUrl = (await this.discover(workspaceRoot))?.base_url ?? runtime.baseUrl;
@@ -664,7 +664,7 @@ var OrbitGateway = class {
 			const value = JSON.parse(output);
 			if (typeof value.workspace_id === "string" && value.workspace_id) return value.workspace_id;
 		} catch {}
-		throw new Error("Orbit Hub workspace registration returned invalid JSON");
+		throw new Error("PromptaFlow Hub workspace registration returned invalid JSON");
 	}
 	async runOrbit(args, cwd) {
 		return await new Promise((resolve, reject) => {
@@ -686,7 +686,7 @@ var OrbitGateway = class {
 				stderr += chunk;
 			});
 			child.once("error", reject);
-			child.once("exit", (code) => code === 0 ? resolve(stdout) : reject(/* @__PURE__ */ new Error(`Orbit command failed: ${args.join(" ")} (code ${String(code)})${stderr ? `: ${stderr.trim()}` : ""}`)));
+			child.once("exit", (code) => code === 0 ? resolve(stdout) : reject(/* @__PURE__ */ new Error(`PromptaFlow command failed: ${args.join(" ")} (code ${String(code)})${stderr ? `: ${stderr.trim()}` : ""}`)));
 		});
 	}
 	async startHub() {
@@ -695,7 +695,7 @@ var OrbitGateway = class {
 			"127.0.0.1",
 			"localhost",
 			"::1"
-		].includes(url.hostname)) throw new Error(`Orbit Hub auto-start requires a loopback HTTP URL: ${this.hubUrl}`);
+		].includes(url.hostname)) throw new Error(`PromptaFlow Hub auto-start requires a loopback HTTP URL: ${this.hubUrl}`);
 		const port = url.port ? Number(url.port) : 80;
 		const log = await open(join(tmpdir(), `dsh-orbit-hub-${String(port)}.log`), "w");
 		try {
@@ -750,18 +750,18 @@ var OrbitGateway = class {
 				stderr += chunk;
 			});
 			child.once("error", reject);
-			child.once("exit", (code) => code === 0 ? resolve(stdout) : reject(/* @__PURE__ */ new Error(`Orbit Runtime discovery failed with code ${String(code)}${stderr ? `: ${stderr.trim()}` : ""}`)));
+			child.once("exit", (code) => code === 0 ? resolve(stdout) : reject(/* @__PURE__ */ new Error(`PromptaFlow Runtime discovery failed with code ${String(code)}${stderr ? `: ${stderr.trim()}` : ""}`)));
 		});
 		let entries;
 		try {
 			entries = JSON.parse(output);
 		} catch {
-			throw new Error("Orbit Runtime discovery returned invalid JSON");
+			throw new Error("PromptaFlow Runtime discovery returned invalid JSON");
 		}
-		if (!Array.isArray(entries)) throw new Error("Orbit Runtime discovery must return an array");
+		if (!Array.isArray(entries)) throw new Error("PromptaFlow Runtime discovery must return an array");
 		const matches = entries.filter((entry) => entry.project_root === workspaceRoot && entry.base_url);
 		if (matches.length === 0) return void 0;
-		if (matches.length > 1) throw new Error(`Multiple Orbit Runtimes claim Workspace ${workspaceRoot}`);
+		if (matches.length > 1) throw new Error(`Multiple PromptaFlow Runtimes claim Workspace ${workspaceRoot}`);
 		return matches[0];
 	}
 	async rpc(runtime, method, params) {
@@ -785,13 +785,13 @@ var OrbitGateway = class {
 					params
 				})
 			});
-			if (!response.ok) throw new OrbitTransportError(`Orbit MCP HTTP ${String(response.status)}`);
+			if (!response.ok) throw new OrbitTransportError(`PromptaFlow MCP HTTP ${String(response.status)}`);
 			const message = await response.json();
-			if (message.error !== void 0) throw new Error(message.error.message || "Orbit MCP request failed");
+			if (message.error !== void 0) throw new Error(message.error.message || "PromptaFlow MCP request failed");
 			return message.result;
 		} catch (error) {
-			if (controller.signal.aborted) throw new OrbitTransportError(`Orbit MCP ${method} timed out`);
-			if (error instanceof TypeError) throw new OrbitTransportError(`Orbit MCP transport failed: ${error.message}`);
+			if (controller.signal.aborted) throw new OrbitTransportError(`PromptaFlow MCP ${method} timed out`);
+			if (error instanceof TypeError) throw new OrbitTransportError(`PromptaFlow MCP transport failed: ${error.message}`);
 			throw error;
 		} finally {
 			clearTimeout(timer);
@@ -997,10 +997,10 @@ var WorkflowCatalog = class {
 		const shown = ready.slice(0, 20).map(line);
 		const omitted = ready.length - shown.length;
 		return [
-			`Orbit Workflows ready in ${canonicalPath}:`,
+			`PromptaFlow Workflows ready in ${canonicalPath}:`,
 			...shown,
 			...omitted > 0 ? [`- …and ${String(omitted)} more; call orbit_list_workflows for the rest.`] : [],
-			"Start one with orbit_start_run. Progress appears in the Orbit panel."
+			"Start one with orbit_start_run. Progress appears in the PromptaFlow panel."
 		].join("\n");
 	}
 };
@@ -1020,7 +1020,7 @@ const object = (properties, required = []) => ({
 	additionalProperties: false
 });
 function args(value) {
-	if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error("Orbit tool arguments must be an object");
+	if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error("PromptaFlow tool arguments must be an object");
 	return value;
 }
 var OrbitToolBridge = class {
@@ -1041,8 +1041,8 @@ var OrbitToolBridge = class {
 	}
 	definitions() {
 		return [
-			this.definition("orbit_list_workflows", "List published Orbit workflows available in this Session Workspace.", object({ ready_only: { type: "boolean" } }), "list_workflows", true),
-			this.definition("orbit_list_runs", "List Orbit workflow runs owned by this Harness Session.", object({
+			this.definition("orbit_list_workflows", "List published PromptaFlow workflows available in this Session Workspace.", object({ ready_only: { type: "boolean" } }), "list_workflows", true),
+			this.definition("orbit_list_runs", "List PromptaFlow workflow runs owned by this Harness Session.", object({
 				status: { type: "string" },
 				limit: {
 					type: "integer",
@@ -1050,7 +1050,7 @@ var OrbitToolBridge = class {
 					maximum: 200
 				}
 			}), "list_runs", true),
-			this.definition("orbit_list_delegations", "Check once on the first turn of this Session for resumable Orbit Agent work. Stay silent when the returned list is empty.", object({
+			this.definition("orbit_list_delegations", "Check once on the first turn of this Session for resumable PromptaFlow Agent work. Stay silent when the returned list is empty.", object({
 				statuses: {
 					type: "array",
 					items: { type: "string" },
@@ -1064,7 +1064,7 @@ var OrbitToolBridge = class {
 			}), "list_delegations", true),
 			{
 				name: "orbit_claim_delegation",
-				description: "Claim the next queued Orbit Agent step for this Harness Session.",
+				description: "Claim the next queued PromptaFlow Agent step for this Harness Session.",
 				parameters: object({ lease_seconds: {
 					type: "integer",
 					minimum: 5,
@@ -1082,7 +1082,7 @@ var OrbitToolBridge = class {
 			},
 			{
 				name: "orbit_renew_delegation",
-				description: "Renew an Orbit Agent-step lease held by this Harness Session.",
+				description: "Renew an PromptaFlow Agent-step lease held by this Harness Session.",
 				parameters: object({
 					delegation_id: { type: "string" },
 					lease_seconds: {
@@ -1104,7 +1104,7 @@ var OrbitToolBridge = class {
 			},
 			{
 				name: "orbit_complete_delegation",
-				description: "Return exactly one result object or error for an Orbit Agent step.",
+				description: "Return exactly one result object or error for an PromptaFlow Agent step.",
 				parameters: object({
 					delegation_id: { type: "string" },
 					result: { type: "object" },
@@ -1120,7 +1120,7 @@ var OrbitToolBridge = class {
 					});
 				}
 			},
-			this.definition("orbit_reconcile_delegation", "Submit a user-verified outcome for unknown Orbit Agent work; never execute unknown work again.", object({
+			this.definition("orbit_reconcile_delegation", "Submit a user-verified outcome for unknown PromptaFlow Agent work; never execute unknown work again.", object({
 				delegation_id: { type: "string" },
 				outcome: {
 					type: "string",
@@ -1135,10 +1135,10 @@ var OrbitToolBridge = class {
 				"outcome",
 				"idempotency_key"
 			]), "reconcile_delegation", false),
-			this.definition("orbit_inspect_run", "Inspect one Orbit Run, including status, revision, interrupts and allowed commands.", object({ run_id: { type: "string" } }, ["run_id"]), "inspect_run", true),
+			this.definition("orbit_inspect_run", "Inspect one PromptaFlow Run, including status, revision, interrupts and allowed commands.", object({ run_id: { type: "string" } }, ["run_id"]), "inspect_run", true),
 			{
 				name: "orbit_start_run",
-				description: "Start a published Orbit workflow in the current Workspace. Returns immediately so progress appears in the Orbit Run Card.",
+				description: "Start a published PromptaFlow workflow in the current Workspace. Returns immediately so progress appears in the PromptaFlow Run Card.",
 				parameters: object({
 					workflow_id: { type: "string" },
 					workflow_version: { type: "integer" },
@@ -1161,7 +1161,7 @@ var OrbitToolBridge = class {
 			},
 			{
 				name: "orbit_generate_workflow",
-				description: "Draft a new Orbit workflow from a description and publish it if the compiler accepts it. Returns a job immediately — authoring takes a while — so poll orbit_get_authoring_job with the job_id until its status leaves queued/running. Nothing is published until the compiler accepts the draft, so a failed job has changed nothing. Progress also appears in the Orbit panel.",
+				description: "Draft a new PromptaFlow workflow from a description and publish it if the compiler accepts it. Returns a job immediately — authoring takes a while — so poll orbit_get_authoring_job with the job_id until its status leaves queued/running. Nothing is published until the compiler accepts the draft, so a failed job has changed nothing. Progress also appears in the PromptaFlow panel.",
 				parameters: object({
 					prompt: {
 						type: "string",
@@ -1186,10 +1186,10 @@ var OrbitToolBridge = class {
 					return job;
 				}
 			},
-			this.definition("orbit_get_authoring_job", "Check an Orbit authoring job started by orbit_generate_workflow. Status queued or running means it is still going; done carries the published workflow, failed carries why.", object({ job_id: { type: "string" } }, ["job_id"]), "get_authoring_job", true),
+			this.definition("orbit_get_authoring_job", "Check an PromptaFlow authoring job started by orbit_generate_workflow. Status queued or running means it is still going; done carries the published workflow, failed carries why.", object({ job_id: { type: "string" } }, ["job_id"]), "get_authoring_job", true),
 			{
 				name: "orbit_cancel_run",
-				description: "Cancel an Orbit Run if its latest server-advertised commands allow cancellation.",
+				description: "Cancel an PromptaFlow Run if its latest server-advertised commands allow cancellation.",
 				parameters: object({ run_id: { type: "string" } }, ["run_id"]),
 				output: JSON_OUTPUT,
 				timeoutMs: 6e4,
@@ -1200,7 +1200,7 @@ var OrbitToolBridge = class {
 			},
 			{
 				name: "orbit_resume_run",
-				description: "Resume an interrupted Orbit Run using its latest server-advertised revision.",
+				description: "Resume an interrupted PromptaFlow Run using its latest server-advertised revision.",
 				parameters: object({
 					run_id: { type: "string" },
 					value: {},
@@ -1229,7 +1229,7 @@ var OrbitToolBridge = class {
 	async command(exec, runId, command, value, interruptId) {
 		const { workspace, session } = await this.route(exec);
 		const advertised = (await this.gateway.run(workspace, String(session.id), runId)).allowed_commands.find((item) => item.command === command);
-		if (!advertised) throw new Error(`Orbit no longer advertises ${command} for Run ${runId}`);
+		if (!advertised) throw new Error(`PromptaFlow no longer advertises ${command} for Run ${runId}`);
 		return await this.gateway.call(workspace, String(session.id), command === "langgraph_run.cancel" ? "cancel_run" : "resume_run", {
 			run_id: runId,
 			expected_version: advertised.expected_version,
@@ -1244,9 +1244,9 @@ var OrbitToolBridge = class {
 	}
 	async route(exec) {
 		const session = exec.agent?.session;
-		if (!session) throw new Error("Orbit tools require a live Harness Agent Session");
+		if (!session) throw new Error("PromptaFlow tools require a live Harness Agent Session");
 		const cwd = session.header.cwd;
-		if (!cwd) throw new Error("Orbit tools require the Session to have a Workspace cwd");
+		if (!cwd) throw new Error("PromptaFlow tools require the Session to have a Workspace cwd");
 		const registered = await this.registry.resolveByPath(cwd);
 		return {
 			session,
@@ -1268,7 +1268,7 @@ const IMAGE_TYPES = /* @__PURE__ */ new Set([
 function artifactImageInput(content) {
 	const mediaType = content.artifact.content_type;
 	if (!mediaType || !IMAGE_TYPES.has(mediaType)) throw new Error(`Harness Attachment import supports images only; Artifact is ${mediaType || "unknown"}`);
-	if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(content.content)) throw new Error("Orbit Artifact content is not canonical base64");
+	if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(content.content)) throw new Error("PromptaFlow Artifact content is not canonical base64");
 	return {
 		data: Uint8Array.from(Buffer.from(content.content, "base64")),
 		mediaType,
@@ -1278,7 +1278,7 @@ function artifactImageInput(content) {
 //#endregion
 //#region src/index.ts
 /** How long to let one authoring turn run before giving the request back.
-*  Under the broker's own lease, so this Host stops waiting before Orbit
+*  Under the broker's own lease, so this Host stops waiting before PromptaFlow
 *  stops expecting it to. */
 const AUTHORING_TURN_MS = 24e4;
 /** How long a settled job stays on the panel before it stops being news. */
@@ -1714,7 +1714,7 @@ var OrbitRemoteService = (() => {
 		*
 		*  Held here because there is nothing to ask: a job is addressed by an id
 		*  the starter was handed, and `get_authoring_job` is scoped to the actor
-		*  that created it. Jobs started in Orbit's own UI are shown by Orbit's own
+		*  that created it. Jobs started in PromptaFlow's own UI are shown by PromptaFlow's own
 		*  UI, which has the whole authoring surface. */
 		authoringByWorkspace = /* @__PURE__ */ new Map();
 		bridges = /* @__PURE__ */ new Map();
@@ -1759,12 +1759,12 @@ var OrbitRemoteService = (() => {
 		}
 		/**
 		* Name the runnable Workflows in the model's context, so it does not have to
-		* ask before it can tell whether Orbit is relevant to what was just said.
+		* ask before it can tell whether PromptaFlow is relevant to what was just said.
 		*
 		* The contribution is read synchronously at every assembly, so it can only
 		* ever report what has already been fetched: a stale entry answers now and
 		* refreshes for next time. The alternative — blocking assembly on a Runtime
-		* that may not be running — would make a missing Orbit everyone's problem.
+		* that may not be running — would make a missing PromptaFlow everyone's problem.
 		*/
 		tellTheModelWhatCanRun(ctx) {
 			const systemPrompt = ctx.get("systemPrompt");
@@ -1874,7 +1874,7 @@ var OrbitRemoteService = (() => {
 				* Hand a browser the bytes of one Artifact.
 				*
 				* A GET, because a link is what a person clicks and a browser is what
-				* renders the result. It exists because Orbit's own address for an
+				* renders the result. It exists because PromptaFlow's own address for an
 				* Artifact cannot serve one: Artifacts are owned by the actor that
 				* produced them, a browser reaching `/api/v1` on loopback is `local`,
 				* and the Runs this panel starts belong to `harness:session:<id>`. So
@@ -1882,8 +1882,8 @@ var OrbitRemoteService = (() => {
 				*
 				* This route is that identity. It reads the Artifact as the Session that
 				* owns it and passes the bytes through unchanged — no gallery, no
-				* viewer, no second drawing of anything Orbit draws. The browser opens
-				* what it was given, exactly as it would have from Orbit's own URL.
+				* viewer, no second drawing of anything PromptaFlow draws. The browser opens
+				* what it was given, exactly as it would have from PromptaFlow's own URL.
 				*/
 				ctx.effect(() => webServer.register({
 					kind: "exact",
@@ -1929,7 +1929,7 @@ var OrbitRemoteService = (() => {
 							return;
 						}
 						const controller = new AbortController();
-						req.once("aborted", () => controller.abort(/* @__PURE__ */ new Error("Orbit client request aborted")));
+						req.once("aborted", () => controller.abort(/* @__PURE__ */ new Error("PromptaFlow client request aborted")));
 						try {
 							const chunks = [];
 							let size = 0;
@@ -1938,12 +1938,12 @@ var OrbitRemoteService = (() => {
 								size += buffer.length;
 								if (size > 262144) {
 									req.destroy();
-									throw new Error("Orbit client request exceeds 256 KiB");
+									throw new Error("PromptaFlow client request exceeds 256 KiB");
 								}
 								chunks.push(buffer);
 							}
 							const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-							if (typeof body.action !== "string" || !Array.isArray(body.args)) throw new Error("Orbit client request requires action and args");
+							if (typeof body.action !== "string" || !Array.isArray(body.args)) throw new Error("PromptaFlow client request requires action and args");
 							const result = await this.dispatchWebApi(body.action, body.args, controller.signal);
 							res.writeHead(200, {
 								"content-type": "application/json; charset=utf-8",
@@ -1996,7 +1996,7 @@ var OrbitRemoteService = (() => {
 				case "importArtifact": return await this.importArtifact(args[0], String(args[1]), String(args[2]), signal);
 				case "executeCommand": return await this.executeCommand(args[0], signal);
 				case "reconcileDelegation": return await this.reconcileDelegation(args[0], String(args[1]), String(args[2]), String(args[3]), args[4], String(args[5]), signal);
-				default: throw new Error(`Unknown Orbit client action: ${action}`);
+				default: throw new Error(`Unknown PromptaFlow client action: ${action}`);
 			}
 		}
 		/**
@@ -2009,7 +2009,7 @@ var OrbitRemoteService = (() => {
 		*/
 		async verified(claimed, sessionId) {
 			const actual = await this.workspaceForSession(this.liveSession(sessionId));
-			if (claimed.id !== actual.id || claimed.canonicalPath !== actual.canonicalPath) throw new Error("Orbit request Workspace does not match the Harness Session");
+			if (claimed.id !== actual.id || claimed.canonicalPath !== actual.canonicalPath) throw new Error("PromptaFlow request Workspace does not match the Harness Session");
 			return actual;
 		}
 		/**
@@ -2019,7 +2019,7 @@ var OrbitRemoteService = (() => {
 		*/
 		async registered(claimed) {
 			const found = await this.workspaceRegistry.resolveByPath(claimed.canonicalPath);
-			if (!found || String(found.id) !== claimed.id || found.path !== claimed.canonicalPath) throw new Error("Orbit request names a Workspace this Harness has not registered");
+			if (!found || String(found.id) !== claimed.id || found.path !== claimed.canonicalPath) throw new Error("PromptaFlow request names a Workspace this Harness has not registered");
 			return {
 				id: String(found.id),
 				canonicalPath: found.path
@@ -2058,13 +2058,13 @@ var OrbitRemoteService = (() => {
 					},
 					live: false
 				};
-				if (matches.length > 1) throw new Error("Orbit requires a live Harness Session");
+				if (matches.length > 1) throw new Error("PromptaFlow requires a live Harness Session");
 			}
-			throw new Error("Orbit requires a live Harness Session");
+			throw new Error("PromptaFlow requires a live Harness Session");
 		}
 		liveSession(sessionId) {
 			const session = this.hostSessions.list().find((item) => String(item.id) === sessionId);
-			if (!session) throw new Error("Orbit requires a live Harness Session");
+			if (!session) throw new Error("PromptaFlow requires a live Harness Session");
 			return session;
 		}
 		startSessionBridge(ctx, session) {
@@ -2123,9 +2123,9 @@ var OrbitRemoteService = (() => {
 			this.waitForAuthoring(ctx, workspace, String(session.id));
 		}
 		/**
-		* Stand on Orbit's authoring queue for this Workspace, and write what comes.
+		* Stand on PromptaFlow's authoring queue for this Workspace, and write what comes.
 		*
-		* Being on the queue is what makes this Host a writer Orbit will choose:
+		* Being on the queue is what makes this Host a writer PromptaFlow will choose:
 		* `_connected_client_first` prefers a connected client over forking an Agent
 		* CLI, and it counts a client as connected because it is waiting here. A
 		* Host that only ever called tools was never on the queue, so the preference
@@ -2159,7 +2159,7 @@ var OrbitRemoteService = (() => {
 								error: String(error),
 								at: (/* @__PURE__ */ new Date()).toISOString()
 							});
-							ctx.logger.warn(`Orbit authoring ${stage} failed in ${scope.canonicalPath}: ${String(error)}`);
+							ctx.logger.warn(`PromptaFlow authoring ${stage} failed in ${scope.canonicalPath}: ${String(error)}`);
 						}
 					});
 					if (controller.signal.aborted) return;
@@ -2321,7 +2321,7 @@ var OrbitRemoteService = (() => {
 		* carry it, which go on executing and being opened. The catalog is the
 		* wrong place to look one of those up — a catalog is what can be started —
 		* so the panel had nothing to name them by and printed the id, which reads
-		* as a Goal pointed at something that is not there. Orbit keeps the
+		* as a Goal pointed at something that is not there. PromptaFlow keeps the
 		* definition for exactly this, so ask it.
 		*
 		* Read once per id and remembered, negative answers included: a retired id
@@ -2449,7 +2449,7 @@ var OrbitRemoteService = (() => {
 		* Cancel or resume a Run from the panel.
 		*
 		* `expectedRevision` is what the panel had on screen, and it must still be
-		* what Orbit advertises. Re-reading here would make the call succeed against
+		* what PromptaFlow advertises. Re-reading here would make the call succeed against
 		* a Run that changed under the reader — the refusal is the point: whoever
 		* pressed the button was looking at something else.
 		*/
@@ -2459,7 +2459,7 @@ var OrbitRemoteService = (() => {
 			const release = await this.gateway.acquire(scope);
 			try {
 				const advertised = advertisedAt(await this.gateway.run(scope, sessionId, runId), command, expectedRevision);
-				if (advertised === void 0) throw new Error(`Orbit no longer offers ${command} at revision ${String(expectedRevision)}`);
+				if (advertised === void 0) throw new Error(`PromptaFlow no longer offers ${command} at revision ${String(expectedRevision)}`);
 				return await this.gateway.call(scope, sessionId, commandTool(command), {
 					run_id: runId,
 					expected_version: advertised.expected_version,
@@ -2489,7 +2489,7 @@ var OrbitRemoteService = (() => {
 			}
 		}
 		/**
-		* Stop the Orbit Runtime serving this Session's Workspace.
+		* Stop the PromptaFlow Runtime serving this Session's Workspace.
 		*
 		* Session-scoped like every other call here: the Workspace is derived from
 		* the Session rather than taken from the caller, so this can only ever stop
@@ -2535,7 +2535,7 @@ var OrbitRemoteService = (() => {
 		}
 		async workspaceForSession(session) {
 			const cwd = session.header.cwd;
-			if (!cwd) throw new Error("Orbit requires the Harness Session to have a Workspace cwd");
+			if (!cwd) throw new Error("PromptaFlow requires the Harness Session to have a Workspace cwd");
 			const registered = await this.workspaceRegistry.resolveByPath(cwd);
 			return {
 				id: registered ? String(registered.id) : `cwd:${cwd}`,
@@ -2576,7 +2576,7 @@ var OrbitRemoteService = (() => {
 				await release();
 			}
 		}
-		/** Register this exact Session route before asking Orbit to address work to it. */
+		/** Register this exact Session route before asking PromptaFlow to address work to it. */
 		async prepareAuthoringRoute(scope, sessionId) {
 			const client = authoringClientForSession(sessionId);
 			try {
@@ -2696,7 +2696,7 @@ var OrbitRemoteService = (() => {
 		/**
 		* Write one Artifact out as an ordinary file and say where it went.
 		*
-		* Not the path it already has. Orbit stores Artifacts content-addressed: the
+		* Not the path it already has. PromptaFlow stores Artifacts content-addressed: the
 		* file on disk is named by the sha256 of its own bytes, has no extension, is
 		* shared by every Artifact with identical content, and is collected when
 		* nothing references it. Handing that path to a person invites them to open
@@ -2761,7 +2761,7 @@ var OrbitRemoteService = (() => {
 			const scope = await this.verified(request.workspace, request.sessionId);
 			const release = await this.gateway.acquire(scope);
 			try {
-				if (advertisedAt(await this.gateway.run(scope, request.sessionId, request.runId), request.command, request.expectedVersion) === void 0) throw new Error("Orbit command is no longer advertised at this revision");
+				if (advertisedAt(await this.gateway.run(scope, request.sessionId, request.runId), request.command, request.expectedVersion) === void 0) throw new Error("PromptaFlow command is no longer advertised at this revision");
 				const tool = commandTool(request.command);
 				return await this.gateway.call(scope, request.sessionId, tool, {
 					run_id: request.runId,

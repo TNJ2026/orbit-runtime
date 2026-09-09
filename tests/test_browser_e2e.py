@@ -1398,7 +1398,7 @@ class SimplifiedUpgradeTests(BrowserE2ETestCase):
         A running modification used to show none of the middle two: the
         textarea was replaced by the job, and the instruction and the Agent
         survived only in a closure. What it printed was there, with the
-        Runtime's own `orbit-progress` control lines printed alongside it.
+        Runtime's own `promptaflow-progress` control lines printed alongside it.
         """
 
         page = self.open("en-US", "/ui/#/workflows")
@@ -1427,7 +1427,7 @@ class SimplifiedUpgradeTests(BrowserE2ETestCase):
     def test_the_modify_console_never_shows_the_runtimes_own_markers(
         self,
     ) -> None:
-        """`\x1eorbit-progress:` drives the stepper; it is not Agent output.
+        """`\x1epromptaflow-progress:` drives the stepper; it is not Agent output.
 
         The panel here printed every chunk verbatim, so the Runtime's own
         control lines were dumped into the console as raw JSON.
@@ -1440,7 +1440,7 @@ class SimplifiedUpgradeTests(BrowserE2ETestCase):
         page.wait_for_selector("#confirmRevision", timeout=30_000)
 
         console = page.locator(".workflow-generation-console").inner_text()
-        self.assertNotIn("orbit-progress", console)
+        self.assertNotIn("promptaflow-progress", console)
 
     def test_a_finished_modification_keeps_what_it_was_asked(self) -> None:
         """A settled job is gone from every payload the page is built from.

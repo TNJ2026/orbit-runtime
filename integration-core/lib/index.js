@@ -1,6 +1,6 @@
-/** Orbit, to any integration that is not this one.
+/** PromptaFlow, to any integration that is not this one.
  *
- * What lives here is everything an Orbit integration needs that is not about
+ * What lives here is everything an PromptaFlow integration needs that is not about
  * a particular host: finding or starting a Runtime, speaking to it, reading
  * what it says back, and turning a failure into a sentence. What does not live
  * here is anything that knows what a panel, a composer, or a slash command is

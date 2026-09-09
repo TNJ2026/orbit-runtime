@@ -1,5 +1,5 @@
 /** One Workflow as the panel's body, using the same graph/definition hierarchy
- * as Orbit's MCP App card. */
+ * as PromptaFlow's MCP App card. */
 
 import { useEffect, useState } from 'react'
 import { panelError, type PanelError } from '@promptaflow/integration-core'

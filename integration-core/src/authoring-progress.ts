@@ -14,7 +14,17 @@
  * marker, and must not be able to move the ladder.
  */
 
-const SENTINEL = '\x1eorbit-progress:'
+const SENTINEL = '\x1epromptaflow-progress:'
+// The Runtime and this bundle upgrade separately, so a Runtime that predates
+// the rename is still emitting the old marker at a moment when the panel is
+// showing its progress. Reading both is the difference between a live ladder
+// and one that silently never moves.
+const SENTINELS = [SENTINEL, '\x1eorbit-progress:'] as const
+
+/** The sentinel this chunk carries, if it carries one. */
+function sentinelOf(text: string): string | undefined {
+  return SENTINELS.find(candidate => text.startsWith(candidate))
+}
 
 /** The three things authoring does. Repairing is not among them — see below. */
 export const AUTHORING_STAGES = ['generating', 'validating', 'publishing'] as const
@@ -53,7 +63,7 @@ interface Chunk { readonly text: string }
 
 /** Whether this chunk is a progress marker rather than Agent output. */
 export function isProgressMarker(chunk: Chunk): boolean {
-  return chunk.text.startsWith(SENTINEL)
+  return sentinelOf(chunk.text) !== undefined
 }
 
 interface Marker { stage: string; attempt: number; maxAttempts: number }
@@ -61,7 +71,9 @@ interface Marker { stage: string; attempt: number; maxAttempts: number }
 function marker(chunk: Chunk): Marker | null {
   if (!isProgressMarker(chunk)) return null
   try {
-    const value = JSON.parse(chunk.text.slice(SENTINEL.length)) as Record<string, unknown>
+    const marker = sentinelOf(chunk.text)
+    if (marker === undefined) return null
+    const value = JSON.parse(chunk.text.slice(marker.length)) as Record<string, unknown>
     const stage = typeof value.stage === 'string' ? value.stage : ''
     if (!(stage in LANDS_ON)) return null
     return {

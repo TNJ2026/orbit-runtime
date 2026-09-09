@@ -1,4 +1,4 @@
-"""Contract tests for the compact Orbit current-task MCP App."""
+"""Contract tests for the compact PromptaFlow current-task MCP App."""
 
 from __future__ import annotations
 
@@ -463,7 +463,7 @@ class CurrentTaskCardTests(unittest.TestCase):
     def test_a_run_offers_only_what_can_still_be_done_to_it(self) -> None:
         """Two ways out of the card is not something to do with a run.
 
-        A finished run used to offer 解释结果 and 打开完整 Orbit UI — one a
+        A finished run used to offer 解释结果 and 打开完整 PromptaFlow UI — one a
         request to talk about it elsewhere, the other a way to leave. Neither
         acts on the run, and together they were the whole action row of every
         completed goal. A finished run offers nothing now, and the row it
@@ -472,7 +472,7 @@ class CurrentTaskCardTests(unittest.TestCase):
 
         for absent in (
             "promptExplain", "promptOpen", "t().explain", "t().open",
-            "解释结果", "打开完整 Orbit UI", "Open full Orbit UI",
+            "解释结果", "打开完整 PromptaFlow UI", "Open full PromptaFlow UI",
         ):
             self.assertNotIn(absent, ORBIT_DASHBOARD_HTML)
         for marker in (

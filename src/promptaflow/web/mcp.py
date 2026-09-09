@@ -330,7 +330,7 @@ def build_mcp_dispatcher(
             "inputSchema": {"type": "object", "properties": {}},
         },
         {
-            "name": "open_orbit_dashboard",
+            "name": "open_promptaflow_dashboard",
             "description": (
                 "Open PromptaFlow's workspace card beside the conversation. It provides "
                 "goals, workflows, history, agents, live progress, and attention state."
@@ -340,7 +340,7 @@ def build_mcp_dispatcher(
             "_meta": _ui_tool_meta(ORBIT_DASHBOARD_URI),
         },
         {
-            "name": "open_orbit_goals",
+            "name": "open_promptaflow_goals",
             "description": (
                 "Open PromptaFlow's recent goals card beside the conversation. "
                 "It shows goal runs and their current status without opening the full UI."
@@ -1040,6 +1040,9 @@ def build_mcp_dispatcher(
     def call(name: str, arguments: Mapping[str, Any], actor: str) -> Any:
         if name == "get_capabilities":
             return {
+                "promptaflow_version": __version__,
+                # Kept alongside: an Agent App built against the old key reads
+                # this to decide what it may call.
                 "orbit_version": __version__,
                 "integration_protocol": "orbit-harness/1",
                 "integration_protocols": [
@@ -1050,8 +1053,13 @@ def build_mcp_dispatcher(
                 "tool_profile": tool_profile,
             }
         name = {
-            "open_orbit_dashboard": "list_runs",
-            "open_orbit_goals": "list_runs",
+            "open_promptaflow_dashboard": "list_runs",
+            "open_promptaflow_goals": "list_runs",
+            # Only the current names are advertised. These are still answered
+            # because a client calls the name it discovered, and a tool list
+            # read before an upgrade outlives the upgrade.
+            "open_promptaflow_dashboard": "list_runs",
+            "open_promptaflow_goals": "list_runs",
         }.get(name, name)
         if name == "list_runs":
             owner = reading_actor(actor)

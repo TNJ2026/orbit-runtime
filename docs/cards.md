@@ -17,16 +17,16 @@ so treat the visible surface as a separate question from the call.
 
 | Call this | and this card appears | showing |
 | --- | --- | --- |
-| `open_orbit_dashboard` | PromptaFlow workspace | goals, workflows, history, and agents |
+| `open_promptaflow_dashboard` | PromptaFlow workspace | goals, workflows, history, and agents |
 | `list_workflows` | PromptaFlow workflows | the published catalogue |
 | `get_workflow_definition` | PromptaFlow workflows | the same card, opened on one workflow |
 | `generate_workflow` | PromptaFlow workflow generation | one authoring job's progress and result |
 | `start_run` | PromptaFlow goal execution | that run's steps, attention state and result |
-| `open_orbit_goals` | PromptaFlow goals | recent goal runs and their status |
+| `open_promptaflow_goals` | PromptaFlow goals | recent goal runs and their status |
 
 Pick the card from the intent rather than opening the workspace card first: a
 request to see the workflows is `list_workflows`, and a request to run a goal
-is `start_run`. Opening PromptaFlow itself is `open_orbit_dashboard`; the legacy tool
+is `start_run`. Opening PromptaFlow itself is `open_promptaflow_dashboard`; the legacy tool
 name remains stable for existing clients.
 
 ## What each one is

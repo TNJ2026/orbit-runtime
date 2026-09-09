@@ -4,7 +4,7 @@ Use this procedure for requests such as `open workflows`, `view workflow
 list`, `show workflows`, `打开工作流`, `查看工作流`, `工作流列表`, and close
 equivalents.
 
-1. Resolve the current project workspace exactly as in [open-orbit.md](open-orbit.md).
+1. Resolve the current project workspace exactly as in [open-promptaflow.md](open-promptaflow.md).
 2. Call `list_workflows`. Pass `ready_only=true` only when the user asks for
    runnable workflows; otherwise show the complete published list.
 3. The tool's workflow-list MCP App is the visible result. It contains only
@@ -37,6 +37,6 @@ equivalents.
    and a fresh idempotency key. If that tool is unavailable, say so; do not
    construct a mutation URL.
 
-Do not call `open_orbit_dashboard` for a workflow-list request: the workspace card
+Do not call `open_promptaflow_dashboard` for a workflow-list request: the workspace card
 is the default for opening PromptaFlow, while `list_workflows` is the dedicated list
 card.

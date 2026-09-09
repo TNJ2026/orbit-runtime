@@ -50,7 +50,7 @@ test('a model is offered only the Workflows routed by its Workspace', () => {
   catalog.remember('/b', [workflow({ workflow_id: 'workflow:b' })])
   catalog.remember('/a', [workflow({ workflow_id: 'workflow:a' })])
   const text = catalog.render('/a')
-  assert.match(text, /Orbit Workflows ready in \/a:/)
+  assert.match(text, /PromptaFlow Workflows ready in \/a:/)
   assert.doesNotMatch(text, /workflow:b/)
   assert.doesNotMatch(text, /\/b/)
 })

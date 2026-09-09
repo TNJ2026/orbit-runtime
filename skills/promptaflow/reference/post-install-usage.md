@@ -21,11 +21,11 @@ response carries the card; there is no separate open-card command.
 
 | Card | Function | Command or tool | Copyable Chinese prompt |
 | --- | --- | --- | --- |
-| PromptaFlow workspace | Goals, workflows, history, Agents, live progress, and attention state in one workspace view | `open_orbit_dashboard` | `打开 PromptaFlow` |
+| PromptaFlow workspace | Goals, workflows, history, Agents, live progress, and attention state in one workspace view | `open_promptaflow_dashboard` | `打开 PromptaFlow` |
 | PromptaFlow workflows | Published workflow catalogue; selecting an item shows its graph and definition in the same card | `list_workflows`; `get_workflow_definition` opens the same card at one workflow | `显示所有 PromptaFlow 工作流` / `打开工作流 workflow:<id>` |
 | PromptaFlow workflow generation | One workflow authoring job's queue, generation, validation, publication, and result state | `generate_workflow` | `生成一个“开发—评审—测试—提交代码”的 PromptaFlow 工作流` |
 | PromptaFlow goal execution | One Run's steps, attention state, human interruption, and final result | `start_run` | `用工作流 workflow:<id> 执行目标：<目标原文>` |
-| PromptaFlow goals | Recent goal Runs and their current statuses | `open_orbit_goals` | `打开 PromptaFlow 目标列表` |
+| PromptaFlow goals | Recent goal Runs and their current statuses | `open_promptaflow_goals` | `打开 PromptaFlow 目标列表` |
 
 Cards are views, not authority. A card action sends intent back to the Agent;
 the Agent must re-read current state and obey `allowed_commands[]`, current
@@ -41,14 +41,14 @@ a new task.
 
 | Intent | Tool sequence | Copyable Chinese prompt |
 | --- | --- | --- |
-| Open the full workspace card | `open_orbit_dashboard` | `打开 PromptaFlow` |
+| Open the full workspace card | `open_promptaflow_dashboard` | `打开 PromptaFlow` |
 | Show published workflows | `list_workflows` | `显示 PromptaFlow 工作流列表` |
 | Inspect one workflow in the same card | `get_workflow_definition` | `打开工作流 workflow:<id>` |
 | Generate a workflow from chat | `register_authoring_client(client="codex-app")`, then `generate_workflow` | `注册为当前项目的 Agent，并生成一个用于 <用途> 的工作流` |
 | Listen for Generate clicks from the full UI | `wait_authoring_request(client="codex-app")`; answer with `submit_authoring_response` | `现在监听 PromptaFlow 的工作流生成请求` |
 | Modify a published workflow | `modify_workflow`, then poll `get_authoring_job` | `把工作流 workflow:<id> 修改为：<修改要求>` |
 | Run a goal | Resolve with `inspect_workflow_definition`, then `start_run` | `用工作流 workflow:<id> 执行目标：<目标原文>` |
-| Show recent goals | `open_orbit_goals` | `打开 PromptaFlow 目标列表` |
+| Show recent goals | `open_promptaflow_goals` | `打开 PromptaFlow 目标列表` |
 | Resume delegated work on the first turn | `list_delegations`; ask before continuing when non-empty | `检查是否有可恢复的 PromptaFlow 委托` |
 
 Opening PromptaFlow is display-only. It does not register `codex-app` or start an
@@ -92,13 +92,13 @@ plugin or stdio proxy; configure a custom Streamable HTTP connector named
 | Intent | Tool sequence | Copyable Chinese prompt |
 | --- | --- | --- |
 | Select the project workspace | `list_workspaces`, then `select_workspace` | `列出 PromptaFlow Workspaces，并选择 <项目名或绝对路径>` |
-| Open the workspace card | `open_orbit_dashboard` | `打开 PromptaFlow` |
+| Open the workspace card | `open_promptaflow_dashboard` | `打开 PromptaFlow` |
 | Show workflows as a card | `list_workflows` | `显示 PromptaFlow 工作流列表` |
 | Select or filter workflows without mounting a card | `inspect_workflows` | `找出所有可以直接启动目标的 PromptaFlow 工作流` |
 | Open one workflow in the workflow card | `get_workflow_definition` | `打开工作流 workflow:<id>` |
 | Generate a workflow | Register a unique WorkBuddy client name, then `generate_workflow` | `注册当前 WorkBuddy 为工作流编写 Agent，并生成一个用于 <用途> 的工作流` |
 | Run and follow a goal | `start_run`, then `inspect_run` and Run detail tools | `用工作流 workflow:<id> 执行目标：<目标原文>` |
-| Show recent goals | `open_orbit_goals` | `打开 PromptaFlow 目标列表` |
+| Show recent goals | `open_promptaflow_goals` | `打开 PromptaFlow 目标列表` |
 | Handle current-App Agent steps | `claim_delegation`, `renew_delegation`, `checkpoint_delegation`, `complete_delegation` | `使用 current_app 模式运行，并在本对话中处理所有 Agent 步骤` |
 
 WorkBuddy may register as `orbit` or

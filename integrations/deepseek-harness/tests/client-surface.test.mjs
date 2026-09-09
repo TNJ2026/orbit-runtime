@@ -633,7 +633,7 @@ test('an authoring job draws its stages, not one unchanging line', () => {
   // Markers are control data: kept out of the console text, read as the ladder.
   assert.match(row, /filter\(chunk => !isProgressMarker\(chunk\)\)/)
   assert.match(row, /setMarkers\(/)
-  assert.equal(row.includes("'\\x1eorbit-progress:'"), false,
+  assert.equal(row.includes("'\\x1epromptaflow-progress:'"), false,
     'the sentinel is matched in one place, beside what parses it')
 })
 

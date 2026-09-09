@@ -1,4 +1,4 @@
-"""The bundled Orbit skill routes each intent to its dedicated MCP App."""
+"""The bundled PromptaFlow skill routes each intent to its dedicated MCP App."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ class PromptaflowSkillCardRoutingTests(unittest.TestCase):
     def test_main_skill_names_each_card_and_tool(self) -> None:
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         for marker in (
-            "open_orbit_dashboard", "list_workflows",
+            "open_promptaflow_dashboard", "list_workflows",
             "get_workflow_definition", "delete_workflow", "generate_workflow", "start_run",
             "Workflow list", "Workflow generation", "Goal execution",
         ):
@@ -45,7 +45,7 @@ class PromptaflowSkillCardRoutingTests(unittest.TestCase):
         for name in ("execute-goal.md", "authoring-with-current-app.md"):
             text = (ROOT / "reference" / name).read_text(encoding="utf-8")
             self.assertIn("Do not call", text)
-            self.assertIn("open_orbit_dashboard", text)
+            self.assertIn("open_promptaflow_dashboard", text)
 
     def test_explicit_workflow_execution_skips_list_card(self) -> None:
         text = (ROOT / "reference" / "execute-goal.md").read_text(
@@ -84,7 +84,7 @@ class PromptaflowSkillCardRoutingTests(unittest.TestCase):
             self.assertIn(marker, text)
 
     def test_opening_promptaflow_does_not_register_or_listen(self) -> None:
-        text = (ROOT / "reference" / "open-orbit.md").read_text(
+        text = (ROOT / "reference" / "open-promptaflow.md").read_text(
             encoding="utf-8"
         )
         self.assertIn("Opening PromptaFlow is display-only", text)
@@ -131,7 +131,7 @@ class PromptaflowSkillCardRoutingTests(unittest.TestCase):
         for marker in (
             "PromptaFlow workspace", "PromptaFlow workflows", "PromptaFlow workflow generation",
             "PromptaFlow goal execution", "PromptaFlow goals", "Codex", "DeepSeek Harness",
-            "WorkBuddy", "open_orbit_dashboard", "open_orbit_goals",
+            "WorkBuddy", "open_promptaflow_dashboard", "open_promptaflow_goals",
             "generate_workflow", "start_run", "/promptaflow", "/promptaflow-workflows",
             "orbit_list_workflows", "orbit_start_run", "list_workspaces",
             "select_workspace", "Copyable Chinese prompt",

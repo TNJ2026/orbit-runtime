@@ -372,7 +372,7 @@ class SweepTests(unittest.TestCase):
 
         reclaimed = grant.sweep({"alive-run:node-1"})
 
-        self.assertIn(provider.branch_name("dead-run:node-1")[len("orbit/ws-"):], reclaimed)
+        self.assertIn(provider.branch_name("dead-run:node-1")[len("promptaflow/ws-"):], reclaimed)
         self.assertFalse(dead.exists())
         self.assertTrue(alive.exists())
 

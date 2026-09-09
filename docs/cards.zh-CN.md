@@ -15,15 +15,15 @@ SEP-1865）：每一张都作为 MCP 资源发布、mime type 为 `text/html;pro
 
 | 调用这个 | 就出现这张卡 | 显示 |
 | --- | --- | --- |
-| `open_orbit_dashboard` | PromptaFlow workspace | 目标、工作流、历史记录和 Agents |
+| `open_promptaflow_dashboard` | PromptaFlow workspace | 目标、工作流、历史记录和 Agents |
 | `list_workflows` | PromptaFlow workflows | 已发布的目录 |
 | `get_workflow_definition` | PromptaFlow workflows | 同一张卡，直接停在某个工作流上 |
 | `generate_workflow` | PromptaFlow workflow generation | 某个撰写任务的进度与结果 |
 | `start_run` | PromptaFlow goal execution | 该次 run 的步骤、是否需要人、以及结果 |
-| `open_orbit_goals` | PromptaFlow goals | 最近的目标运行及其状态 |
+| `open_promptaflow_goals` | PromptaFlow goals | 最近的目标运行及其状态 |
 
 **按意图选卡，不要先开 workspace 卡片**：要看工作流就是 `list_workflows`，要跑目标就是
-`start_run`；「打开 PromptaFlow」本身才是 `open_orbit_dashboard`。这个历史工具名会继续保留，
+`start_run`；「打开 PromptaFlow」本身才是 `open_promptaflow_dashboard`。这个历史工具名会继续保留，
 避免破坏已有客户端。
 
 ## 每张卡是什么

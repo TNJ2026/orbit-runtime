@@ -1,4 +1,4 @@
-/** The resident Orbit panel: what is running, and a way into Orbit itself. */
+/** The resident PromptaFlow panel: what is running, and a way into PromptaFlow itself. */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { IconChevronDownOutline14, IconCloseOutline16, IconPanelLeftOutline16, IconRefreshOutline16, IconShareOutline16, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -19,7 +19,7 @@ import { OrbitWorkflowDetail } from './OrbitWorkflowDetail.tsx'
 
 type Translate = (key: OrbitLocaleKey, values?: Record<string, string | number>) => string
 
-/** Orbit's ring-and-satellite mark, kept inline so the folded control is self-contained. */
+/** PromptaFlow's ring-and-satellite mark, kept inline so the folded control is self-contained. */
 function OrbitMark() {
   return (
     <svg className={styles.orbitMark} viewBox="0 0 64 64" aria-hidden="true">
@@ -59,7 +59,7 @@ function useBounds(): PanelBounds {
 
 /** Two letters and a colour, derived so the same Agent always looks the same.
  *
- * Orbit gives each Agent a coloured mark; this reproduces the idea without
+ * PromptaFlow gives each Agent a coloured mark; this reproduces the idea without
  * shipping a palette that would drift from it. The hue is the name's own, and
  * the colours stay inside the shell's theme by being expressed as one.
  */
@@ -77,7 +77,7 @@ function agentMark(name: string): { initials: string; style: React.CSSProperties
 }
 
 /** One page's heading, the line under it, and anything it counts. */
-/** The letter a step wears in the chain, as Orbit's own card assigns it. */
+/** The letter a step wears in the chain, as PromptaFlow's own card assigns it. */
 function glyph(kind: string): string {
   if (kind === 'terminal') return '✓'
   if (kind === 'human') return 'H'
@@ -497,7 +497,7 @@ export function OrbitPanel({ t, useSessions, onSelectWorkflow, onEditWorkflow, o
         </button>
         {/* Last, and it asks first. Every control to its left is reversible —
             fold the panel, open a tab, poll again — and this one stops a
-            service other Sessions, Orbit's own UI and any Run in flight are
+            service other Sessions, PromptaFlow's own UI and any Run in flight are
             using. A press that cannot be undone does not belong in that row
             without a question between it and the effect. */}
         <button
@@ -615,7 +615,7 @@ export function OrbitPanel({ t, useSessions, onSelectWorkflow, onEditWorkflow, o
                 className={styles.flowButton}
                 onClick={() => setSelectedFlow(item.workflow_id)}
               >
-              {/* Name and shape, as Orbit's own card reads: the id is how a
+              {/* Name and shape, as PromptaFlow's own card reads: the id is how a
                   machine addresses this, and it is a line above the only thing
                   a person is choosing by. Both are on the detail page. */}
               <div className={styles.flowName}>

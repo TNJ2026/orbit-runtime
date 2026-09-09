@@ -58,7 +58,7 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
         self.assertIn("@Remote('listArtifacts')", remote)
         self.assertIn("@Remote('getArtifactContent')", remote)
         # The property, not its old address: every mutation re-reads the Run
-        # and matches the command against what Orbit advertises at the exact
+        # and matches the command against what PromptaFlow advertises at the exact
         # revision the caller was reading. It now lives in one shared helper
         # rather than being spelled twice.
         commands = (CORE / "src" / "commands.ts").read_text(encoding="utf-8")
@@ -114,14 +114,14 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
         """A resident panel of Runs, and a link out for everything deeper.
 
         The boundary is the whole reason this is not the 685-line duplicate it
-        replaced: graphs and Artifacts are drawn by Orbit, and reading their
-        data here is how a panel becomes a second Orbit.
+        replaced: graphs and Artifacts are drawn by PromptaFlow, and reading their
+        data here is how a panel becomes a second PromptaFlow.
 
         Authoring sits on the boundary rather than beyond it, and the line is
         between asking and editing. `/orbit-generate` starts a job and the
         Workflows page follows it, because a job somebody started from this
         input box is news about this Workspace. Changing a published Workflow
-        is the other thing: that is the authoring surface, Orbit draws all of
+        is the other thing: that is the authoring surface, PromptaFlow draws all of
         it, and a second half-copy here would be the duplicate again.
         """
 

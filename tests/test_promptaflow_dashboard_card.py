@@ -610,7 +610,7 @@ class DashboardCardTests(unittest.TestCase):
     # -- what the card was for --------------------------------------------
 
     def test_a_waiting_run_is_what_the_card_opens_on(self) -> None:
-        """The reason to open Orbit is the goal that needs an answer."""
+        """The reason to open PromptaFlow is the goal that needs an answer."""
 
         runs = [run("run:live", status="interrupted", goal="起草说明文档",
                     created_at=at(0), updated_at=at(0),

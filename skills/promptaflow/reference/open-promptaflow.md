@@ -5,10 +5,10 @@ finds the workspace, where the UI has to be opened, and whether a listening
 call may be held open.
 
 1. Resolve the current project workspace to an absolute directory. If the App
-   has no project workspace, use `ORBIT_DEFAULT_WORKSPACE` when configured or
+   has no project workspace, use `PROMPTAFLOW_DEFAULT_WORKSPACE` when configured or
    `~/.promptaflow/workspaces/default`; never use the process working directory as a
    fallback.
-2. Call `open_orbit_dashboard`. The MCP proxy selects the resolved workspace
+2. Call `open_promptaflow_dashboard`. The MCP proxy selects the resolved workspace
    through the Hub, which starts or discovers its Runtime, and opens the
    default PromptaFlow workspace card.
    Keep this default for requests to open PromptaFlow itself. Workflow-list requests

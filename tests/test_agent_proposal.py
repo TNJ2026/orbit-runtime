@@ -132,7 +132,7 @@ class ProbeTests(unittest.TestCase):
 
 class ProposalTests(unittest.TestCase):
     def test_cli_name_is_extracted_from_chinese_prompt_without_model_authority(self) -> None:
-        self.assertEqual(["kimi"], _explicit_cli_names("请给 Orbit 添加 Kimi CLI"))
+        self.assertEqual(["kimi"], _explicit_cli_names("请给 PromptaFlow 添加 Kimi CLI"))
 
     def test_short_natural_requests_are_extracted_without_cli_keyword(self) -> None:
         cases = {
@@ -157,7 +157,7 @@ class ProposalTests(unittest.TestCase):
     def test_only_cli_names_explicitly_present_in_the_prompt_survive(self) -> None:
         self.assertEqual(
             ["kimi"],
-            _mentioned_names("请给 Orbit 添加 Kimi CLI", ["kimi", "pi", "claude"]),
+            _mentioned_names("请给 PromptaFlow 添加 Kimi CLI", ["kimi", "pi", "claude"]),
         )
 
     def test_hyphenated_name_uses_whole_name_boundaries(self) -> None:
@@ -435,7 +435,7 @@ class EndpointTests(unittest.TestCase):
             )
             self.assertEqual("", data["patch"])
 
-    def test_apply_targets_the_orbit_checkout_not_the_runtime_workspace(self) -> None:
+    def test_apply_targets_the_promptaflow_checkout_not_the_runtime_workspace(self) -> None:
         from test_web_composition import AsgiHarness
 
         sample = propose(
