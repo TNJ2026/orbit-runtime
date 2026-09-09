@@ -19,7 +19,7 @@ WorkBuddy 没有专用插件，也没有 Proxy。PromptaFlow 在本地运行，W
 把下面这句话交给能够读取公开仓库并运行本地命令的 WorkBuddy Agent：
 
 ```text
-请从这个仓库为 WorkBuddy 配置 PromptaFlow 连接器：https://github.com/TNJ2026/orbit
+请从这个仓库为 WorkBuddy 配置 PromptaFlow 连接器：https://github.com/TNJ2026/promptaflow
 ```
 
 Agent 应通过仓库的宿主索引找到本文，安装并启动 PromptaFlow、检查端点，然后引导你完成它无法
@@ -37,7 +37,7 @@ Agent 应通过仓库的宿主索引找到本文，安装并启动 PromptaFlow�
 把 checkout 保存在稳定目录：
 
 ```bash
-git clone https://github.com/TNJ2026/orbit.git /绝对路径/稳定目录/orbit
+git clone https://github.com/TNJ2026/promptaflow.git /绝对路径/稳定目录/orbit
 uv tool install /绝对路径/稳定目录/orbit
 uv tool update-shell
 orbit --version
@@ -172,7 +172,7 @@ WorkBuddy 从 MCP 服务器的初始化指令里收到这条规则：第一个�
 - 连接器：启用现有的、名为 PromptaFlow 的自定义 MCP 连接器。
 
 以仓库中的最新指南为唯一依据：
-https://github.com/TNJ2026/orbit/blob/main/docs/hosts/workbuddy.zh-CN.md
+https://github.com/TNJ2026/promptaflow/blob/main/docs/hosts/workbuddy.zh-CN.md
 
 读取其中的「示例：一份工作流编排提示词」一节，把该节代码块中的完整提示词作为专家指令。
 保留所有工具名、首轮恢复检查、Workspace 选择、卡片使用规则、allowed_commands 与 revision

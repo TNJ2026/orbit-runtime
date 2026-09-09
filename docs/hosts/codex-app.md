@@ -12,7 +12,7 @@
 ## Install the repository/personal plugin
 
 PromptaFlow is distributed through a local Marketplace archive attached to each
-[GitHub Release](https://github.com/TNJ2026/orbit/releases). Installing this
+[GitHub Release](https://github.com/TNJ2026/promptaflow/releases). Installing this
 archive registers it for the current user only; it does not publish PromptaFlow to
 the public Plugins Directory.
 
@@ -24,7 +24,7 @@ copied into the prompt. It may ask for approval before downloading the release
 or writing the user-level plugin configuration.
 
 ```text
-Install the PromptaFlow Codex plugin from https://github.com/TNJ2026/orbit.
+Install the PromptaFlow Codex plugin from https://github.com/TNJ2026/promptaflow.
 ```
 
 For a specific release, add its exact version to the prompt, for example:

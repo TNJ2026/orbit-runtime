@@ -20,7 +20,7 @@ Paste this into a WorkBuddy Agent that can read public repositories and run
 local commands:
 
 ```text
-Set up the PromptaFlow connector for WorkBuddy from https://github.com/TNJ2026/orbit.
+Set up the PromptaFlow connector for WorkBuddy from https://github.com/TNJ2026/promptaflow.
 ```
 
 The Agent should find this document through the repository's host index,
@@ -40,22 +40,22 @@ connector-setting action it cannot perform itself.
 Keep the checkout in a stable location:
 
 ```bash
-git clone https://github.com/TNJ2026/orbit.git /absolute/stable/path/orbit
-uv tool install /absolute/stable/path/orbit
+git clone https://github.com/TNJ2026/promptaflow.git /absolute/stable/path/promptaflow
+uv tool install /absolute/stable/path/promptaflow
 uv tool update-shell
 orbit --version
 ```
 
 If the checkout already exists, inspect and preserve local changes. Update a
 clean checkout with `git pull --ff-only`, then refresh the installed tool with
-`uv tool install --force /absolute/stable/path/orbit`.
+`uv tool install --force /absolute/stable/path/promptaflow`.
 
 ### 3. Start PromptaFlow for the intended project
 
 Run the repository launcher with the project that should own the Runtime:
 
 ```bash
-/absolute/stable/path/orbit/start-promptaflow.sh /absolute/path/to/project
+/absolute/stable/path/promptaflow/start-promptaflow.sh /absolute/path/to/project
 ```
 
 Then verify discovery and open the Hub UI:
@@ -110,9 +110,9 @@ To upgrade, update a clean checkout, reinstall the tool, and rerun the launcher
 for the intended project:
 
 ```bash
-cd /absolute/stable/path/orbit
+cd /absolute/stable/path/promptaflow
 git pull --ff-only
-uv tool install --force /absolute/stable/path/orbit
+uv tool install --force /absolute/stable/path/promptaflow
 ./start-promptaflow.sh /absolute/path/to/project
 ```
 
@@ -197,7 +197,7 @@ Create a WorkBuddy expert with these settings:
 - Connector: enable the existing custom MCP connector named PromptaFlow.
 
 Use the current repository guide as the source of truth:
-https://github.com/TNJ2026/orbit/blob/main/docs/hosts/workbuddy.md
+https://github.com/TNJ2026/promptaflow/blob/main/docs/hosts/workbuddy.md
 
 Read the section "Example: a workflow orchestration prompt" and use the entire
 prompt in its fenced text block as the expert's instructions. Preserve its tool

@@ -29,8 +29,8 @@ uv tool update-shell
 To work from source:
 
 ```bash
-git clone https://github.com/TNJ2026/orbit.git
-cd orbit
+git clone https://github.com/TNJ2026/promptaflow.git
+cd promptaflow
 uv sync --extra dev
 uv run promptaflow serve
 ```

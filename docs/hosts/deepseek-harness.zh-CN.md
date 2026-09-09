@@ -19,7 +19,7 @@
 把下面这句话交给能够读取公开仓库并运行本地命令的 DeepSeek Harness Agent：
 
 ```text
-请安装这个仓库中的 PromptaFlow DeepSeek Harness 集成：https://github.com/TNJ2026/orbit
+请安装这个仓库中的 PromptaFlow DeepSeek Harness 集成：https://github.com/TNJ2026/promptaflow
 ```
 
 Agent 应从仓库的宿主索引找到本文，并执行下面的步骤。它必须在重启当前 Harness Profile
@@ -44,7 +44,7 @@ dsh --version
 ### 2. 把 PromptaFlow 克隆到稳定目录
 
 ```bash
-git clone https://github.com/TNJ2026/orbit.git /绝对路径/稳定目录/orbit
+git clone https://github.com/TNJ2026/promptaflow.git /绝对路径/稳定目录/orbit
 cd /绝对路径/稳定目录/orbit
 ```
 

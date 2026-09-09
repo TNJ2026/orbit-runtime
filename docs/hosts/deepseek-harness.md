@@ -21,7 +21,7 @@ Paste this into a DeepSeek Harness Agent that can read public repositories and
 run local commands:
 
 ```text
-Install the PromptaFlow DeepSeek Harness integration from https://github.com/TNJ2026/orbit.
+Install the PromptaFlow DeepSeek Harness integration from https://github.com/TNJ2026/promptaflow.
 ```
 
 The Agent should find this document from the repository's host index and
@@ -47,8 +47,8 @@ dsh --version
 ### 2. Clone PromptaFlow into a stable directory
 
 ```bash
-git clone https://github.com/TNJ2026/orbit.git /absolute/stable/path/orbit
-cd /absolute/stable/path/orbit
+git clone https://github.com/TNJ2026/promptaflow.git /absolute/stable/path/promptaflow
+cd /absolute/stable/path/promptaflow
 ```
 
 If the repository already exists, inspect its changes before updating it. Do
@@ -57,7 +57,7 @@ not discard local work; update a clean checkout with `git pull --ff-only`.
 ### 3. Install PromptaFlow Runtime
 
 ```bash
-uv tool install /absolute/stable/path/orbit
+uv tool install /absolute/stable/path/promptaflow
 uv tool update-shell
 orbit --version
 ```
@@ -70,7 +70,7 @@ Open a new terminal if `orbit` is not immediately visible after
 Stop the active Web Profile before replacing an existing bundle, then run:
 
 ```bash
-dsh plugin --profile web add /absolute/stable/path/orbit/integrations/deepseek-harness
+dsh plugin --profile web add /absolute/stable/path/promptaflow/integrations/deepseek-harness
 dsh --profile web --dump-config
 ```
 
@@ -101,10 +101,10 @@ For an upgrade, stop the Profile, update the clean checkout, refresh the Runtime
 tool, and add the bundle again:
 
 ```bash
-cd /absolute/stable/path/orbit
+cd /absolute/stable/path/promptaflow
 git pull --ff-only
-uv tool install --force /absolute/stable/path/orbit
-dsh plugin --profile web add /absolute/stable/path/orbit/integrations/deepseek-harness
+uv tool install --force /absolute/stable/path/promptaflow
+dsh plugin --profile web add /absolute/stable/path/promptaflow/integrations/deepseek-harness
 dsh --profile web --dump-config
 ```
 

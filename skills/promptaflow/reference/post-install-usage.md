@@ -80,7 +80,7 @@ full browser UI rather than being redrawn in the panel.
 Harness installation prompt:
 
 ```text
-请安装这个仓库中的 PromptaFlow DeepSeek Harness 集成：https://github.com/TNJ2026/orbit
+请安装这个仓库中的 PromptaFlow DeepSeek Harness 集成：https://github.com/TNJ2026/promptaflow
 ```
 
 ## WorkBuddy
@@ -109,5 +109,5 @@ its own MCP session, so mount a card only when the user asked to see it.
 WorkBuddy connector setup prompt:
 
 ```text
-请从这个仓库为 WorkBuddy 配置 PromptaFlow 连接器：https://github.com/TNJ2026/orbit
+请从这个仓库为 WorkBuddy 配置 PromptaFlow 连接器：https://github.com/TNJ2026/promptaflow
 ```

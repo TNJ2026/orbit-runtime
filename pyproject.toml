@@ -41,9 +41,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/TNJ2026/orbit"
-Repository = "https://github.com/TNJ2026/orbit"
-Issues = "https://github.com/TNJ2026/orbit/issues"
+Homepage = "https://github.com/TNJ2026/promptaflow"
+Repository = "https://github.com/TNJ2026/promptaflow"
+Issues = "https://github.com/TNJ2026/promptaflow/issues"
 
 # Test-only. playwright is never imported by the package; the browser suite
 # skips when it is absent, so a plain install stays four dependencies deep.

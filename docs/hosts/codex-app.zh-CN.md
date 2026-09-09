@@ -11,7 +11,7 @@
 
 ## 安装仓库/个人插件
 
-PromptaFlow 通过每个 [GitHub Release](https://github.com/TNJ2026/orbit/releases) 附带的本地
+PromptaFlow 通过每个 [GitHub Release](https://github.com/TNJ2026/promptaflow/releases) 附带的本地
 Marketplace 压缩包分发。安装后只对当前用户生效，不会把 PromptaFlow 发布到公共 Plugins
 Directory。
 
@@ -22,7 +22,7 @@ Directory。
 授权。
 
 ```text
-请安装这个仓库中的 PromptaFlow Codex 插件：https://github.com/TNJ2026/orbit
+请安装这个仓库中的 PromptaFlow Codex 插件：https://github.com/TNJ2026/promptaflow
 ```
 
 如果要安装指定 Release，在提示词末尾加上明确版本即可，例如：`安装 PromptaFlow 0.4.0`。
