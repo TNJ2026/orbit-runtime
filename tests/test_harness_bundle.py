@@ -29,7 +29,7 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
             if name.startswith("@deepseek-ai/dsh-")
         }
         self.assertTrue(harness_peers)
-        self.assertEqual({">=0.1.1-rc.2 <0.2.0"}, set(harness_peers.values()))
+        self.assertEqual({">=0.1.2-rc.1 <0.2.0"}, set(harness_peers.values()))
         self.assertTrue(all("alpha" not in version for version in harness_peers.values()))
 
     def test_patch_registers_the_host_gateway(self) -> None:

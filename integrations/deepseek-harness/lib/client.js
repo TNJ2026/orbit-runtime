@@ -2389,15 +2389,15 @@ window.__ModuleLoader__.load({
 			}
 			function touchstarted(event, d) {
 				if (!filter.call(this, event, d)) return;
-				var touches = event.changedTouches, c = container.call(this, event, d), n = touches.length, i, gesture;
-				for (i = 0; i < n; ++i) if (gesture = beforestart(this, c, event, d, touches[i].identifier, touches[i])) {
+				var touches = event.changedTouches, c = container.call(this, event, d), n = touches.length, i = 0, gesture;
+				for (; i < n; ++i) if (gesture = beforestart(this, c, event, d, touches[i].identifier, touches[i])) {
 					nopropagation$1(event);
 					gesture("start", event, touches[i]);
 				}
 			}
 			function touchmoved(event) {
-				var touches = event.changedTouches, n = touches.length, i, gesture;
-				for (i = 0; i < n; ++i) if (gesture = gestures[touches[i].identifier]) {
+				var touches = event.changedTouches, n = touches.length, i = 0, gesture;
+				for (; i < n; ++i) if (gesture = gestures[touches[i].identifier]) {
 					noevent_default$1(event);
 					gesture("drag", event, touches[i]);
 				}
@@ -2867,8 +2867,8 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region node_modules/d3-interpolate/src/array.js
 		function genericArray(a, b) {
-			var nb = b ? b.length : 0, na = a ? Math.min(nb, a.length) : 0, x = new Array(na), c = new Array(nb), i;
-			for (i = 0; i < na; ++i) x[i] = value_default(a[i], b[i]);
+			var nb = b ? b.length : 0, na = a ? Math.min(nb, a.length) : 0, x = new Array(na), c = new Array(nb), i = 0;
+			for (; i < na; ++i) x[i] = value_default(a[i], b[i]);
 			for (; i < nb; ++i) c[i] = b[i];
 			return function(t) {
 				for (i = 0; i < na; ++i) c[i] = x[i](t);
@@ -2957,7 +2957,7 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region node_modules/d3-interpolate/src/transform/decompose.js
 		var degrees = 180 / Math.PI;
-		var identity$1 = {
+		var identity$2 = {
 			translateX: 0,
 			translateY: 0,
 			rotate: 0,
@@ -2985,13 +2985,13 @@ window.__ModuleLoader__.load({
 		var svgNode;
 		function parseCss(value) {
 			const m = new (typeof DOMMatrix === "function" ? DOMMatrix : WebKitCSSMatrix)(value + "");
-			return m.isIdentity ? identity$1 : decompose_default(m.a, m.b, m.c, m.d, m.e, m.f);
+			return m.isIdentity ? identity$2 : decompose_default(m.a, m.b, m.c, m.d, m.e, m.f);
 		}
 		function parseSvg(value) {
-			if (value == null) return identity$1;
+			if (value == null) return identity$2;
 			if (!svgNode) svgNode = document.createElementNS("http://www.w3.org/2000/svg", "g");
 			svgNode.setAttribute("transform", value);
-			if (!(value = svgNode.transform.baseVal.consolidate())) return identity$1;
+			if (!(value = svgNode.transform.baseVal.consolidate())) return identity$2;
 			value = value.matrix;
 			return decompose_default(value.a, value.b, value.c, value.d, value.e, value.f);
 		}
@@ -3914,10 +3914,10 @@ window.__ModuleLoader__.load({
 				return "translate(" + this.x + "," + this.y + ") scale(" + this.k + ")";
 			}
 		};
-		var identity = new Transform(1, 0, 0);
+		var identity$1 = new Transform(1, 0, 0);
 		transform.prototype = Transform.prototype;
 		function transform(node) {
-			while (!node.__zoom) if (!(node = node.parentNode)) return identity;
+			while (!node.__zoom) if (!(node = node.parentNode)) return identity$1;
 			return node.__zoom;
 		}
 		//#endregion
@@ -3947,7 +3947,7 @@ window.__ModuleLoader__.load({
 			return [[0, 0], [e.clientWidth, e.clientHeight]];
 		}
 		function defaultTransform() {
-			return this.__zoom || identity;
+			return this.__zoom || identity$1;
 		}
 		function defaultWheelDelta(event) {
 			return -event.deltaY * (event.deltaMode === 1 ? .05 : event.deltaMode ? 1 : .002) * (event.ctrlKey ? 10 : 1);
@@ -3991,7 +3991,7 @@ window.__ModuleLoader__.load({
 			zoom.translateTo = function(selection, x, y, p, event) {
 				zoom.transform(selection, function() {
 					var e = extent.apply(this, arguments), t = this.__zoom, p0 = p == null ? centroid(e) : typeof p === "function" ? p.apply(this, arguments) : p;
-					return constrain(identity.translate(p0[0], p0[1]).scale(t.k).translate(typeof x === "function" ? -x.apply(this, arguments) : -x, typeof y === "function" ? -y.apply(this, arguments) : -y), e, translateExtent);
+					return constrain(identity$1.translate(p0[0], p0[1]).scale(t.k).translate(typeof x === "function" ? -x.apply(this, arguments) : -x, typeof y === "function" ? -y.apply(this, arguments) : -y), e, translateExtent);
 				}, p, event);
 			};
 			function scale(transform, k) {
@@ -6422,7 +6422,7 @@ window.__ModuleLoader__.load({
 			y: transform.y,
 			zoom: transform.k
 		});
-		const viewportToTransform = ({ x, y, zoom }) => identity.translate(x, y).scale(zoom);
+		const viewportToTransform = ({ x, y, zoom }) => identity$1.translate(x, y).scale(zoom);
 		const isWrappedWithClass = (event, className) => event.target.closest(`.${className}`);
 		const isRightClickPan = (panOnDrag, usedButton) => usedButton === 2 && Array.isArray(panOnDrag) && panOnDrag.includes(2);
 		const defaultEase = (t) => ((t *= 2) <= 1 ? t * t * t : (t -= 2) * t * t + 2) / 2;
@@ -7050,146 +7050,146 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region node_modules/use-sync-external-store/cjs/use-sync-external-store-shim.production.min.js
+		//#region node_modules/zustand/node_modules/use-sync-external-store/cjs/use-sync-external-store-shim.production.js
 		/**
 		* @license React
-		* use-sync-external-store-shim.production.min.js
+		* use-sync-external-store-shim.production.js
 		*
-		* Copyright (c) Facebook, Inc. and its affiliates.
+		* Copyright (c) Meta Platforms, Inc. and affiliates.
 		*
 		* This source code is licensed under the MIT license found in the
 		* LICENSE file in the root directory of this source tree.
 		*/
-		var require_use_sync_external_store_shim_production_min = /* @__PURE__ */ __commonJSMin(((exports) => {
-			var e = require("react");
-			function h(a, b) {
-				return a === b && (0 !== a || 1 / a === 1 / b) || a !== a && b !== b;
+		var require_use_sync_external_store_shim_production = /* @__PURE__ */ __commonJSMin(((exports) => {
+			var React$1 = require("react");
+			function is(x, y) {
+				return x === y && (0 !== x || 1 / x === 1 / y) || x !== x && y !== y;
 			}
-			var k = "function" === typeof Object.is ? Object.is : h;
-			var l = e.useState;
-			var m = e.useEffect;
-			var n = e.useLayoutEffect;
-			var p = e.useDebugValue;
-			function q(a, b) {
-				var d = b(), f = l({ inst: {
-					value: d,
-					getSnapshot: b
-				} }), c = f[0].inst, g = f[1];
-				n(function() {
-					c.value = d;
-					c.getSnapshot = b;
-					r(c) && g({ inst: c });
+			var objectIs = "function" === typeof Object.is ? Object.is : is;
+			var useState = React$1.useState;
+			var useEffect = React$1.useEffect;
+			var useLayoutEffect = React$1.useLayoutEffect;
+			var useDebugValue = React$1.useDebugValue;
+			function useSyncExternalStore$2(subscribe, getSnapshot) {
+				var value = getSnapshot(), _useState = useState({ inst: {
+					value,
+					getSnapshot
+				} }), inst = _useState[0].inst, forceUpdate = _useState[1];
+				useLayoutEffect(function() {
+					inst.value = value;
+					inst.getSnapshot = getSnapshot;
+					checkIfSnapshotChanged(inst) && forceUpdate({ inst });
 				}, [
-					a,
-					d,
-					b
+					subscribe,
+					value,
+					getSnapshot
 				]);
-				m(function() {
-					r(c) && g({ inst: c });
-					return a(function() {
-						r(c) && g({ inst: c });
+				useEffect(function() {
+					checkIfSnapshotChanged(inst) && forceUpdate({ inst });
+					return subscribe(function() {
+						checkIfSnapshotChanged(inst) && forceUpdate({ inst });
 					});
-				}, [a]);
-				p(d);
-				return d;
+				}, [subscribe]);
+				useDebugValue(value);
+				return value;
 			}
-			function r(a) {
-				var b = a.getSnapshot;
-				a = a.value;
+			function checkIfSnapshotChanged(inst) {
+				var latestGetSnapshot = inst.getSnapshot;
+				inst = inst.value;
 				try {
-					var d = b();
-					return !k(a, d);
-				} catch (f) {
+					var nextValue = latestGetSnapshot();
+					return !objectIs(inst, nextValue);
+				} catch (error) {
 					return !0;
 				}
 			}
-			function t(a, b) {
-				return b();
+			function useSyncExternalStore$1(subscribe, getSnapshot) {
+				return getSnapshot();
 			}
-			var u = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? t : q;
-			exports.useSyncExternalStore = void 0 !== e.useSyncExternalStore ? e.useSyncExternalStore : u;
+			var shim = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? useSyncExternalStore$1 : useSyncExternalStore$2;
+			exports.useSyncExternalStore = void 0 !== React$1.useSyncExternalStore ? React$1.useSyncExternalStore : shim;
 		}));
 		//#endregion
-		//#region node_modules/use-sync-external-store/shim/index.js
+		//#region node_modules/zustand/node_modules/use-sync-external-store/shim/index.js
 		var require_shim = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-			module.exports = require_use_sync_external_store_shim_production_min();
+			module.exports = require_use_sync_external_store_shim_production();
 		}));
 		//#endregion
-		//#region node_modules/use-sync-external-store/cjs/use-sync-external-store-shim/with-selector.production.min.js
+		//#region node_modules/zustand/node_modules/use-sync-external-store/cjs/use-sync-external-store-shim/with-selector.production.js
 		/**
 		* @license React
-		* use-sync-external-store-shim/with-selector.production.min.js
+		* use-sync-external-store-shim/with-selector.production.js
 		*
-		* Copyright (c) Facebook, Inc. and its affiliates.
+		* Copyright (c) Meta Platforms, Inc. and affiliates.
 		*
 		* This source code is licensed under the MIT license found in the
 		* LICENSE file in the root directory of this source tree.
 		*/
-		var require_with_selector_production_min = /* @__PURE__ */ __commonJSMin(((exports) => {
-			var h = require("react");
-			var n = require_shim();
-			function p(a, b) {
-				return a === b && (0 !== a || 1 / a === 1 / b) || a !== a && b !== b;
+		var require_with_selector_production = /* @__PURE__ */ __commonJSMin(((exports) => {
+			var React = require("react");
+			var shim = require_shim();
+			function is(x, y) {
+				return x === y && (0 !== x || 1 / x === 1 / y) || x !== x && y !== y;
 			}
-			var q = "function" === typeof Object.is ? Object.is : p;
-			var r = n.useSyncExternalStore;
-			var t = h.useRef;
-			var u = h.useEffect;
-			var v = h.useMemo;
-			var w = h.useDebugValue;
-			exports.useSyncExternalStoreWithSelector = function(a, b, e, l, g) {
-				var c = t(null);
-				if (null === c.current) {
-					var f = {
+			var objectIs = "function" === typeof Object.is ? Object.is : is;
+			var useSyncExternalStore = shim.useSyncExternalStore;
+			var useRef = React.useRef;
+			var useEffect = React.useEffect;
+			var useMemo = React.useMemo;
+			var useDebugValue = React.useDebugValue;
+			exports.useSyncExternalStoreWithSelector = function(subscribe, getSnapshot, getServerSnapshot, selector, isEqual) {
+				var instRef = useRef(null);
+				if (null === instRef.current) {
+					var inst = {
 						hasValue: !1,
 						value: null
 					};
-					c.current = f;
-				} else f = c.current;
-				c = v(function() {
-					function a(a) {
-						if (!c) {
-							c = !0;
-							d = a;
-							a = l(a);
-							if (void 0 !== g && f.hasValue) {
-								var b = f.value;
-								if (g(b, a)) return k = b;
+					instRef.current = inst;
+				} else inst = instRef.current;
+				instRef = useMemo(function() {
+					function memoizedSelector(nextSnapshot) {
+						if (!hasMemo) {
+							hasMemo = !0;
+							memoizedSnapshot = nextSnapshot;
+							nextSnapshot = selector(nextSnapshot);
+							if (void 0 !== isEqual && inst.hasValue) {
+								var currentSelection = inst.value;
+								if (isEqual(currentSelection, nextSnapshot)) return memoizedSelection = currentSelection;
 							}
-							return k = a;
+							return memoizedSelection = nextSnapshot;
 						}
-						b = k;
-						if (q(d, a)) return b;
-						var e = l(a);
-						if (void 0 !== g && g(b, e)) return b;
-						d = a;
-						return k = e;
+						currentSelection = memoizedSelection;
+						if (objectIs(memoizedSnapshot, nextSnapshot)) return currentSelection;
+						var nextSelection = selector(nextSnapshot);
+						if (void 0 !== isEqual && isEqual(currentSelection, nextSelection)) return memoizedSnapshot = nextSnapshot, currentSelection;
+						memoizedSnapshot = nextSnapshot;
+						return memoizedSelection = nextSelection;
 					}
-					var c = !1, d, k, m = void 0 === e ? null : e;
+					var hasMemo = !1, memoizedSnapshot, memoizedSelection, maybeGetServerSnapshot = void 0 === getServerSnapshot ? null : getServerSnapshot;
 					return [function() {
-						return a(b());
-					}, null === m ? void 0 : function() {
-						return a(m());
+						return memoizedSelector(getSnapshot());
+					}, null === maybeGetServerSnapshot ? void 0 : function() {
+						return memoizedSelector(maybeGetServerSnapshot());
 					}];
 				}, [
-					b,
-					e,
-					l,
-					g
+					getSnapshot,
+					getServerSnapshot,
+					selector,
+					isEqual
 				]);
-				var d = r(a, c[0], c[1]);
-				u(function() {
-					f.hasValue = !0;
-					f.value = d;
-				}, [d]);
-				w(d);
-				return d;
+				var value = useSyncExternalStore(subscribe, instRef[0], instRef[1]);
+				useEffect(function() {
+					inst.hasValue = !0;
+					inst.value = value;
+				}, [value]);
+				useDebugValue(value);
+				return value;
 			};
 		}));
 		//#endregion
 		//#region node_modules/zustand/esm/vanilla.mjs
 		var import_with_selector = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-			module.exports = require_with_selector_production_min();
+			module.exports = require_with_selector_production();
 		})))(), 1);
 		const createStoreImpl = (createState) => {
 			let state;
@@ -7203,6 +7203,7 @@ window.__ModuleLoader__.load({
 				}
 			};
 			const getState = () => state;
+			const getInitialState = () => initialState;
 			const subscribe = (listener) => {
 				listeners.add(listener);
 				return () => listeners.delete(listener);
@@ -7214,10 +7215,11 @@ window.__ModuleLoader__.load({
 			const api = {
 				setState,
 				getState,
+				getInitialState,
 				subscribe,
 				destroy
 			};
-			state = createState(setState, getState, api);
+			const initialState = state = createState(setState, getState, api);
 			return api;
 		};
 		const createStore$1 = (createState) => createState ? createStoreImpl(createState) : createStoreImpl;
@@ -7225,8 +7227,9 @@ window.__ModuleLoader__.load({
 		//#region node_modules/zustand/esm/traditional.mjs
 		const { useDebugValue } = react.default;
 		const { useSyncExternalStoreWithSelector } = import_with_selector.default;
-		function useStoreWithEqualityFn(api, selector = api.getState, equalityFn) {
-			const slice = useSyncExternalStoreWithSelector(api.subscribe, api.getState, api.getServerState || api.getState, selector, equalityFn);
+		const identity = (arg) => arg;
+		function useStoreWithEqualityFn(api, selector = identity, equalityFn) {
+			const slice = useSyncExternalStoreWithSelector(api.subscribe, api.getState, api.getServerState || api.getInitialState, selector, equalityFn);
 			useDebugValue(slice);
 			return slice;
 		}
@@ -7254,7 +7257,7 @@ window.__ModuleLoader__.load({
 			}
 			const keysA = Object.keys(objA);
 			if (keysA.length !== Object.keys(objB).length) return false;
-			for (let i = 0; i < keysA.length; i++) if (!Object.prototype.hasOwnProperty.call(objB, keysA[i]) || !Object.is(objA[keysA[i]], objB[keysA[i]])) return false;
+			for (const keyA of keysA) if (!Object.prototype.hasOwnProperty.call(objB, keyA) || !Object.is(objA[keyA], objB[keyA])) return false;
 			return true;
 		}
 		//#endregion

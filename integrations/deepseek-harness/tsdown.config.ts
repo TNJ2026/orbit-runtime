@@ -11,6 +11,36 @@ import { basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { transform } from 'lightningcss'
 import { defineConfig } from 'tsdown'
+import ts from 'typescript'
+
+/**
+ * Downlevel standard decorators in the emitted server chunk.
+ *
+ * `@Remote` is a standard (TC39) decorator, and Rolldown's own decorator
+ * transform implements only the legacy proposal — so it passes `@Remote(...)`
+ * through verbatim, and the published `lib/index.js` is then syntax no Node
+ * release can parse: the Harness loader fails the entry at boot with
+ * `Invalid or unexpected token`, long after a green build and a green test
+ * run. TypeScript is the transform that understands the standard proposal,
+ * so the chunk goes back through it before it is written.
+ */
+const downlevelDecorators = {
+  name: 'downlevel-standard-decorators',
+  renderChunk(code: string) {
+    // Cheap guard: a chunk with no decorator line is left byte-identical, so
+    // this never rewrites the client or types builds by accident.
+    if (!/^\s*@[A-Za-z_$]/m.test(code)) return null
+    const { outputText } = ts.transpileModule(code, {
+      compilerOptions: {
+        target: ts.ScriptTarget.ES2022,
+        module: ts.ModuleKind.ESNext,
+        experimentalDecorators: false,
+      },
+      fileName: 'chunk.ts',
+    })
+    return { code: outputText }
+  },
+}
 
 /** Platform seed entries the browser module table answers (external). */
 const PLATFORM_MODULES = [
@@ -19,8 +49,14 @@ const PLATFORM_MODULES = [
   '@deepseek-ai/dsh-client-ui-slots',
   '@deepseek-ai/dsh-client-ui-primitives',
 ]
-/** Dynamic rows whose factories the shell preloads before boot. */
-const PRELOADED = ['@deepseek-ai/dsh-client-runtime/client']
+/**
+ * Dynamic rows whose factories the shell preloads before boot. Empty: this
+ * bundle reaches the platform through `ctx` alone, and the one row that used
+ * to sit here (`@deepseek-ai/dsh-client-runtime/client`) is a package the
+ * Harness split up — its ClientContext seats now come from ui-renderer, and
+ * they are type-only, so nothing survives erasure to be resolved at runtime.
+ */
+const PRELOADED: readonly string[] = []
 const CLIENT_EXTERNALS: readonly string[] = [...PLATFORM_MODULES, ...PRELOADED]
 
 /**
@@ -49,6 +85,7 @@ const PLUGIN_ID: string = JSON.parse(
 export default defineConfig([{
   name: `${PLUGIN_ID}/server`,
   entry: { index: 'src/index.ts' },
+  plugins: [downlevelDecorators],
   tsconfig: 'tsconfig.bundle.json',
   outDir: 'lib',
   format: 'esm',

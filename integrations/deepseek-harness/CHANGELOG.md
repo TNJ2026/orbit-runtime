@@ -31,6 +31,12 @@
   modification, explicit image Attachment import, and downloadable diagnostics.
 - Removed the cancelled Harness Subagent executor, provider policy, Git effect
   observer, related tests/codecs, and direct Agent/Subagent peer dependencies.
+- Moved the supported Harness range to `>=0.1.2-rc.1 <0.2.0`. `JsonValue` now
+  comes from `@deepseek-ai/dsh-util-values`, and the `ctx.slots` seat from
+  `@deepseek-ai/dsh-client-ui-renderer/client`; `@deepseek-ai/dsh-client-runtime`
+  no longer exists, so its stale client-bundle preload row is gone. npm semver
+  does not match a prerelease against a range with no comparator on its own
+  patch tuple, which is why the floor moves rather than widens.
 
 ## 0.1.0
 

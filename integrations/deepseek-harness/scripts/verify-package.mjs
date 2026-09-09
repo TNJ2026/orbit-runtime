@@ -43,4 +43,14 @@ for (const path of ['lib/index.js', 'lib/index.d.ts', 'lib/client.js']) {
   )
 }
 
+// The Harness loader reaches the entry through a plain `import()`, so the
+// published chunk has to be syntax Node parses on its own. Standard decorators
+// are the way this breaks silently: the bundler emits them verbatim, build and
+// unit tests stay green, and the entry fails at profile boot instead.
+try {
+  await import(new URL('lib/index.js', root).href)
+} catch (error) {
+  assert.fail(`lib/index.js must load under a plain import(): ${error.message}`)
+}
+
 console.log('npm package is self-contained')

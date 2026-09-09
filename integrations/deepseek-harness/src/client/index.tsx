@@ -16,6 +16,8 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 // Type-only: `shell.overlay` is declared by ui-layout; ctx.slots.inject owns
 // the runtime wait for that declaration.
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
+// Type-only: the slot registry seat on ClientContext, owned by the renderer.
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { OrbitPanel } from './OrbitPanel.tsx'
 import { ORBIT_LOCALE_NAMESPACE, en, zh, type OrbitLocaleKey } from './locales.ts'
 import { panelError } from '@orbit-runtime/integration-core'

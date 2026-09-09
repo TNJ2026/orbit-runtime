@@ -29,9 +29,11 @@ bundle's same-origin Host API; it never receives the Runtime endpoint, child
 process handle, actor header, or Orbit loopback credentials.
 
 Maintainers can verify install, Host/Web startup, HTTP readiness and clean
-removal in an isolated temporary Profile with `npm run smoke:profile`. Set
-`DSH_BIN` only when the Harness launcher is not named `dsh` on `PATH`. To test
-the exact release artifact, set `DSH_BUNDLE_SPEC` to an absolute `.tgz` path.
+removal in an isolated temporary Profile with `npm run smoke:profile`. `dsh
+plugin` forwards to `pnpm` in the Profile directory, so that smoke needs `pnpm`
+on `PATH` as well as the launcher. Set `DSH_BIN` only when the Harness launcher
+is not named `dsh` on `PATH`. To test the exact release artifact, set
+`DSH_BUNDLE_SPEC` to an absolute `.tgz` path.
 
 ## Compatibility
 
@@ -39,8 +41,8 @@ the exact release artifact, set `DSH_BUNDLE_SPEC` to an absolute `.tgz` path.
 | --- | --- |
 | Orbit Runtime | `>=0.4.0 <0.5.0` |
 | Orbit integration protocol | `orbit-harness/1` |
-| Harness packages | `>=0.1.1-rc.2 <0.2.0` (alpha prereleases are not supported) |
-| Verified Harness launcher | `0.1.0-rc.6` |
+| Harness packages | `>=0.1.2-rc.1 <0.2.0` (alpha prereleases are not supported) |
+| Verified Harness launcher | `0.1.2-rc.1` |
 | React | `^18.2.0` |
 | Node.js | `>=22` (verified with Harness bundled Node.js 26) |
 
