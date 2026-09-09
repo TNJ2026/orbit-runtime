@@ -48,8 +48,19 @@ jobs:
       - name: Install development dependencies
         run: uv sync --extra dev
 
-      - name: Run Python release tests
+      - name: Run full Python release tests
+        if: runner.os != 'Windows'
         run: uv run python scripts/run-release-tests.py
+
+      - name: Run Windows Python release tests
+        if: runner.os == 'Windows'
+        run: >-
+          uv run python -m unittest -v
+          tests.test_acceptance
+          tests.test_agent_apps.HostHelperTests
+          tests.test_powershell_scripts
+          tests.test_workflow_dsl
+          tests.test_workflow_handler_registry
 
       - name: Run UI tests
         run: node --test tests/ui/client_modules.test.mjs
