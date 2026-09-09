@@ -281,4 +281,5 @@ Pushing a tag such as `2.0` or `v2.0.0` runs the Release workflow. It normalizes
 a two-part tag to `2.0.0`, verifies that it matches `src/orbit/__init__.py`, runs
 the tests, and uploads all distribution assets to the GitHub Release. The same
 workflow can be started manually for an existing tag; repeated runs replace its
-uploaded assets.
+uploaded assets. PyPI publishing is opt-in on a manual run and requires a
+configured Trusted Publisher; normal tag releases remain GitHub-only.

@@ -236,4 +236,5 @@ python scripts/build-marketplace-release.py \
 推送 `2.0` 或 `v2.0.0` 这样的标签后，Release workflow 会把两段版本规范化为
 `2.0.0`，检查它与 `src/orbit/__init__.py` 的版本是否一致、运行测试，并把全部
 分发产物上传到 GitHub Release。也可以为已有标签手动运行；重复运行会覆盖上传的
-产物。
+产物。PyPI 发布只在手动运行时按需勾选，并要求事先配置 Trusted Publisher；普通
+标签发布仅分发到 GitHub。

@@ -11,6 +11,11 @@ on:
         description: "Existing Git tag to release (for example 2.0 or v2.0.0)"
         required: true
         type: string
+      publish_pypi:
+        description: "Also publish the Python distributions to PyPI"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -110,7 +115,7 @@ jobs:
     # to publish: it runs with `id-token: write` and nothing else, and it can
     # be gated on a GitHub Environment that requires a review.
     needs: release
-    if: github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_pypi
     runs-on: ubuntu-latest
     environment:
       name: pypi
