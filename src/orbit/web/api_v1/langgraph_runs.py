@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Mapping
+from urllib.parse import quote
 
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
@@ -356,15 +357,20 @@ def build_routes(ctx, service) -> list[Route]:
             content = service.artifacts.read(item["artifact_id"], actor=owner)
         except LookupError as exc:
             return error("not_found", str(exc), 404)
+        headers = {
+            "Content-Length": str(item["size_bytes"]),
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
+            "Cache-Control": "no-store",
+        }
+        if request.query_params.get("download") == "true" and item["filename"]:
+            headers["Content-Disposition"] = (
+                "attachment; filename*=UTF-8''" + quote(item["filename"], safe="")
+            )
         return Response(
             content,
             media_type=item["content_type"],
-            headers={
-                "Content-Length": str(item["size_bytes"]),
-                "X-Content-Type-Options": "nosniff",
-                "Content-Security-Policy": "default-src 'none'; sandbox",
-                "Cache-Control": "no-store",
-            },
+            headers=headers,
         )
 
     async def artifact_lineage(request: Request) -> JSONResponse:

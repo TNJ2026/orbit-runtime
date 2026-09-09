@@ -29,6 +29,12 @@ When the user asks this task to generate a new workflow:
    Completed Workflow nodes are the recovery boundary; one monolithic Agent
    prompt cannot resume from its internal halfway point. Do not split work that
    is genuinely atomic or add nodes whose only purpose is naming a checkpoint.
+   When the user explicitly numbers or names a sequence and requires every step
+   to run in order or not be skipped, preserve each substantive step as its own
+   business node and connect them in that order. Do not collapse that requested
+   graph into an internal checklist in one Agent prompt. A terminal does not
+   count as one of the requested steps; only a pure formatting step or one with
+   no independently meaningful work or result may be merged.
 5. Call `submit_authoring_response` with the returned `request_id` and DSL.
 6. Call `get_authoring_job`. If compilation requests another attempt, repeat
    the claim, generation, and submission steps. Stop when the job is done,

@@ -244,6 +244,21 @@ class AuthoringServiceTests(unittest.TestCase):
         self.assertIn("Every app.delegate action", prompt)
         self.assertIn("task.instructions", prompt)
 
+    def test_prompt_preserves_an_explicit_mandatory_step_sequence_as_nodes(self) -> None:
+        model = ScriptedModel([json.dumps(valid_document())])
+        service(model).generate(
+            "第一步检查输入；第二步理解内容；第三步分类。必须按顺序执行，不得跳过。"
+        )
+        prompt = model.prompts[0]
+
+        self.assertIn("explicitly numbered or named sequence", prompt)
+        self.assertIn("every substantive requested step as its own business node", prompt)
+        self.assertIn("preserve the stated order with edges", prompt)
+        self.assertIn("persisted cumulative result", prompt)
+        self.assertIn("internal checklist inside one Agent prompt", prompt)
+        self.assertIn("terminal node does not count", prompt)
+        self.assertIn("purely output formatting", prompt)
+
     def test_prompt_carries_the_rules_that_were_learned_by_failing(self) -> None:
         """Three constraints a document can satisfy the schema and still break on.
 

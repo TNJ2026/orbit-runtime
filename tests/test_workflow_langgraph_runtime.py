@@ -611,6 +611,64 @@ class WorkspaceAccessCompilerTests(unittest.TestCase):
 
 
 class LangGraphArtifactStoreTests(unittest.TestCase):
+    def test_typed_artifacts_receive_a_filename_suffix(self) -> None:
+        content_type = (
+            "application/vnd.openxmlformats-officedocument."
+            "presentationml.presentation"
+        )
+        output = IRPort(
+            "presentation", SCHEMA, True, False, None, "",
+            PortDataPolicy(
+                PortTransport.ARTIFACT_REF,
+                max_size_bytes=1024,
+                content_types=(content_type,),
+            ),
+        )
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
+            store = LangGraphArtifactStore(
+                Path(directory) / "runs.sqlite3", Path(directory) / "blobs",
+            )
+            access = store.access(
+                run_id="langgraph_run:one", node_id="produce",
+                attempt_id="langgraph_attempt:one", output_ports=(output,), inputs={},
+            )
+            inferred_id = access.write(
+                name="presentation", content=b"pptx",
+                content_type=content_type,
+            )
+            access.commit()
+
+            inferred = store.get(inferred_id)
+
+        self.assertEqual("presentation.pptx", inferred["filename"])
+
+    def test_typed_artifact_appends_missing_suffix_to_supplied_filename(self) -> None:
+        output = IRPort(
+            "document", SCHEMA, True, False, None, "",
+            PortDataPolicy(
+                PortTransport.ARTIFACT_REF,
+                max_size_bytes=1024,
+                content_types=("application/pdf",),
+            ),
+        )
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
+            store = LangGraphArtifactStore(
+                Path(directory) / "runs.sqlite3", Path(directory) / "blobs",
+            )
+            access = store.access(
+                run_id="langgraph_run:one", node_id="produce",
+                attempt_id="langgraph_attempt:one", output_ports=(output,), inputs={},
+            )
+            artifact_id = access.write(
+                name="document", content=b"pdf", content_type="application/pdf",
+                filename="report",
+            )
+            access.commit()
+
+            artifact = store.get(artifact_id)
+
+        self.assertEqual("report.pdf", artifact["filename"])
+
     def test_stage_commit_and_scoped_read(self) -> None:
         output = artifact_port("document")
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:
@@ -5385,15 +5443,23 @@ class LangGraphHttpApiTests(unittest.TestCase):
             artifacts = LangGraphArtifactStore(
                 database, Path(directory) / "artifacts",
             )
+            output = IRPort(
+                "document", SCHEMA, True, False, None, "",
+                PortDataPolicy(
+                    PortTransport.ARTIFACT_REF,
+                    max_size_bytes=1024,
+                    content_types=("text/plain",),
+                ),
+            )
             access = artifacts.access(
                 run_id="langgraph_run:projection", node_id="agent",
                 attempt_id="langgraph_attempt:projection",
-                output_ports=(artifact_port("document"),), inputs={},
+                output_ports=(output,), inputs={},
                 actor="test:reader",
             )
             artifact_id = access.write(
                 name="document", content=b"projected content",
-                content_type="application/octet-stream",
+                content_type="text/plain",
             )
             artifacts.commit(access.produced_artifact_ids)
             service = LangGraphWorkflowService(
@@ -5419,6 +5485,10 @@ class LangGraphHttpApiTests(unittest.TestCase):
                 )
                 content = client.get(
                     f"/api/v1/langgraph-artifacts/{artifact_id}/content",
+                    actor="test:reader",
+                )
+                download = client.get(
+                    f"/api/v1/langgraph-artifacts/{artifact_id}/content?download=true",
                     actor="test:reader",
                 )
                 lineage = client.get(
@@ -5450,7 +5520,13 @@ class LangGraphHttpApiTests(unittest.TestCase):
             listed.json()["data"]["artifacts"][0]["artifact_id"],
         )
         self.assertEqual(artifact_id, detail.json()["data"]["artifact_id"])
+        self.assertEqual("document.txt", detail.json()["data"]["filename"])
         self.assertEqual(b"projected content", content.content)
+        self.assertNotIn("content-disposition", content.headers)
+        self.assertEqual(
+            "attachment; filename*=UTF-8''document.txt",
+            download.headers["content-disposition"],
+        )
         self.assertEqual([], lineage.json()["data"]["derived_from"])
         # An Artifact belongs to the Run that wrote it, and the Run belongs to
         # this Workspace — which is the whole of who may read either.

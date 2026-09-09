@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 import hashlib
+import mimetypes
 from pathlib import Path
 import sqlite3
 from typing import Any, Iterator, Mapping
@@ -15,6 +16,47 @@ from ..domain.data import PortTransport
 
 class LangGraphArtifactAccessDenied(PermissionError):
     pass
+
+
+# Python's MIME database varies by platform and does not know Markdown on all
+# supported hosts.  Keep the formats workflows most commonly deliver stable,
+# then use the host database for less common, still-specific media types.
+_CONTENT_TYPE_EXTENSIONS = {
+    "application/json": ".json",
+    "application/pdf": ".pdf",
+    "application/vnd.ms-excel": ".xls",
+    "application/vnd.ms-powerpoint": ".ppt",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "application/zip": ".zip",
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/svg+xml": ".svg",
+    "text/csv": ".csv",
+    "text/html": ".html",
+    "text/markdown": ".md",
+    "text/plain": ".txt",
+}
+_GENERIC_CONTENT_TYPES = frozenset({"application/octet-stream"})
+
+
+def _typed_filename(name: str, content_type: str, filename: str | None) -> str | None:
+    """Give a typed Artifact a stable filename with its media-type suffix."""
+
+    if content_type in _GENERIC_CONTENT_TYPES:
+        return filename
+    extension = _CONTENT_TYPE_EXTENSIONS.get(content_type)
+    if extension is None:
+        extension = mimetypes.guess_extension(content_type, strict=False)
+    if not extension:
+        return filename
+    value = (filename or name).strip()
+    if value.lower().endswith(extension.lower()):
+        return value
+    # Artifact filenames are bounded to 255 characters by the public schema.
+    value = value[: 255 - len(extension)]
+    return value + extension
 
 
 class LangGraphArtifactStore:
@@ -332,6 +374,7 @@ class _ArtifactAccess:
         policy = port.data_policy
         if normalized not in policy.content_types:
             raise LangGraphArtifactAccessDenied("Artifact content type is not allowed")
+        filename = _typed_filename(name, normalized, filename)
         artifact_id = "langgraph_artifact:" + hashlib.sha256(
             f"{self.attempt_id}|{name}".encode("utf-8")
         ).hexdigest()
