@@ -279,11 +279,11 @@ Build the Python and plugin packages:
 ```bash
 uv build
 python scripts/build-marketplace-release.py \
-  --version 0.6.2-alpha \
-  --output dist/promptaflow-marketplace-0.6.2-alpha.zip \
-  --plugin-output dist/promptaflow-plugin-0.6.2-alpha.zip
+  --version 0.6.3-alpha \
+  --output dist/promptaflow-marketplace-0.6.3-alpha.zip \
+  --plugin-output dist/promptaflow-plugin-0.6.3-alpha.zip
 ```
 
-Pushing a full SemVer tag such as `v0.6.2-alpha` runs the cross-platform Release
+Pushing a full SemVer tag such as `v0.6.3-alpha` runs the cross-platform Release
 workflow and uploads the GitHub distribution assets. PyPI publishing is opt-in on
 a manual workflow run; ordinary tag releases remain GitHub-only.
