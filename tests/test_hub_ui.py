@@ -151,10 +151,12 @@ class HubUiTests(unittest.TestCase):
 
         manager.stop_all.assert_not_called()
 
-    @patch("promptaflow.hub.terminate_pid_tree")
+    @patch("promptaflow.hub._wait_for_process_exit")
+    @patch("promptaflow.hub.stop_pid_tree_if_identity")
+    @patch("promptaflow.hub.process_identity")
     @patch("promptaflow.hub._runtime_json")
     def test_stop_all_uses_the_runtime_api_then_falls_back_to_the_owned_pid(
-        self, runtime_json, terminate_pid_tree,
+        self, runtime_json, process_identity, stop_pid_tree, wait_for_exit,
     ):
         graceful = DiscoveredRuntime(Path('/a.lock'), {
             'pid': 10, 'project_root': '/work/a',
@@ -164,7 +166,12 @@ class HubUiTests(unittest.TestCase):
             'pid': 11, 'project_root': '/work/b',
         })
         runtime_json.return_value = (200, {"data": {"status": "stopping"}})
-        terminate_pid_tree.return_value = True
+        process_identity.side_effect = ["graceful-birth", "starting-birth"]
+        # The HTTP-requested Runtime exits inside its grace period. The Runtime
+        # without an endpoint needs the process-tree fallback, which is then
+        # verified independently of its discovery record.
+        wait_for_exit.side_effect = [True, True]
+        stop_pid_tree.return_value = True
 
         result = WorkspaceRuntimeManager(
             runtime_discovery=lambda: [graceful, starting],
@@ -173,4 +180,45 @@ class HubUiTests(unittest.TestCase):
         self.assertEqual(["/work/a"], result["requested"])
         self.assertEqual(["/work/b"], result["terminated"])
         self.assertEqual([], result["failures"])
-        terminate_pid_tree.assert_called_once_with(11)
+        stop_pid_tree.assert_called_once_with(11, "starting-birth")
+
+    @patch("promptaflow.hub._wait_for_process_exit")
+    @patch("promptaflow.hub.stop_pid_tree_if_identity")
+    @patch("promptaflow.hub.process_identity", return_value="stuck-birth")
+    @patch("promptaflow.hub._runtime_json", return_value=(200, {}))
+    def test_stop_all_kills_a_runtime_that_unregistered_but_did_not_exit(
+        self, _runtime_json, _process_identity, stop_pid_tree, wait_for_exit,
+    ):
+        runtime = DiscoveredRuntime(Path('/a.lock'), {
+            'pid': 10, 'project_root': '/work/a',
+            'base_url': 'http://127.0.0.1:41001',
+        })
+        wait_for_exit.side_effect = [False, True]
+        stop_pid_tree.return_value = True
+
+        result = WorkspaceRuntimeManager(
+            runtime_discovery=lambda: [runtime],
+        ).stop_all()
+
+        self.assertEqual(["/work/a"], result["requested"])
+        self.assertEqual(["/work/a"], result["terminated"])
+        self.assertEqual([], result["failures"])
+        stop_pid_tree.assert_called_once_with(10, "stuck-birth")
+
+    @patch("promptaflow.hub.process_identity", return_value=None)
+    @patch("promptaflow.hub._runtime_json", return_value=(200, {}))
+    def test_stop_all_reports_successful_http_without_a_provable_pid_as_failure(
+        self, _runtime_json, _process_identity,
+    ):
+        runtime = DiscoveredRuntime(Path('/a.lock'), {
+            'project_root': '/work/a',
+            'base_url': 'http://127.0.0.1:41001',
+        })
+
+        result = WorkspaceRuntimeManager(
+            runtime_discovery=lambda: [runtime],
+        ).stop_all()
+
+        self.assertEqual(["/work/a"], result["requested"])
+        self.assertEqual([], result["terminated"])
+        self.assertEqual(["/work/a"], result["failures"])

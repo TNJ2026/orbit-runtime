@@ -32,7 +32,7 @@ from .global_control import (
     WorkflowTemplateError, WorkflowTemplateStorageError, WorkflowTemplateStore,
 )
 from .platform.projects import project_id, resolve_project_root
-from .platform.process import terminate_pid_tree
+from .platform.process import process_identity, stop_pid_tree_if_identity
 from .platform.runtime_ownership import DiscoveredRuntime, discover_runtimes
 from .web.mcp import (
     INVALID_PARAMS, INVALID_REQUEST, METHOD_NOT_FOUND, PARSE_ERROR,
@@ -292,6 +292,18 @@ def workspace_urls(identifier: str, hub_url: str = "http://127.0.0.1:8848") -> d
     }
 
 
+def _wait_for_process_exit(pid: int, identity: str, timeout: float) -> bool:
+    """Wait until ``pid`` no longer names the process whose birth token we saw."""
+
+    deadline = time.monotonic() + max(0.0, timeout)
+    while process_identity(pid) == identity:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return False
+        time.sleep(min(0.05, remaining))
+    return True
+
+
 class WorkspaceRuntimeManager:
     def __init__(
         self,
@@ -392,7 +404,15 @@ class WorkspaceRuntimeManager:
         return sorted(entries.values(), key=lambda entry: (entry["path"], entry["url"]))
 
     def stop_all(self) -> dict[str, list[str]]:
-        """Ask every discovered Runtime to stop, falling back to its owned PID."""
+        """Stop every discovered Runtime and prove its owning process exited.
+
+        A Runtime drops its discovery lock during application teardown, before
+        the process is necessarily gone.  Consequently disappearance from
+        ``discover_runtimes()`` is not a completion signal: retain the PID's
+        birth identity from the live owner record, request graceful HTTP
+        shutdown, then stop that exact process tree if it outlives the grace
+        period.
+        """
 
         requested: list[str] = []
         terminated: list[str] = []
@@ -402,6 +422,9 @@ class WorkspaceRuntimeManager:
                 runtime.facts.get("project_root") or runtime.db_path
                 or f"pid {runtime.pid or 'unknown'}"
             )
+            pid = runtime.pid
+            identity = process_identity(pid) if pid is not None else None
+            graceful_requested = False
             base = runtime.base_url
             if base:
                 try:
@@ -421,13 +444,25 @@ class WorkspaceRuntimeManager:
                         )
                         if 200 <= status < 300:
                             requested.append(label)
-                            continue
+                            graceful_requested = True
                 except (HubError, OSError, ValueError):
                     pass
-            if runtime.pid is not None and terminate_pid_tree(runtime.pid):
-                terminated.append(label)
-            else:
+
+            # A successful response only means the shutdown request was
+            # accepted.  The owner record may disappear while uvicorn or a
+            # worker is still alive, so completion is always checked by PID
+            # identity instead of rediscovery.
+            if pid is None or identity is None:
                 failures.append(label)
+                continue
+            if graceful_requested and _wait_for_process_exit(pid, identity, 2.0):
+                continue
+            stopped = stop_pid_tree_if_identity(pid, identity)
+            if _wait_for_process_exit(pid, identity, 0.25):
+                if stopped:
+                    terminated.append(label)
+                continue
+            failures.append(label)
         return {
             "requested": requested,
             "terminated": terminated,
@@ -605,9 +640,14 @@ def create_hub_app(
                 if shutdown_request is not None else None
             )
             if stop_all is not None:
-                app.state.runtime_shutdown = await anyio.to_thread.run_sync(
-                    stop_all
-                )
+                outcome = await anyio.to_thread.run_sync(stop_all)
+                app.state.runtime_shutdown = outcome
+                if outcome["failures"]:
+                    print(
+                        "PromptaFlow Hub could not stop every Runtime: "
+                        + json.dumps(outcome, sort_keys=True),
+                        file=sys.stderr, flush=True,
+                    )
 
     def result(request_id: Any, payload: Mapping[str, Any]) -> dict[str, Any]:
         return {"jsonrpc": "2.0", "id": request_id, "result": payload}

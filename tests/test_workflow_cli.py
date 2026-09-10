@@ -214,6 +214,20 @@ class WorkflowCliTests(unittest.TestCase):
         self.assertIn("http://127.0.0.1:18848", output)
         listener.close.assert_called_once_with()
 
+    def test_standalone_hub_is_configured_as_the_runtime_process_owner(self) -> None:
+        app = Mock()
+        with (
+            patch("promptaflow.hub.create_hub_app", return_value=app) as create_app,
+            patch("promptaflow.__main__.uvicorn.run") as run,
+            patch("promptaflow.global_control.WorkflowTemplateStore", return_value=Mock()),
+        ):
+            self.run_cli("hub", "serve", "--port", "18848")
+
+        self.assertTrue(callable(create_app.call_args.kwargs["shutdown_request"]))
+        run.assert_called_once_with(
+            app, host="127.0.0.1", port=18848, log_level="info",
+        )
+
     def test_serve_wires_the_configured_artifact_store(self) -> None:
         artifact_root = Path(self.temp_dir.name) / "custom-artifacts"
         with (

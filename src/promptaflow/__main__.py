@@ -1399,8 +1399,17 @@ def main() -> None:
                 start_new_session=os.name != "nt",
             )
         try:
+            def request_shutdown() -> None:
+                # The standalone Hub owns every Runtime it launches too. Keep
+                # both its HTTP shutdown endpoint and signal-driven exit on the
+                # same uvicorn lifespan path as `paf serve`.
+                os.kill(os.getpid(), signal.SIGINT)
+
             uvicorn.run(
-                create_hub_app(template_store=templates),
+                create_hub_app(
+                    template_store=templates,
+                    shutdown_request=request_shutdown,
+                ),
                 host=args.host, port=args.port, log_level="info",
             )
         finally:
