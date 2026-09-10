@@ -135,11 +135,12 @@ class LegacyRemovalTests(unittest.TestCase):
     def test_the_state_dirs_stay_out_of_git(self) -> None:
         lines = Path(".gitignore").read_text(encoding="utf-8").splitlines()
         self.assertIn(".promptaflow/", lines)
-        self.assertIn(".dev_loop/", lines)
+        # Only the directory this writes. `.dev_loop/` was ignored for an
+        # engine two generations back; keeping the line was the last piece of
+        # deference to a layout nothing here reads any more.
+        self.assertNotIn(".dev_loop/", lines)
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class SourceIsReviewableTests(unittest.TestCase):
@@ -170,3 +171,7 @@ class SourceIsReviewableTests(unittest.TestCase):
                 if position >= 0:
                     offenders.append(f"{path.relative_to(root)} at byte {position}")
         self.assertEqual([], offenders)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,5 +1,4 @@
 .venv/
-.dev_loop/
 .promptaflow/
 __pycache__/
 *.pyc
@@ -29,7 +28,6 @@ DESIGN.md
 # Visual regression scratch output (baselines themselves are committed)
 tests/visual_baselines/*.actual.png
 tests/visual_baselines/*.diff.png
-!docs/ui/workflow-prompt-authoring.md
 
 # Build output is *not* ignored: the DeepSeek-Harness plugin is loaded from
 # `lib/` by the host, and `integration-core/lib/` is what its bare import
