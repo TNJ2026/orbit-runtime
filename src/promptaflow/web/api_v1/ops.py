@@ -291,7 +291,7 @@ def build_routes(ctx) -> list[Route]:
                 "workspace_path": ctx.operational_config.get("workspace_path"),
                 "allowed_commands": ([{
                     "command": "runtime.shutdown",
-                    "label": "Stop PromptaFlow",
+                    "label": "Stop this Workspace's Runtime",
                     "method": "POST",
                     "href": "/api/v1/runtime/shutdown",
                     "target_aggregate_id": "runtime",
