@@ -59,7 +59,7 @@ uv tool update-shell
 paf --version
 ```
 
-如果执行 `uv tool update-shell` 后仍暂时找不到 `promptaflow`，请打开一个新终端。
+如果执行 `uv tool update-shell` 后仍暂时找不到 `paf`，请打开一个新终端。
 
 ### 4. 添加 Harness Bundle
 

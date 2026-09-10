@@ -62,7 +62,7 @@ uv tool update-shell
 paf --version
 ```
 
-Open a new terminal if `promptaflow` is not immediately visible after
+Open a new terminal if `paf` is not immediately visible after
 `uv tool update-shell`.
 
 ### 4. Add the Harness bundle
