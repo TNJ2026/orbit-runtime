@@ -191,7 +191,9 @@ class LangGraphArtifactStore:
             row["blob_key"], max_size_bytes=row["size_bytes"]
         )
 
-    def lineage(self, artifact_id: str, *, actor: str) -> Mapping[str, Any]:
+    def lineage(
+        self, artifact_id: str, *, actor: str | None = None,
+    ) -> Mapping[str, Any]:
         artifact = self.get(artifact_id, actor=actor)
         with self._connect() as connection:
             upstream = [
@@ -208,14 +210,18 @@ class LangGraphArtifactStore:
                     (artifact_id,),
                 )
             ]
-        visible_upstream = [
-            item for item in upstream
-            if self._record(item)["owner_actor"] == actor
-        ]
-        visible_downstream = [
-            item for item in downstream
-            if self._record(item)["owner_actor"] == actor
-        ]
+        visible_upstream = (
+            upstream if actor is None else [
+                item for item in upstream
+                if self._record(item)["owner_actor"] == actor
+            ]
+        )
+        visible_downstream = (
+            downstream if actor is None else [
+                item for item in downstream
+                if self._record(item)["owner_actor"] == actor
+            ]
+        )
         return {
             "artifact": artifact,
             "derived_from": visible_upstream,

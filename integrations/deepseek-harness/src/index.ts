@@ -1,6 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol'
-import { PromptaFlowGateway, PromptaFlowSessionBridge, WorkflowCatalog, advertisedAt, artifactFilename, commandTool, readableAsText, sessionCanBridge, type PromptaFlowCursorStore, type PromptaFlowRunCommand } from '@promptaflow/integration-core'
+import { PromptaFlowGateway, PromptaFlowSessionBridge, WorkflowCatalog, advertisedAt, artifactFilename, commandTool, isLive, readableAsText, sessionCanBridge, type PromptaFlowCursorStore, type PromptaFlowRunCommand } from '@promptaflow/integration-core'
 import type { AgentSummary, ArtifactContent, ArtifactSummary, AuthoringJob, AuthoringOutputPage, AuthoringSummary, EdgeSummary, ImportedArtifact, IntegrationDiagnostics, PromptaFlowCommandRequest, OutputPage, RunDto, RunGraph, RuntimeSummary, StepSummary, WorkflowNode, WorkflowSummary, WorkspaceRef } from '@promptaflow/integration-core'
 import { PromptaFlowToolBridge } from './promptaflow-tools.js'
 import type { Session, SessionStore } from '@deepseek-ai/dsh-session'
@@ -49,6 +49,9 @@ interface PromptaFlowWebServer {
 
 /** How long a settled job stays on the panel before it stops being news. */
 const AUTHORING_LINGER_MS = 60_000
+
+/** Bound the extra live progress reads made by one panel poll. */
+const LIVE_STEP_LIMIT = 6
 
 interface TrackedAuthoring {
   /** The Session that started it; `get_authoring_job` answers only to it. */
@@ -270,16 +273,13 @@ export class PromptaFlowRemoteService extends TypertRemoteService {
        * Hand a browser the bytes of one Artifact.
        *
        * A GET, because a link is what a person clicks and a browser is what
-       * renders the result. It exists because PromptaFlow's own address for an
-       * Artifact cannot serve one: Artifacts are owned by the actor that
-       * produced them, a browser reaching `/api/v1` on loopback is `local`,
-       * and the Runs this panel starts belong to `harness:session:<id>`. So
-       * the link was a 404 for every Artifact this Harness ever made.
+       * renders the result. The Runtime has a dynamic, private address, so the
+       * stable Harness page cannot link to its `/api/v1` URL directly.
        *
-       * This route is that identity. It reads the Artifact as the Session that
-       * owns it and passes the bytes through unchanged — no gallery, no
-       * viewer, no second drawing of anything PromptaFlow draws. The browser opens
-       * what it was given, exactly as it would have from PromptaFlow's own URL.
+       * This route resolves the Session's Workspace and passes the bytes through
+       * unchanged — no gallery, no viewer, no second drawing of anything
+       * PromptaFlow draws. The browser opens what it was given, exactly as it
+       * would have from PromptaFlow's own URL.
        */
       ctx.effect(() => webServer.register({
         kind: 'exact', path: '/plugins/dsh-promptaflow/artifact',
@@ -715,6 +715,7 @@ export class PromptaFlowRemoteService extends TypertRemoteService {
     workflows: readonly WorkflowSummary[]; agents: readonly AgentSummary[]
     retiredWorkflowNames: Record<string, string>
     authoring: readonly AuthoringSummary[]
+    liveSteps: Record<string, StepSummary[]>
   }> {
     signal.throwIfAborted()
     const { scope, live } = await this.sessionScope(sessionId, true)
@@ -760,6 +761,7 @@ export class PromptaFlowRemoteService extends TypertRemoteService {
       // and presenting its stale `running` flag as a current Goal invents work
       // the Runtime can no longer inspect or operate.
       const runs = result.runs.filter(run => !retired.missing.has(run.workflow_id))
+      const liveSteps = await this.liveStepProgress(scope, sessionId, runs)
       return {
         runs,
         uiUrl: await this.gateway.uiUrl(scope),
@@ -767,8 +769,27 @@ export class PromptaFlowRemoteService extends TypertRemoteService {
         agents,
         retiredWorkflowNames: retired.names,
         authoring: authoring.jobs,
+        liveSteps,
       }
     } finally { await release() }
+  }
+
+  /** Names and statuses for Runs still moving; logs stay in Run detail. */
+  private async liveStepProgress(
+    scope: WorkspaceRef, sessionId: string, runs: readonly RunDto[],
+  ): Promise<Record<string, StepSummary[]>> {
+    const visible = runs.filter(run => isLive(run.status)).slice(0, LIVE_STEP_LIMIT)
+    const read = await Promise.all(visible.map(async run => {
+      try {
+        const detail = await this.gateway.call(
+          scope, sessionId, 'get_run_steps', { run_id: run.run_id },
+        ) as { steps: StepSummary[] }
+        return [run.run_id, detail.steps.map(step => ({
+          node_id: step.node_id, label: step.label, status: step.status,
+        }))] as const
+      } catch { return null }
+    }))
+    return Object.fromEntries(read.filter(entry => entry !== null))
   }
 
   /**
@@ -1162,9 +1183,9 @@ export class PromptaFlowRemoteService extends TypertRemoteService {
    * it in an editor and save — and saving corrupts every Artifact sharing
    * those bytes. So they get a copy that is theirs.
    *
-   * Session-scoped like everything else here, and for the same reason twice
-   * over: an Artifact belongs to the actor that produced it, so the Session is
-   * both which Workspace to look in and the only identity allowed to read it.
+   * Session-scoped like everything else here because the Session determines
+   * which Workspace Runtime holds the Artifact. Reads use that Workspace as
+   * their boundary, so an Artifact from a previous Harness Session still opens.
    */
   @Remote('exportArtifact')
   async exportArtifact(

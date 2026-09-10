@@ -1248,22 +1248,25 @@ def build_mcp_dispatcher(
         if name == "list_artifacts":
             if getattr(langgraph_service, "artifacts", None) is None:
                 raise LookupError("LangGraph Artifact store is unavailable")
+            owner = reading_actor(actor)
             return {"artifacts": list(langgraph_service.artifacts.list(
                 run_id=arguments.get("run_id") or None,
                 limit=min(200, max(1, int(arguments.get("limit", 20)))),
-                actor=actor,
+                actor=owner,
             ))}
         if name == "read_artifact":
             if getattr(langgraph_service, "artifacts", None) is None:
                 raise LookupError("LangGraph Artifact store is unavailable")
+            owner = reading_actor(actor)
             return langgraph_service.artifacts.get(
-                str(arguments["artifact_id"]), actor=actor,
+                str(arguments["artifact_id"]), actor=owner,
             )
         if name == "read_artifact_content":
             if getattr(langgraph_service, "artifacts", None) is None:
                 raise LookupError("LangGraph Artifact store is unavailable")
             artifact_id = str(arguments["artifact_id"])
-            metadata = langgraph_service.artifacts.get(artifact_id, actor=actor)
+            owner = reading_actor(actor)
+            metadata = langgraph_service.artifacts.get(artifact_id, actor=owner)
             limit = min(
                 MCP_ARTIFACT_CONTENT_MAX_BYTES,
                 max(1, int(arguments.get(
@@ -1274,7 +1277,7 @@ def build_mcp_dispatcher(
                 raise ValueError(
                     f"Artifact is too large for MCP content proxy ({metadata['size_bytes']} > {limit})"
                 )
-            content = langgraph_service.artifacts.read(artifact_id, actor=actor)
+            content = langgraph_service.artifacts.read(artifact_id, actor=owner)
             return {
                 "artifact": metadata,
                 "encoding": "base64",
@@ -1283,8 +1286,9 @@ def build_mcp_dispatcher(
         if name == "get_artifact_lineage":
             if getattr(langgraph_service, "artifacts", None) is None:
                 raise LookupError("LangGraph Artifact store is unavailable")
+            owner = reading_actor(actor)
             return langgraph_service.artifacts.lineage(
-                str(arguments["artifact_id"]), actor=actor,
+                str(arguments["artifact_id"]), actor=owner,
             )
         if name == "collect_artifacts":
             if getattr(langgraph_service, "artifacts", None) is None:

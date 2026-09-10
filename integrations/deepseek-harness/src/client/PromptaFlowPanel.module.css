@@ -560,6 +560,20 @@
   font-size: 10.5px;
   line-height: 1.4;
 }
+.liveSteps {
+  margin: 8px 12px 10px;
+  border-top: 1px solid var(--dsw-alias-border-l2, rgb(128 128 128 / 12%));
+}
+.liveStepRow {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 5px 2px;
+  border-bottom: 1px solid var(--dsw-alias-border-l2, rgb(128 128 128 / 12%));
+}
+.liveStepRow:last-child { border-bottom: 0; }
 /* The request reads as a quoted block, the way a step's output does: it is
    somebody else's text sitting inside the panel's own, and the same card says
    so in both places.

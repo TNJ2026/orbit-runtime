@@ -754,8 +754,12 @@ class DedicatedCardTests(unittest.TestCase):
         self.assertIn('.tab[aria-selected="true"]::after{background:var(--accent)}', PROMPTAFLOW_WORKFLOWS_HTML)
         self.assertNotIn('.tab[aria-selected="true"]{color:var(--text);background:', PROMPTAFLOW_WORKFLOWS_HTML)
 
-    def test_workflow_list_and_detail_share_a_stable_card_height(self) -> None:
-        self.assertIn("#cardFrame { height: var(--card-height); }", PROMPTAFLOW_WORKFLOWS_HTML)
+    def test_workflow_list_opens_at_the_maximum_card_height(self) -> None:
+        self.assertIn(
+            "#cardFrame { height: var(--card-height); min-height: var(--card-height);",
+            PROMPTAFLOW_WORKFLOWS_HTML,
+        )
+        self.assertIn("flex: 0 0 var(--card-height);", PROMPTAFLOW_WORKFLOWS_HTML)
         self.assertNotIn("--workflow-card-height", PROMPTAFLOW_WORKFLOWS_HTML)
         self.assertIn("card.className='card workflowList'", PROMPTAFLOW_WORKFLOWS_HTML)
         self.assertIn("card.className='card workflowDetail'", PROMPTAFLOW_WORKFLOWS_HTML)

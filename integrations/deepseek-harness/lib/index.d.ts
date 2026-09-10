@@ -423,7 +423,10 @@ declare class PromptaFlowRemoteService extends TypertRemoteService {
     agents: readonly AgentSummary[];
     retiredWorkflowNames: Record<string, string>;
     authoring: readonly AuthoringSummary[];
+    liveSteps: Record<string, StepSummary[]>;
   }>;
+  /** Names and statuses for Runs still moving; logs stay in Run detail. */
+  private liveStepProgress;
   /**
    * Names for the Workflows a Run ran and the catalog no longer offers.
    *
@@ -534,9 +537,9 @@ declare class PromptaFlowRemoteService extends TypertRemoteService {
    * it in an editor and save — and saving corrupts every Artifact sharing
    * those bytes. So they get a copy that is theirs.
    *
-   * Session-scoped like everything else here, and for the same reason twice
-   * over: an Artifact belongs to the actor that produced it, so the Session is
-   * both which Workspace to look in and the only identity allowed to read it.
+   * Session-scoped like everything else here because the Session determines
+   * which Workspace Runtime holds the Artifact. Reads use that Workspace as
+   * their boundary, so an Artifact from a previous Harness Session still opens.
    */
   exportArtifact(sessionId: string, artifactId: string, signal: AbortSignal): Promise<{
     path: string;

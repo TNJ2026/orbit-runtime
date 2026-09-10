@@ -781,6 +781,19 @@ var PromptaFlowGateway = class {
 	}
 };
 //#endregion
+//#region ../../integration-core/src/run-progress.ts
+/** Run statuses there is no coming back from. */
+const TERMINAL$1 = /* @__PURE__ */ new Set([
+	"completed",
+	"failed",
+	"cancelled",
+	"unknown"
+]);
+/** Whether a Run could still do something. */
+function isLive(status) {
+	return !TERMINAL$1.has(status);
+}
+//#endregion
 //#region ../../integration-core/src/session-bridge.ts
 function sessionCanBridge(header) {
 	return Boolean(header.cwd) && (header.delegationDepth ?? 0) === 0;
@@ -1221,6 +1234,8 @@ function artifactImageInput(content) {
 const AUTHORING_TURN_MS = 24e4;
 /** How long a settled job stays on the panel before it stops being news. */
 const AUTHORING_LINGER_MS = 6e4;
+/** Bound the extra live progress reads made by one panel poll. */
+const LIVE_STEP_LIMIT = 6;
 var PromptaFlowRemoteService = (() => {
 	let _classSuper = TypertRemoteService;
 	let _instanceExtraInitializers = [];
@@ -1789,16 +1804,13 @@ var PromptaFlowRemoteService = (() => {
 				* Hand a browser the bytes of one Artifact.
 				*
 				* A GET, because a link is what a person clicks and a browser is what
-				* renders the result. It exists because PromptaFlow's own address for an
-				* Artifact cannot serve one: Artifacts are owned by the actor that
-				* produced them, a browser reaching `/api/v1` on loopback is `local`,
-				* and the Runs this panel starts belong to `harness:session:<id>`. So
-				* the link was a 404 for every Artifact this Harness ever made.
+				* renders the result. The Runtime has a dynamic, private address, so the
+				* stable Harness page cannot link to its `/api/v1` URL directly.
 				*
-				* This route is that identity. It reads the Artifact as the Session that
-				* owns it and passes the bytes through unchanged — no gallery, no
-				* viewer, no second drawing of anything PromptaFlow draws. The browser opens
-				* what it was given, exactly as it would have from PromptaFlow's own URL.
+				* This route resolves the Session's Workspace and passes the bytes through
+				* unchanged — no gallery, no viewer, no second drawing of anything
+				* PromptaFlow draws. The browser opens what it was given, exactly as it
+				* would have from PromptaFlow's own URL.
 				*/
 				ctx.effect(() => webServer.register({
 					kind: "exact",
@@ -2209,17 +2221,37 @@ var PromptaFlowRemoteService = (() => {
 				const agents = (await this.gateway.call(scope, sessionId, "list_agents", {})).agents;
 				const workflows = this.catalog.list(scope.canonicalPath);
 				const retired = await this.retiredWorkflowNames(scope, sessionId, result.runs, workflows, force);
+				const runs = result.runs.filter((run) => !retired.missing.has(run.workflow_id));
+				const liveSteps = await this.liveStepProgress(scope, sessionId, runs);
 				return {
-					runs: result.runs.filter((run) => !retired.missing.has(run.workflow_id)),
+					runs,
 					uiUrl: await this.gateway.uiUrl(scope),
 					workflows,
 					agents,
 					retiredWorkflowNames: retired.names,
-					authoring: authoring.jobs
+					authoring: authoring.jobs,
+					liveSteps
 				};
 			} finally {
 				await release();
 			}
+		}
+		/** Names and statuses for Runs still moving; logs stay in Run detail. */
+		async liveStepProgress(scope, sessionId, runs) {
+			const visible = runs.filter((run) => isLive(run.status)).slice(0, LIVE_STEP_LIMIT);
+			const read = await Promise.all(visible.map(async (run) => {
+				try {
+					const detail = await this.gateway.call(scope, sessionId, "get_run_steps", { run_id: run.run_id });
+					return [run.run_id, detail.steps.map((step) => ({
+						node_id: step.node_id,
+						label: step.label,
+						status: step.status
+					}))];
+				} catch {
+					return null;
+				}
+			}));
+			return Object.fromEntries(read.filter((entry) => entry !== null));
 		}
 		/**
 		* Names for the Workflows a Run ran and the catalog no longer offers.
@@ -2548,9 +2580,9 @@ var PromptaFlowRemoteService = (() => {
 		* it in an editor and save — and saving corrupts every Artifact sharing
 		* those bytes. So they get a copy that is theirs.
 		*
-		* Session-scoped like everything else here, and for the same reason twice
-		* over: an Artifact belongs to the actor that produced it, so the Session is
-		* both which Workspace to look in and the only identity allowed to read it.
+		* Session-scoped like everything else here because the Session determines
+		* which Workspace Runtime holds the Artifact. Reads use that Workspace as
+		* their boundary, so an Artifact from a previous Harness Session still opens.
 		*/
 		async exportArtifact(sessionId, artifactId, signal) {
 			signal.throwIfAborted();

@@ -201,6 +201,25 @@ export function PromptaFlowStepList(
   )
 }
 
+/** Live progress only: no disclosure, console output, or completed trace. */
+export function PromptaFlowLiveStepList({ steps }: { steps: readonly StepSummary[] }) {
+  return (
+    <div className={styles.liveSteps}>
+      {steps.map(item => {
+        const step = toStepRow(item)
+        const indicator = stepDotState(step.status)
+        return (
+          <div className={styles.liveStepRow} key={step.nodeId}>
+            <span className={`${styles.stepDot} ${styles[`stepDot_${indicator}`]}`} aria-hidden="true" />
+            <span className={styles.stepTitle}>{step.label}</span>
+            <span className={styles.status}>{step.status}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 /**
  * A Run in a list: what it was for, and how it went.
  *
@@ -229,8 +248,9 @@ export function PromptaFlowRunListRow(
 
 /** A compact account of the current (or most recently completed) Goal. */
 export function PromptaFlowRunGoalCard(
-  { call, t, sessionId, run }: {
+  { call, t, sessionId, run, steps }: {
     call: HostCall; t: Translate; sessionId: string; run: RunRowData
+    steps?: readonly StepSummary[]
   },
 ) {
   return (
@@ -246,6 +266,7 @@ export function PromptaFlowRunGoalCard(
         </span>
       </div>
       <RunControls call={call} t={t} sessionId={sessionId} run={run} />
+      {run.live && steps?.length ? <PromptaFlowLiveStepList steps={steps} /> : null}
       <RunResult t={t} run={run} sessionId={sessionId} call={call} />
     </section>
   )

@@ -1022,7 +1022,7 @@ class DiscoveryAndResultTests(ApiTestCase):
             self.assertTrue(result["result"]["isError"])
             self.assertIn("error", payload_of(result))
 
-    def test_artifact_content_is_bounded_and_base64_encoded(self) -> None:
+    def test_artifact_survives_actor_change_and_content_is_bounded(self) -> None:
         from promptaflow.workflow.domain.data import PortTransport
 
         store = self.app.state.langgraph_service.artifacts
@@ -1042,17 +1042,36 @@ class DiscoveryAndResultTests(ApiTestCase):
         store.commit(access.produced_artifact_ids)
 
         with AsgiHarness(self.app) as client:
+            listed = payload_of(tool(
+                client, "list_artifacts", {"run_id": "run:artifact-content"},
+                actor="writer",
+            ))
+            metadata = payload_of(tool(
+                client, "read_artifact", {"artifact_id": artifact_id},
+                actor="writer",
+            ))
             content = payload_of(tool(
                 client, "read_artifact_content", {"artifact_id": artifact_id},
-                actor="reader",
+                actor="writer",
+            ))
+            lineage = payload_of(tool(
+                client, "get_artifact_lineage", {"artifact_id": artifact_id},
+                actor="writer",
             ))
             too_small = tool(
                 client, "read_artifact_content",
-                {"artifact_id": artifact_id, "max_bytes": 4}, actor="reader",
+                {"artifact_id": artifact_id, "max_bytes": 4},
+                actor="writer",
             )
 
+        self.assertEqual(
+            [artifact_id],
+            [item["artifact_id"] for item in listed["artifacts"]],
+        )
+        self.assertEqual(artifact_id, metadata["artifact_id"])
         self.assertEqual("base64", content["encoding"])
         self.assertEqual("aGVsbG8=", content["content"])
+        self.assertEqual(artifact_id, lineage["artifact"]["artifact_id"])
         self.assertTrue(too_small["result"]["isError"])
 
 

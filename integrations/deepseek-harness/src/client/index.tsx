@@ -256,25 +256,34 @@ export function apply(ctx: ClientContext): void {
   registerWorkflowPopup(ctx, t)
   const Panel = ({ t, useSessions }: PropsLocale<'promptaflow'> & {
     useSessions: <T>(selector: (state: { current?: string }) => T) => T
-  }) => <PromptaFlowPanel
-    t={t}
-    useSessions={useSessions}
-    onSelectWorkflow={(workflow, sessionId) => writeWorkflowDraft(ctx, t, workflow, sessionId)}
-    // The Dashboard card opens its prompt editor with this same sentence.
-    // Harness already has a native composer, so put it there and stop: the
-    // person may finish the CLI name before deciding to submit it.
-    onAddAgent={sessionId => writeDraft(ctx, sessionId, t('promptAddAgent'))}
-    onEditWorkflow={(workflow, sessionId) => writeDraft(ctx, sessionId, t('editWorkflowPrompt', {
-      name: workflow.name || workflow.workflow_id, id: workflow.workflow_id,
-    }))}
-    onDeleteWorkflow={async (workflow, sessionId) => {
-      const scoped = conversationFor(ctx, sessionId)
-      if (!scoped) return
-      await scoped.conversation.send(t('deleteWorkflowPrompt', {
+  }) => {
+    // A Session header — including cwd — is immutable in Harness. Switching
+    // directories therefore switches the current Session. Remount the panel at
+    // that boundary so no Run, Workflow detail, error or in-flight poll from
+    // the previous Workspace survives the switch. Window geometry and folded
+    // state still come back from the panel's localStorage-backed layout.
+    const sessionId = useSessions(state => state.current)
+    return <PromptaFlowPanel
+      key={sessionId ?? 'no-session'}
+      t={t}
+      useSessions={useSessions}
+      onSelectWorkflow={(workflow, sessionId) => writeWorkflowDraft(ctx, t, workflow, sessionId)}
+      // The Dashboard card opens its prompt editor with this same sentence.
+      // Harness already has a native composer, so put it there and stop: the
+      // person may finish the CLI name before deciding to submit it.
+      onAddAgent={sessionId => writeDraft(ctx, sessionId, t('promptAddAgent'))}
+      onEditWorkflow={(workflow, sessionId) => writeDraft(ctx, sessionId, t('editWorkflowPrompt', {
         name: workflow.name || workflow.workflow_id, id: workflow.workflow_id,
-      }))
-    }}
-  />
+      }))}
+      onDeleteWorkflow={async (workflow, sessionId) => {
+        const scoped = conversationFor(ctx, sessionId)
+        if (!scoped) return
+        await scoped.conversation.send(t('deleteWorkflowPrompt', {
+          name: workflow.name || workflow.workflow_id, id: workflow.workflow_id,
+        }))
+      }}
+    />
+  }
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({
     name: 'shell.overlay',
     id: 'promptaflow-runs',

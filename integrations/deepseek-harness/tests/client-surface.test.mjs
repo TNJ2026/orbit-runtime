@@ -89,6 +89,15 @@ test('the panel reads its Session from the store the slot actually hands over', 
   assert.equal(/sessionId\?: string\s*\}/.test(panel), false, 'a prop the slot never sends is back')
 })
 
+test('changing the Harness working directory remounts a clean panel', async () => {
+  const client = await readFile(join(clientDir, 'index.tsx'), 'utf8')
+  const slot = client.slice(client.indexOf('const Panel ='), client.indexOf("ctx.slots.inject('shell.overlay'"))
+  assert.match(slot, /const sessionId = useSessions\(state => state\.current\)/)
+  assert.match(slot, /<PromptaFlowPanel\s+key=\{sessionId \?\? 'no-session'\}/)
+  assert.match(slot, /localStorage-backed layout/,
+    'remounting must preserve the explicitly persisted window layout')
+})
+
 test('the title area drags, and only its controls do not', () => {
   // setPointerCapture redirects every following pointer event to the captor, so
   // a press that started on a control never becomes a click. Excluding controls
@@ -481,8 +490,8 @@ test('the catalog marks what a goal cannot be started from', () => {
   assert.doesNotMatch(detail, /styles\.facts/)
 })
 
-/** The Goal page is a summary; the History detail remains the process view. */
-test('a running Goal does not draw its steps on the Goal page', () => {
+/** The Goal page shows live progress; History remains the complete process view. */
+test('a running Goal draws compact steps but no step output', () => {
   const panel = sources[names.indexOf('PromptaFlowPanel.tsx')]
   const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
   const from = panel.indexOf("tab === 'goal' ? (")
@@ -490,22 +499,36 @@ test('a running Goal does not draw its steps on the Goal page', () => {
   assert.ok(from > 0 && until > from, 'the Goal and History blocks were not found')
   const goal = panel.slice(from, until)
   assert.ok(goal.includes('PromptaFlowRunGoalCard'), 'the Goal page draws the Run as a card')
-  assert.doesNotMatch(goal, /steps=\{steps\[/, 'the Goal card is not fed a step trace')
+  assert.match(goal, /steps=\{liveSteps\[row\.runId\]\}/)
   assert.equal(goal.includes('PromptaFlowRunListRow'), false,
     'the Goal page uses its compact card rather than a history row')
   assert.ok(panel.slice(until).includes('PromptaFlowRunListRow'))
   assert.ok(rows.includes('export function PromptaFlowStepList'))
+  assert.ok(rows.includes('export function PromptaFlowLiveStepList'))
   assert.equal((rows.match(/<PromptaFlowStepList/g) ?? []).length, 1,
     'only Run detail renders the step-by-step process')
   assert.equal((rows.match(/<StepDisclosure/g) ?? []).length, 1,
     'the step row is instantiated in one place, inside PromptaFlowStepList')
+  const compact = rows.slice(
+    rows.indexOf('export function PromptaFlowLiveStepList'),
+    rows.indexOf('/**\n * A Run in a list'),
+  )
+  assert.doesNotMatch(compact, /StepDisclosure|getStepOutput|FoldedText/)
+  assert.match(
+    rows.slice(rows.indexOf('export function PromptaFlowRunGoalCard')),
+    /run\.live && steps\?\.length/,
+  )
 })
 
-/** A compact Goal poll does not spend one extra Runtime request per Run. */
-test('the Host does not send a step trace with panel state', async () => {
+/** Only live Runs add bounded progress reads to a panel poll. */
+test('the Host sends compact steps only for live Runs', async () => {
   const host = await readFile(join(here, '..', 'src', 'index.ts'), 'utf8')
   const state = host.slice(host.indexOf("@Remote('getPanelState')"), host.indexOf("@Remote('getRunDetail')"))
-  assert.doesNotMatch(state, /liveSteps|get_run_steps|steps:/)
+  assert.match(state, /liveSteps: Record<string, StepSummary\[\]>/)
+  assert.match(state, /liveStepProgress\(scope, sessionId, runs\)/)
+  assert.match(state, /runs\.filter\(run => isLive\(run\.status\)\)\.slice\(0, LIVE_STEP_LIMIT\)/)
+  assert.match(state, /node_id: step\.node_id, label: step\.label, status: step\.status/)
+  assert.doesNotMatch(state, /has_output|resolution|reconciliation/)
   assert.match(host.slice(host.indexOf("@Remote('getRunDetail')")), /get_run_steps/,
     'Run detail still reads the complete process on demand')
 })
@@ -519,7 +542,7 @@ test('the Goal page keeps the shared live-or-latest rule', async () => {
   const until = panel.indexOf("tab === 'history' ? (")
   assert.match(panel.slice(from, until), /goal\.map\(/, 'the Goal page draws goalRuns')
   assert.match(panel, /const goal = goalRuns\(/)
-  assert.doesNotMatch(panel, /setSteps|state\.steps/)
+  assert.match(panel, /setLiveSteps/)
 })
 
 /**

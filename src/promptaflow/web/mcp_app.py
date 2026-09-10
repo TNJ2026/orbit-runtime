@@ -1011,7 +1011,12 @@ def _card(
 
 
 _WORKFLOW_LIST_STYLE = r"""
-#cardFrame { height: var(--card-height); }
+/* Open the catalogue at the shared ceiling immediately. The common frame may
+   shrink to fit a small host viewport; this catalogue deliberately asks for
+   its full list height so the host allocates the largest card from the first
+   paint instead of growing it after rows arrive. */
+#cardFrame { height: var(--card-height); min-height: var(--card-height);
+  flex: 0 0 var(--card-height); }
 #card.workflowDetail { display: flex; min-height: 0; flex-direction: column; }
 #card.workflowDetail .detailPanel { flex: 1 1 auto; height: auto; min-height: 0; }
 /* Why there is no 新目标 on this one. Small print, wrapping, and in the row
