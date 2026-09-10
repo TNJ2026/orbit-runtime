@@ -51,6 +51,7 @@ pids="$temporary/pids"
 "${PROMPTAFLOW[@]}" runtimes --json > "$temporary/runtimes.json"
 python3 - "$temporary/runtimes.json" "$STATE_ROOT" "$ROOT_DIR/agent-app.json" "$RUNTIME_ROOT" > "$pids" <<'PYTHON'
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -92,11 +93,27 @@ def identity_of(pid: int) -> str:
 # A candidate this fails to recognise is not stopped and not reported as a
 # problem — it is skipped as somebody else's process, and the restart goes on
 # to report success while the old one keeps its port and its lock.
-PROGRAM_TOKENS = ("paf", "promptaflow")
 HUB_VERBS = ("hub serve",)
 RUNTIME_VERBS = ("_runtime", "serve")
-HUB_COMMANDS = tuple(f"{t} {v}" for t in PROGRAM_TOKENS for v in HUB_VERBS)
-RUNTIME_COMMANDS = tuple(f"{t} {v}" for t in PROGRAM_TOKENS for v in RUNTIME_VERBS)
+PROMPTAFLOW_PREFIX = (
+    r"(?:^|[\s/\\])(?:"
+    r"-m\s+promptaflow\s+|"
+    r"(?:paf|promptaflow)(?:\.exe)?[\"']?\s+"
+    r")"
+)
+
+
+def runs_promptaflow(identity: str, verbs: tuple[str, ...]) -> bool:
+    """Recognise complete command tokens, never a suffix such as `notpaf`."""
+
+    return any(
+        re.search(
+            PROMPTAFLOW_PREFIX + re.escape(verb) + r"(?:\s|$)",
+            identity,
+            flags=re.IGNORECASE,
+        )
+        for verb in verbs
+    )
 
 candidates: list[tuple[int, str, tuple[str, ...]]] = []
 # The Hub, as the Agent App host records it — not as whatever holds the port,
@@ -105,7 +122,7 @@ pid_files = sorted(state_root.glob("promptaflow/*/pid.json"))
 for pid_file in pid_files:
     try:
         payload = json.loads(pid_file.read_text(encoding="utf-8"))
-        candidates.append((int(payload["pid"]), "PromptaFlow Hub", HUB_COMMANDS))
+        candidates.append((int(payload["pid"]), "PromptaFlow Hub", HUB_VERBS))
     except (OSError, ValueError, KeyError, TypeError):
         continue
 
@@ -126,7 +143,7 @@ if port is not None and shutil.which("lsof"):
     ).stdout.split()
     for value in listeners:
         try:
-            candidates.append((int(value), "PromptaFlow Hub", HUB_COMMANDS))
+            candidates.append((int(value), "PromptaFlow Hub", HUB_VERBS))
         except ValueError:
             continue
 
@@ -142,7 +159,7 @@ for entry in listed if isinstance(listed, list) else []:
     if not isinstance(entry, dict):
         continue
     try:
-        candidates.append((int(entry["pid"]), "PromptaFlow Runtime", RUNTIME_COMMANDS))
+        candidates.append((int(entry["pid"]), "PromptaFlow Runtime", RUNTIME_VERBS))
     except (KeyError, TypeError, ValueError):
         continue
 
@@ -157,7 +174,7 @@ for lock_path in sorted(runtime_root.rglob("*.owner.lock")):
     for facts_path in (lock_path.with_suffix(".json"), lock_path):
         try:
             payload = json.loads(facts_path.read_text(encoding="utf-8"))
-            candidates.append((int(payload["pid"]), "PromptaFlow Runtime", RUNTIME_COMMANDS))
+            candidates.append((int(payload["pid"]), "PromptaFlow Runtime", RUNTIME_VERBS))
             break
         except (OSError, ValueError, KeyError, TypeError):
             continue
@@ -170,7 +187,7 @@ for pid, label, expected in candidates:
     identity = identity_of(pid)
     if not identity:
         continue          # Already gone; nothing to stop and nothing to warn about.
-    if not any(command in identity for command in expected):
+    if not runs_promptaflow(identity, expected):
         print(
             f"skipping PID {pid}: recorded as {label} but now runs {identity}",
             file=sys.stderr,

@@ -235,6 +235,28 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
             self.assertIn("PromptaFlow Hub", lines[0])
             self.assertIn("PromptaFlow Runtime", lines[1])
 
+    def test_the_program_name_must_be_a_complete_path_segment(self) -> None:
+        """A stale PID must not make a similarly named program ours."""
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            environment = self.environment(
+                root,
+                listed=[{"pid": 6201}],
+                recorded=6200,
+                ps_answers={
+                    6200: "/x/notpromptaflow hub serve",
+                    6201: "/x/notpaf _runtime --project-root /other",
+                },
+            )
+
+            result = self.run_dry(environment, root)
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertNotIn("Would stop", result.stdout)
+            self.assertIn("skipping PID 6200", result.stderr)
+            self.assertIn("skipping PID 6201", result.stderr)
+
     def test_a_pid_reused_during_the_wait_is_not_killed(self) -> None:
         """The gap between the check and the signal is up to 45 seconds long.
 

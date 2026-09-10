@@ -35,6 +35,46 @@ class PowerShellScriptTests(unittest.TestCase):
             check=False,
         )
 
+    def test_restart_command_matcher_requires_a_complete_program_name(self):
+        """Exercise the production function without running the restart body."""
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            probe = root / "probe.ps1"
+            probe.write_text(
+                "param([string] $Source)\n"
+                "$tokens = $null\n"
+                "$errors = $null\n"
+                "$ast = [System.Management.Automation.Language.Parser]::ParseFile(\n"
+                "  $Source, [ref]$tokens, [ref]$errors\n"
+                ")\n"
+                "$function = $ast.Find({\n"
+                "  param($node)\n"
+                "  $node -is [System.Management.Automation.Language.FunctionDefinitionAst] "
+                "-and $node.Name -eq 'Test-PromptaFlowCommand'\n"
+                "}, $true)\n"
+                "if ($null -eq $function) { throw 'matcher function not found' }\n"
+                "Invoke-Expression $function.Extent.Text\n"
+                "$script:promptaflowSourceRoot = 'C:\\promptaflow'\n"
+                "$cases = @(\n"
+                "  @('/x/paf _runtime --port 0', 'Runtime', $true),\n"
+                "  @('python -m promptaflow hub serve', 'Hub', $true),\n"
+                "  @('/x/notpaf.exe _runtime --port 0', 'Runtime', $false),\n"
+                "  @('/x/notpromptaflow hub serve', 'Hub', $false)\n"
+                ")\n"
+                "foreach ($case in $cases) {\n"
+                "  $actual = Test-PromptaFlowCommand -CommandLine $case[0] -Kind $case[1]\n"
+                "  if ($actual -ne $case[2]) { throw \"unexpected match: $($case[0])\" }\n"
+                "}\n",
+                encoding="utf-8",
+            )
+
+            result = self.run_script(
+                probe, str(ROOT / "restart-promptaflow.ps1"), cwd=root,
+            )
+
+            self.assertEqual(0, result.returncode, result.stderr)
+
     @staticmethod
     def fake_promptaflow(root: Path) -> tuple[Path, Path]:
         capture = root / "arguments.jsonl"
