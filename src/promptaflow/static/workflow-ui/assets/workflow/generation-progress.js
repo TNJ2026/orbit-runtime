@@ -31,6 +31,7 @@ export function workflowGenerationProgress(
     promptLabelKey = "generate.instruction",
     agentLabelKey = "generate.writtenBy",
     onCancelled = null,
+    onJobChanged = null,
     // What the host offers once the job has settled. A node slot rather than
     // more labels: the two callers differ in what the buttons *do*, and no
     // amount of wording can express that.
@@ -145,6 +146,7 @@ export function workflowGenerationProgress(
   });
 
   const updateCancel = () => {
+    if (onJobChanged) onJobChanged(job);
     cancelGeneration.hidden = !(job.allowed_commands || []).some(
       (item) => item.command === "workflow.authoring.cancel",
     );

@@ -360,7 +360,7 @@ class AccessibilityTests(unittest.TestCase):
         self.assertIn('cancelledJob?.status !== "cancelled"', generation_js)
         self.assertIn("if (onCancelled) await onCancelled(job)", generation_js)
         self.assertIn("onCancelled: render", views_js)
-        self.assertIn("job = null;\n              draw();", views_js)
+        self.assertIn("job = cancelledJob;\n              draw();", views_js)
         self.assertIn("showNotice", generation_js)
 
     def messages(self, text: str) -> set[str]:

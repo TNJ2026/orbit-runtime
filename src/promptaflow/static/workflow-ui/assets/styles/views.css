@@ -642,6 +642,23 @@ html[data-theme="light"] .console-chunk.stderr { color: var(--text); }
 .icon-close:hover, .goal-modal-close:hover { color: var(--text); background: var(--hover); }
 .icon-close:focus-visible,
 .goal-modal-close:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+.icon-close[hidden] { display: none; }
+/* Keep the close target inside the heading row, clear of the title and the
+   scrolling body. Use a full, visible hit area in both colour schemes. */
+.workflow-generation-dialog-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 24px; min-height: 36px; margin-bottom: 16px;
+}
+.workflow-generation-dialog-head h2 { margin: 0; min-width: 0; }
+.workflow-generation-dialog-close, #closeWorkflowEditor {
+  width: 36px; height: 36px; border-radius: 8px;
+  margin: 0; align-self: flex-start;
+  transition: background-color .12s ease, color .12s ease;
+}
+.workflow-generation-dialog-close:hover, #closeWorkflowEditor:hover {
+  background-color: var(--hover); color: var(--text);
+}
+.workflow-edit-head > .actions { padding: 0 4px 0 16px; }
 .goal-modal-body { display: flex; flex-direction: column; gap: 16px; }
 
 /* Goal detail sections. Headings sit outside their card at 16px semibold,

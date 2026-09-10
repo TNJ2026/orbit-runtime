@@ -3027,6 +3027,13 @@ export function createViews(context) {
             version: i18n.number(value.latest_version),
           }),
         });
+        const editorClose = closeButton(el, {
+          label: i18n.t("action.close"), id: "closeWorkflowEditor",
+          onClose: () => {
+            if (!editorClose.hidden) navigate({ view: "workflows", runId: null });
+          },
+        });
+        const setEditorBusy = (busy) => { editorClose.hidden = busy; };
         const drawDefinition = (current) => {
           const currentEditors = current.action_editors || {};
           editingVersion.textContent = i18n.t("workflows.editingVersion", {
@@ -3065,15 +3072,12 @@ export function createViews(context) {
               // because a reader who cannot see the workflow page behind this
               // one has nowhere else to learn it. See .workflow-editing-version.
               editingVersion,
-              closeButton(el, {
-                label: i18n.t("action.close"), id: "closeWorkflowEditor",
-                onClose: () => navigate({ view: "workflows", runId: null }),
-              }),
+              editorClose,
             ]),
           ]),
           // The revise panel is the editing surface — lead with it, above the
           // diagram, so the primary "change this workflow" action comes first.
-          modify ? workflowEditorPanel(modify, value, draw, refreshPublished) : null,
+          modify ? workflowEditorPanel(modify, value, draw, refreshPublished, setEditorBusy) : null,
           canvas,
         ].filter(Boolean));
         drawDefinition(value);
@@ -3477,19 +3481,48 @@ export function createViews(context) {
     return { ...input, [binding.input_id]: envelope };
   }
   async function generateWorkflowDialog(generateCommand, initialJob = null) {
-    const dialog = el("dialog", { "aria-label": i18n.t("generate.title") });
+    const dialog = el("dialog", {
+      class: "workflow-generation-dialog", "aria-label": i18n.t("generate.title"),
+    });
     const form = el("form", { method: "dialog" });
     dialog.append(form);
     let job = initialJob;
     let promptText = initialJob?.prompt || "";
     let timer = null;
+    let submitting = false;
+    const terminal = new Set(["done", "failed", "cancelled"]);
+    const canClose = () => !submitting && (!job || terminal.has(job.status));
+    // Escape never dismisses this progress dialog, even after completion.
+    // Closing the view and cancelling the server-side job are different acts.
+    dialog.addEventListener("cancel", (event) => event.preventDefault());
+    const blockEscape = (event) => {
+      if (event.key !== "Escape" || !dialog.open) return;
+      // Redrawing the form can move focus out of the dialog. Catch Escape
+      // before the browser's close watcher, not only on the replaced content.
+      // A stacked error/confirmation dialog still owns its own Escape key.
+      if ([...document.querySelectorAll("dialog[open]")].at(-1) !== dialog) return;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    document.addEventListener("keydown", blockEscape, true);
+    form.addEventListener("submit", (event) => {
+      if (!canClose()) event.preventDefault();
+    });
 
     const draw = () => {
-      const body = [el("h2", { text: i18n.t("generate.title") })];
+      const close = closeButton(el, {
+        label: i18n.t("action.close"), className: "workflow-generation-dialog-close",
+        onClose: () => { if (canClose()) dialog.close(); },
+      });
+      close.hidden = !canClose();
+      const body = [el("header", { class: "workflow-generation-dialog-head" }, [
+        el("h2", { text: i18n.t("generate.title") }), close,
+      ])];
       const actions = el("div", { class: "actions" });
       if (!job) {
         const instruction = el("textarea", {
           id: "generateInstruction", required: "required", maxlength: "4000",
+          disabled: submitting ? "disabled" : null,
           placeholder: i18n.t("generate.instructionPh"), text: promptText,
         });
         body.push(
@@ -3501,15 +3534,19 @@ export function createViews(context) {
         );
         actions.append(
           el("button", {
-            class: "button", value: "cancel", formnovalidate: "formnovalidate",
+            type: "button", class: "button", disabled: submitting ? "disabled" : null,
             text: i18n.t("action.cancel"),
+            onclick: () => { if (canClose()) dialog.close(); },
           }),
           el("button", {
           type: "button", class: "button primary", id: "generateSubmit",
+          disabled: submitting ? "disabled" : null,
           text: i18n.t("generate.action"),
           onclick: async () => {
-            if (!instruction.value.trim()) return;
+            if (submitting || !instruction.value.trim()) return;
             promptText = instruction.value.trim();
+            submitting = true;
+            draw();
             try {
               const response = await api.execute(
                 // Step names are read here, so they are written in this locale
@@ -3518,10 +3555,12 @@ export function createViews(context) {
                 `workflow.generate:${Date.now()}`,
               );
               job = response.data;
-              draw();
-              watch();
             } catch (error) {
               reportError(error);
+            } finally {
+              submitting = false;
+              draw();
+              watch();
             }
           },
         }));
@@ -3568,11 +3607,11 @@ export function createViews(context) {
                 return;
               }
               clearTimeout(timer);
-              job = null;
+              job = cancelledJob;
               draw();
             },
           }));
-        } else {
+        } else if (terminal.has(job.status)) {
           actions.append(el("button", {
             type: "button", class: "button", text: job.status === "done"
               ? i18n.t("action.open") : i18n.t("action.close"),
@@ -3612,12 +3651,14 @@ export function createViews(context) {
           watch();
         } catch (error) {
           reportError(error);
+          watch();
         }
       }, 800);
     };
 
     dialog.addEventListener("close", () => {
       clearTimeout(timer);
+      document.removeEventListener("keydown", blockEscape, true);
       dialog.remove();
     }, { once: true });
     document.body.append(dialog);
@@ -3685,7 +3726,7 @@ export function createViews(context) {
 
   /* The revision editor is the lower band of the dedicated edit page. It stays
    * beside the graph it revises instead of becoming a second floating dialog. */
-  function workflowEditorPanel(modifyCommand, workflow, onDone, onPublished = null) {
+  function workflowEditorPanel(modifyCommand, workflow, onDone, onPublished = null, onBusy = () => {}) {
     const upgrading = workflow.goal_readiness === "needs_upgrade";
     const title = i18n.t(upgrading ? "workflows.upgrade" : "editor.edit");
     const section = el("section", { class: "workflow-editor", "aria-label": title });
@@ -3700,8 +3741,13 @@ export function createViews(context) {
     let regenerateOffered = false;
     // The progress panel owns a timer; a redraw that swaps it out must stop it.
     let stopProgress = null;
+    let submitting = false;
+    const syncBusy = () => onBusy(submitting || Boolean(job && !["done", "failed", "cancelled"].includes(job.status)));
 
     const submit = async (mode) => {
+      if (submitting) return;
+      submitting = true;
+      syncBusy();
       try {
         job = (await api.execute(
           modifyCommand, {
@@ -3715,6 +3761,9 @@ export function createViews(context) {
         draw();
       } catch (error) {
         reportError(error);
+      } finally {
+        submitting = false;
+        syncBusy();
       }
     };
 
@@ -3805,6 +3854,7 @@ export function createViews(context) {
 
     const draw = () => {
       if (stopProgress) { stopProgress(); stopProgress = null; }
+      syncBusy();
       if (!job) {
         section.replaceChildren(...formPose());
         return;
@@ -3832,6 +3882,7 @@ export function createViews(context) {
           progressTitleKey: "editor.revision.progress.title",
           promptLabelKey: "editor.revision.instruction",
           agentLabelKey: "editor.revisedBy",
+          onJobChanged: (latest) => { job = latest; syncBusy(); },
           renderOutcome: outcomeNodes,
         },
       ));
