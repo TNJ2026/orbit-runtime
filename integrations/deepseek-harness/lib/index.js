@@ -1281,7 +1281,6 @@ var PromptaFlowRemoteService = (() => {
 	let _listWorkflows_decorators;
 	let _listRuns_decorators;
 	let _generateWorkflow_decorators;
-	let _generateWorkflowForSession_decorators;
 	let _modifyWorkflow_decorators;
 	let _getAuthoringJob_decorators;
 	let _getRun_decorators;
@@ -1317,7 +1316,6 @@ var PromptaFlowRemoteService = (() => {
 			_listWorkflows_decorators = [Remote("listWorkflows")];
 			_listRuns_decorators = [Remote("listRuns")];
 			_generateWorkflow_decorators = [Remote("generateWorkflow")];
-			_generateWorkflowForSession_decorators = [Remote("generateWorkflowForSession")];
 			_modifyWorkflow_decorators = [Remote("modifyWorkflow")];
 			_getAuthoringJob_decorators = [Remote("getAuthoringJob")];
 			_getRun_decorators = [Remote("getRun")];
@@ -1484,17 +1482,6 @@ var PromptaFlowRemoteService = (() => {
 				access: {
 					has: (obj) => "generateWorkflow" in obj,
 					get: (obj) => obj.generateWorkflow
-				},
-				metadata: _metadata
-			}, null, _instanceExtraInitializers);
-			__esDecorate(this, null, _generateWorkflowForSession_decorators, {
-				kind: "method",
-				name: "generateWorkflowForSession",
-				static: false,
-				private: false,
-				access: {
-					has: (obj) => "generateWorkflowForSession" in obj,
-					get: (obj) => obj.generateWorkflowForSession
 				},
 				metadata: _metadata
 			}, null, _instanceExtraInitializers);
@@ -1941,7 +1928,6 @@ var PromptaFlowRemoteService = (() => {
 				case "getRuntime": return await this.getRuntime(args[0], signal);
 				case "getRuntimeUi": return await this.getRuntimeUi(String(args[0]), signal);
 				case "getPanelState": return await this.getPanelState(String(args[0]), Boolean(args[1]), Boolean(args[2]), signal);
-				case "generateWorkflowForSession": return await this.generateWorkflowForSession(String(args[0]), String(args[1]), signal);
 				case "getAuthoringOutput": return await this.getAuthoringOutput(String(args[0]), String(args[1]), Number(args[2]), signal);
 				case "getRunDetail": return await this.getRunDetail(String(args[0]), String(args[1]), signal);
 				case "getWorkflowDefinition": return await this.getWorkflowDefinition(String(args[0]), String(args[1]), signal);
@@ -2521,26 +2507,6 @@ var PromptaFlowRemoteService = (() => {
 			});
 			this.watchAuthoring(scope, sessionId, job);
 			return job;
-		}
-		/** Start authoring from a Slash command whose only authority is its Session. */
-		async generateWorkflowForSession(sessionId, prompt, signal) {
-			signal.throwIfAborted();
-			if (!prompt.trim() || prompt.length > 2e4) throw new Error("Workflow prompt must be 1-20000 characters");
-			const scope = await this.sessionWorkspace(sessionId);
-			const release = await this.gateway.acquire(scope, true);
-			try {
-				const agent = await this.prepareAuthoringRoute(scope, sessionId);
-				const job = await this.gateway.call(scope, sessionId, "generate_workflow", {
-					prompt: prompt.trim(),
-					display_language: "zh-CN",
-					agent,
-					idempotency_key: crypto.randomUUID()
-				});
-				this.watchAuthoring(scope, sessionId, job);
-				return job;
-			} finally {
-				await release();
-			}
 		}
 		/** Register this exact Session route before asking PromptaFlow to address work to it. */
 		async prepareAuthoringRoute(scope, sessionId) {

@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
-import { spawn } from 'node:child_process'
-import { mkdtemp, mkdir } from 'node:fs/promises'
+import { execFile, spawn } from 'node:child_process'
+import { mkdtemp, mkdir, rm } from 'node:fs/promises'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
+import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 
@@ -14,6 +15,7 @@ const promptaflow = process.env.PROMPTAFLOW_BIN || resolve(
   here,
   process.platform === 'win32' ? '../../../.venv/Scripts/paf.exe' : '../../../.venv/bin/paf',
 )
+const execFileAsync = promisify(execFile)
 
 async function freePort() {
   const server = createServer()
@@ -38,6 +40,21 @@ async function stop(child) {
   await new Promise(resolveExit => child.once('exit', resolveExit))
 }
 
+async function waitRuntimeGone(workspacePath) {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const { stdout } = await execFileAsync(promptaflow, ['runtimes', '--json'], {
+      cwd: workspacePath, encoding: 'utf8', timeout: 5_000,
+    })
+    const runtimes = JSON.parse(stdout)
+    assert.ok(Array.isArray(runtimes), 'paf runtimes --json must return an array')
+    if (!runtimes.some(runtime =>
+      runtime?.project_root && resolve(String(runtime.project_root)) === resolve(workspacePath),
+    )) return
+    await new Promise(resolveWait => setTimeout(resolveWait, 50))
+  }
+  throw new Error(`PromptaFlow Runtime remained live after Hub exit: ${workspacePath}`)
+}
+
 test('Harness reaches its workspace Runtime through the fixed Hub', { timeout: 30_000 }, async t => {
   const root = await mkdtemp(join(tmpdir(), 'promptaflow-independent-e2e-'))
   // Both roots, not just the discovery one. Acquiring a Workspace runs
@@ -51,12 +68,6 @@ test('Harness reaches its workspace Runtime through the fixed Hub', { timeout: 3
     Object.keys(overrides).map(name => [name, process.env[name]]),
   )
   Object.assign(process.env, overrides)
-  t.after(() => {
-    for (const [name, value] of Object.entries(previous)) {
-      if (value === undefined) delete process.env[name]
-      else process.env[name] = value
-    }
-  })
   const workspacePath = join(root, 'workspace')
   await mkdir(workspacePath)
   const port = await freePort()
@@ -65,7 +76,18 @@ test('Harness reaches its workspace Runtime through the fixed Hub', { timeout: 3
   ], { cwd: workspacePath, stdio: ['ignore', 'ignore', 'pipe'] })
   let stderr = ''
   child.stderr.setEncoding('utf8'); child.stderr.on('data', chunk => { stderr += chunk })
-  t.after(async () => { await stop(child) })
+  t.after(async () => {
+    try {
+      await stop(child)
+      await waitRuntimeGone(workspacePath)
+    } finally {
+      for (const [name, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[name]
+        else process.env[name] = value
+      }
+      await rm(root, { recursive: true, force: true })
+    }
+  })
   const base = `http://127.0.0.1:${String(port)}`
   try { await waitReady(`${base}/health/ready`, child) }
   catch (error) { throw new Error(`${String(error)}\n${stderr}`) }

@@ -514,8 +514,6 @@ declare class PromptaFlowRemoteService extends TypertRemoteService {
   listRuns(workspace: WorkspaceRef, sessionId: string, status: string | undefined, signal: AbortSignal): Promise<RunDto[]>;
   private workspaceForSession;
   generateWorkflow(workspace: WorkspaceRef, sessionId: string, prompt: string, signal: AbortSignal): Promise<AuthoringJob>;
-  /** Start authoring from a Slash command whose only authority is its Session. */
-  generateWorkflowForSession(sessionId: string, prompt: string, signal: AbortSignal): Promise<AuthoringJob>;
   /** Register this exact Session route before asking PromptaFlow to address work to it. */
   private prepareAuthoringRoute;
   modifyWorkflow(workspace: WorkspaceRef, sessionId: string, workflowId: string, prompt: string, regenerate: boolean, signal: AbortSignal): Promise<AuthoringJob>;

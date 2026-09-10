@@ -123,7 +123,33 @@ class HubUiTests(unittest.TestCase):
             self.assertEqual([], stopped)
             client._loop.run_until_complete(asyncio.sleep(0.06))
             self.assertEqual([True], stopped)
-        self.assertEqual(2, manager.stop_all.call_count)
+        # The successful endpoint call stops them before answering; lifespan
+        # repeats the idempotent cleanup for every normal Hub exit path.
+        self.assertEqual(3, manager.stop_all.call_count)
+
+    def test_lifespan_shutdown_stops_runtimes_without_the_http_endpoint(self):
+        manager = Mock(spec=WorkspaceRuntimeManager)
+        manager.stop_all.return_value = {
+            "requested": ["/work/a"], "terminated": [], "failures": [],
+        }
+
+        app = create_hub_app(manager, shutdown_request=lambda: None)
+        with AsgiHarness(app):
+            manager.stop_all.assert_not_called()
+
+        manager.stop_all.assert_called_once_with()
+        self.assertEqual(
+            {"requested": ["/work/a"], "terminated": [], "failures": []},
+            app.state.runtime_shutdown,
+        )
+
+    def test_embedded_app_lifespan_does_not_stop_machine_runtimes(self):
+        manager = Mock(spec=WorkspaceRuntimeManager)
+
+        with AsgiHarness(create_hub_app(manager)):
+            pass
+
+        manager.stop_all.assert_not_called()
 
     @patch("promptaflow.hub.terminate_pid_tree")
     @patch("promptaflow.hub._runtime_json")

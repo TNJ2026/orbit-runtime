@@ -329,6 +329,7 @@
 }
 
 /* PromptaFlow's Agent identity tile, scaled to the resident panel's single column. */
+.agentsSection { min-height: 100%; }
 .agentsGrid { display: grid; gap: 10px; padding: 10px 12px; }
 .agentCard {
   display: grid;
@@ -379,6 +380,24 @@
   background: var(--dsw-alias-state-error-secondary, rgb(242 90 90 / 12%));
   color: var(--dsw-alias-state-error-primary, LinkText);
 }
+.agentActions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 2px 12px 12px;
+}
+.addAgent {
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--dsw-alias-state-business-primary, Highlight);
+  color: var(--dsw-alias-label-on-color, HighlightText);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.addAgent:hover:not(:disabled) { filter: brightness(1.06); }
+.addAgent:disabled { opacity: .45; cursor: not-allowed; }
 
 /* A Workflow leads with its id, small, because that is the half the Agent uses
    and the half a person checks — the name below is what they read. */

@@ -20,7 +20,6 @@ import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { PromptaFlowPanel } from './PromptaFlowPanel.tsx'
 import { PROMPTAFLOW_LOCALE_NAMESPACE, en, zh, type PromptaFlowLocaleKey } from './locales.ts'
-import { panelError } from '@promptaflow/integration-core'
 import { caretToEnd } from './composer-caret.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -32,7 +31,6 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
 const PANEL_COMMAND = 'promptaflow'
 const LIST_COMMAND = 'promptaflow-workflows'
-const GENERATE_COMMAND = 'promptaflow-generate'
 
 interface InputTriggerRegistry { registerSource(source: Record<string, unknown>): () => void }
 type SubmitResult = { kind: 'success'; text?: string } | { kind: 'error'; text: string }
@@ -78,54 +76,6 @@ function registerPromptaFlowSlashSource(ctx: ClientContext, t: Translate): void 
 
 interface SelectOption { readonly id: string; readonly label: string; readonly detail?: string }
 interface SessionContext { readonly sessionId: string }
-interface TriggerPick { readonly session: SessionContext }
-
-/** `/promptaflow-generate` starts the existing authoring flow and reveals its row. */
-function registerGenerateSlashSource(ctx: ClientContext, t: Translate): void {
-  const inputTriggers = ctx.get('inputTriggers') as unknown as InputTriggerRegistry | undefined
-  if (!inputTriggers) throw new Error('PromptaFlow /promptaflow-generate requires the Harness inputTriggers service')
-  const claim = (session: SessionContext) => ({
-    // The claim token is also what a menu pick inserts into the composer.
-    // Keep the argument separator in it so the person can type the Workflow
-    // description immediately without first adding a space.
-    token: `/${GENERATE_COMMAND} `,
-    submit: async (args: string): Promise<SubmitResult> => {
-      const prompt = args.trim()
-      if (!prompt) return { kind: 'error', text: t('generateUsage') }
-      // The Workflows tab, because that is where the job appears and where the
-      // Workflow it publishes will land. Before the call: writing one takes a
-      // while, and the panel is the only place that says it started.
-      showPromptaFlowPanel('workflows')
-      try {
-        await hostCall<unknown>(
-          'generateWorkflowForSession', [session.sessionId, prompt], new AbortController().signal,
-        )
-        return { kind: 'success' }
-      } catch (reason) {
-        // The same reading the panel gives, because it is the same failure
-        // arriving by the same route — only the place it is shown differs.
-        const failure = panelError(reason)
-        return { kind: 'error', text: t(failure.key, failure.values) }
-      }
-    },
-  })
-  ctx.effect(() => inputTriggers.registerSource({
-    trigger: '/', name: GENERATE_COMMAND, order: -9, showGroupTitle: false,
-    candidates: async (session: SessionContext, request: { query: string }) =>
-      GENERATE_COMMAND.includes(request.query.toLowerCase())
-        ? [{ name: GENERATE_COMMAND, description: t('generateCommandDescription') }] : [],
-    // Menu picks wrap the Session in an InputTriggerPick; space and enter pass
-    // the ClientSessionContext directly. Treating the wrapper itself as the
-    // Session sent `undefined` to the Host and produced "requires a live
-    // Harness Session" only when the command was chosen from the menu.
-    onPick: (pick: TriggerPick) => ({ claim: claim(pick.session) }),
-    matchSpace: (session: SessionContext, token: string) =>
-      token === `/${GENERATE_COMMAND}` ? { claim: claim(session) } : undefined,
-    matchEnter: async (session: SessionContext, line: string) =>
-      new RegExp(`^/${GENERATE_COMMAND}(?:\\s|$)`, 'u').test(line.trim())
-        ? { claim: claim(session) } : undefined,
-  }), 'promptaflow: slash command generating a workflow')
-}
 interface SessionInput {
   setDraft(text: string): void
   readonly state: { getSnapshot(): { draft: string; draftRev: number } }
@@ -248,10 +198,9 @@ function registerWorkflowPopup(ctx: ClientContext, t: Translate): void {
         // Run they are about to describe starts reporting.
         showPromptaFlowPanel()
         // `startIfMissing`, because typing the command is the asking. The
-        // panel starts a Runtime when it is expanded and `/promptaflow-generate`
-        // starts one to write into; this list was the one entry point that
-        // required a Runtime to already be there, and answered a person who
-        // asked what could run with an error about nothing running.
+        // panel starts a Runtime when it is expanded; this list once required a
+        // Runtime to already be there, and answered a person who asked what
+        // could run with an error about nothing running.
         //
         // Not `force`: the catalog refreshes itself when stale, and making
         // every open re-ask would charge each one for a freshness that only
@@ -274,12 +223,6 @@ function registerWorkflowPopup(ctx: ClientContext, t: Translate): void {
       // knows nothing about — unable to report on it or take the next step from
       // it — and a popupSelect has nowhere to put the goal anyway.
       onSelect: (option, session) => {
-        const conversation = ctx.get('conversation') as unknown as Conversation | undefined
-        const sessions = ctx.get('sessions') as unknown as Sessions | undefined
-        const actx = sessions?.scope(session.sessionId)
-        if (!conversation || actx === undefined) return
-        const input = conversation.input.for(actx)
-        const head = t('runHead')
         // Plain text, not a reference chip.
         //
         // The composer draws in two layers: the visible text is a `.backdrop`
@@ -296,10 +239,11 @@ function registerWorkflowPopup(ctx: ClientContext, t: Translate): void {
         // is shown whole at full size. What it costs is the chip's atomicity —
         // this can be edited character by character — and the codec's
         // `serialize`, which only fires for minted references. The Workflow's
-        // identity survives because the model is already told the catalog:
-        // `- workflow:wf_… — name (input: …)` sits in its system prompt.
-        input.setDraft(`${head}${MARK_OPEN}${option.label}${MARK_CLOSE}${t('runTail')}`)
-        caretToEnd(input.state.getSnapshot().draft)
+        // identity is explicit beside its readable name, just as it is when a
+        // Workflow is selected from the resident panel.
+        writeWorkflowDraft(ctx, t, {
+          workflow_id: option.id, name: option.label,
+        }, session.sessionId)
       },
     },
   }), 'promptaflow: workflow popup')
@@ -317,7 +261,6 @@ export function apply(ctx: ClientContext): void {
   // the language the shell is in.
   const t = ctx.locale.bind(PROMPTAFLOW_LOCALE_NAMESPACE)
   registerPromptaFlowSlashSource(ctx, t)
-  registerGenerateSlashSource(ctx, t)
   registerWorkflowPopup(ctx, t)
   const Panel = ({ t, useSessions }: PropsLocale<'promptaflow'> & {
     useSessions: <T>(selector: (state: { current?: string }) => T) => T
@@ -325,6 +268,10 @@ export function apply(ctx: ClientContext): void {
     t={t}
     useSessions={useSessions}
     onSelectWorkflow={(workflow, sessionId) => writeWorkflowDraft(ctx, t, workflow, sessionId)}
+    // The Dashboard card opens its prompt editor with this same sentence.
+    // Harness already has a native composer, so put it there and stop: the
+    // person may finish the CLI name before deciding to submit it.
+    onAddAgent={sessionId => writeDraft(ctx, sessionId, t('promptAddAgent'))}
     onEditWorkflow={(workflow, sessionId) => writeDraft(ctx, sessionId, t('editWorkflowPrompt', {
       name: workflow.name || workflow.workflow_id, id: workflow.workflow_id,
     }))}

@@ -33,9 +33,10 @@ export interface PanelBounds {
 }
 
 export const PANEL_STORAGE_KEY = 'promptaflow:panel:v1'
-export const PANEL_DEFAULT_WIDTH = 400
-export const PANEL_DEFAULT_HEIGHT = 420
 export const PANEL_MIN_WIDTH = 320
+/** A fresh panel opens slightly wider than its usable minimum. */
+export const PANEL_DEFAULT_WIDTH = PANEL_MIN_WIDTH * 1.2
+export const PANEL_DEFAULT_HEIGHT = 420
 export const PANEL_MAX_WIDTH = 720
 export const PANEL_MIN_HEIGHT = 280
 export const PANEL_MAX_HEIGHT = 720

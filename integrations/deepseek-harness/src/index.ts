@@ -373,7 +373,6 @@ export class PromptaFlowRemoteService extends TypertRemoteService {
       case 'getRuntime': return await this.getRuntime(args[0] as WorkspaceRef, signal)
       case 'getRuntimeUi': return await this.getRuntimeUi(String(args[0]), signal)
       case 'getPanelState': return await this.getPanelState(String(args[0]), Boolean(args[1]), Boolean(args[2]), signal)
-      case 'generateWorkflowForSession': return await this.generateWorkflowForSession(String(args[0]), String(args[1]), signal)
       case 'getAuthoringOutput': return await this.getAuthoringOutput(String(args[0]), String(args[1]), Number(args[2]), signal)
       case 'getRunDetail': return await this.getRunDetail(String(args[0]), String(args[1]), signal)
       case 'getWorkflowDefinition': return await this.getWorkflowDefinition(String(args[0]), String(args[1]), signal)
@@ -1085,28 +1084,6 @@ export class PromptaFlowRemoteService extends TypertRemoteService {
     }) as AuthoringJob
     this.watchAuthoring(scope, sessionId, job)
     return job
-  }
-
-  /** Start authoring from a Slash command whose only authority is its Session. */
-  @Remote('generateWorkflowForSession')
-  async generateWorkflowForSession(
-    sessionId: string, prompt: string, signal: AbortSignal,
-  ): Promise<AuthoringJob> {
-    signal.throwIfAborted()
-    if (!prompt.trim() || prompt.length > 20_000) throw new Error(
-      'Workflow prompt must be 1-20000 characters',
-    )
-    const scope = await this.sessionWorkspace(sessionId)
-    const release = await this.gateway.acquire(scope, true)
-    try {
-      const agent = await this.prepareAuthoringRoute(scope, sessionId)
-      const job = await this.gateway.call(scope, sessionId, 'generate_workflow', {
-        prompt: prompt.trim(), display_language: 'zh-CN',
-        agent, idempotency_key: crypto.randomUUID(),
-      }) as AuthoringJob
-      this.watchAuthoring(scope, sessionId, job)
-      return job
-    } finally { await release() }
   }
 
   /** Register this exact Session route before asking PromptaFlow to address work to it. */

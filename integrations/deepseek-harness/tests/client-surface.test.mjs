@@ -27,10 +27,9 @@ const code = sources.join('\n').split('\n')
 test('the deep surfaces stay in PromptaFlow', () => {
   for (const elsewhere of [
     'getGraph', 'getEdges', 'listArtifacts', 'getArtifactContent', 'importArtifact',
-    // Not the bare 'generateWorkflow': `/promptaflow-generate` starts a job from this
-    // Session and the Workflows page follows its console, which is news about
-    // this Workspace. The resident detail may prepare a modification prompt,
-    // but the actual authoring surface remains in PromptaFlow.
+    // The model's native tool starts authoring. The resident detail may prepare
+    // a modification prompt, but the actual authoring surface remains in
+    // PromptaFlow.
     'getAuthoringJob',
   ]) {
     assert.equal(code.includes(elsewhere), false, `${elsewhere} belongs to PromptaFlow's own UI`)
@@ -50,10 +49,26 @@ test('every Host call is one the panel can name a reason for', async () => {
   // membership test.
   const used = dispatchable.filter(action => new RegExp(`'${action}'`).test(code))
   assert.deepEqual(used.sort(), [
-    'exportArtifact', 'generateWorkflowForSession', 'getAuthoringOutput', 'getPanelState',
+    'exportArtifact', 'getAuthoringOutput', 'getPanelState',
     'getRunDetail', 'getStepOutput', 'getWorkflowDefinition', 'readArtifactText',
     'reconcileStep', 'runCommand',
   ])
+})
+
+test('workflow generation is a model tool, not a Harness slash command', async () => {
+  const client = await readFile(join(clientDir, 'index.tsx'), 'utf8')
+  const host = await readFile(join(here, '..', 'src', 'index.ts'), 'utf8')
+  assert.doesNotMatch(client, /promptaflow-generate|registerGenerateSlashSource/)
+  assert.doesNotMatch(host, /generateWorkflowForSession/)
+})
+
+test('a newly observed authoring job reveals its progress once', async () => {
+  const panel = await readFile(join(clientDir, 'PromptaFlowPanel.tsx'), 'utf8')
+  assert.match(panel, /seenAuthoring = useRef\(new Set<string>\(\)\)/)
+  assert.match(panel, /!seenAuthoring\.current\.has\(job\.job_id\)/)
+  assert.match(panel, /seenAuthoring\.current\.add\(job\.job_id\)/)
+  assert.match(panel, /if \(unseenLiveAuthoring\)[\s\S]{0,200}setTab\('workflows'\)/)
+  assert.match(panel, /if \(layout\.collapsed\)[\s\S]{0,120}collapsed: false/)
 })
 
 test('the panel is a Harness surface, not one with its own palette', async () => {
@@ -142,7 +157,7 @@ test('selecting a Workflow writes the request, it does not start one', () => {
   // popupSelect has nowhere to put the goal these Workflows declare an input
   // for, so the sentence is left for the person to finish.
   const select = code.slice(code.indexOf('onSelect: (option, session)'), code.indexOf("}, 'promptaflow: workflow popup'"))
-  assert.match(select, /input\.setDraft\(/)
+  assert.match(select, /writeWorkflowDraft\(ctx, t,/)
   assert.equal(/start_run|runCommand|window\.open/.test(select), false, 'the popup grew a launcher')
 })
 
@@ -156,7 +171,9 @@ test('selecting a Workflow writes the request, it does not start one', () => {
  */
 test('the sentence is written whole, in a single draft write', () => {
   const select = code.slice(code.indexOf('onSelect: (option, session)'), code.indexOf("}, 'promptaflow: workflow popup'"))
-  assert.equal((select.match(/input\.setDraft\(/g) ?? []).length, 1)
+  const writer = code.slice(code.indexOf('function writeDraft('), code.indexOf('/** Write the workflow invocation'))
+  assert.equal((writer.match(/input\.setDraft\(/g) ?? []).length, 1)
+  assert.match(select, /workflow_id: option\.id, name: option\.label/)
   assert.doesNotMatch(select, /if \(!inserted\)/)
   assert.doesNotMatch(select, /draftRev/)
 })
@@ -204,7 +221,7 @@ test('workflow cards use the host conversation input bridge', async () => {
   const client = await readFile(join(clientDir, 'index.tsx'), 'utf8')
   const panel = await readFile(join(clientDir, 'PromptaFlowPanel.tsx'), 'utf8')
   assert.match(client, /function writeWorkflowDraft\(/)
-  assert.match(client, /conversation\.input\.for\(actx\)/)
+  assert.match(client, /scoped\.conversation\.input\.for\(scoped\.actx\)/)
   assert.match(client, /input\.setDraft\(/)
   assert.match(client, /onSelectWorkflow=\{\(workflow, sessionId\) => writeWorkflowDraft\(/)
   assert.match(
@@ -224,7 +241,7 @@ test('refresh asks again rather than redrawing what is already held', () => {
   // `asked` among the dependencies is the whole mechanism; the rest of the
   // list grows as the panel learns new reasons to restart its loop, and
   // freezing it made adding one look like breaking this.
-  assert.match(code, /\}, \[sessionId,[^\]]*\basked\]\)/)
+  assert.match(code, /\}, \[sessionId,[^\]]*\basked(?:,[^\]]*)?\]\)/)
   // And the press has to say it is one. Two of the three lists the panel draws
   // are held on purpose — the catalog behind a TTL, the Agents for the life of
   // the Runtime — so an unmarked poll re-reads neither, and pressing refresh
@@ -736,7 +753,7 @@ test('closing the panel also hides its badge without stopping PromptaFlow', () =
   assert.doesNotMatch(panel, /hostCall<\{ stopped: true \}>\('stopRuntime'/)
   assert.match(panel, /if \(layout\.dismissed\) return null/)
   // Dismissal returns before the collapsed badge branch, so both disappear.
-  assert.ok(panel.indexOf('if (layout.dismissed) return null') < panel.indexOf('if (layout.collapsed)'))
+  assert.ok(panel.indexOf('if (layout.dismissed) return null') < panel.indexOf('if (layout.collapsed) {'))
   // The slash command remains the way back.
   assert.match(panel, /dismissed: false, collapsed: false/)
   // A hidden view stops polling, without making a Runtime shutdown call.
@@ -745,6 +762,21 @@ test('closing the panel also hides its badge without stopping PromptaFlow', () =
   assert.match(locales, /closePanel:/)
   assert.match(panel, /<IconChevronDownOutline14 size=\{14\} \/>/)
   assert.doesNotMatch(panel, /IconPanelLeftOutline16/)
+})
+
+test('the Agents page adds the shared Agent CLI prompt to the Harness draft', () => {
+  const panel = sources[names.indexOf('PromptaFlowPanel.tsx')]
+  const client = sources[names.indexOf('index.tsx')]
+  const locales = sources[names.indexOf('locales.ts')]
+  assert.match(panel, /t\('addAgentCli'\)/)
+  assert.match(panel, /onClick=\{\(\) => \{ if \(sessionId\) onAddAgent\(sessionId\) \}\}/)
+  assert.match(client, /onAddAgent=\{sessionId => writeDraft\(ctx, sessionId, t\('promptAddAgent'\)\)\}/)
+  assert.match(locales, /addAgentCli: 'Add Agent CLI'/)
+  assert.match(locales, /addAgentCli: '添加 Agent CLI'/)
+  assert.match(locales, /promptAddAgent: 'Add an Agent CLI to PromptaFlow: '/)
+  assert.match(locales, /promptAddAgent: '给PromptaFlow添加Agent cli：'/)
+  const binding = client.slice(client.indexOf('onAddAgent='), client.indexOf('onEditWorkflow='))
+  assert.doesNotMatch(binding, /conversation\.send|\.send\(/)
 })
 
 /**
@@ -1014,11 +1046,11 @@ test('list rows are separated, not bounded', async () => {
 })
 
 /**
- * An PromptaFlow command reports into the panel, so it opens the panel.
+ * A PromptaFlow command reports into the panel, so it opens the panel.
  *
- * The panel is where the work an PromptaFlow command starts becomes visible — a
- * Run's steps, a Workflow being written. Started behind a folded panel or a
- * dismissed one, a command has done something and said nothing.
+ * The panel is where the work a PromptaFlow command starts becomes visible.
+ * Started behind a folded panel or a dismissed one, a command has done
+ * something and said nothing.
  *
  * `promptaflow:show-panel` and not `promptaflow:toggle-panel`: a toggle run twice hides
  * the thing it was meant to reveal, and hides it for someone who already had
@@ -1044,30 +1076,14 @@ test('every PromptaFlow command that does work opens the panel', async () => {
     client.indexOf('interface SelectOption'))
   assert.match(panelCommand, /promptaflow:toggle-panel/)
 
-  // Both working commands call it, and neither dispatches the event itself.
-  // Ends at its own registration, not at whatever declaration follows it: the
-  // helper is defined further down the file and would otherwise be read as
-  // part of this command's body.
-  const generate = client.slice(client.indexOf('function registerGenerateSlashSource'),
-    client.indexOf("}), 'promptaflow: slash command generating a workflow')"))
-  assert.ok(generate.length > 0 && generate.length < 4000, 'the generate slice ran past its command')
+  // The workflow popup calls it and does not dispatch the event itself. Model
+  // tool generation is revealed from the panel's authoring poll instead.
   const popup = client.slice(client.indexOf('function registerWorkflowPopup'),
     client.indexOf("}), 'promptaflow: workflow popup')"))
-  for (const [where, body] of [['generate', generate], ['popup', popup]]) {
-    assert.match(body, /showPromptaFlowPanel\(/, `${where} does not open the panel`)
-    assert.doesNotMatch(body, /dispatchEvent/, `${where} should go through the helper`)
-  }
+  assert.match(popup, /showPromptaFlowPanel\(/, 'popup does not open the panel')
+  assert.doesNotMatch(popup, /dispatchEvent/, 'popup should go through the helper')
 
-  // Before the work, not after it: a failure has to be met by an open panel
-  // too, and writing a Workflow takes long enough that the panel is the only
-  // thing that can say it started.
-  const started = generate.indexOf('showPromptaFlowPanel')
-  const called = generate.indexOf('hostCall')
-  assert.ok(started > 0 && started < called, 'the panel opens only if the work succeeds')
-
-  // The generate command lands on the tab its job will appear on; the popup
-  // takes no view over, having just shown the list itself.
-  assert.match(generate, /showPromptaFlowPanel\('workflows'\)/)
+  // The popup takes no view over, having just shown the list itself.
   assert.match(popup, /showPromptaFlowPanel\(\)/)
 })
 
@@ -1107,15 +1123,16 @@ test('a hidden panel is still listening for the command that reveals it', async 
  *
  * Bracketed text has no `￼`, so the layers cannot drift, the name is shown
  * whole, and the caret lands where the sentence ends. The Workflow's identity
- * is not lost with the chip: the model is already handed the catalog, ids and
- * all, in its system prompt.
+ * is written beside it as `「name」（workflow:id）`.
  */
-test('a picked Workflow is written into the draft as its whole name', async () => {
+test('a picked Workflow is written into the draft with its whole name and id', async () => {
   const client = await readFile(join(clientDir, 'index.tsx'), 'utf8')
   const pick = client.slice(client.indexOf('onSelect:'), client.indexOf("}), 'promptaflow: workflow popup')"))
 
-  // One write, of the whole sentence, with the name entire.
-  assert.match(pick, /input\.setDraft\(`\$\{head\}\$\{MARK_OPEN\}\$\{option\.label\}\$\{MARK_CLOSE\}\$\{t\('runTail'\)\}`\)/)
+  // The popup and resident Workflow card share the same formatter, including
+  // the stable id beside the readable name.
+  assert.match(pick, /writeWorkflowDraft\(ctx, t, \{[\s\S]{0,100}workflow_id: option\.id, name: option\.label/)
+  assert.match(client, /\$\{MARK_OPEN\}\$\{label\}\$\{MARK_CLOSE\}（\$\{workflow\.workflow_id\}）/)
   assert.match(client, /const MARK_OPEN = '「'/)
   assert.match(client, /const MARK_CLOSE = '」'/)
   // Not shortened: the reason to shorten was a chip that no longer exists.
@@ -1133,7 +1150,7 @@ test('a picked Workflow is written into the draft as its whole name', async () =
 
   // And the caret is put where the sentence ends, which is the point of
   // writing the goal's colon last.
-  assert.match(pick, /caretToEnd\(input\.state\.getSnapshot\(\)\.draft\)/)
+  assert.match(client, /caretToEnd\(input\.state\.getSnapshot\(\)\.draft\)/)
 })
 
 /**
@@ -1152,9 +1169,8 @@ test('the run sentence leans on the brackets, not on spaces', async () => {
  * Typing the command is the asking.
  *
  * `getPanelState` takes `startIfMissing`, and the entry points disagreed about
- * it: the panel passes it when it is expanded, `/promptaflow-generate` passes it to
- * have something to write into, and `/promptaflow-workflows` passed only a Session
- * id — so both trailing parameters defaulted to false. A person who typed the
+ * it: the panel passes it when it is expanded, while `/promptaflow-workflows`
+ * passed only a Session id — so both trailing parameters defaulted to false. A person who typed the
  * command to find out what could run was told that nothing was running, on a
  * machine where the fix was to start the thing they had just asked about.
  *

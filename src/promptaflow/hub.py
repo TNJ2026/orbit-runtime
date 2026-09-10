@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 import json
 import os
 from pathlib import Path
@@ -581,6 +582,33 @@ def create_hub_app(
     # making progress. Waiting callers remain async tasks, not worker threads.
     forward_limiter = anyio.CapacityLimiter(forward_concurrency)
 
+    @asynccontextmanager
+    async def lifespan(app: Starlette):
+        """Stop every managed Runtime whenever the Hub exits normally.
+
+        Runtime processes deliberately start in independent sessions, so an
+        Uvicorn SIGINT/SIGTERM cannot take them down as descendants. The HTTP
+        shutdown route is only one way to leave; lifespan is the common path
+        shared by that route, Ctrl-C, service-manager termination and ordinary
+        server shutdown.
+        """
+
+        try:
+            yield
+        finally:
+            # Only `paf hub serve` supplies this callback: it is the process
+            # owner that may stop machine Runtimes. A bare ASGI app is also used
+            # for embedded/test request handling and must never sweep unrelated
+            # Runtimes merely because its local lifespan ended.
+            stop_all = (
+                getattr(runtimes, "stop_all", None)
+                if shutdown_request is not None else None
+            )
+            if stop_all is not None:
+                app.state.runtime_shutdown = await anyio.to_thread.run_sync(
+                    stop_all
+                )
+
     def result(request_id: Any, payload: Mapping[str, Any]) -> dict[str, Any]:
         return {"jsonrpc": "2.0", "id": request_id, "result": payload}
 
@@ -1147,6 +1175,6 @@ def create_hub_app(
         Route("/workspaces/{workspace_id}/ui/{path:path}", ui, methods=["GET"]),
         WebSocketRoute("/events", events),
         WebSocketRoute("/workspaces/{workspace_id}/events", events),
-    ])
+    ], lifespan=lifespan)
     app.state.forward_limiter = forward_limiter
     return app

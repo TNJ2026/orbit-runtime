@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
-  DEFAULT_PANEL_LAYOUT, PANEL_COMPACT_BREAKPOINT, PANEL_FLOAT_MARGIN,
+  DEFAULT_PANEL_LAYOUT, PANEL_COMPACT_BREAKPOINT, PANEL_DEFAULT_WIDTH, PANEL_FLOAT_MARGIN,
   PANEL_MAX_HEIGHT, PANEL_MAX_WIDTH, PANEL_MIN_HEIGHT, PANEL_MIN_WIDTH,
   dragPanel, placePanel, readLayout, resizePanel,
 } from '../src/client/panel-geometry.ts'
@@ -29,6 +29,11 @@ test('a stored layout is honoured only where it still makes sense', () => {
 
 test('the panel starts folded away', () => {
   assert.equal(DEFAULT_PANEL_LAYOUT.collapsed, true)
+})
+
+test('a fresh panel is twenty percent wider than its usable minimum', () => {
+  assert.equal(PANEL_DEFAULT_WIDTH, PANEL_MIN_WIDTH * 1.2)
+  assert.equal(DEFAULT_PANEL_LAYOUT.width, PANEL_DEFAULT_WIDTH)
 })
 
 test('a docked panel hangs from the right edge at the height it was given', () => {

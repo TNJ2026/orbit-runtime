@@ -118,11 +118,11 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
         data here is how a panel becomes a second PromptaFlow.
 
         Authoring sits on the boundary rather than beyond it, and the line is
-        between asking and editing. `/promptaflow-generate` starts a job and the
-        Workflows page follows it, because a job somebody started from this
+        between asking and editing. The model's native tool starts a job and
+        the Workflows page follows it, because a job somebody started from this
         input box is news about this Workspace. Changing a published Workflow
-        is the other thing: that is the authoring surface, PromptaFlow draws all of
-        it, and a second half-copy here would be the duplicate again.
+        is the other thing: that is the authoring surface, PromptaFlow draws all
+        of it, and a second half-copy here would be the duplicate again.
         """
 
         client = (BUNDLE / "src" / "client").glob("*.ts*")
@@ -130,10 +130,10 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
         self.assertIn("shell.overlay", code)
         self.assertIn("getPanelState", code)
         self.assertIn("--dsw-alias-", (BUNDLE / "src" / "client" / "PromptaFlowPanel.module.css").read_text(encoding="utf-8"))
-        # The one authoring entrance, and it is Session-scoped: the panel never
-        # names a Workspace, so a command that could start a job anywhere would
-        # be a capability the rest of this surface deliberately does not have.
-        self.assertIn("generateWorkflowForSession", code)
+        # Workflow generation is a native model tool, not a second browser
+        # command with its own authoring route.
+        self.assertNotIn("promptaflow-generate", code)
+        self.assertNotIn("generateWorkflowForSession", code)
         # Job state arrives folded into the panel poll; the console output of a
         # job already on the page is the only authoring read of its own.
         self.assertIn("getAuthoringOutput", code)
@@ -144,7 +144,7 @@ class DeepSeekHarnessBundleTests(unittest.TestCase):
         remote = (BUNDLE / "src" / "index.ts").read_text(encoding="utf-8")
         self.assertIn("@Remote('getPanelState')", remote)
         self.assertIn("@Remote('reconcileDelegation')", remote)
-        self.assertIn("@Remote('generateWorkflowForSession')", remote)
+        self.assertNotIn("generateWorkflowForSession", remote)
 
     def test_agent_tools_use_independent_runtime_mcp(self) -> None:
         remote = (BUNDLE / "src" / "index.ts").read_text(encoding="utf-8")

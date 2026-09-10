@@ -253,11 +253,15 @@ export interface PromptaFlowPanelProps {
   useSessions: <T>(selector: (state: { current?: string }) => T) => T
   /** Writes the selected workflow invocation into the conversation composer. */
   onSelectWorkflow: (workflow: WorkflowSummary, sessionId: string) => void
+  /** Writes the shared Add-Agent request into the conversation composer. */
+  onAddAgent: (sessionId: string) => void
   onEditWorkflow: (workflow: WorkflowSummary, sessionId: string) => void
   onDeleteWorkflow: (workflow: WorkflowSummary, sessionId: string) => Promise<void>
 }
 
-export function PromptaFlowPanel({ t, useSessions, onSelectWorkflow, onEditWorkflow, onDeleteWorkflow }: PromptaFlowPanelProps) {
+export function PromptaFlowPanel({
+  t, useSessions, onSelectWorkflow, onAddAgent, onEditWorkflow, onDeleteWorkflow,
+}: PromptaFlowPanelProps) {
   const sessionId = useSessions(state => state.current)
   const [layout, setLayout] = useState<PanelLayout>(() => {
     try { return readLayout(localStorage.getItem(PANEL_STORAGE_KEY)) } catch { return DEFAULT_PANEL_LAYOUT }
@@ -287,6 +291,10 @@ export function PromptaFlowPanel({ t, useSessions, onSelectWorkflow, onEditWorkf
      are ordinary polls, and forcing those would re-read the whole catalog
      every two seconds for the rest of the session. */
   const forceNext = useRef(false)
+  /* A model-started authoring job has no browser-side command to reveal it.
+     Remember the jobs already announced by the Host poll so each new live job
+     opens the Workflows page once, without fighting a later manual collapse. */
+  const seenAuthoring = useRef(new Set<string>())
   const bounds = useBounds()
   const drag = useRef<{ x: number; y: number } | null>(null)
 
@@ -373,9 +381,21 @@ export function PromptaFlowPanel({ t, useSessions, onSelectWorkflow, onEditWorkf
           }
           return { ...held, ...state.steps }
         })
-        setAuthoring(state.authoring ?? [])
+        const nextAuthoring = state.authoring ?? []
+        const unseenLiveAuthoring = nextAuthoring.some(job =>
+          (job.status === 'queued' || job.status === 'running')
+          && !seenAuthoring.current.has(job.job_id),
+        )
+        for (const job of nextAuthoring) seenAuthoring.current.add(job.job_id)
+        setAuthoring(nextAuthoring)
+        if (unseenLiveAuthoring) {
+          setSelected(null); setSelectedFlow(null); setTab('workflows')
+          if (layout.collapsed) update({
+            ...readLayoutSafely(layout), collapsed: false,
+          })
+        }
         setAsking(false); setConnecting(false)
-        const authoringLive = state.authoring.some(
+        const authoringLive = nextAuthoring.some(
           job => job.status === 'queued' || job.status === 'running',
         )
         timer = setTimeout(
@@ -392,7 +412,7 @@ export function PromptaFlowPanel({ t, useSessions, onSelectWorkflow, onEditWorkf
     }
     void tick()
     return () => { controller.abort(); if (timer !== undefined) clearTimeout(timer) }
-  }, [sessionId, layout.collapsed, layout.dismissed, asked])
+  }, [sessionId, layout.collapsed, layout.dismissed, asked, update])
 
   const counts = summarise(rows ?? [])
   // Split once: the Runtime's own pages read as "what is happening" and "what
@@ -606,34 +626,46 @@ export function PromptaFlowPanel({ t, useSessions, onSelectWorkflow, onEditWorkf
         ) : null}
 
         {!connecting && error === null && tab === 'agents' ? (
-          agents.length ? <div className={styles.agentsGrid}>{agents.map(item => {
-            const mark = agentMark(item.name)
-            const attempts = item.attempt_count ?? 0
-            const failed = item.failed_count ?? 0
-            return (
-              <article className={styles.agentCard} key={item.name}>
-                <div className={styles.agentHead}>
-                  <span className={styles.avatar} style={mark.style} aria-hidden>{mark.initials}</span>
-                  <span className={styles.agentIdentity}>
-                    <span className={styles.agentName}>{item.name.replace(/^agent\./u, '')}</span>
-                    <span className={styles.agentVersion}>{item.version}</span>
-                  </span>
-                </div>
-                <div className={styles.agentStat}>
-                  <span className={styles.agentStatLabel}>{t('agentRunsLabel')}</span>
-                  <span className={styles.agentStatPill}>{t('agentRuns', { count: attempts })}</span>
-                </div>
-                {failed > 0 ? (
-                  <div className={styles.agentStat}>
-                    <span className={styles.agentStatLabel}>{t('agentFailedLabel')}</span>
-                    <span className={`${styles.agentStatPill} ${styles.agentStatError}`}>
-                      {t('agentFailed', { count: failed })}
+          <div className={styles.agentsSection}>
+            {agents.length ? <div className={styles.agentsGrid}>{agents.map(item => {
+              const mark = agentMark(item.name)
+              const attempts = item.attempt_count ?? 0
+              const failed = item.failed_count ?? 0
+              return (
+                <article className={styles.agentCard} key={item.name}>
+                  <div className={styles.agentHead}>
+                    <span className={styles.avatar} style={mark.style} aria-hidden>{mark.initials}</span>
+                    <span className={styles.agentIdentity}>
+                      <span className={styles.agentName}>{item.name.replace(/^agent\./u, '')}</span>
+                      <span className={styles.agentVersion}>{item.version}</span>
                     </span>
                   </div>
-                ) : null}
-              </article>
-            )
-          })}</div> : <p className={styles.empty}>{t('emptyAgents')}</p>
+                  <div className={styles.agentStat}>
+                    <span className={styles.agentStatLabel}>{t('agentRunsLabel')}</span>
+                    <span className={styles.agentStatPill}>{t('agentRuns', { count: attempts })}</span>
+                  </div>
+                  {failed > 0 ? (
+                    <div className={styles.agentStat}>
+                      <span className={styles.agentStatLabel}>{t('agentFailedLabel')}</span>
+                      <span className={`${styles.agentStatPill} ${styles.agentStatError}`}>
+                        {t('agentFailed', { count: failed })}
+                      </span>
+                    </div>
+                  ) : null}
+                </article>
+              )
+            })}</div> : <p className={styles.empty}>{t('emptyAgents')}</p>}
+            <div className={styles.agentActions}>
+              <button
+                type="button"
+                className={styles.addAgent}
+                disabled={!sessionId}
+                onClick={() => { if (sessionId) onAddAgent(sessionId) }}
+              >
+                {t('addAgentCli')}
+              </button>
+            </div>
+          </div>
         ) : null}
         </>}
       </div>
