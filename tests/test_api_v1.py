@@ -1497,10 +1497,13 @@ class WorkflowDraftApiTests(ApiTestCase):
                     "expected_version": draft["revision"],
                 },
             )
-            # Enqueued, not judged: the verdict arrives on the job.
+            # Enqueued, not judged: a fast dispatcher may already have leased
+            # the job before the response is serialized, but the verdict still
+            # arrives asynchronously on the job.
             self.assertEqual(200, queued.status_code, queued.text)
-            self.assertEqual(
-                "queued", queued.json()["data"]["pending_revision"]["status"]
+            self.assertIn(
+                queued.json()["data"]["pending_revision"]["status"],
+                {"queued", "running"},
             )
             settled = self._settle(client, draft["draft_id"])
             self.assertIsNone(settled["pending_revision"])
