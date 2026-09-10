@@ -328,6 +328,10 @@ class WorkspaceRuntimeManager:
         self.sleep = sleep
         self.log_root = Path(log_root or default_hub_root() / "runtimes").expanduser()
         self._locks: dict[str, threading.Lock] = {}
+        # PID -> (birth identity, Workspace label). Only processes launched by
+        # this manager belong to this Hub. Discovery is machine-wide and may
+        # include Runtimes owned by another Hub, terminal, or Agent App.
+        self._owned_runtimes: dict[int, tuple[str | None, str]] = {}
         self._guard = threading.Lock()
 
     def ensure(self, identifier: str | None = None) -> str:
@@ -348,7 +352,12 @@ class WorkspaceRuntimeManager:
             if found is not None:
                 return found
             if not multiple:
-                self.launcher(workspace)
+                launched = self.launcher(workspace)
+                pid = getattr(launched, "pid", None)
+                if isinstance(pid, int) and pid > 0:
+                    identity = process_identity(pid)
+                    with self._guard:
+                        self._owned_runtimes[pid] = (identity, str(workspace))
             while self.clock() < deadline:
                 try:
                     found = self._find(workspace)
@@ -404,28 +413,32 @@ class WorkspaceRuntimeManager:
         return sorted(entries.values(), key=lambda entry: (entry["path"], entry["url"]))
 
     def stop_all(self) -> dict[str, list[str]]:
-        """Stop every discovered Runtime and prove its owning process exited.
+        """Stop Runtimes launched by this Hub and prove their processes exited.
 
         A Runtime drops its discovery lock during application teardown, before
         the process is necessarily gone.  Consequently disappearance from
-        ``discover_runtimes()`` is not a completion signal: retain the PID's
-        birth identity from the live owner record, request graceful HTTP
-        shutdown, then stop that exact process tree if it outlives the grace
-        period.
+        ``discover_runtimes()`` is not a completion signal. Discovery is also
+        machine-wide, so it must only enrich this Hub's own PID records with an
+        HTTP endpoint; it must never decide which processes this Hub owns.
         """
 
         requested: list[str] = []
         terminated: list[str] = []
         failures: list[str] = []
-        for runtime in tuple(self.runtime_discovery()):
+        discovered = {
+            runtime.pid: runtime for runtime in tuple(self.runtime_discovery())
+            if runtime.pid is not None
+        }
+        with self._guard:
+            owned = tuple(self._owned_runtimes.items())
+        for pid, (identity, owned_label) in owned:
+            runtime = discovered.get(pid)
             label = str(
-                runtime.facts.get("project_root") or runtime.db_path
-                or f"pid {runtime.pid or 'unknown'}"
+                (runtime.facts.get("project_root") if runtime is not None else None)
+                or owned_label or f"pid {pid}"
             )
-            pid = runtime.pid
-            identity = process_identity(pid) if pid is not None else None
             graceful_requested = False
-            base = runtime.base_url
+            base = runtime.base_url if runtime is not None else None
             if base:
                 try:
                     address = urlsplit(base)
@@ -452,15 +465,19 @@ class WorkspaceRuntimeManager:
             # accepted.  The owner record may disappear while uvicorn or a
             # worker is still alive, so completion is always checked by PID
             # identity instead of rediscovery.
-            if pid is None or identity is None:
+            if identity is None:
                 failures.append(label)
                 continue
             if graceful_requested and _wait_for_process_exit(pid, identity, 2.0):
+                with self._guard:
+                    self._owned_runtimes.pop(pid, None)
                 continue
             stopped = stop_pid_tree_if_identity(pid, identity)
             if _wait_for_process_exit(pid, identity, 0.25):
                 if stopped:
                     terminated.append(label)
+                with self._guard:
+                    self._owned_runtimes.pop(pid, None)
                 continue
             failures.append(label)
         return {
@@ -619,7 +636,7 @@ def create_hub_app(
 
     @asynccontextmanager
     async def lifespan(app: Starlette):
-        """Stop every managed Runtime whenever the Hub exits normally.
+        """Stop this Hub's launched Runtimes whenever the Hub exits normally.
 
         Runtime processes deliberately start in independent sessions, so an
         Uvicorn SIGINT/SIGTERM cannot take them down as descendants. The HTTP
@@ -640,14 +657,25 @@ def create_hub_app(
                 if shutdown_request is not None else None
             )
             if stop_all is not None:
-                outcome = await anyio.to_thread.run_sync(stop_all)
-                app.state.runtime_shutdown = outcome
-                if outcome["failures"]:
+                try:
+                    outcome = await anyio.to_thread.run_sync(stop_all)
+                    app.state.runtime_shutdown = outcome
+                except Exception as exc:  # noqa: BLE001 - shutdown must not mask cause
+                    app.state.runtime_shutdown_error = (
+                        f"{type(exc).__name__}: {exc}"
+                    )
                     print(
-                        "PromptaFlow Hub could not stop every Runtime: "
-                        + json.dumps(outcome, sort_keys=True),
+                        "PromptaFlow Hub Runtime cleanup failed: "
+                        + app.state.runtime_shutdown_error,
                         file=sys.stderr, flush=True,
                     )
+                else:
+                    if outcome["failures"]:
+                        print(
+                            "PromptaFlow Hub could not stop every Runtime: "
+                            + json.dumps(outcome, sort_keys=True),
+                            file=sys.stderr, flush=True,
+                        )
 
     def result(request_id: Any, payload: Mapping[str, Any]) -> dict[str, Any]:
         return {"jsonrpc": "2.0", "id": request_id, "result": payload}
@@ -815,7 +843,7 @@ def create_hub_app(
         return JSONResponse({"status": "ready", "service": "promptaflow-hub"})
 
     async def shutdown_hub(request: Request) -> Response:
-        """Stop every Runtime, then let the ASGI server close the Hub."""
+        """Stop this Hub's launched Runtimes, then close the ASGI server."""
 
         if shutdown_request is None or shutdown_token is None:
             return JSONResponse({"error": "Hub shutdown is not configured"}, status_code=404)

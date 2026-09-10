@@ -12669,7 +12669,7 @@ window.__ModuleLoader__.load({
 			const [asked, setAsked] = (0, react.useState)(0);
 			const [asking, setAsking] = (0, react.useState)(false);
 			const forceNext = (0, react.useRef)(false);
-			const seenAuthoring = (0, react.useRef)(/* @__PURE__ */ new Set());
+			const seenAuthoring = (0, react.useRef)(null);
 			const bounds = useBounds();
 			const drag = (0, react.useRef)(null);
 			const update = (0, react.useCallback)((next) => {
@@ -12689,18 +12689,12 @@ window.__ModuleLoader__.load({
 				return () => window.removeEventListener("promptaflow:toggle-panel", toggle);
 			}, [layout, update]);
 			(0, react.useEffect)(() => {
-				const show = (event) => {
-					const detail = event.detail;
+				const show = () => {
 					update({
 						...readLayoutSafely(layout),
 						dismissed: false,
 						collapsed: false
 					});
-					if (detail?.tab === "workflows") {
-						setSelected(null);
-						setSelectedFlow(null);
-						setTab("workflows");
-					}
 				};
 				window.addEventListener("promptaflow:show-panel", show);
 				return () => window.removeEventListener("promptaflow:show-panel", show);
@@ -12746,8 +12740,15 @@ window.__ModuleLoader__.load({
 							};
 						});
 						const nextAuthoring = state.authoring ?? [];
-						const unseenLiveAuthoring = nextAuthoring.some((job) => (job.status === "queued" || job.status === "running") && !seenAuthoring.current.has(job.job_id));
-						for (const job of nextAuthoring) seenAuthoring.current.add(job.job_id);
+						const priorAuthoring = seenAuthoring.current;
+						const firstForSession = priorAuthoring?.sessionId !== sessionId;
+						const unseenLiveAuthoring = !firstForSession && nextAuthoring.some((job) => (job.status === "queued" || job.status === "running") && !priorAuthoring.jobs.has(job.job_id));
+						const remembered = firstForSession ? /* @__PURE__ */ new Set() : priorAuthoring.jobs;
+						for (const job of nextAuthoring) remembered.add(job.job_id);
+						seenAuthoring.current = {
+							sessionId,
+							jobs: remembered
+						};
 						setAuthoring(nextAuthoring);
 						if (unseenLiveAuthoring) {
 							setSelected(null);
@@ -13228,8 +13229,7 @@ window.__ModuleLoader__.load({
 			agentFailed: "{count} times",
 			togglePanel: "Show or hide the PromptaFlow panel",
 			askWhatRuns: "List the workflows that can run here",
-			runHead: "Run workflow ",
-			runTail: ": "
+			runWorkflowDraft: "Run workflow \"{name}\" ({id}): "
 		};
 		const zh = {
 			title: "PromptaFlow",
@@ -13355,8 +13355,7 @@ window.__ModuleLoader__.load({
 			agentFailed: "{count} 次",
 			togglePanel: "显示或收起 PromptaFlow 面板",
 			askWhatRuns: "列出这里可运行的工作流",
-			runHead: "使用工作流",
-			runTail: "执行："
+			runWorkflowDraft: "使用工作流「{name}」（{id}）执行："
 		};
 		//#endregion
 		//#region src/client/composer-caret.ts
@@ -13446,6 +13445,8 @@ window.__ModuleLoader__.load({
 		//#region src/client/index.tsx
 		const PANEL_COMMAND = "promptaflow";
 		const LIST_COMMAND = "promptaflow-workflows";
+		const MARK_OPEN = "「";
+		const MARK_CLOSE = "」";
 		/** `/promptaflow` folds the resident panel; it never opens a second one. */
 		function registerPromptaFlowSlashSource(ctx, t) {
 			const inputTriggers = ctx.get("inputTriggers");
@@ -13503,8 +13504,10 @@ window.__ModuleLoader__.load({
 		* the same session-scoped input API used by `/promptaflow-workflows`.
 		*/
 		function writeWorkflowDraft(ctx, t, workflow, sessionId) {
-			const label = workflow.name || workflow.workflow_id;
-			writeDraft(ctx, sessionId, `${t("runHead")}${MARK_OPEN}${label}${MARK_CLOSE}（${workflow.workflow_id}）${t("runTail")}`);
+			writeDraft(ctx, sessionId, t("runWorkflowDraft", {
+				name: workflow.name || workflow.workflow_id,
+				id: workflow.workflow_id
+			}));
 		}
 		/**
 		* Bring the panel out, wherever it was put.
@@ -13519,11 +13522,9 @@ window.__ModuleLoader__.load({
 		* hidden panel has reported nothing. Called before the work rather than after
 		* it, so a failure is met by an open panel too.
 		*/
-		function showPromptaFlowPanel(tab) {
-			window.dispatchEvent(new CustomEvent("promptaflow:show-panel", { detail: tab === void 0 ? {} : { tab } }));
+		function showPromptaFlowPanel() {
+			window.dispatchEvent(new CustomEvent("promptaflow:show-panel"));
 		}
-		const MARK_OPEN = "「";
-		const MARK_CLOSE = "」";
 		async function hostCall(action, args, signal) {
 			const response = await fetch("/plugins/dsh-promptaflow/api", {
 				method: "POST",

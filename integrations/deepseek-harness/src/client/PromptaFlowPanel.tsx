@@ -292,9 +292,10 @@ export function PromptaFlowPanel({
      every two seconds for the rest of the session. */
   const forceNext = useRef(false)
   /* A model-started authoring job has no browser-side command to reveal it.
-     Remember the jobs already announced by the Host poll so each new live job
-     opens the Workflows page once, without fighting a later manual collapse. */
-  const seenAuthoring = useRef(new Set<string>())
+     The first answer for a Session is a baseline, not an announcement: after a
+     reload it may contain work that has been running for minutes. Later jobs
+     open the Workflows page once without fighting a manual collapse. */
+  const seenAuthoring = useRef<{ sessionId: string; jobs: Set<string> } | null>(null)
   const bounds = useBounds()
   const drag = useRef<{ x: number; y: number } | null>(null)
 
@@ -316,12 +317,8 @@ export function PromptaFlowPanel({
   }, [layout, update])
 
   useEffect(() => {
-    const show = (event: Event) => {
-      const detail = (event as CustomEvent<{ tab?: string }>).detail
+    const show = () => {
       update({ ...readLayoutSafely(layout), dismissed: false, collapsed: false })
-      if (detail?.tab === 'workflows') {
-        setSelected(null); setSelectedFlow(null); setTab('workflows')
-      }
     }
     window.addEventListener('promptaflow:show-panel', show)
     return () => window.removeEventListener('promptaflow:show-panel', show)
@@ -382,11 +379,15 @@ export function PromptaFlowPanel({
           return { ...held, ...state.steps }
         })
         const nextAuthoring = state.authoring ?? []
-        const unseenLiveAuthoring = nextAuthoring.some(job =>
-          (job.status === 'queued' || job.status === 'running')
-          && !seenAuthoring.current.has(job.job_id),
+        const priorAuthoring = seenAuthoring.current
+        const firstForSession = priorAuthoring?.sessionId !== sessionId
+        const unseenLiveAuthoring = !firstForSession && nextAuthoring.some(job =>
+          (job.status === 'queued' || job.status === 'running') &&
+          !priorAuthoring.jobs.has(job.job_id),
         )
-        for (const job of nextAuthoring) seenAuthoring.current.add(job.job_id)
+        const remembered = firstForSession ? new Set<string>() : priorAuthoring.jobs
+        for (const job of nextAuthoring) remembered.add(job.job_id)
+        seenAuthoring.current = { sessionId, jobs: remembered }
         setAuthoring(nextAuthoring)
         if (unseenLiveAuthoring) {
           setSelected(null); setSelectedFlow(null); setTab('workflows')

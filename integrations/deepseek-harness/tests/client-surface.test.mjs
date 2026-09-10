@@ -64,9 +64,11 @@ test('workflow generation is a model tool, not a Harness slash command', async (
 
 test('a newly observed authoring job reveals its progress once', async () => {
   const panel = await readFile(join(clientDir, 'PromptaFlowPanel.tsx'), 'utf8')
-  assert.match(panel, /seenAuthoring = useRef\(new Set<string>\(\)\)/)
-  assert.match(panel, /!seenAuthoring\.current\.has\(job\.job_id\)/)
-  assert.match(panel, /seenAuthoring\.current\.add\(job\.job_id\)/)
+  assert.match(panel, /seenAuthoring = useRef<\{ sessionId: string; jobs: Set<string> \} \| null>\(null\)/)
+  assert.match(panel, /const firstForSession = priorAuthoring\?\.sessionId !== sessionId/)
+  assert.match(panel, /const unseenLiveAuthoring = !firstForSession/)
+  assert.match(panel, /!priorAuthoring\.jobs\.has\(job\.job_id\)/)
+  assert.match(panel, /seenAuthoring\.current = \{ sessionId, jobs: remembered \}/)
   assert.match(panel, /if \(unseenLiveAuthoring\)[\s\S]{0,200}setTab\('workflows'\)/)
   assert.match(panel, /if \(layout\.collapsed\)[\s\S]{0,120}collapsed: false/)
 })
@@ -208,13 +210,11 @@ test('/promptaflow still only folds the panel', () => {
   assert.equal(/workflow/i.test(behaviour), false, 'the trigger source is carrying Workflows again')
 })
 
-test('the sentence leaves a gap for the Workflow rather than naming it', async () => {
-  // The chip is the name now: a reference replaces a span, so the copy is the
-  // two halves around it and never interpolates one.
+test('each locale owns the complete Workflow draft sentence', async () => {
   const copy = await readFile(join(clientDir, 'locales.ts'), 'utf8')
-  assert.equal((copy.match(/runHead:/g) ?? []).length, 2, 'both dictionaries must carry it')
-  assert.equal((copy.match(/runTail:/g) ?? []).length, 2)
-  assert.equal(/runHead: '[^']*\{name\}/.test(copy), false, 'the head interpolates a name again')
+  assert.equal((copy.match(/runWorkflowDraft:/g) ?? []).length, 2)
+  assert.match(copy, /runWorkflowDraft: 'Run workflow "\{name\}" \(\{id\}\): '/)
+  assert.match(copy, /runWorkflowDraft: '使用工作流「\{name\}」（\{id\}）执行：'/)
 })
 
 test('workflow cards use the host conversation input bridge', async () => {
@@ -226,7 +226,7 @@ test('workflow cards use the host conversation input bridge', async () => {
   assert.match(client, /onSelectWorkflow=\{\(workflow, sessionId\) => writeWorkflowDraft\(/)
   assert.match(
     client,
-    /MARK_CLOSE\}（\$\{workflow\.workflow_id\}）/,
+    /t\('runWorkflowDraft', \{[\s\S]{0,80}name: label, id: workflow\.workflow_id/,
     'New goal drafts must identify the selected Workflow by both name and id',
   )
   assert.match(panel, /onSelectWorkflow: \(workflow: WorkflowSummary, sessionId: string\) => void/)
@@ -1061,9 +1061,9 @@ test('every PromptaFlow command that does work opens the panel', async () => {
   const client = await readFile(join(clientDir, 'index.tsx'), 'utf8')
 
   // One helper, and it only ever shows.
-  assert.match(client, /function showPromptaFlowPanel\(tab\?: 'workflows'\): void/)
+  assert.match(client, /function showPromptaFlowPanel\(\): void/)
   const helper = client.slice(client.indexOf('function showPromptaFlowPanel'),
-    client.indexOf('const MARK_OPEN'))
+    client.indexOf('interface CommandUi'))
   assert.match(helper, /'promptaflow:show-panel'/)
   assert.doesNotMatch(helper, /toggle/)
 
@@ -1103,11 +1103,10 @@ test('a hidden panel is still listening for the command that reveals it', async 
   assert.ok(listener < bail, 'the show listener is registered after the panel bails out')
 
   // Showing clears both ways of being out of sight, not just the fold.
-  const show = panel.slice(panel.indexOf('const show = (event: Event)'), listener)
+  const show = panel.slice(panel.indexOf('const show = ()'), listener)
   assert.match(show, /dismissed: false/)
   assert.match(show, /collapsed: false/)
-  // And a tab is only taken over when one was asked for.
-  assert.match(show, /detail\?\.tab === 'workflows'/)
+  assert.doesNotMatch(show, /detail|setTab/)
 })
 
 /**
@@ -1132,9 +1131,7 @@ test('a picked Workflow is written into the draft with its whole name and id', a
   // The popup and resident Workflow card share the same formatter, including
   // the stable id beside the readable name.
   assert.match(pick, /writeWorkflowDraft\(ctx, t, \{[\s\S]{0,100}workflow_id: option\.id, name: option\.label/)
-  assert.match(client, /\$\{MARK_OPEN\}\$\{label\}\$\{MARK_CLOSE\}（\$\{workflow\.workflow_id\}）/)
-  assert.match(client, /const MARK_OPEN = '「'/)
-  assert.match(client, /const MARK_CLOSE = '」'/)
+  assert.match(client, /t\('runWorkflowDraft', \{[\s\S]{0,80}name: label, id: workflow\.workflow_id/)
   // Not shortened: the reason to shorten was a chip that no longer exists.
   assert.doesNotMatch(client, /referenceLabel/)
 
@@ -1157,12 +1154,10 @@ test('a picked Workflow is written into the draft with its whole name and id', a
  * The brackets are the separation, so the sentence adds none of its own —
  * `用「名字」执行：` rather than `用 「名字」 执行：`.
  */
-test('the run sentence leans on the brackets, not on spaces', async () => {
+test('the run sentence punctuation follows the active locale', async () => {
   const locale = await readFile(join(clientDir, 'locales.ts'), 'utf8')
-  assert.match(locale, /runHead: '使用工作流'/)
-  assert.match(locale, /runTail: '执行：'/)
-  assert.doesNotMatch(locale, /runHead: '使用工作流 '/)
-  assert.doesNotMatch(locale, /runTail: ' 执行：'/)
+  assert.match(locale, /runWorkflowDraft: '使用工作流「\{name\}」（\{id\}）执行：'/)
+  assert.match(locale, /runWorkflowDraft: 'Run workflow "\{name\}" \(\{id\}\): '/)
 })
 
 /**

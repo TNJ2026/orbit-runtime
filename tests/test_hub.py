@@ -347,6 +347,34 @@ class ProjectAccessGrantTests(unittest.TestCase):
 
 
 class WorkspaceRuntimeManagerTests(unittest.TestCase):
+    @mock.patch("promptaflow.hub.process_identity", return_value="birth-token")
+    def test_a_launched_runtime_is_recorded_as_owned_by_this_hub(
+        self, _process_identity,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace = root / "project"
+            workspace.mkdir()
+            registry = WorkspaceRegistry(root / "workspaces.json")
+            identifier, workspace = registry.register(workspace)
+            process = mock.Mock(pid=123)
+            runtime = DiscoveredRuntime(root / "owner.lock", {
+                "pid": 123, "project_root": str(workspace),
+                "base_url": "http://127.0.0.1:41001",
+            })
+            observations = iter(((), (runtime,)))
+            manager = WorkspaceRuntimeManager(
+                registry=registry, runtime_discovery=lambda: next(observations),
+                health_check=lambda _url: True, launcher=lambda _path: process,
+                sleep=lambda _seconds: None,
+            )
+
+            self.assertEqual("http://127.0.0.1:41001", manager.ensure(identifier))
+            self.assertEqual(
+                {123: ("birth-token", str(workspace))},
+                manager._owned_runtimes,  # noqa: SLF001 - ownership contract
+            )
+
     def test_existing_runtime_for_the_workspace_is_reused(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

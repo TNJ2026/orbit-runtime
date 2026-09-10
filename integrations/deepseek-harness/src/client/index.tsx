@@ -31,6 +31,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
 const PANEL_COMMAND = 'promptaflow'
 const LIST_COMMAND = 'promptaflow-workflows'
+const MARK_OPEN = '「'
+const MARK_CLOSE = '」'
 
 interface InputTriggerRegistry { registerSource(source: Record<string, unknown>): () => void }
 type SubmitResult = { kind: 'success'; text?: string } | { kind: 'error'; text: string }
@@ -118,11 +120,9 @@ function writeWorkflowDraft(
   sessionId: string,
 ): void {
   const label = workflow.name || workflow.workflow_id
-  writeDraft(
-    ctx,
-    sessionId,
-    `${t('runHead')}${MARK_OPEN}${label}${MARK_CLOSE}（${workflow.workflow_id}）${t('runTail')}`,
-  )
+  writeDraft(ctx, sessionId, t('runWorkflowDraft', {
+    name: label, id: workflow.workflow_id,
+  }))
 }
 
 /**
@@ -138,17 +138,9 @@ function writeWorkflowDraft(
  * hidden panel has reported nothing. Called before the work rather than after
  * it, so a failure is met by an open panel too.
  */
-function showPromptaFlowPanel(tab?: 'workflows'): void {
-  window.dispatchEvent(new CustomEvent('promptaflow:show-panel', {
-    detail: tab === undefined ? {} : { tab },
-  }))
+function showPromptaFlowPanel(): void {
+  window.dispatchEvent(new CustomEvent('promptaflow:show-panel'))
 }
-
-/* The Workflow's name is written into the sentence rather than chipped, so
-   something has to show where it starts and ends. Corner brackets, because the
-   sentence around them is Chinese and a name may contain spaces or a comma. */
-const MARK_OPEN = '「'
-const MARK_CLOSE = '」'
 interface CommandUi {
   register(contribution: {
     name: string

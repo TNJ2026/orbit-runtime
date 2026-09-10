@@ -100,8 +100,7 @@ export const en = {
   agentFailedLabel: 'Failed', agentFailed: '{count} times',
   togglePanel: 'Show or hide the PromptaFlow panel',
   askWhatRuns: 'List the workflows that can run here',
-  runHead: 'Run workflow ',
-  runTail: ': ',
+  runWorkflowDraft: 'Run workflow "{name}" ({id}): ',
 
 } as const
 
@@ -203,8 +202,7 @@ export const zh = {
   agentFailedLabel: '失败', agentFailed: '{count} 次',
   togglePanel: '显示或收起 PromptaFlow 面板',
   askWhatRuns: '列出这里可运行的工作流',
-  runHead: '使用工作流',
-  runTail: '执行：',
+  runWorkflowDraft: '使用工作流「{name}」（{id}）执行：',
 
 } as const
 

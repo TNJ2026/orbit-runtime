@@ -143,6 +143,18 @@ class HubUiTests(unittest.TestCase):
             app.state.runtime_shutdown,
         )
 
+    def test_lifespan_cleanup_failure_is_reported_without_failing_shutdown(self):
+        manager = Mock(spec=WorkspaceRuntimeManager)
+        manager.stop_all.side_effect = OSError("discovery unavailable")
+        app = create_hub_app(manager, shutdown_request=lambda: None)
+
+        with AsgiHarness(app):
+            pass
+
+        self.assertEqual(
+            "OSError: discovery unavailable", app.state.runtime_shutdown_error,
+        )
+
     def test_embedded_app_lifespan_does_not_stop_machine_runtimes(self):
         manager = Mock(spec=WorkspaceRuntimeManager)
 
@@ -153,10 +165,9 @@ class HubUiTests(unittest.TestCase):
 
     @patch("promptaflow.hub._wait_for_process_exit")
     @patch("promptaflow.hub.stop_pid_tree_if_identity")
-    @patch("promptaflow.hub.process_identity")
     @patch("promptaflow.hub._runtime_json")
     def test_stop_all_uses_the_runtime_api_then_falls_back_to_the_owned_pid(
-        self, runtime_json, process_identity, stop_pid_tree, wait_for_exit,
+        self, runtime_json, stop_pid_tree, wait_for_exit,
     ):
         graceful = DiscoveredRuntime(Path('/a.lock'), {
             'pid': 10, 'project_root': '/work/a',
@@ -166,16 +177,20 @@ class HubUiTests(unittest.TestCase):
             'pid': 11, 'project_root': '/work/b',
         })
         runtime_json.return_value = (200, {"data": {"status": "stopping"}})
-        process_identity.side_effect = ["graceful-birth", "starting-birth"]
         # The HTTP-requested Runtime exits inside its grace period. The Runtime
         # without an endpoint needs the process-tree fallback, which is then
         # verified independently of its discovery record.
         wait_for_exit.side_effect = [True, True]
         stop_pid_tree.return_value = True
 
-        result = WorkspaceRuntimeManager(
+        manager = WorkspaceRuntimeManager(
             runtime_discovery=lambda: [graceful, starting],
-        ).stop_all()
+        )
+        manager._owned_runtimes = {  # noqa: SLF001 - manager ownership fixture
+            10: ("graceful-birth", "/work/a"),
+            11: ("starting-birth", "/work/b"),
+        }
+        result = manager.stop_all()
 
         self.assertEqual(["/work/a"], result["requested"])
         self.assertEqual(["/work/b"], result["terminated"])
@@ -184,10 +199,9 @@ class HubUiTests(unittest.TestCase):
 
     @patch("promptaflow.hub._wait_for_process_exit")
     @patch("promptaflow.hub.stop_pid_tree_if_identity")
-    @patch("promptaflow.hub.process_identity", return_value="stuck-birth")
     @patch("promptaflow.hub._runtime_json", return_value=(200, {}))
     def test_stop_all_kills_a_runtime_that_unregistered_but_did_not_exit(
-        self, _runtime_json, _process_identity, stop_pid_tree, wait_for_exit,
+        self, _runtime_json, stop_pid_tree, wait_for_exit,
     ):
         runtime = DiscoveredRuntime(Path('/a.lock'), {
             'pid': 10, 'project_root': '/work/a',
@@ -196,29 +210,36 @@ class HubUiTests(unittest.TestCase):
         wait_for_exit.side_effect = [False, True]
         stop_pid_tree.return_value = True
 
-        result = WorkspaceRuntimeManager(
+        manager = WorkspaceRuntimeManager(
             runtime_discovery=lambda: [runtime],
-        ).stop_all()
+        )
+        manager._owned_runtimes = {  # noqa: SLF001 - manager ownership fixture
+            10: ("stuck-birth", "/work/a"),
+        }
+        result = manager.stop_all()
 
         self.assertEqual(["/work/a"], result["requested"])
         self.assertEqual(["/work/a"], result["terminated"])
         self.assertEqual([], result["failures"])
         stop_pid_tree.assert_called_once_with(10, "stuck-birth")
 
-    @patch("promptaflow.hub.process_identity", return_value=None)
-    @patch("promptaflow.hub._runtime_json", return_value=(200, {}))
-    def test_stop_all_reports_successful_http_without_a_provable_pid_as_failure(
-        self, _runtime_json, _process_identity,
-    ):
-        runtime = DiscoveredRuntime(Path('/a.lock'), {
-            'project_root': '/work/a',
-            'base_url': 'http://127.0.0.1:41001',
-        })
+    def test_stop_all_reports_an_owned_pid_without_a_birth_identity_as_failure(self):
+        manager = WorkspaceRuntimeManager(runtime_discovery=lambda: [])
+        manager._owned_runtimes = {10: (None, "/work/a")}  # noqa: SLF001
 
-        result = WorkspaceRuntimeManager(
-            runtime_discovery=lambda: [runtime],
-        ).stop_all()
+        result = manager.stop_all()
 
-        self.assertEqual(["/work/a"], result["requested"])
+        self.assertEqual([], result["requested"])
         self.assertEqual([], result["terminated"])
         self.assertEqual(["/work/a"], result["failures"])
+
+    def test_stop_all_does_not_touch_a_runtime_owned_by_another_hub(self):
+        foreign = DiscoveredRuntime(Path('/foreign.lock'), {
+            'pid': 99, 'project_root': '/work/foreign',
+            'base_url': 'http://127.0.0.1:41999',
+        })
+        manager = WorkspaceRuntimeManager(runtime_discovery=lambda: [foreign])
+
+        result = manager.stop_all()
+
+        self.assertEqual({"requested": [], "terminated": [], "failures": []}, result)
