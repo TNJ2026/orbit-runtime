@@ -241,10 +241,6 @@
   .iconButton:disabled svg, .connectSpinner { animation: none; opacity: .45; }
 }
 
-/* The one control in the bar that cannot be undone, and it says so before it
-   is pressed rather than after. */
-.stopButton:hover { color: var(--dsw-alias-state-error-primary, LinkText); }
-
 .confirmBar {
   display: grid;
   gap: 8px;

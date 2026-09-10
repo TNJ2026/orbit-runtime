@@ -1,7 +1,7 @@
 /** The resident PromptaFlow panel: what is running, and a way into PromptaFlow itself. */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { IconChevronDownOutline14, IconCloseOutline16, IconPanelLeftOutline16, IconRefreshOutline16, IconShareOutline16, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconChevronDownOutline14, IconCloseOutline16, IconRefreshOutline16, IconShareOutline16, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
 import { authoringProgress, isProgressMarker, panelError, type PanelError } from '@promptaflow/integration-core'
 import type { AgentSummary, AuthoringOutputChunk, AuthoringOutputPage, AuthoringSummary, RunDto, StepSummary, WorkflowSummary } from '@promptaflow/integration-core'
 import styles from './PromptaFlowPanel.module.css'
@@ -267,10 +267,6 @@ export function PromptaFlowPanel({ t, useSessions, onSelectWorkflow, onEditWorkf
   const [workflows, setWorkflows] = useState<readonly WorkflowSummary[]>([])
   const [agents, setAgents] = useState<readonly AgentSummary[]>([])
   const [authoring, setAuthoring] = useState<readonly AuthoringSummary[]>([])
-  /** Whether the close button has asked, and whether the answer is in flight. */
-  const [confirmingStop, setConfirmingStop] = useState(false)
-  const [stopping, setStopping] = useState(false)
-  const [stopError, setStopError] = useState<PanelError | null>(null)
   /** Steps of the Runs still moving, so a list line can say where each one is. */
   const [steps, setSteps] = useState<Record<string, StepSummary[]>>({})
   // The Runtime's own four: what is running, what could, what did, and who by.
@@ -409,8 +405,8 @@ export function PromptaFlowPanel({ t, useSessions, onSelectWorkflow, onEditWorkf
   const settled = (rows ?? []).filter(row => !row.live)
   const box = placePanel(layout, bounds)
 
-  // Put away means gone: no panel, and no badge offering to reopen a page
-  // about a Runtime the same press stopped. `/promptaflow` is the way back.
+  // Put away means gone: no panel and no badge. It is only a view preference;
+  // the Workspace Runtime keeps serving and `/promptaflow` brings the view back.
   if (layout.dismissed) return null
 
   if (layout.collapsed) {
@@ -493,57 +489,20 @@ export function PromptaFlowPanel({ t, useSessions, onSelectWorkflow, onEditWorkf
           aria-label={t('collapse')}
           title={t('collapse')}
         >
-          <IconPanelLeftOutline16 size={14} />
+          <IconChevronDownOutline14 size={14} />
         </button>
-        {/* Last, and it asks first. Every control to its left is reversible —
-            fold the panel, open a tab, poll again — and this one stops a
-            service other Sessions, PromptaFlow's own UI and any Run in flight are
-            using. A press that cannot be undone does not belong in that row
-            without a question between it and the effect. */}
+        {/* Closing hides both the panel and its floating badge. Runtime lifetime
+            belongs to PromptaFlow, not to a view-level window control. */}
         <button
           type="button"
-          className={`${styles.iconButton} ${styles.stopButton}`}
-          disabled={stopping}
-          onClick={() => setConfirmingStop(true)}
-          aria-label={t('stopRuntime')}
-          title={t('stopRuntime')}
+          className={styles.iconButton}
+          onClick={() => update({ ...readLayoutSafely(layout), dismissed: true })}
+          aria-label={t('closePanel')}
+          title={t('closePanel')}
         >
           <IconCloseOutline16 size={14} />
         </button>
       </div>
-      {confirmingStop ? (
-        <div className={styles.confirmBar} role="alertdialog" aria-label={t('stopRuntime')}>
-          <span className={styles.confirmText}>{t('stopRuntimeAsk')}</span>
-          <div className={styles.confirmActions}>
-            <button
-              type="button" className={styles.confirmCancel}
-              onClick={() => setConfirmingStop(false)}
-            >
-              {t('stopCancel')}
-            </button>
-            <button
-              type="button" className={styles.confirmGo} disabled={stopping}
-              onClick={() => {
-                setStopping(true); setStopError(null)
-                void hostCall<{ stopped: true }>('stopRuntime', [sessionId], new AbortController().signal)
-                  .then(() => {
-                    // It is a close button, so it closes. Stopping the Runtime
-                    // and leaving its panel open would leave a page describing
-                    // a service that is no longer there — and the next poll
-                    // would fill it with the error of finding that out.
-                    setConfirmingStop(false); setRows([]); setSteps({})
-                    update({ ...readLayoutSafely(layout), dismissed: true })
-                  })
-                  .catch(reason => setStopError(panelError(reason)))
-                  .finally(() => setStopping(false))
-              }}
-            >
-              {stopping ? t('working') : t('stopConfirm')}
-            </button>
-          </div>
-          <PanelErrorText t={t} error={stopError} />
-        </div>
-      ) : null}
       <nav className={styles.tabs} aria-label={t('title')}>
         {([
           ['goal', 'tabGoal'], ['workflows', 'tabWorkflows'],

@@ -1,7 +1,8 @@
+import asyncio
 import re
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from promptaflow.hub import WorkspaceRuntimeManager, create_hub_app
 from promptaflow.platform.runtime_ownership import DiscoveredRuntime
@@ -80,3 +81,70 @@ class HubUiTests(unittest.TestCase):
         self.assertEqual(200, response.status_code)
         self.assertIn('暂无运行中的 Runtime', response.content.decode())
         launcher.assert_not_called()
+
+    def test_shutdown_button_stops_all_runtimes_then_the_hub(self):
+        stopped = []
+        manager = Mock(spec=WorkspaceRuntimeManager)
+        manager.live_ui_entries.return_value = []
+        manager.stop_all.return_value = {
+            "requested": ["/work/a"], "terminated": ["/work/b"], "failures": [],
+        }
+        with AsgiHarness(create_hub_app(
+            manager, shutdown_request=lambda: stopped.append(True),
+        )) as client:
+            body = client.get('/ui').content.decode()
+            self.assertIn('关闭 PromptaFlow', body)
+            token = re.search(
+                r"x-promptaflow-shutdown-token': '([^']+)'", body,
+            ).group(1)
+            denied = client.request(
+                "POST", "/api/v1/hub/shutdown",
+                headers={"x-promptaflow-shutdown-token": "wrong"},
+            )
+            self.assertEqual(403, denied.status_code)
+            manager.stop_all.return_value = {
+                "requested": [], "terminated": [], "failures": ["/work/stuck"],
+            }
+            failed = client.request(
+                "POST", "/api/v1/hub/shutdown",
+                headers={"x-promptaflow-shutdown-token": token},
+            )
+            self.assertEqual(503, failed.status_code)
+            self.assertEqual([], stopped)
+            manager.stop_all.return_value = {
+                "requested": ["/work/a"], "terminated": ["/work/b"], "failures": [],
+            }
+            response = client.request(
+                "POST", "/api/v1/hub/shutdown",
+                headers={"x-promptaflow-shutdown-token": token},
+            )
+            self.assertEqual(200, response.status_code)
+            self.assertEqual("stopping", response.json()["status"])
+            self.assertEqual([], stopped)
+            client._loop.run_until_complete(asyncio.sleep(0.06))
+            self.assertEqual([True], stopped)
+        self.assertEqual(2, manager.stop_all.call_count)
+
+    @patch("promptaflow.hub.terminate_pid_tree")
+    @patch("promptaflow.hub._runtime_json")
+    def test_stop_all_uses_the_runtime_api_then_falls_back_to_the_owned_pid(
+        self, runtime_json, terminate_pid_tree,
+    ):
+        graceful = DiscoveredRuntime(Path('/a.lock'), {
+            'pid': 10, 'project_root': '/work/a',
+            'base_url': 'http://127.0.0.1:41001',
+        })
+        starting = DiscoveredRuntime(Path('/b.lock'), {
+            'pid': 11, 'project_root': '/work/b',
+        })
+        runtime_json.return_value = (200, {"data": {"status": "stopping"}})
+        terminate_pid_tree.return_value = True
+
+        result = WorkspaceRuntimeManager(
+            runtime_discovery=lambda: [graceful, starting],
+        ).stop_all()
+
+        self.assertEqual(["/work/a"], result["requested"])
+        self.assertEqual(["/work/b"], result["terminated"])
+        self.assertEqual([], result["failures"])
+        terminate_pid_tree.assert_called_once_with(11)

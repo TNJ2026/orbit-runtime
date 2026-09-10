@@ -16,9 +16,8 @@ export interface PanelLayout {
    *
    * Distinct from `collapsed`, which is the panel folded down to its mark and
    * still watching. This is a person saying they are done with PromptaFlow here: the
-   * close button sets it after stopping the Runtime, because a badge still
-   * sitting there would be an offer to reopen a page about a service that is
-   * no longer running. `/promptaflow` brings it back.
+   * close button sets it without changing the Runtime. `/promptaflow` brings
+   * the panel and badge back when they are needed again.
    */
   readonly dismissed: boolean
   readonly x: number
@@ -39,6 +38,7 @@ export const PANEL_DEFAULT_HEIGHT = 420
 export const PANEL_MIN_WIDTH = 320
 export const PANEL_MAX_WIDTH = 720
 export const PANEL_MIN_HEIGHT = 280
+export const PANEL_MAX_HEIGHT = 720
 export const PANEL_DOCK_TOP = 64
 export const PANEL_DOCK_RIGHT = 18
 export const PANEL_DOCK_BOTTOM = 24
@@ -87,7 +87,7 @@ export function readLayout(raw: string | null): PanelLayout {
     x: finite(stored.x, DEFAULT_PANEL_LAYOUT.x),
     y: finite(stored.y, DEFAULT_PANEL_LAYOUT.y),
     width: clamp(finite(stored.width, PANEL_DEFAULT_WIDTH), PANEL_MIN_WIDTH, PANEL_MAX_WIDTH),
-    height: Math.max(finite(stored.height, PANEL_DEFAULT_HEIGHT), PANEL_MIN_HEIGHT),
+    height: clamp(finite(stored.height, PANEL_DEFAULT_HEIGHT), PANEL_MIN_HEIGHT, PANEL_MAX_HEIGHT),
   }
 }
 
@@ -104,7 +104,10 @@ export function placePanel(layout: PanelLayout, bounds: PanelBounds): {
     // Docked is a side, not a column: filling to the bottom of the window made
     // a panel of three Runs as tall as the conversation beside it. The height
     // is the arranged one, capped by what the window has.
-    const available = Math.max(PANEL_MIN_HEIGHT, bounds.height - top - PANEL_DOCK_BOTTOM)
+    const available = Math.max(
+      PANEL_MIN_HEIGHT,
+      Math.min(PANEL_MAX_HEIGHT, bounds.height - top - PANEL_DOCK_BOTTOM),
+    )
     return {
       left: Math.max(PANEL_FLOAT_MARGIN, bounds.width - width - PANEL_DOCK_RIGHT),
       top,
@@ -112,7 +115,11 @@ export function placePanel(layout: PanelLayout, bounds: PanelBounds): {
       height: Math.min(Math.max(layout.height, PANEL_MIN_HEIGHT), available),
     }
   }
-  const height = clamp(layout.height, PANEL_MIN_HEIGHT, Math.max(PANEL_MIN_HEIGHT, bounds.height - 2 * PANEL_FLOAT_MARGIN))
+  const height = clamp(
+    layout.height,
+    PANEL_MIN_HEIGHT,
+    Math.max(PANEL_MIN_HEIGHT, Math.min(PANEL_MAX_HEIGHT, bounds.height - 2 * PANEL_FLOAT_MARGIN)),
+  )
   return {
     left: clamp(layout.x, PANEL_FLOAT_MARGIN, Math.max(PANEL_FLOAT_MARGIN, bounds.width - width - PANEL_FLOAT_MARGIN)),
     top: clamp(layout.y, PANEL_FLOAT_MARGIN, Math.max(PANEL_FLOAT_MARGIN, bounds.height - height - PANEL_FLOAT_MARGIN)),
@@ -138,6 +145,10 @@ export function resizePanel(layout: PanelLayout, dWidth: number, dHeight: number
   return {
     ...layout,
     width: clamp(layout.width + dWidth, PANEL_MIN_WIDTH, maxWidth),
-    height: clamp(layout.height + dHeight, PANEL_MIN_HEIGHT, Math.max(PANEL_MIN_HEIGHT, bounds.height - 2 * PANEL_FLOAT_MARGIN)),
+    height: clamp(
+      layout.height + dHeight,
+      PANEL_MIN_HEIGHT,
+      Math.max(PANEL_MIN_HEIGHT, Math.min(PANEL_MAX_HEIGHT, bounds.height - 2 * PANEL_FLOAT_MARGIN)),
+    ),
   }
 }

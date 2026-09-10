@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from pathlib import Path
+import secrets
 import subprocess
 import sys
 import threading
@@ -29,6 +31,7 @@ from .global_control import (
     WorkflowTemplateError, WorkflowTemplateStorageError, WorkflowTemplateStore,
 )
 from .platform.projects import project_id, resolve_project_root
+from .platform.process import terminate_pid_tree
 from .platform.runtime_ownership import DiscoveredRuntime, discover_runtimes
 from .web.mcp import (
     INVALID_PARAMS, INVALID_REQUEST, METHOD_NOT_FOUND, PARSE_ERROR,
@@ -387,6 +390,49 @@ class WorkspaceRuntimeManager:
             entries[(path, url)] = {"path": path, "url": url}
         return sorted(entries.values(), key=lambda entry: (entry["path"], entry["url"]))
 
+    def stop_all(self) -> dict[str, list[str]]:
+        """Ask every discovered Runtime to stop, falling back to its owned PID."""
+
+        requested: list[str] = []
+        terminated: list[str] = []
+        failures: list[str] = []
+        for runtime in tuple(self.runtime_discovery()):
+            label = str(
+                runtime.facts.get("project_root") or runtime.db_path
+                or f"pid {runtime.pid or 'unknown'}"
+            )
+            base = runtime.base_url
+            if base:
+                try:
+                    address = urlsplit(base)
+                    if (
+                        address.scheme == "http"
+                        and address.hostname in {"127.0.0.1", "localhost", "::1"}
+                        and address.port is not None
+                        and address.username is None
+                        and address.password is None
+                    ):
+                        status, _payload = _runtime_json(
+                            f"{base.rstrip('/')}/api/v1/runtime/shutdown",
+                            method="POST", body={"expected_version": 0},
+                            headers={"idempotency-key": f"hub-shutdown-{uuid.uuid4().hex}"},
+                            timeout=5,
+                        )
+                        if 200 <= status < 300:
+                            requested.append(label)
+                            continue
+                except (HubError, OSError, ValueError):
+                    pass
+            if runtime.pid is not None and terminate_pid_tree(runtime.pid):
+                terminated.append(label)
+            else:
+                failures.append(label)
+        return {
+            "requested": requested,
+            "terminated": terminated,
+            "failures": failures,
+        }
+
     def find_live(self, identifier: str) -> str | None:
         """Return an already-live Runtime without starting an offline Workspace."""
         return self._find(self.registry.resolve(identifier))
@@ -520,6 +566,7 @@ def _count(value: Any) -> int:
 def create_hub_app(
     manager: WorkspaceRuntimeManager | None = None, *, forward_concurrency: int = 24,
     template_store: WorkflowTemplateStore | None = None,
+    shutdown_request: Callable[[], None] | None = None,
 ) -> Starlette:
     if forward_concurrency < 1:
         raise ValueError("forward concurrency must be positive")
@@ -528,6 +575,7 @@ def create_hub_app(
     sessions = McpSessionRegistry()
     selections: dict[str, str] = {}
     selection_lock = threading.Lock()
+    shutdown_token = secrets.token_urlsafe(32) if shutdown_request is not None else None
     # A stuck Runtime must not consume AnyIO's entire default worker pool (40
     # threads at present) and prevent health checks or other workspaces from
     # making progress. Waiting callers remain async tasks, not worker threads.
@@ -697,6 +745,27 @@ def create_hub_app(
 
     async def ready(_request: Request) -> Response:
         return JSONResponse({"status": "ready", "service": "promptaflow-hub"})
+
+    async def shutdown_hub(request: Request) -> Response:
+        """Stop every Runtime, then let the ASGI server close the Hub."""
+
+        if shutdown_request is None or shutdown_token is None:
+            return JSONResponse({"error": "Hub shutdown is not configured"}, status_code=404)
+        if request.client is None or request.client.host not in {
+            "127.0.0.1", "::1", "localhost", "testclient",
+        }:
+            return JSONResponse({"error": "loopback access required"}, status_code=403)
+        supplied = request.headers.get("x-promptaflow-shutdown-token", "")
+        if not secrets.compare_digest(supplied, shutdown_token):
+            return JSONResponse({"error": "invalid shutdown token"}, status_code=403)
+        outcome = await anyio.to_thread.run_sync(runtimes.stop_all)
+        if outcome["failures"]:
+            return JSONResponse({
+                "error": "some Runtimes could not be stopped",
+                "details": outcome,
+            }, status_code=503)
+        asyncio.get_running_loop().call_later(0.05, shutdown_request)
+        return JSONResponse({"status": "stopping", "runtimes": outcome})
 
     async def register_workspace(request: Request) -> Response:
         """Persist workspace routing in the process that owns Hub state.
@@ -998,7 +1067,10 @@ def create_hub_app(
         tail = request.path_params.get("path", "")
         if identifier is None and not tail:
             entries = await anyio.to_thread.run_sync(runtimes.live_ui_entries)
-            return HTMLResponse(render_hub_ui(entries), headers={"Cache-Control": "no-store"})
+            return HTMLResponse(
+                render_hub_ui(entries, shutdown_token),
+                headers={"Cache-Control": "no-store"},
+            )
         try:
             base = await anyio.to_thread.run_sync(runtimes.ensure, identifier)
         except HubError as exc:
@@ -1054,6 +1126,7 @@ def create_hub_app(
 
     app = Starlette(routes=[
         Route("/health/ready", ready, methods=["GET"]),
+        Route("/api/v1/hub/shutdown", shutdown_hub, methods=["POST"]),
         Route(
             "/internal/v1/workspaces/register", register_workspace,
             methods=["POST"],

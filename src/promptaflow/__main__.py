@@ -421,8 +421,15 @@ def _serve(args) -> None:
     grants = ProjectAccessGrants()
     grants.enable_by_default(identifier)
     manager = WorkspaceRuntimeManager(registry=registry, grants=grants)
+
+    def request_shutdown() -> None:
+        # Keep shutdown on uvicorn's normal lifespan path so the Hub finishes
+        # open responses before it releases its listener.
+        os.kill(os.getpid(), signal.SIGINT)
+
     app = create_hub_app(
         manager=manager, template_store=WorkflowTemplateStore(),
+        shutdown_request=request_shutdown,
     )
 
     # Bind/listen before launching the Runtime. This establishes the Hub as the

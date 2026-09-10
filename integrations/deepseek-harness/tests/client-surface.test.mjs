@@ -8,8 +8,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 const clientDir = join(here, '..', 'src', 'client')
 /* The host-agnostic half of this integration lives outside it. These tests
    still read it because several of the rules they hold are about the two
-   halves agreeing — the panel and the Host reaching for the same `goalRuns`,
-   the close button and `stopRuntime` being one gesture. */
+   halves agreeing — the panel and the Host reaching for the same `goalRuns`. */
 const coreDir = join(here, '..', '..', '..', 'integration-core', 'src')
 const names = (await readdir(clientDir)).filter(name => /\.(ts|tsx)$/.test(name))
 const sources = await Promise.all(names.map(name => readFile(join(clientDir, name), 'utf8')))
@@ -53,7 +52,7 @@ test('every Host call is one the panel can name a reason for', async () => {
   assert.deepEqual(used.sort(), [
     'exportArtifact', 'generateWorkflowForSession', 'getAuthoringOutput', 'getPanelState',
     'getRunDetail', 'getStepOutput', 'getWorkflowDefinition', 'readArtifactText',
-    'reconcileStep', 'runCommand', 'stopRuntime',
+    'reconcileStep', 'runCommand',
   ])
 })
 
@@ -727,58 +726,25 @@ test('detail pages share a compact, readable back control', async () => {
   assert.equal(/back: '←/.test(sources[names.indexOf('locales.ts')]), false)
 })
 
-/**
- * The close button stops a service, so it asks before it does.
- *
- * Every other control in that bar is reversible — fold the panel, open a tab,
- * poll again. This one stops a Runtime that PromptaFlow's own UI, other Sessions and
- * any Run in flight are using, and a press in that row cannot be undone. The
- * Gateway's own note said a panel must never stop a Runtime; that changed
- * deliberately, and the question is what makes it safe.
- */
-test('stopping PromptaFlow is asked for, not merely clicked', async () => {
+/** Closing is a view action: both panel affordances disappear, Runtime stays. */
+test('closing the panel also hides its badge without stopping PromptaFlow', () => {
   const panel = sources[names.indexOf('PromptaFlowPanel.tsx')]
-  // The press opens the question; only the confirm reaches the Host.
-  assert.match(panel, /onClick=\{\(\) => setConfirmingStop\(true\)\}/)
-  const asked = panel.slice(panel.indexOf('confirmingStop ? ('))
-  const dialog = asked.slice(0, asked.indexOf('\n      ) : null}'))
-  assert.match(dialog, /'stopRuntime', \[sessionId\]/)
-  // It is a close button, so it closes — everything. Not folded to the mark:
-  // a badge still sitting there offers to reopen a page about a service the
-  // same press stopped, and the next poll would fill it with the error of
-  // finding that out.
-  assert.match(dialog, /dismissed: true/)
-  assert.doesNotMatch(dialog, /collapsed: true/)
+  const close = panel.slice(panel.indexOf("aria-label={t('closePanel')}" ) - 240,
+    panel.indexOf("aria-label={t('closePanel')}" ) + 240)
+  assert.match(close, /dismissed: true/)
+  assert.doesNotMatch(close, /stopRuntime|confirmingStop/)
+  assert.doesNotMatch(panel, /hostCall<\{ stopped: true \}>\('stopRuntime'/)
   assert.match(panel, /if \(layout\.dismissed\) return null/)
-  // And there is a way back, or the button would be one-way.
+  // Dismissal returns before the collapsed badge branch, so both disappear.
+  assert.ok(panel.indexOf('if (layout.dismissed) return null') < panel.indexOf('if (layout.collapsed)'))
+  // The slash command remains the way back.
   assert.match(panel, /dismissed: false, collapsed: false/)
-  // Nothing to poll for a panel that is not there, against a Runtime that has
-  // just been stopped.
+  // A hidden view stops polling, without making a Runtime shutdown call.
   assert.match(panel, /if \(!sessionId \|\| layout\.dismissed\)/)
   const locales = sources[names.indexOf('locales.ts')]
-  // The question says what is lost, not just that something will happen.
-  for (const key of ['stopRuntimeAsk', 'stopCancel', 'stopConfirm']) {
-    assert.ok(locales.includes(`${key}:`), `the confirmation needs ${key}`)
-  }
-
-  // Session-scoped like every other call: the Workspace is derived from the
-  // Session, so this can only stop the Runtime the person is looking at.
-  const host = await readFile(join(here, '..', 'src', 'index.ts'), 'utf8')
-  const stop = host.slice(host.indexOf("@Remote('stopRuntime')"))
-  const body = stop.slice(0, stop.indexOf('\n  }'))
-  assert.match(body, /const scope = await this\.sessionWorkspace\(sessionId\)/)
-  // The authoring waiter is parked on that Runtime; leaving it would have it
-  // report the shutdown as a failure of something that was asked for.
-  assert.match(body, /this\.authoringWaiters\.get\(scope\.canonicalPath\)\?\.abort\(\)/)
-
-  // The Runtime's own command, not a signal: it unwinds rather than is cut.
-  const gateway = await readFile(join(coreDir, 'gateway.ts'), 'utf8')
-  assert.match(gateway, /\/api\/v1\/runtime\/shutdown/)
-  assert.match(gateway, /'idempotency-key': crypto\.randomUUID\(\)/)
-  assert.equal(/process\.kill|SIGTERM/.test(gateway), false,
-    'a Runtime is asked to stop, never signalled')
-  // The connection goes whatever the answer was.
-  assert.match(gateway, /\} finally \{\n      this\.runtimes\.delete\(key\)/)
+  assert.match(locales, /closePanel:/)
+  assert.match(panel, /<IconChevronDownOutline14 size=\{14\} \/>/)
+  assert.doesNotMatch(panel, /IconPanelLeftOutline16/)
 })
 
 /**

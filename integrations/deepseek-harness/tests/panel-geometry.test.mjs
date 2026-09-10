@@ -3,7 +3,7 @@ import test from 'node:test'
 
 import {
   DEFAULT_PANEL_LAYOUT, PANEL_COMPACT_BREAKPOINT, PANEL_FLOAT_MARGIN,
-  PANEL_MAX_WIDTH, PANEL_MIN_HEIGHT, PANEL_MIN_WIDTH,
+  PANEL_MAX_HEIGHT, PANEL_MAX_WIDTH, PANEL_MIN_HEIGHT, PANEL_MIN_WIDTH,
   dragPanel, placePanel, readLayout, resizePanel,
 } from '../src/client/panel-geometry.ts'
 
@@ -36,6 +36,15 @@ test('a docked panel hangs from the right edge at the height it was given', () =
   const box = placePanel(layout, wide)
   assert.equal(box.left + box.width, wide.width - 18)
   assert.equal(box.height, layout.height, 'docked is a side, not a full-height column')
+})
+
+test('the panel never grows taller than its readable maximum', () => {
+  const tall = { width: 1440, height: 2000 }
+  const oversized = { ...DEFAULT_PANEL_LAYOUT, collapsed: false, height: 4000 }
+  assert.equal(placePanel(oversized, tall).height, PANEL_MAX_HEIGHT)
+  assert.equal(placePanel({ ...oversized, mode: 'floating' }, tall).height, PANEL_MAX_HEIGHT)
+  assert.equal(resizePanel(oversized, 0, 4000, tall).height, PANEL_MAX_HEIGHT)
+  assert.equal(readLayout(JSON.stringify(oversized)).height, PANEL_MAX_HEIGHT)
 })
 
 test('a short window caps the docked height rather than overflowing it', () => {
@@ -74,9 +83,7 @@ test('resizing stays between the bounds a person can still use', () => {
  * Put away is a third state, not a deeper fold.
  *
  * `collapsed` is the panel folded to its mark and still watching; `dismissed`
- * is a person done with PromptaFlow here. The close button reaches the second after
- * stopping the Runtime, because a mark still sitting there would be an offer
- * to reopen a page about a service that is no longer running.
+ * is a person done with this view. Closing the view leaves the Runtime alone.
  */
 test('a layout written before dismissal existed still shows the panel', () => {
   assert.equal(readLayout(JSON.stringify({ collapsed: false })).dismissed, false)
