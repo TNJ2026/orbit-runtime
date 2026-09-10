@@ -236,6 +236,10 @@ PromptaFlow 按 workspace 划分，而这个连接器接进来时并不带 works
 `checkpoint_delegation` 记录恢复点。**状态为 `unknown` 的委托绝不重跑** —— 报出来，
 让人用 `reconcile_delegation` 定夺。
 
+正文或文本 Artifact 必须提交为 `{"result":{"text":"..."}}`。不要再包一层写成
+`{"result":{"result":"..."}}`，也不要添加 `content_type`；Runtime 会按端口声明选择
+文本类型。
+
 ## 回应中断
 
 run 需要人处理时，**回答前重新读一次这个 run**：用它**此刻**报告的 `interrupt_id`、

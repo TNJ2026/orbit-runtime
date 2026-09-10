@@ -40,6 +40,14 @@ class PromptaflowSkillCardRoutingTests(unittest.TestCase):
         self.assertIn("switches to its built-in detail\n   view", text)
         self.assertIn("must not open a separate workflow-detail MCP App card", text)
         self.assertIn("returns to the list inside the same card", text)
+        self.assertIn("`inspect_workflow_definition` internally", text)
+
+    def test_text_delegation_result_documents_the_exact_shape(self) -> None:
+        text = (ROOT / "reference" / "execute-goal.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('{"text": "..."}', text)
+        self.assertIn("Do not wrap that object in an output-port name", text)
 
     def test_run_and_authoring_do_not_open_dashboard_as_a_surrogate(self) -> None:
         for name in ("execute-goal.md", "authoring-with-current-app.md"):

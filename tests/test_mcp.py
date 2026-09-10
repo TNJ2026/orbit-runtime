@@ -77,7 +77,7 @@ class HandshakeTests(ApiTestCase):
             resources = listed["result"]["resources"]
             self.assertEqual(
                 {
-                    "ui://promptaflow/current-task-v52.html", "ui://promptaflow/workflows-v27.html",
+                    "ui://promptaflow/current-task-v53.html", "ui://promptaflow/workflows-v28.html",
                     "ui://promptaflow/workflow-authoring-v16.html", "ui://promptaflow/goal-run-v22.html",
                     "ui://promptaflow/goals-v16.html",
                 },
@@ -263,12 +263,12 @@ class DiscoveryTests(ApiTestCase):
                 item for item in tools if item["name"] == "open_promptaflow_dashboard"
             )
             self.assertEqual(
-                "ui://promptaflow/current-task-v52.html",
+                "ui://promptaflow/current-task-v53.html",
                 dashboard["_meta"]["ui"]["resourceUri"],
             )
             self.assertEqual(
                 {
-                    "open_promptaflow_dashboard": "ui://promptaflow/current-task-v52.html",
+                    "open_promptaflow_dashboard": "ui://promptaflow/current-task-v53.html",
                     "open_promptaflow_goals": "ui://promptaflow/goals-v16.html",
                 },
                 {
@@ -280,15 +280,23 @@ class DiscoveryTests(ApiTestCase):
                 item["name"]: item.get("_meta", {}).get("ui", {}).get("resourceUri")
                 for item in tools
             }
-            self.assertEqual("ui://promptaflow/workflows-v27.html", card_bindings["list_workflows"])
+            self.assertEqual("ui://promptaflow/workflows-v28.html", card_bindings["list_workflows"])
             self.assertEqual(
-                "ui://promptaflow/workflows-v27.html",
+                "ui://promptaflow/workflows-v28.html",
                 card_bindings["get_workflow_definition"],
             )
             self.assertIsNone(card_bindings["inspect_workflow_definition"])
             self.assertEqual("ui://promptaflow/workflow-authoring-v16.html", card_bindings["generate_workflow"])
             self.assertEqual("ui://promptaflow/goal-run-v22.html", card_bindings["start_run"])
             self.assertEqual("ui://promptaflow/goals-v16.html", card_bindings["open_promptaflow_goals"])
+            by_name = {item["name"]: item for item in tools}
+            self.assertIn(
+                "inspect_workflow_definition",
+                by_name["get_workflow_definition"]["description"],
+            )
+            self.assertIn(
+                "same idempotency_key", by_name["start_run"]["description"],
+            )
             for item in tools:
                 resource_uri = item.get("_meta", {}).get("ui", {}).get("resourceUri")
                 if resource_uri is not None:
@@ -305,14 +313,14 @@ class DiscoveryTests(ApiTestCase):
             ).json()["result"]["resources"]
             detail = next(
                 item for item in listed
-                if item["uri"] == "ui://promptaflow/workflows-v27.html"
+                if item["uri"] == "ui://promptaflow/workflows-v28.html"
             )
             self.assertFalse(detail["_meta"]["ui"]["prefersBorder"])
             self.assertFalse(detail["_meta"]["openai/widgetPrefersBorder"])
 
             read = rpc(
                 client, "resources/read",
-                {"uri": "ui://promptaflow/workflows-v27.html"}, actor="reader",
+                {"uri": "ui://promptaflow/workflows-v28.html"}, actor="reader",
             ).json()["result"]["contents"][0]
             self.assertFalse(read["_meta"]["ui"]["prefersBorder"])
             self.assertFalse(read["_meta"]["openai/widgetPrefersBorder"])
@@ -321,11 +329,11 @@ class DiscoveryTests(ApiTestCase):
         with AsgiHarness(self.app) as client:
             workflows = rpc(
                 client, "resources/read",
-                {"uri": "ui://promptaflow/workflows-v27.html"}, actor="reader",
+                {"uri": "ui://promptaflow/workflows-v28.html"}, actor="reader",
             ).json()["result"]["contents"][0]["text"]
             dashboard = rpc(
                 client, "resources/read",
-                {"uri": "ui://promptaflow/current-task-v52.html"}, actor="reader",
+                {"uri": "ui://promptaflow/current-task-v53.html"}, actor="reader",
             ).json()["result"]["contents"][0]["text"]
 
             self.assertIn("dispatchPromptValue(t().promptGoal(", workflows)

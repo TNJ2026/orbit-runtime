@@ -30,7 +30,7 @@ PROMPTAFLOW_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://promptaflow/current-task-v52.html", PROMPTAFLOW_DASHBOARD_URI)
+        self.assertEqual("ui://promptaflow/current-task-v53.html", PROMPTAFLOW_DASHBOARD_URI)
         self.assertEqual(PROMPTAFLOW_DASHBOARD_URI, PROMPTAFLOW_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -156,7 +156,7 @@ class CurrentTaskCardTests(unittest.TestCase):
         self.assertEqual(
             {
                 "list_runs", "list_authoring_jobs", "get_run_steps",
-                "list_workflows", "get_workflow_definition", "list_agents",
+                "inspect_workflows", "inspect_workflow_definition", "list_agents",
                 # A finished run reports what it produced, which means asking
                 # what an artifact is before deciding whether to show it.
                 "read_artifact", "read_artifact_content",
@@ -169,7 +169,7 @@ class CurrentTaskCardTests(unittest.TestCase):
     def test_workflow_selection_switches_views_inside_the_card(self) -> None:
         for marker in (
             'data-tab="workflows"', "showWorkflows", "showWorkflowDetail",
-            "callTool('list_workflows'", "callTool('get_workflow_definition'",
+            "callTool('inspect_workflows'", "callTool('inspect_workflow_definition'",
             "data-back-view", "renderWorkflowList", "renderWorkflowDetail",
         ):
             self.assertIn(marker, PROMPTAFLOW_DASHBOARD_HTML)
@@ -634,9 +634,15 @@ class DedicatedCardTests(unittest.TestCase):
         self.assertNotIn("127.0.0.1:8848/ui", PROMPTAFLOW_GOALS_HTML)
 
     def test_workflow_list_contains_only_catalog_calls(self) -> None:
-        self.assertIn("callTool('list_workflows'", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertIn("callTool('inspect_workflows'", PROMPTAFLOW_WORKFLOWS_HTML)
         self.assertNotIn("list_runs", PROMPTAFLOW_WORKFLOWS_HTML)
         self.assertNotIn("list_authoring_jobs", PROMPTAFLOW_WORKFLOWS_HTML)
+
+    def test_app_documents_do_not_recursively_open_workflow_cards(self) -> None:
+        for html in (PROMPTAFLOW_DASHBOARD_HTML, PROMPTAFLOW_WORKFLOWS_HTML):
+            with self.subTest():
+                self.assertNotIn("callTool('list_workflows'", html)
+                self.assertNotIn("callTool('get_workflow_definition'", html)
 
     def test_workflow_list_items_offer_the_same_new_goal_prompt(self) -> None:
         """Same offer, same prompt, same button, same construction.
@@ -689,7 +695,7 @@ class DedicatedCardTests(unittest.TestCase):
     def test_workflow_item_switches_to_detail_inside_the_list_card(self) -> None:
         for marker in (
             "b.onclick=()=>openDetail(b.dataset.openId)",
-            "callTool('get_workflow_definition',{workflow_id:workflowId})",
+            "callTool('inspect_workflow_definition',{workflow_id:workflowId})",
             "function drawDetail(w)", 'id="workflowBack"',
             "document.getElementById('workflowBack').onclick=showList",
             "else if(value?.workflow_id){current=value;drawDetail(current)}",
@@ -698,7 +704,7 @@ class DedicatedCardTests(unittest.TestCase):
         self.assertNotIn("使用工作流详情卡片展示", PROMPTAFLOW_WORKFLOWS_HTML)
 
     def test_workflow_detail_returns_mutations_to_chat(self) -> None:
-        self.assertIn("get_workflow_definition", PROMPTAFLOW_WORKFLOWS_HTML)
+        self.assertIn("inspect_workflow_definition", PROMPTAFLOW_WORKFLOWS_HTML)
         for label in ("新目标", "修改", "删除"):
             self.assertIn(label, PROMPTAFLOW_WORKFLOWS_HTML)
         self.assertIn(

@@ -135,6 +135,26 @@ class CurrentAppExecutionTests(unittest.TestCase):
         self.complete(second_item, {"text": "approved"})
         self.finished(engine, run)
 
+    def test_malformed_text_artifact_result_explains_the_wire_shape(self):
+        policy = PortDataPolicy(PortTransport.ARTIFACT_REF, 4096, ("text/markdown",))
+        step = replace(
+            agent_step(), outputs=(replace(port("result"), data_policy=policy),),
+        )
+        ir = single_step_workflow(step)
+        engine = self.engine(ir)
+        run = engine.start(
+            ir.workflow_id, {"prompt": {}}, actor=ACTOR,
+            idempotency_key="bad-artifact-shape", execution_mode="current_app",
+        )
+        self.complete(self.claim(), {"result": "wrapped"})
+        failed = self.eventually(
+            lambda: (
+                item if (item := engine.get(run.run_id)).status == "failed" else None
+            )
+        )
+        self.assertIn('{"text":"..."}', failed.error)
+        self.assertIn("without an output-port or content_type wrapper", failed.error)
+
     def test_a_port_accepting_several_types_is_judged_by_all_of_them(self):
         """`content_types` is a sorted set, not a preference order.
 

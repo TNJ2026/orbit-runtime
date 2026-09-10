@@ -110,13 +110,13 @@ class DashboardCardTests(unittest.TestCase):
         self.addCleanup(context.close)
         answers = {
             "list_runs": {"runs": list(runs)},
-            "list_workflows": {"workflows": WORKFLOWS},
+            "inspect_workflows": {"workflows": WORKFLOWS},
             "list_authoring_jobs": {"jobs": list(jobs)},
             "list_agents": {"agents": AGENTS},
             "get_run_steps": {"steps": list(steps)},
             "read_artifact": {"artifact": dict(artifact or {})},
             "read_artifact_content": {"encoding": "utf-8", "content": content},
-            "get_workflow_definition": {
+            "inspect_workflow_definition": {
                 "workflow_id": "workflow:draft", "name": "起草 · 人工审核",
                 "latest_version": 3, "description": "Draft, review, rework",
                 "nodes": [

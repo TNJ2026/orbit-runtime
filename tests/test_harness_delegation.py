@@ -301,6 +301,15 @@ class DelegationQueueTests(unittest.TestCase):
         self.assertIn("checkpoint_delegation", names)
         self.assertIn("list_delegations", names)
         self.assertIn("configure_execution_lease", names)
+        complete_tool = next(
+            tool for tool in listed["result"]["tools"]
+            if tool["name"] == "complete_delegation"
+        )
+        self.assertIn('{"text":"..."}', complete_tool["description"])
+        self.assertIn(
+            '{"text":"..."}',
+            complete_tool["inputSchema"]["properties"]["result"]["description"],
+        )
         resumable = dispatch({
             "jsonrpc": "2.0", "id": 11, "method": "tools/call",
             "params": {"name": "list_delegations", "arguments": {}},

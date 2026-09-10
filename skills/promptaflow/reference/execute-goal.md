@@ -109,6 +109,7 @@ adapts only this Run, including every parallel Agent branch.
    `request.input.task.input` carries its assembled inputs. The original
    Handler name is provenance, not a request to invoke that CLI. Return an
    object as `result`; for prose or text artifacts return `{"text": "..."}`.
+   Do not wrap that object in an output-port name and do not add `content_type`.
    Runtime stores declared artifacts and passes their content to later steps.
    Secret-reference inputs remain opaque references; they do not grant access
    to Runtime secrets. Use only the App's already-authorized credential/tool

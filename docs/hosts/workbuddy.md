@@ -277,6 +277,10 @@ execute it in this conversation, `complete_delegation` with the result. Use
 a resume point. Never execute a delegation whose status is `unknown`; report
 it and let a person decide with `reconcile_delegation`.
 
+For prose or a text artifact, submit `{"result":{"text":"..."}}`. Do not
+wrap the value again as `{"result":{"result":"..."}}`, and do not add a
+`content_type` field; the Runtime selects the declared text type.
+
 ## Answering an interrupt
 
 When a run needs a person, read the run again before answering: use the

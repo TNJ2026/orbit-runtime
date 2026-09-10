@@ -24,7 +24,7 @@ equivalents.
    [execute-goal.md](execute-goal.md) using that exact workflow id. Do not make
    the user open the detail card first.
 6. When the user clicks the item itself, the workflow-list card calls
-   `get_workflow_definition` internally and switches to its built-in detail
+   `inspect_workflow_definition` internally and switches to its built-in detail
    view. It must not open a separate workflow-detail MCP App card. The back
    action returns to the list inside the same card.
 7. A detail-view **New goal** request follows [execute-goal.md](execute-goal.md)

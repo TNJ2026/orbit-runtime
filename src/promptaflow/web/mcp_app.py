@@ -14,11 +14,11 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-PROMPTAFLOW_DASHBOARD_URI = "ui://promptaflow/current-task-v52.html"
+PROMPTAFLOW_DASHBOARD_URI = "ui://promptaflow/current-task-v53.html"
 PROMPTAFLOW_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-PROMPTAFLOW_WORKFLOWS_URI = "ui://promptaflow/workflows-v27.html"
+PROMPTAFLOW_WORKFLOWS_URI = "ui://promptaflow/workflows-v28.html"
 PROMPTAFLOW_AUTHORING_URI = "ui://promptaflow/workflow-authoring-v16.html"
 PROMPTAFLOW_RUN_URI = "ui://promptaflow/goal-run-v22.html"
 PROMPTAFLOW_GOALS_URI = "ui://promptaflow/goals-v16.html"
@@ -786,7 +786,7 @@ __CARD_STYLE__
     enter('workflows');
     try {
       const [workflowResult,jobResult] = await Promise.all([
-        callTool('list_workflows',{}), callTool('list_authoring_jobs',{limit:10}),
+        callTool('inspect_workflows',{}), callTool('list_authoring_jobs',{limit:10}),
       ]);
       const jobs = list(jobResult,'jobs');
       const job = jobs.find(item => ACTIVE_JOBS.has(item.status)) || jobs.find(item => isRecent(item)) || null;
@@ -802,7 +802,7 @@ __CARD_STYLE__
   async function showWorkflowDetail(workflowId) {
     clearTimeout(poller); currentTab = 'workflows'; detail = {kind:'workflow', id:workflowId};
     paintTabs(); refreshButton.disabled = true;
-    try { const result = await callTool('get_workflow_definition',{workflow_id:workflowId}); renderWorkflowDetail(result); bindActions(); updated.textContent = t().refreshed; }
+    try { const result = await callTool('inspect_workflow_definition',{workflow_id:workflowId}); renderWorkflowDetail(result); bindActions(); updated.textContent = t().refreshed; }
     catch (_) { card.innerHTML = `${viewHead(t().workflow,'workflows')}<div class="error">${esc(t().error)}</div>`; bindActions(); }
     finally { refreshButton.disabled = false; }
   }
@@ -834,7 +834,7 @@ __CARD_STYLE__
     enter('history');
     try {
       const [runResult,workflowResult] = await Promise.all([
-        known ? null : callTool('list_runs',{limit:HISTORY_LIMIT}), callTool('list_workflows',{}),
+        known ? null : callTool('list_runs',{limit:HISTORY_LIMIT}), callTool('inspect_workflows',{}),
       ]);
       const runs = known || list(runResult,'runs');
       const names = new Map(list(workflowResult,'workflows').map(item => [item.workflow_id, item.name || '']));
@@ -1091,8 +1091,8 @@ function drawDetail(w){
  <button class="action" data-prompt="${esc(t().promptModify(w.name||w.workflow_id,w.workflow_id))}" data-prompt-mode="edit">${esc(t().modify)}</button>
  <button id="openDeleteWorkflowDialog" class="action danger" type="button">${esc(t().remove)}</button></div>
  <dialog id="deleteWorkflowDialog" class="confirmDialog" aria-labelledby="deleteWorkflowTitle"><div class="confirmBody"><h2 id="deleteWorkflowTitle" class="confirmTitle">${esc(t().confirmTitle)}</h2><p class="confirmText">${esc(w.name||w.workflow_id)}<br>${esc(w.workflow_id)}</p></div><div class="confirmActions"><button id="cancelDeleteWorkflow" class="action" type="button">${esc(t().cancel)}</button><button id="confirmDeleteWorkflow" class="action danger" type="button">${esc(t().confirm)}</button></div></dialog>`;document.getElementById('workflowBack').onclick=showList;bind();bindTabs();bindDefinitionItems();bindDeleteConfirmation(w);mountGraph(w.graph)}
-async function showList(){try{const data=await callTool('list_workflows',{});drawList(Array.isArray(data.workflows)?data.workflows:[])}catch(e){card.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
-async function openDetail(workflowId){try{current=await callTool('get_workflow_definition',{workflow_id:workflowId});drawDetail(current)}catch(e){card.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function showList(){try{const data=await callTool('inspect_workflows',{});drawList(Array.isArray(data.workflows)?data.workflows:[])}catch(e){card.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function openDetail(workflowId){try{current=await callTool('inspect_workflow_definition',{workflow_id:workflowId});drawDetail(current)}catch(e){card.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
 async function refresh(){if(current?.workflow_id)await openDetail(current.workflow_id);else await showList()}
 document.getElementById('refresh').onclick=refresh;onHostContext(()=>refresh());onToolResult(value=>{if(Array.isArray(value?.workflows))drawList(value.workflows);else if(value?.workflow_id){current=value;drawDetail(current)}});refresh();
 """, extra_style=_WORKFLOW_LIST_STYLE + _WORKFLOW_DETAIL_STYLE, extra_script=_XYFLOW_SCRIPT)

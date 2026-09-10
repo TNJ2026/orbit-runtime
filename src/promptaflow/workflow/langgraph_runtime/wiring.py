@@ -696,8 +696,10 @@ def _tool_adapter(
                         content_type, content = "application/json", canonical_json(value)
                     else:
                         raise ValueError(
-                            "App artifact result must be prose for a text port "
-                            "or an object for a JSON one; this port accepts "
+                            f"App artifact result for port {port['id']!r} must be "
+                            '{"text":"..."} for accepted text content or an '
+                            "object for application/json, without an output-port "
+                            "or content_type wrapper; this port accepts "
                             + ", ".join(types)
                         )
                     output[port["id"]] = {"artifact_id": artifacts.write(

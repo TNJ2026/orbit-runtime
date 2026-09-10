@@ -378,9 +378,10 @@ def build_mcp_dispatcher(
         {
             "name": "get_workflow_definition",
             "description": (
-                "The published steps of one workflow, in the order a reader "
-                "meets them: what each does, which Agent runs it, and the "
-                "prompt it was authored with."
+                "Show one published workflow to the person inside the existing "
+                "workflow App card. For goal resolution, validation, or any "
+                "model-side read, use `inspect_workflow_definition` instead so "
+                "the host does not open another card."
             ),
             "scope": READ_SCOPE,
             "inputSchema": {
@@ -746,7 +747,16 @@ def build_mcp_dispatcher(
             },
             {
                 "name": "start_run",
-                "description": "Start a published workflow. execution_mode=current_app delegates every Agent step to this conversation, including parallel branches, without requiring CLIs. Claim and complete delegations while following the run; this mode always returns asynchronously.",
+                "description": (
+                    "Start exactly one new Run and open its goal-execution card. "
+                    "execution_mode=current_app delegates every Agent step to this "
+                    "conversation, including parallel branches, without requiring "
+                    "CLIs. Claim and complete delegations while following the run; "
+                    "this mode always returns asynchronously. If the response is "
+                    "uncertain, retry the identical request with the same "
+                    "idempotency_key; after a definite response, never retry with a "
+                    "new key."
+                ),
                 "scope": WRITE_SCOPE,
                 "inputSchema": {
                     "type": "object",
@@ -976,13 +986,26 @@ def build_mcp_dispatcher(
             },
             {
                 "name": "complete_delegation",
-                "description": "Submit the current App Agent's result for a leased delegation.",
+                "description": (
+                    "Submit exactly one of result or error for a leased current-App "
+                    "delegation. For a prose or text-artifact result, pass "
+                    "result as {\"text\":\"...\"}; do not wrap it in an output-port "
+                    "name and do not add content_type."
+                ),
                 "scope": WRITE_SCOPE,
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "delegation_id": {"type": "string"}, "worker_id": {"type": "string"},
-                        "result": {"type": "object"}, "error": {"type": "string"},
+                        "result": {
+                            "type": "object",
+                            "description": (
+                                "The Agent result object. For prose or a text "
+                                "artifact use {\"text\":\"...\"}, without an "
+                                "output-port or content_type wrapper."
+                            ),
+                        },
+                        "error": {"type": "string"},
                     },
                     "required": ["delegation_id", "worker_id"],
                 },

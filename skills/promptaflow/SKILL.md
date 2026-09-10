@@ -26,9 +26,11 @@ the user asked to open PromptaFlow itself.
   follow the goal-execution procedure without opening the detail card first.
   Clicking the item itself switches the same card to its built-in workflow
   detail view; it does not open another MCP App card. Do not substitute the workspace card.
-- **Workflow detail** — the workflow-list card calls `get_workflow_definition`
+- **Workflow detail** — the workflow-list card calls `inspect_workflow_definition`
   internally for the exact selected workflow. Its built-in detail view shows
   the definition and offers **New goal**, **Modify**, and **Delete** actions.
+  `get_workflow_definition` is the conversation-facing, card-bound entry and
+  must not be used for this internal read.
   These actions return to the conversation: resolve the
   exact workflow again, require explicit confirmation before deletion, and
   call `delete_workflow` with the observed latest version and a fresh
