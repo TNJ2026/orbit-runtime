@@ -215,18 +215,34 @@ class WorkflowCliTests(unittest.TestCase):
         listener.close.assert_called_once_with()
 
     def test_standalone_hub_is_configured_as_the_runtime_process_owner(self) -> None:
+        """It owns a Server, so shutdown can be asked for rather than signalled.
+
+        `uvicorn.run` builds its Server out of reach, leaving nothing to set
+        `should_exit` on — and on Windows the signal fallback is
+        TerminateProcess, which skips the lifespan that stops the Runtimes.
+        """
+
         app = Mock()
+        config = Mock()
+        server = Mock()
         with (
             patch("promptaflow.hub.create_hub_app", return_value=app) as create_app,
-            patch("promptaflow.__main__.uvicorn.run") as run,
+            patch("promptaflow.__main__.uvicorn.Config", return_value=config) as build,
+            patch("promptaflow.__main__.uvicorn.Server", return_value=server) as serve,
             patch("promptaflow.global_control.WorkflowTemplateStore", return_value=Mock()),
         ):
             self.run_cli("hub", "serve", "--port", "18848")
 
-        self.assertTrue(callable(create_app.call_args.kwargs["shutdown_request"]))
-        run.assert_called_once_with(
+            shutdown = create_app.call_args.kwargs["shutdown_request"]
+            self.assertTrue(callable(shutdown))
+            shutdown()
+
+        build.assert_called_once_with(
             app, host="127.0.0.1", port=18848, log_level="info",
         )
+        serve.assert_called_once_with(config)
+        server.run.assert_called_once_with()
+        self.assertTrue(server.should_exit)
 
     def test_serve_wires_the_configured_artifact_store(self) -> None:
         artifact_root = Path(self.temp_dir.name) / "custom-artifacts"

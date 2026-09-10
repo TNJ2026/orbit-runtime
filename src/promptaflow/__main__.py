@@ -422,9 +422,16 @@ def _serve(args) -> None:
     grants.enable_by_default(identifier)
     manager = WorkspaceRuntimeManager(registry=registry, grants=grants)
 
+    server: uvicorn.Server | None = None
+
     def request_shutdown() -> None:
         # Keep shutdown on uvicorn's normal lifespan path so the Hub finishes
-        # open responses before it releases its listener.
+        # open responses before it releases its listener. Asked of the server
+        # rather than signalled at the process: on Windows `os.kill` with
+        # SIGINT calls TerminateProcess, and lifespan shutdown never runs.
+        if server is not None:
+            server.should_exit = True
+            return
         os.kill(os.getpid(), signal.SIGINT)
 
     app = create_hub_app(
@@ -444,7 +451,8 @@ def _serve(args) -> None:
     try:
         manager.ensure(identifier)
         print(f"promptaflow workspace ready at {urls['ui_url']}", flush=True)
-        uvicorn.Server(config).run(sockets=[listener])
+        server = uvicorn.Server(config)
+        server.run(sockets=[listener])
     finally:
         listener.close()
 
@@ -535,10 +543,17 @@ def _serve_runtime(args) -> None:
         "app.delegate@1.1.0",
     ))
 
+    server: uvicorn.Server | None = None
+
     def request_shutdown() -> None:
-        # Uvicorn owns graceful shutdown and lifespan cleanup. Raising the same
-        # signal as Ctrl-C keeps its public `run` entrypoint (and embedders that
-        # patch it) intact while still stopping workers through app lifespan.
+        # Uvicorn owns graceful shutdown and lifespan cleanup. Ask it to leave
+        # rather than signalling: on Windows `os.kill` with SIGINT is
+        # TerminateProcess, which skips the lifespan that stops the workers.
+        # The signal stays as the fallback for an embedder that supplied its
+        # own server.
+        if server is not None:
+            server.should_exit = True
+            return
         os.kill(os.getpid(), signal.SIGINT)
 
     try:
@@ -639,7 +654,8 @@ def _serve_runtime(args) -> None:
         mcp_url=f"{base_url}/mcp",
     )
     try:
-        uvicorn.Server(config).run(sockets=[listener])
+        server = uvicorn.Server(config)
+        server.run(sockets=[listener])
     finally:
         listener.close()
         ownership.release()
@@ -1399,19 +1415,29 @@ def main() -> None:
                 start_new_session=os.name != "nt",
             )
         try:
+            server: uvicorn.Server | None = None
+
             def request_shutdown() -> None:
-                # The standalone Hub owns every Runtime it launches too. Keep
-                # both its HTTP shutdown endpoint and signal-driven exit on the
-                # same uvicorn lifespan path as `paf serve`.
+                # Ask the server to leave rather than signalling the process.
+                # `os.kill(getpid(), SIGINT)` is not a signal on Windows: it
+                # calls TerminateProcess, so uvicorn never runs its lifespan
+                # shutdown and the Runtime cleanup this endpoint exists for
+                # would be skipped entirely — along with the `finally` below
+                # that stops the background worker.
+                if server is not None:
+                    server.should_exit = True
+                    return
                 os.kill(os.getpid(), signal.SIGINT)
 
-            uvicorn.run(
+            config = uvicorn.Config(
                 create_hub_app(
                     template_store=templates,
                     shutdown_request=request_shutdown,
                 ),
                 host=args.host, port=args.port, log_level="info",
             )
+            server = uvicorn.Server(config)
+            server.run()
         finally:
             if background is not None and background.poll() is None:
                 background.terminate()
