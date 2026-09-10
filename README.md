@@ -185,9 +185,56 @@ queues each Agent step for the initiating conversation and stores the effective
 graph with the run. The mode is asynchronous and supports parallel branches and
 resuming safely from a checkpoint.
 
+### How it is triggered
+
+Only by asking for it. There is no CLI flag, no toggle in the UI, and no
+automatic fallback when a CLI turns out to be missing — a run that was not
+started in this mode stays in the mode it was started in.
+
+| Way | What to do |
+| --- | --- |
+| Ask the Agent App | Say so in the conversation. The bundled skill selects the workflow and passes the mode. |
+| MCP tool | `start_run(workflow_id=..., goal=..., execution_mode="current_app")` |
+| HTTP API | `POST /api/v1/langgraph-runs` with `"execution_mode": "current_app"` in the body |
+
+Workflows whose Agent steps name a CLI you do not have are filtered out of the
+default catalogue. When choosing one for this mode, list with
+`ready_only=false` — a missing CLI is exactly what this mode makes irrelevant.
+`inspect_workflow_definition` also takes `execution_mode` so you can see how a
+definition compiles here before starting anything.
+
+### Prompts
+
+Starting a run in this mode:
+
 ```text
-start_run(workflow_id=..., goal=..., execution_mode="current_app")
+Use PromptaFlow to <goal>. Run every Agent step in this conversation
+instead of forking a CLI.
 ```
+
+```text
+用工作流 workflow:<id> 执行目标：<目标原文>，Agent 步骤都交给你在当前对话里做，不要调用 CLI。
+```
+
+Picking a workflow first, when you are not sure one exists:
+
+```text
+Show me the PromptaFlow workflows that could run entirely in this
+conversation, including the ones whose CLIs I have not installed.
+```
+
+Following a run that is already delegated:
+
+```text
+Continue the PromptaFlow run you are executing for me — claim the next
+step, do it, and report what it produced.
+```
+
+The conversation drives the run through the delegation tools:
+`list_delegations` to see queued work, `claim_delegation` to take one step,
+`checkpoint_delegation` and `renew_delegation` while it is long-running, and
+`complete_delegation` to hand the result back. A claimed step that is never
+completed is recovered through `reconcile_delegation`.
 
 ## CLI quick reference
 

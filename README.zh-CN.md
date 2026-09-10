@@ -162,9 +162,48 @@ Agent 步骤通常交给工作流指定的 CLI。当系统没有安装 CLI，或
 步骤排队交给发起运行的对话，并把实际执行图随运行保存。该模式异步执行，支持并行分支，
 也支持从 checkpoint 安全恢复。
 
+### 有哪几种触发方式
+
+只能显式指定。没有 CLI 开关，界面上也没有切换项，**更不会因为缺少 CLI 而自动降级**——
+运行以哪种模式启动，就一直是哪种模式。
+
+| 方式 | 做法 |
+| --- | --- |
+| 对 Agent App 直接说 | 在对话里讲清楚即可，内置 skill 会选好工作流并带上该模式 |
+| MCP 工具 | `start_run(workflow_id=..., goal=..., execution_mode="current_app")` |
+| HTTP API | `POST /api/v1/langgraph-runs`，请求体带 `"execution_mode": "current_app"` |
+
+Agent 步骤指定了你未安装的 CLI 的工作流，默认会被目录过滤掉。为这个模式挑工作流时请用
+`ready_only=false` 列出——缺 CLI 正是这个模式要抹平的事情。`inspect_workflow_definition`
+也接受 `execution_mode`，可以在启动前先看它在这个模式下编译成什么样。
+
+### 提示词
+
+以该模式启动一次运行：
+
 ```text
-start_run(workflow_id=..., goal=..., execution_mode="current_app")
+用 PromptaFlow 执行：<目标原文>。Agent 步骤都由你在当前对话里完成，不要调用 CLI。
 ```
+
+```text
+用工作流 workflow:<id> 执行目标：<目标原文>，委托给当前对话执行。
+```
+
+还不确定有没有合适的工作流时，先挑：
+
+```text
+列出可以完全在当前对话里跑完的 PromptaFlow 工作流，包括那些我没装 CLI 的。
+```
+
+跟进一次已经委托出来的运行：
+
+```text
+继续你正在替我执行的 PromptaFlow 运行——领取下一个步骤，做完并汇报产出。
+```
+
+对话通过委托工具驱动整个运行：`list_delegations` 查看排队的工作，`claim_delegation`
+领取一个步骤，长时间执行期间用 `checkpoint_delegation` 和 `renew_delegation`，
+`complete_delegation` 交回结果。领取后未完成的步骤由 `reconcile_delegation` 回收。
 
 ## CLI 快速参考
 
