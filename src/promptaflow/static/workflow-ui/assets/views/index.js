@@ -3910,7 +3910,6 @@ export function createViews(context) {
     },
     canLeave() { return !activeViewLeaveGuard || activeViewLeaveGuard(); },
     cleanup() { if (activeViewCleanup) activeViewCleanup(); activeViewCleanup = null; },
-    stopPolling() { if (refreshTimer) clearTimeout(refreshTimer); },
     renderSimplifiedWorkspace, renderHistory, renderWorkflows, openWorkflowModal,
     openGoalModal, reopenGoalModal, openRunModal,
     renderWorkflowEdit, renderAgents, refreshRuntimeCard,
