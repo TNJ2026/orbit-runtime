@@ -1,7 +1,7 @@
 {
   "name": "@promptaflow/dsh",
   "description": "DeepSeek Harness Host bundle for the PromptaFlow MCP runtime",
-  "version": "0.6.1-alpha",
+  "version": "0.6.2-alpha",
   "publishConfig": {
     "access": "public"
   },

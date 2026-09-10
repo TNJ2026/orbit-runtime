@@ -1,6 +1,6 @@
 {
   "name": "@promptaflow/integration-core",
-  "version": "0.6.1-alpha",
+  "version": "0.6.2-alpha",
   "private": true,
   "type": "module",
   "description": "Everything a PromptaFlow integration needs that is not about one host.",
