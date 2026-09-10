@@ -1,6 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol'
-import { PromptaFlowGateway, PromptaFlowSessionBridge, WorkflowCatalog, advertisedAt, artifactFilename, commandTool, isLive, readableAsText, sessionCanBridge, type PromptaFlowCursorStore, type PromptaFlowRunCommand } from '@promptaflow/integration-core'
+import { PromptaFlowGateway, PromptaFlowSessionBridge, WorkflowCatalog, advertisedAt, artifactFilename, commandTool, readableAsText, sessionCanBridge, type PromptaFlowCursorStore, type PromptaFlowRunCommand } from '@promptaflow/integration-core'
 import type { AgentSummary, ArtifactContent, ArtifactSummary, AuthoringJob, AuthoringOutputPage, AuthoringSummary, EdgeSummary, ImportedArtifact, IntegrationDiagnostics, PromptaFlowCommandRequest, OutputPage, RunDto, RunGraph, RuntimeSummary, StepSummary, WorkflowNode, WorkflowSummary, WorkspaceRef } from '@promptaflow/integration-core'
 import { PromptaFlowToolBridge } from './promptaflow-tools.js'
 import type { Session, SessionStore } from '@deepseek-ai/dsh-session'
@@ -49,9 +49,6 @@ interface PromptaFlowWebServer {
 
 /** How long a settled job stays on the panel before it stops being news. */
 const AUTHORING_LINGER_MS = 60_000
-
-/** Bound the extra live progress reads made by one panel poll. */
-const LIVE_STEP_LIMIT = 6
 
 interface TrackedAuthoring {
   /** The Session that started it; `get_authoring_job` answers only to it. */
@@ -715,7 +712,6 @@ export class PromptaFlowRemoteService extends TypertRemoteService {
     workflows: readonly WorkflowSummary[]; agents: readonly AgentSummary[]
     retiredWorkflowNames: Record<string, string>
     authoring: readonly AuthoringSummary[]
-    liveSteps: Record<string, StepSummary[]>
   }> {
     signal.throwIfAborted()
     const { scope, live } = await this.sessionScope(sessionId, true)
@@ -761,7 +757,6 @@ export class PromptaFlowRemoteService extends TypertRemoteService {
       // and presenting its stale `running` flag as a current Goal invents work
       // the Runtime can no longer inspect or operate.
       const runs = result.runs.filter(run => !retired.missing.has(run.workflow_id))
-      const liveSteps = await this.liveStepProgress(scope, sessionId, runs)
       return {
         runs,
         uiUrl: await this.gateway.uiUrl(scope),
@@ -769,27 +764,8 @@ export class PromptaFlowRemoteService extends TypertRemoteService {
         agents,
         retiredWorkflowNames: retired.names,
         authoring: authoring.jobs,
-        liveSteps,
       }
     } finally { await release() }
-  }
-
-  /** Names and statuses for Runs still moving; logs stay in Run detail. */
-  private async liveStepProgress(
-    scope: WorkspaceRef, sessionId: string, runs: readonly RunDto[],
-  ): Promise<Record<string, StepSummary[]>> {
-    const visible = runs.filter(run => isLive(run.status)).slice(0, LIVE_STEP_LIMIT)
-    const read = await Promise.all(visible.map(async run => {
-      try {
-        const detail = await this.gateway.call(
-          scope, sessionId, 'get_run_steps', { run_id: run.run_id },
-        ) as { steps: StepSummary[] }
-        return [run.run_id, detail.steps.map(step => ({
-          node_id: step.node_id, label: step.label, status: step.status,
-        }))] as const
-      } catch { return null }
-    }))
-    return Object.fromEntries(read.filter(entry => entry !== null))
   }
 
   /**
@@ -846,7 +822,7 @@ export class PromptaFlowRemoteService extends TypertRemoteService {
             // cached and the next poll asks again. Deliberately not rethrown:
             // this runs inside `Promise.all` inside `getPanelState`, so one
             // failed lookup used to reject the whole answer and blank the
-            // panel — runs, workflows, agents, authoring and steps — over a
+            // panel — runs, workflows, agents and authoring — over a
             // row that would otherwise just have shown its id.
           }
         }),

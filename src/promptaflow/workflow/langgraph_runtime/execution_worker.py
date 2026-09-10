@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import secrets
 import threading
+import time
 from typing import Any, Mapping, Sequence
 
 from ..domain.serialization import to_primitive
@@ -167,6 +168,11 @@ class ExecutionWorkerController:
         raise RuntimeError(f"Execution Worker {error_type}: {error}")
 
     def stop(self, timeout: float = 5.0) -> bool:
+        deadline = time.monotonic() + max(0.0, timeout)
+
+        def remaining() -> float:
+            return max(0.0, deadline - time.monotonic())
+
         if not self.alive:
             self.process.join(timeout=0)
             return True
@@ -184,10 +190,10 @@ class ExecutionWorkerController:
                 connection.close()
             except (EOFError, OSError, BrokenPipeError):
                 pass
-        self.process.join(timeout=timeout)
+        self.process.join(timeout=remaining())
         if self.process.is_alive():
             self.process.terminate()
-            self.process.join(timeout=timeout)
+            self.process.join(timeout=remaining())
         return not self.process.is_alive()
 
 
@@ -245,7 +251,13 @@ class ExecutionWorkerPool:
         return self._select(payload).request(payload)
 
     def stop(self, timeout: float = 5.0) -> bool:
-        return all(worker.stop(timeout) for worker in self.workers)
+        deadline = time.monotonic() + max(0.0, timeout)
+        stopped = True
+        for worker in self.workers:
+            # Do not short-circuit after one straggler: every worker belongs to
+            # this pool and must still receive the remaining shutdown budget.
+            stopped = worker.stop(max(0.0, deadline - time.monotonic())) and stopped
+        return stopped
 
 
 def start_execution_worker(

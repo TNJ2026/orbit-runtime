@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { IconChevronDownOutline14, IconCloseOutline16, IconRefreshOutline16, IconShareOutline16, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
 import { authoringProgress, isProgressMarker, panelError, type PanelError } from '@promptaflow/integration-core'
-import type { AgentSummary, AuthoringOutputChunk, AuthoringOutputPage, AuthoringSummary, RunDto, StepSummary, WorkflowSummary } from '@promptaflow/integration-core'
+import type { AgentSummary, AuthoringOutputChunk, AuthoringOutputPage, AuthoringSummary, RunDto, WorkflowSummary } from '@promptaflow/integration-core'
 import styles from './PromptaFlowPanel.module.css'
 import {
   DEFAULT_PANEL_LAYOUT, PANEL_STORAGE_KEY, dragPanel, placePanel, readLayout,
@@ -14,7 +14,7 @@ import {
   toRow, type PromptaFlowRunRow as RunRowData,
 } from '@promptaflow/integration-core'
 import type { PromptaFlowLocaleKey } from './locales.ts'
-import { PromptaFlowRunDetail, PromptaFlowRunGoalCard, PromptaFlowRunListRow, PanelErrorText } from './PromptaFlowRunRow.tsx'
+import { PromptaFlowRunDetail, PromptaFlowRunListRow, PanelErrorText } from './PromptaFlowRunRow.tsx'
 import { PromptaFlowWorkflowDetail } from './PromptaFlowWorkflowDetail.tsx'
 
 type Translate = (key: PromptaFlowLocaleKey, values?: Record<string, string | number>) => string
@@ -253,6 +253,8 @@ export interface PromptaFlowPanelProps {
   useSessions: <T>(selector: (state: { current?: string }) => T) => T
   /** Writes the selected workflow invocation into the conversation composer. */
   onSelectWorkflow: (workflow: WorkflowSummary, sessionId: string) => void
+  /** Writes the workflow-generation request prefix into the conversation composer. */
+  onGenerateWorkflow: (sessionId: string) => void
   /** Writes the shared Add-Agent request into the conversation composer. */
   onAddAgent: (sessionId: string) => void
   onEditWorkflow: (workflow: WorkflowSummary, sessionId: string) => void
@@ -260,7 +262,8 @@ export interface PromptaFlowPanelProps {
 }
 
 export function PromptaFlowPanel({
-  t, useSessions, onSelectWorkflow, onAddAgent, onEditWorkflow, onDeleteWorkflow,
+  t, useSessions, onSelectWorkflow, onGenerateWorkflow, onAddAgent,
+  onEditWorkflow, onDeleteWorkflow,
 }: PromptaFlowPanelProps) {
   const sessionId = useSessions(state => state.current)
   const [layout, setLayout] = useState<PanelLayout>(() => {
@@ -271,7 +274,6 @@ export function PromptaFlowPanel({
   const [workflows, setWorkflows] = useState<readonly WorkflowSummary[]>([])
   const [agents, setAgents] = useState<readonly AgentSummary[]>([])
   const [authoring, setAuthoring] = useState<readonly AuthoringSummary[]>([])
-  const [liveSteps, setLiveSteps] = useState<Record<string, StepSummary[]>>({})
   // The Runtime's own four: what is running, what could, what did, and who by.
   const [tab, setTab] = useState<'goal' | 'workflows' | 'history' | 'agents'>('goal')
   // One Run at a time, filling the panel. Selection is cleared by changing page
@@ -294,7 +296,7 @@ export function PromptaFlowPanel({
      The first answer for a Session is a baseline, not an announcement: after a
      reload it may contain work that has been running for minutes. Later jobs
      open the Workflows page once without fighting a manual collapse. */
-  const seenAuthoring = useRef<{ sessionId: string; jobs: Set<string> } | null>(null)
+  const seenAuthoring = useRef(new Map<string, Set<string>>())
   const bounds = useBounds()
   const drag = useRef<{ x: number; y: number } | null>(null)
 
@@ -344,7 +346,6 @@ export function PromptaFlowPanel({
           workflows: readonly WorkflowSummary[]; agents: readonly AgentSummary[]
           retiredWorkflowNames: Record<string, string>
           authoring: readonly AuthoringSummary[]
-          liveSteps: Record<string, StepSummary[]>
         }>(
           // A folded resident badge may observe an existing Runtime, but only
           // an explicit open — `/promptaflow` or the badge — may start a new one.
@@ -364,22 +365,20 @@ export function PromptaFlowPanel({
         const next = orderRows(state.runs.map(run => toRow(run, workflowNames.get(run.workflow_id))))
         setRows(next); setUiUrl(state.uiUrl); setError(null)
         setWorkflows(state.workflows ?? []); setAgents(state.agents ?? [])
-        // Keep the last good projection across one failed step read, but only
-        // while its Run is live. Completion removes the ladder immediately.
-        setLiveSteps(current => Object.fromEntries(next.filter(row => row.live).flatMap(row => {
-          const steps = state.liveSteps?.[row.runId] ?? current[row.runId]
-          return steps === undefined ? [] : [[row.runId, steps]]
-        })))
         const nextAuthoring = state.authoring ?? []
-        const priorAuthoring = seenAuthoring.current
-        const firstForSession = priorAuthoring?.sessionId !== sessionId
+        // Kept per Session, not as one record. A single record made switching
+        // away and back a fresh baseline, so a job that started while the user
+        // was in another Session was swallowed instead of announced — the one
+        // announcement this exists to make.
+        const priorAuthoring = seenAuthoring.current.get(sessionId)
+        const firstForSession = priorAuthoring === undefined
         const unseenLiveAuthoring = !firstForSession && nextAuthoring.some(job =>
           (job.status === 'queued' || job.status === 'running') &&
-          !priorAuthoring.jobs.has(job.job_id),
+          !priorAuthoring.has(job.job_id),
         )
-        const remembered = firstForSession ? new Set<string>() : priorAuthoring.jobs
+        const remembered = priorAuthoring ?? new Set<string>()
         for (const job of nextAuthoring) remembered.add(job.job_id)
-        seenAuthoring.current = { sessionId, jobs: remembered }
+        seenAuthoring.current.set(sessionId, remembered)
         setAuthoring(nextAuthoring)
         if (unseenLiveAuthoring) {
           setSelected(null); setSelectedFlow(null); setTab('workflows')
@@ -563,9 +562,9 @@ export function PromptaFlowPanel({
 
         {!connecting && error === null && rows !== null && sessionId !== undefined && tab === 'goal' ? (
           goal.length ? goal.map(row => (
-            <PromptaFlowRunGoalCard
+            <PromptaFlowRunDetail
               key={row.runId} call={hostCall} t={t} sessionId={sessionId}
-              run={row} steps={liveSteps[row.runId]}
+              run={row}
             />
           )) : <p className={styles.empty}>{t('emptyGoal')}</p>
         ) : null}
@@ -579,8 +578,8 @@ export function PromptaFlowPanel({
         {!connecting && error === null && sessionId && tab === 'workflows'
           ? authoring.map(job => <AuthoringRow key={job.job_id} t={t} job={job} sessionId={sessionId} />)
           : null}
-        {!connecting && error === null && tab === 'workflows' ? (
-          workflows.length ? workflows.map(item => (
+        {!connecting && error === null && tab === 'workflows' ? <>
+          {workflows.length ? workflows.map(item => (
             <div className={styles.flowRow} key={item.workflow_id}>
               <button
                 type="button"
@@ -615,8 +614,18 @@ export function PromptaFlowPanel({
                 {t('newGoal')}
               </button>
             </div>
-          )) : <p className={styles.empty}>{t('emptyWorkflows')}</p>
-        ) : null}
+          )) : <p className={styles.empty}>{t('emptyWorkflows')}</p>}
+          <div className={styles.listActions}>
+            <button
+              type="button"
+              className={styles.flowNewGoal}
+              disabled={!sessionId}
+              onClick={() => { if (sessionId) onGenerateWorkflow(sessionId) }}
+            >
+              {t('generateWorkflowAction')}
+            </button>
+          </div>
+        </> : null}
 
         {!connecting && error === null && tab === 'agents' ? (
           <div className={styles.agentsSection}>
@@ -648,10 +657,10 @@ export function PromptaFlowPanel({
                 </article>
               )
             })}</div> : <p className={styles.empty}>{t('emptyAgents')}</p>}
-            <div className={styles.agentActions}>
+            <div className={styles.listActions}>
               <button
                 type="button"
-                className={styles.addAgent}
+                className={styles.flowNewGoal}
                 disabled={!sessionId}
                 onClick={() => { if (sessionId) onAddAgent(sessionId) }}
               >

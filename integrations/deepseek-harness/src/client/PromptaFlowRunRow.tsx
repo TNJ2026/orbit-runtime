@@ -201,25 +201,6 @@ export function PromptaFlowStepList(
   )
 }
 
-/** Live progress only: no disclosure, console output, or completed trace. */
-export function PromptaFlowLiveStepList({ steps }: { steps: readonly StepSummary[] }) {
-  return (
-    <div className={styles.liveSteps}>
-      {steps.map(item => {
-        const step = toStepRow(item)
-        const indicator = stepDotState(step.status)
-        return (
-          <div className={styles.liveStepRow} key={step.nodeId}>
-            <span className={`${styles.stepDot} ${styles[`stepDot_${indicator}`]}`} aria-hidden="true" />
-            <span className={styles.stepTitle}>{step.label}</span>
-            <span className={styles.status}>{step.status}</span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 /**
  * A Run in a list: what it was for, and how it went.
  *
@@ -244,40 +225,6 @@ export function PromptaFlowRunListRow(
       <span className={styles.status}>{run.status}</span>
     </button>
   )
-}
-
-/** A compact account of the current (or most recently completed) Goal. */
-export function PromptaFlowRunGoalCard(
-  { call, t, sessionId, run, steps }: {
-    call: HostCall; t: Translate; sessionId: string; run: RunRowData
-    steps?: readonly StepSummary[]
-  },
-) {
-  return (
-    <section className={styles.goalCard}>
-      <div className={styles.goalHead}>
-        <StateDot state={dotState(run.status)} size={9} className={styles.listDot} />
-        <span className={styles.listMain}>
-          <span className={styles.goalTitle}>{run.workflowName}</span>
-          <time className={styles.goalTime} dateTime={run.createdAt}>
-            {formatRunTime(run.createdAt)}
-          </time>
-          <FoldedText t={t} text={run.prompt} lines={PROMPT_LINES} />
-        </span>
-      </div>
-      <RunControls call={call} t={t} sessionId={sessionId} run={run} />
-      {run.live && steps?.length ? <PromptaFlowLiveStepList steps={steps} /> : null}
-      <RunResult t={t} run={run} sessionId={sessionId} call={call} />
-    </section>
-  )
-}
-
-function formatRunTime(value: string): string {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium', timeStyle: 'short',
-  }).format(date)
 }
 
 /** Past this many lines a request stops being a heading and becomes a wall. */
@@ -583,7 +530,7 @@ function RunResult(
 
 export interface PromptaFlowRunRowProps {
   call: HostCall; t: Translate; sessionId: string; run: RunRowData
-  onBack: () => void
+  onBack?: () => void
 }
 
 export function PromptaFlowRunDetail({ call, t, sessionId, run, onBack }: PromptaFlowRunRowProps) {
@@ -605,7 +552,7 @@ export function PromptaFlowRunDetail({ call, t, sessionId, run, onBack }: Prompt
   }, [open, run.live, load])
   return (
     <div>
-      <BackButton t={t} onBack={onBack} />
+      {onBack ? <BackButton t={t} onBack={onBack} /> : null}
       <section className={styles.goalCard}>
         <div className={styles.goalHead}>
           <StateDot state={dotState(run.status)} size={9} className={styles.listDot} />

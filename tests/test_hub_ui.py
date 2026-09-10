@@ -112,6 +112,7 @@ class HubUiTests(unittest.TestCase):
             )
             self.assertEqual(503, failed.status_code)
             self.assertEqual([], stopped)
+            self.assertFalse(hasattr(client.app.state, "runtime_shutdown"))
             manager.stop_all.return_value = {
                 "requested": ["/work/a"], "terminated": ["/work/b"], "failures": [],
             }
@@ -121,12 +122,16 @@ class HubUiTests(unittest.TestCase):
             )
             self.assertEqual(200, response.status_code)
             self.assertEqual("stopping", response.json()["status"])
+            self.assertEqual(
+                manager.stop_all.return_value,
+                client.app.state.runtime_shutdown,
+            )
             self.assertEqual([], stopped)
             client._loop.run_until_complete(asyncio.sleep(0.06))
             self.assertEqual([True], stopped)
-        # The successful endpoint call stops them before answering; lifespan
-        # repeats the idempotent cleanup for every normal Hub exit path.
-        self.assertEqual(3, manager.stop_all.call_count)
+        # The failed request and the successful request each try once. After
+        # success lifespan sees the recorded outcome and does not sweep again.
+        self.assertEqual(2, manager.stop_all.call_count)
 
     def test_lifespan_shutdown_stops_runtimes_without_the_http_endpoint(self):
         manager = Mock(spec=WorkspaceRuntimeManager)
@@ -143,6 +148,38 @@ class HubUiTests(unittest.TestCase):
             {"requested": ["/work/a"], "terminated": [], "failures": []},
             app.state.runtime_shutdown,
         )
+
+    def test_route_cleanup_failure_is_answered_as_json_not_a_500(self):
+        """The operator has to be able to read why, and the Hub must stay up.
+
+        `discover_runtimes` reaches the filesystem through `is_dir()` and
+        `rglob()` and catches no `OSError`, so this is the same fault the
+        lifespan guard was added for. Unguarded here it becomes a non-JSON 500:
+        the Hub page cannot parse it, and the operator is told the shutdown
+        failed with nothing saying what happened.
+        """
+
+        stopped: list[bool] = []
+        manager = Mock(spec=WorkspaceRuntimeManager)
+        manager.live_ui_entries.return_value = []
+        manager.stop_all.side_effect = OSError("discovery unavailable")
+        with AsgiHarness(create_hub_app(
+            manager, shutdown_request=lambda: stopped.append(True),
+        )) as client:
+            body = client.get("/ui").content.decode()
+            token = re.search(
+                r"x-promptaflow-shutdown-token': '([^']+)'", body,
+            ).group(1)
+            response = client.request(
+                "POST", "/api/v1/hub/shutdown",
+                headers={"x-promptaflow-shutdown-token": token},
+            )
+
+        self.assertEqual(503, response.status_code)
+        self.assertEqual(
+            "OSError: discovery unavailable", response.json()["details"],
+        )
+        self.assertEqual([], stopped, "the Hub must not close on a failed sweep")
 
     def test_lifespan_cleanup_failure_is_reported_without_failing_shutdown(self):
         manager = Mock(spec=WorkspaceRuntimeManager)
@@ -224,15 +261,47 @@ class HubUiTests(unittest.TestCase):
         self.assertEqual([], result["failures"])
         stop_pid_tree.assert_called_once_with(10, "stuck-birth")
 
-    def test_stop_all_reports_an_owned_pid_without_a_birth_identity_as_failure(self):
+    def test_stop_all_forgets_an_owned_pid_it_can_never_identify(self):
+        """A phantom must not make the Hub unstoppable for the rest of its life.
+
+        `ensure` records the birth token straight after `Popen`, and it is
+        `None` when the Runtime dies in its first milliseconds or `ps` times
+        out. Reporting that as a failure and keeping the record meant every
+        later sweep failed the same way, and `shutdown_hub` refuses while any
+        failure stands — so the Hub could never be stopped again, over a
+        process that had never started.
+        """
+
         manager = WorkspaceRuntimeManager(runtime_discovery=lambda: [])
         manager._owned_runtimes = {10: _OwnedRuntime(None, "/work/a")}  # noqa: SLF001
 
-        result = manager.stop_all()
+        with patch("promptaflow.hub.process_identity", return_value=None):
+            result = manager.stop_all()
 
         self.assertEqual([], result["requested"])
         self.assertEqual([], result["terminated"])
-        self.assertEqual(["/work/a"], result["failures"])
+        self.assertEqual([], result["failures"])
+        self.assertEqual({}, manager._owned_runtimes)  # noqa: SLF001
+
+    def test_stop_all_re_probes_an_identity_recorded_too_early(self):
+        """The record may predate the process being identifiable."""
+
+        manager = WorkspaceRuntimeManager(runtime_discovery=lambda: [])
+        manager._owned_runtimes = {10: _OwnedRuntime(None, "/work/a")}  # noqa: SLF001
+
+        # Identifiable on the re-probe, gone once it has been signalled.
+        with (
+            patch(
+                "promptaflow.hub.process_identity",
+                side_effect=["late-birth", None],
+            ),
+            patch("promptaflow.hub.stop_pid_tree_if_identity", return_value=True) as stop,
+        ):
+            result = manager.stop_all()
+
+        stop.assert_called_once_with(10, "late-birth")
+        self.assertEqual(["/work/a"], result["terminated"])
+        self.assertEqual({}, manager._owned_runtimes)  # noqa: SLF001
 
     def test_stop_all_does_not_touch_a_runtime_owned_by_another_hub(self):
         foreign = DiscoveredRuntime(Path('/foreign.lock'), {

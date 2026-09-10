@@ -42,7 +42,7 @@ def render_hub_ui(
 <script>
 const shutdown = document.getElementById('shutdown');
 shutdown.addEventListener('click', async () => {{
-  if (!window.confirm('将结束所有 Runtime、执行 Worker 和 Hub。正在运行的工作会被中断，确定继续吗？')) return;
+  if (!window.confirm('将结束本 Hub 启动的 Runtime 及其执行 Worker，然后关闭 Hub。其它来源启动的 Runtime 不受影响。正在运行的工作会被中断，确定继续吗？')) return;
   shutdown.disabled = true;
   shutdown.textContent = '正在关闭…';
   try {{

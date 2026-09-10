@@ -21,6 +21,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import Mock, patch
 
 from promptaflow.web.app import RuntimeComposition, HandlerRegistration, create_app
 from promptaflow.web.schema_guard import (
@@ -405,6 +406,41 @@ class CompositionTests(unittest.TestCase):
             self.assertEqual([], [loop.name for loop in composition.loops])
         finally:
             self.assertEqual([], composition.stop())
+
+    def test_shutdown_components_share_one_total_deadline(self) -> None:
+        composition = RuntimeComposition(
+            self.db, handlers=[transform_registration()], schemas=SCHEMAS,
+        )
+        first = Mock()
+        first.name = "first-loop"
+        first.join.return_value = False
+        second = Mock()
+        second.name = "second-loop"
+        second.join.return_value = True
+        settle = Mock(return_value=("background-run-0",))
+        worker = Mock()
+        worker.stop.return_value = False
+        composition.loops = [first, second]
+        composition.langgraph_service = SimpleNamespace(
+            wait_for_background=settle, execution_worker=worker,
+        )
+
+        with patch(
+            "promptaflow.web.app.time.monotonic",
+            side_effect=[100.0, 102.0, 106.0, 109.0, 111.0],
+        ):
+            stragglers = composition.stop(timeout=10.0)
+
+        first.request_stop.assert_called_once_with()
+        second.request_stop.assert_called_once_with()
+        first.join.assert_called_once_with(8.0)
+        second.join.assert_called_once_with(4.0)
+        settle.assert_called_once_with(1.0)
+        worker.stop.assert_called_once_with(0.0)
+        self.assertEqual(
+            ["first-loop", "background-run-0", "execution-worker"],
+            stragglers,
+        )
 
     def test_a_langgraph_service_brings_its_timer_loop(self) -> None:
         composition = RuntimeComposition(

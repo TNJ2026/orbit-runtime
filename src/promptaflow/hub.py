@@ -504,7 +504,21 @@ class WorkspaceRuntimeManager:
             # worker is still alive, so completion is always checked by PID
             # identity instead of rediscovery.
             if identity is None:
-                failures.append(label)
+                # Recorded before the process could be identified — a Runtime
+                # that died in its first milliseconds, or a `ps` that timed
+                # out. Ask once more; the record may simply have been taken
+                # too early.
+                identity = process_identity(pid)
+            if identity is None:
+                # Still nothing to match on. Without a birth token this PID
+                # cannot be told apart from one the OS has since handed to
+                # somebody else, so it must not be signalled — and it must not
+                # be remembered either. Keeping it made every later sweep
+                # report the same phantom, and `shutdown_hub` refuses while any
+                # failure stands: the Hub could never be stopped again, over a
+                # process that had never started.
+                with self._guard:
+                    self._owned_runtimes.pop(pid, None)
                 continue
             if graceful_requested and _wait_for_process_exit(
                 pid, identity, RUNTIME_GRACE_SECONDS, handle,
@@ -903,12 +917,30 @@ def create_hub_app(
         supplied = request.headers.get("x-promptaflow-shutdown-token", "")
         if not secrets.compare_digest(supplied, shutdown_token):
             return JSONResponse({"error": "invalid shutdown token"}, status_code=403)
-        outcome = await anyio.to_thread.run_sync(runtimes.stop_all)
+        try:
+            outcome = await anyio.to_thread.run_sync(runtimes.stop_all)
+        except Exception as exc:  # noqa: BLE001 - answered, never a 500 body
+            # The same guard lifespan has. `discover_runtimes` reaches the
+            # filesystem through `is_dir()` and `rglob()` and does not catch
+            # `OSError`, so a permission or FS fault here would otherwise leave
+            # Starlette to answer with a non-JSON 500 — which the Hub page
+            # cannot read, so the operator is told "could not shut down" while
+            # the Hub stays up.
+            return JSONResponse({
+                "error": "Runtime cleanup failed",
+                "details": f"{type(exc).__name__}: {exc}",
+            }, status_code=503)
         if outcome["failures"]:
             return JSONResponse({
                 "error": "some Runtimes could not be stopped",
                 "details": outcome,
             }, status_code=503)
+        # Lifespan is the fallback for every other normal exit path. Mark a
+        # successful explicit sweep so that fallback does not rediscover and
+        # stop the same processes again after this response has promised they
+        # are already gone. A failed sweep is deliberately not remembered:
+        # Ctrl-C or a later request must still be allowed to retry it.
+        request.app.state.runtime_shutdown = outcome
         asyncio.get_running_loop().call_later(0.05, shutdown_request)
         return JSONResponse({"status": "stopping", "runtimes": outcome})
 

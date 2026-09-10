@@ -268,6 +268,7 @@ export function apply(ctx: ClientContext): void {
       t={t}
       useSessions={useSessions}
       onSelectWorkflow={(workflow, sessionId) => writeWorkflowDraft(ctx, t, workflow, sessionId)}
+      onGenerateWorkflow={sessionId => writeDraft(ctx, sessionId, t('generateWorkflowPrompt'))}
       // The Dashboard card opens its prompt editor with this same sentence.
       // Harness already has a native composer, so put it there and stop: the
       // person may finish the CLI name before deciding to submit it.

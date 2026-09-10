@@ -394,24 +394,11 @@
   background: var(--dsw-alias-state-error-secondary, rgb(242 90 90 / 12%));
   color: var(--dsw-alias-state-error-primary, LinkText);
 }
-.agentActions {
+.listActions {
   display: flex;
   justify-content: flex-end;
   padding: 2px 12px 12px;
 }
-.addAgent {
-  min-height: 32px;
-  padding: 6px 12px;
-  border: 0;
-  border-radius: 10px;
-  background: var(--dsw-alias-state-business-primary, Highlight);
-  color: var(--dsw-alias-label-on-color, HighlightText);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.addAgent:hover:not(:disabled) { filter: brightness(1.06); }
-.addAgent:disabled { opacity: .45; cursor: not-allowed; }
 
 /* A Workflow leads with its id, small, because that is the half the Agent uses
    and the half a person checks — the name below is what they read. */
@@ -568,26 +555,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.goalTime {
-  margin-top: 1px;
-  color: var(--dsw-alias-label-tertiary, GrayText);
-  font-size: 10.5px;
-  line-height: 1.4;
-}
-.liveSteps {
-  margin: 8px 12px 10px;
-  border-top: 1px solid var(--dsw-alias-border-l2, rgb(128 128 128 / 12%));
-}
-.liveStepRow {
-  display: grid;
-  grid-template-columns: 8px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  min-height: 34px;
-  padding: 5px 2px;
-  border-bottom: 1px solid var(--dsw-alias-border-l2, rgb(128 128 128 / 12%));
-}
-.liveStepRow:last-child { border-bottom: 0; }
 /* The request reads as a quoted block, the way a step's output does: it is
    somebody else's text sitting inside the panel's own, and the same card says
    so in both places.
@@ -763,7 +730,7 @@ a.artifact:hover { text-decoration: underline; }
 }
 .resultError { color: var(--dsw-alias-state-error-primary); }
 
-/* A Goal summary: Workflow name, start time, request and current/final result. */
+/* A Run detail: Workflow name, request, steps and current/final result. */
 .goalCard { border-bottom: 1px solid var(--dsw-alias-border-l2, rgb(128 128 128 / 12%)); }
 .goalCard:last-child { border-bottom: 0; }
 /* A heading, not a control: the card below it is the whole Run, so there is

@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import threading
+import time
 from typing import Any, Callable, Mapping, Sequence
 
 from starlette.applications import Starlette
@@ -315,20 +316,33 @@ class RuntimeComposition:
         self._started = True
 
     def stop(self, timeout: float = DEFAULT_SHUTDOWN_SECONDS) -> list[str]:
-        """Stop every loop; returns the names that did not exit in time."""
+        """Stop every component within one shared deadline.
+
+        ``timeout`` is the Runtime's whole drain budget, not a fresh allowance
+        for each loop, the background queue, and the Execution Worker. Keeping
+        one deadline makes it possible for the owning Hub to know how long a
+        graceful shutdown may legitimately take before it sends a signal.
+        """
+
+        deadline = time.monotonic() + max(0.0, timeout)
+
+        def remaining() -> float:
+            return max(0.0, deadline - time.monotonic())
 
         for loop in self.loops:
             loop.request_stop()
-        stragglers = [loop.name for loop in self.loops if not loop.join(timeout)]
+        stragglers = [
+            loop.name for loop in self.loops if not loop.join(remaining())
+        ]
         # Runs whose caller did not wait have nobody else to wait for them.
         # Walking away is safe — they stay `running` and startup recovery
         # re-enters them — but re-entering costs a superstep that letting them
         # finish does not.
         settle = getattr(self.langgraph_service, "wait_for_background", None)
         if settle is not None:
-            stragglers.extend(settle(timeout))
+            stragglers.extend(settle(remaining()))
         worker = getattr(self.langgraph_service, "execution_worker", None)
-        if worker is not None and not worker.stop(timeout):
+        if worker is not None and not worker.stop(remaining()):
             stragglers.append("execution-worker")
         self._started = False
         return stragglers

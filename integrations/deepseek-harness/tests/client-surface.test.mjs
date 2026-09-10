@@ -64,11 +64,11 @@ test('workflow generation is a model tool, not a Harness slash command', async (
 
 test('a newly observed authoring job reveals its progress once', async () => {
   const panel = await readFile(join(clientDir, 'PromptaFlowPanel.tsx'), 'utf8')
-  assert.match(panel, /seenAuthoring = useRef<\{ sessionId: string; jobs: Set<string> \} \| null>\(null\)/)
-  assert.match(panel, /const firstForSession = priorAuthoring\?\.sessionId !== sessionId/)
+  assert.match(panel, /seenAuthoring = useRef\(new Map<string, Set<string>>\(\)\)/)
+  assert.match(panel, /const firstForSession = priorAuthoring === undefined/)
   assert.match(panel, /const unseenLiveAuthoring = !firstForSession/)
-  assert.match(panel, /!priorAuthoring\.jobs\.has\(job\.job_id\)/)
-  assert.match(panel, /seenAuthoring\.current = \{ sessionId, jobs: remembered \}/)
+  assert.match(panel, /!priorAuthoring\.has\(job\.job_id\)/)
+  assert.match(panel, /seenAuthoring\.current\.set\(sessionId, remembered\)/)
   assert.match(panel, /if \(unseenLiveAuthoring\)[\s\S]{0,200}setTab\('workflows'\)/)
   assert.match(panel, /if \(layout\.collapsed\)[\s\S]{0,120}collapsed: false/)
 })
@@ -302,8 +302,8 @@ test('a Goal keeps the name of a Workflow that was deleted', async () => {
   // A temporary failure must stay retryable *and* stay local to the row it is
   // about. Rethrowing did the first and not the second: the lookups run inside
   // `Promise.all` inside `getPanelState`, so one transport error rejected the
-  // whole answer and blanked the panel — runs, workflows, agents, authoring,
-  // steps — over a row that would otherwise have shown its id for one poll.
+  // whole answer and blanked the panel — runs, workflows, agents and authoring
+  // — over a row that would otherwise have shown its id for one poll.
   assert.doesNotMatch(resolver, /throw reason/,
     'a failed lookup must not reject the answer the whole panel is drawn from')
   const caught = resolver.slice(resolver.indexOf('} catch (reason)'))
@@ -325,8 +325,6 @@ test('a Goal keeps the name of a Workflow that was deleted', async () => {
   // those Runs until the Host restarts.
   assert.match(resolver, /if \(force\)[^\n]*retiredNames\.delete/,
     'a refresh re-asks the negatives too')
-  assert.doesNotMatch(host, /liveSteps\(scope, sessionId, runs\)/,
-    'the compact Goal page must not poll every Run step')
   // Merged under the catalog, never over it: an offered Workflow owns its name.
   const merge = code.slice(
     code.indexOf('const workflowNames = new Map'), code.indexOf('const next = orderRows'),
@@ -504,47 +502,37 @@ test('the catalog marks what a goal cannot be started from', () => {
   assert.doesNotMatch(detail, /styles\.facts/)
 })
 
-/** The Goal page shows live progress; History remains the complete process view. */
-test('a running Goal draws compact steps but no step output', () => {
+/** A live Goal and a History detail are the same Run surface. */
+test('a running Goal uses the complete History detail UI', () => {
   const panel = sources[names.indexOf('PromptaFlowPanel.tsx')]
   const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
   const from = panel.indexOf("tab === 'goal' ? (")
   const until = panel.indexOf("tab === 'history' ? (")
   assert.ok(from > 0 && until > from, 'the Goal and History blocks were not found')
   const goal = panel.slice(from, until)
-  assert.ok(goal.includes('PromptaFlowRunGoalCard'), 'the Goal page draws the Run as a card')
-  assert.match(goal, /steps=\{liveSteps\[row\.runId\]\}/)
-  assert.equal(goal.includes('PromptaFlowRunListRow'), false,
-    'the Goal page uses its compact card rather than a history row')
+  assert.ok(goal.includes('PromptaFlowRunDetail'), 'the Goal page must reuse Run detail')
+  assert.doesNotMatch(goal, /onBack=/, 'the resident Goal detail has nowhere to go back to')
+  assert.equal(goal.includes('PromptaFlowRunListRow'), false)
   assert.ok(panel.slice(until).includes('PromptaFlowRunListRow'))
   assert.ok(rows.includes('export function PromptaFlowStepList'))
-  assert.ok(rows.includes('export function PromptaFlowLiveStepList'))
+  assert.equal(rows.includes('PromptaFlowLiveStepList'), false,
+    'a second compact step UI would let Goal and History drift apart again')
   assert.equal((rows.match(/<PromptaFlowStepList/g) ?? []).length, 1,
-    'only Run detail renders the step-by-step process')
+    'the shared Run detail owns the only step-by-step process')
   assert.equal((rows.match(/<StepDisclosure/g) ?? []).length, 1,
     'the step row is instantiated in one place, inside PromptaFlowStepList')
-  const compact = rows.slice(
-    rows.indexOf('export function PromptaFlowLiveStepList'),
-    rows.indexOf('/**\n * A Run in a list'),
-  )
-  assert.doesNotMatch(compact, /StepDisclosure|getStepOutput|FoldedText/)
-  assert.match(
-    rows.slice(rows.indexOf('export function PromptaFlowRunGoalCard')),
-    /run\.live && steps\?\.length/,
-  )
+  assert.match(rows, /onBack \? <BackButton t=\{t\} onBack=\{onBack\} \/> : null/,
+    'only a detail opened from History needs a Back button')
 })
 
-/** Only live Runs add bounded progress reads to a panel poll. */
-test('the Host sends compact steps only for live Runs', async () => {
+/** The shared detail owns step reads, so the panel poll does not duplicate them. */
+test('the Host leaves complete step reads to Run detail', async () => {
   const host = await readFile(join(here, '..', 'src', 'index.ts'), 'utf8')
   const state = host.slice(host.indexOf("@Remote('getPanelState')"), host.indexOf("@Remote('getRunDetail')"))
-  assert.match(state, /liveSteps: Record<string, StepSummary\[\]>/)
-  assert.match(state, /liveStepProgress\(scope, sessionId, runs\)/)
-  assert.match(state, /runs\.filter\(run => isLive\(run\.status\)\)\.slice\(0, LIVE_STEP_LIMIT\)/)
-  assert.match(state, /node_id: step\.node_id, label: step\.label, status: step\.status/)
-  assert.doesNotMatch(state, /has_output|resolution|reconciliation/)
+  assert.doesNotMatch(state, /liveSteps|liveStepProgress|LIVE_STEP_LIMIT/)
+  assert.doesNotMatch(host, /private async liveStepProgress/)
   assert.match(host.slice(host.indexOf("@Remote('getRunDetail')")), /get_run_steps/,
-    'Run detail still reads the complete process on demand')
+    'the shared Run detail reads the complete process on demand')
 })
 
 /** The Goal page still chooses every live Run, or the latest settled one. */
@@ -556,17 +544,17 @@ test('the Goal page keeps the shared live-or-latest rule', async () => {
   const until = panel.indexOf("tab === 'history' ? (")
   assert.match(panel.slice(from, until), /goal\.map\(/, 'the Goal page draws goalRuns')
   assert.match(panel, /const goal = goalRuns\(/)
-  assert.match(panel, /setLiveSteps/)
+  assert.doesNotMatch(panel, /liveSteps|setLiveSteps/)
 })
 
 /**
- * The compact Goal card still shows the execution result without a detail click.
+ * The shared detail shows the execution result without another click.
  */
 test('a Goal shows its output and its answer without being asked', () => {
   const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
   assert.ok(rows.includes('function RunResult'))
-  // On both pages a Run is read on, and drawn from one place.
-  assert.equal((rows.match(/<RunResult/g) ?? []).length, 2)
+  assert.equal((rows.match(/<RunResult/g) ?? []).length, 1,
+    'Goal and History must not carry separate result renderers')
   assert.ok(rows.includes('resultOutcome'))
 })
 
@@ -579,14 +567,12 @@ test('a Goal shows its output and its answer without being asked', () => {
  */
 test('the Goal heading is not a link, and the Run is still actionable', () => {
   const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
-  const card = rows.slice(rows.indexOf('export function PromptaFlowRunGoalCard'))
-  const body = card.slice(0, card.indexOf('\n}'))
-  assert.equal(/onOpen/.test(body), false, 'the Goal card no longer navigates')
-  assert.match(body, /<div className=\{styles\.goalHead\}/, 'the heading is a heading')
-  assert.ok(body.includes('<RunControls'), 'a running Goal can still be stopped')
-  // One definition of what may be done to a Run, on both pages that read one.
+  const detail = rows.slice(rows.indexOf('export function PromptaFlowRunDetail'))
+  assert.match(detail, /<div className=\{styles\.goalHead\}/, 'the heading is a heading')
+  assert.ok(detail.includes('<RunControls'), 'a running Goal can still be stopped or resumed')
+  // One definition and one rendering of every advertised Run action.
   assert.ok(rows.includes('function RunControls'))
-  assert.equal((rows.match(/<RunControls/g) ?? []).length, 2)
+  assert.equal((rows.match(/<RunControls/g) ?? []).length, 1)
   assert.equal((rows.match(/commandRevision\(/g) ?? []).length, 2,
     'the advertised revision is read in one place, inside RunControls')
   const panel = sources[names.indexOf('PromptaFlowPanel.tsx')]
@@ -598,15 +584,13 @@ test('the Goal heading is not a link, and the Run is still actionable', () => {
 })
 
 /**
- * The Goal summary names the Workflow and shows the request and start time.
+ * The shared Run detail names the Workflow and shows the request.
  */
-test('the Goal summary shows only the workflow, request, time and result', () => {
+test('the shared Run detail shows the workflow, request and result', () => {
   const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
-  const card = rows.slice(rows.indexOf('export function PromptaFlowRunGoalCard'))
-  const head = card.slice(card.indexOf('goalHead'), card.indexOf('</div>'))
+  const detail = rows.slice(rows.indexOf('export function PromptaFlowRunDetail'))
+  const head = detail.slice(detail.indexOf('goalHead'), detail.indexOf('</div>'))
   assert.match(head, /run\.workflowName/)
-  assert.match(head, /dateTime=\{run\.createdAt\}/)
-  assert.match(head, /formatRunTime\(run\.createdAt\)/)
   assert.match(head, /<FoldedText t=\{t\} text=\{run\.prompt\}/)
   assert.equal(/run\.goal/.test(head), false, 'the redundant Goal label is omitted')
   assert.equal(/run\.workflow(?:\W|$)/.test(head), false, 'the Workflow id is omitted')
@@ -759,10 +743,17 @@ test('closing the panel also hides its badge without stopping PromptaFlow', () =
   assert.doesNotMatch(panel, /IconPanelLeftOutline16/)
 })
 
-test('the Agents page adds the shared Agent CLI prompt to the Harness draft', () => {
+test('the Workflows and Agents page actions prepare prompts in the Harness draft', () => {
   const panel = sources[names.indexOf('PromptaFlowPanel.tsx')]
   const client = sources[names.indexOf('index.tsx')]
   const locales = sources[names.indexOf('locales.ts')]
+  assert.match(panel, /t\('generateWorkflowAction'\)/)
+  assert.match(panel, /onClick=\{\(\) => \{ if \(sessionId\) onGenerateWorkflow\(sessionId\) \}\}/)
+  assert.match(client, /onGenerateWorkflow=\{sessionId => writeDraft\(ctx, sessionId, t\('generateWorkflowPrompt'\)\)\}/)
+  assert.match(locales, /generateWorkflowAction: 'Generate workflow'/)
+  assert.match(locales, /generateWorkflowAction: '生成工作流'/)
+  assert.match(locales, /generateWorkflowPrompt: 'Generate a PromptaFlow workflow: '/)
+  assert.match(locales, /generateWorkflowPrompt: '生成一个 PromptaFlow 工作流：'/)
   assert.match(panel, /t\('addAgentCli'\)/)
   assert.match(panel, /onClick=\{\(\) => \{ if \(sessionId\) onAddAgent\(sessionId\) \}\}/)
   assert.match(client, /onAddAgent=\{sessionId => writeDraft\(ctx, sessionId, t\('promptAddAgent'\)\)\}/)
@@ -770,8 +761,11 @@ test('the Agents page adds the shared Agent CLI prompt to the Harness draft', ()
   assert.match(locales, /addAgentCli: '添加 Agent CLI'/)
   assert.match(locales, /promptAddAgent: 'Add an Agent CLI to PromptaFlow: '/)
   assert.match(locales, /promptAddAgent: '给PromptaFlow添加Agent cli：'/)
-  const binding = client.slice(client.indexOf('onAddAgent='), client.indexOf('onEditWorkflow='))
+  const binding = client.slice(client.indexOf('onGenerateWorkflow='), client.indexOf('onEditWorkflow='))
   assert.doesNotMatch(binding, /conversation\.send|\.send\(/)
+  const newGoalClassUses = panel.match(/className=\{styles\.flowNewGoal\}/g) ?? []
+  assert.equal(newGoalClassUses.length, 3, 'New goal and both list actions share one button style')
+  assert.doesNotMatch(panel, /styles\.addAgent|styles\.agentActions/)
 })
 
 /**
@@ -898,8 +892,7 @@ test('a result is an outcome and a door, not an artifact id', () => {
   assert.match(body, /styles\.outcome/)
   // Artifacts as a row of their own, drawn once per Artifact.
   assert.match(body, /<ArtifactRow/)
-  // While it is still going, the status is the result so far; the step trace
-  // stays out of the compact Goal card.
+  // While it is still going, the status is the result so far.
   assert.doesNotMatch(body, /if \(run\.live\) return null/)
   // The panel still draws nothing of an Artifact: it hands over a link, and
   // the browser opens what the Host sends back.

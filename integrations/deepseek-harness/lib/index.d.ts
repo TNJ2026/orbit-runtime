@@ -423,10 +423,7 @@ declare class PromptaFlowRemoteService extends TypertRemoteService {
     agents: readonly AgentSummary[];
     retiredWorkflowNames: Record<string, string>;
     authoring: readonly AuthoringSummary[];
-    liveSteps: Record<string, StepSummary[]>;
   }>;
-  /** Names and statuses for Runs still moving; logs stay in Run detail. */
-  private liveStepProgress;
   /**
    * Names for the Workflows a Run ran and the catalog no longer offers.
    *

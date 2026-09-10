@@ -5,17 +5,50 @@ import socket
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import Mock, call, patch
 
 from promptaflow.web.builtin_handlers import builtin_handlers
 from promptaflow.workflow.langgraph_runtime.compiler import (
     LangGraphExecutionContext, LangGraphUnknownExternalResult,
 )
 from promptaflow.workflow.langgraph_runtime.execution_worker import (
+    ExecutionWorkerController, ExecutionWorkerPool,
     start_execution_worker, start_execution_worker_pool,
 )
 
 
 class ExecutionWorkerTests(unittest.TestCase):
+    def test_controller_join_and_terminate_share_one_deadline(self) -> None:
+        process = Mock()
+        process.is_alive.side_effect = [True, True, True, False]
+        worker = ExecutionWorkerController(process, ("127.0.0.1", 1), b"key", 7)
+        worker.request = Mock(return_value={"ok": True})
+
+        with patch(
+            "promptaflow.workflow.langgraph_runtime.execution_worker.time.monotonic",
+            side_effect=[10.0, 12.0, 14.0],
+        ):
+            self.assertTrue(worker.stop(timeout=5.0))
+
+        self.assertEqual([call(timeout=3.0), call(timeout=1.0)], process.join.call_args_list)
+        process.terminate.assert_called_once_with()
+
+    def test_pool_stops_every_worker_with_the_remaining_budget(self) -> None:
+        first = Mock()
+        first.stop.return_value = False
+        second = Mock()
+        second.stop.return_value = True
+        pool = ExecutionWorkerPool((first, second))
+
+        with patch(
+            "promptaflow.workflow.langgraph_runtime.execution_worker.time.monotonic",
+            side_effect=[20.0, 21.0, 24.0],
+        ):
+            self.assertFalse(pool.stop(timeout=5.0))
+
+        first.stop.assert_called_once_with(4.0)
+        second.stop.assert_called_once_with(1.0)
+
     def test_pool_distributes_distinct_attempts_across_workers(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             registry, pool = start_execution_worker_pool(
