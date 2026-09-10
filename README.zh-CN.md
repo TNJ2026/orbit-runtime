@@ -38,6 +38,23 @@ Agent App / 浏览器 / API
            └── LangGraph 状态、运行记录与 Artifact
 ```
 
+## 从 Orbit 升级
+
+本项目原名 Orbit,这次改名是彻底切断:Orbit 安装留下的任何东西都不会被读取、转换或迁移。
+
+- 状态目录是 `~/.promptaflow`。已有的 `~/.orbit` 永远不会被打开——其中的项目、Hub
+  注册表、工作区和工作流库都不会带过来,首次运行看起来就是一次全新安装。
+- 项目内状态在 `<project>/.promptaflow`。已有的 `<project>/.orbit` 原样留着,包括
+  其中的 worktree。
+- 发行名是 `promptaflow`,命令是 `promptaflow`(简写 `paf`),MCP server 名为
+  `promptaflow`——因此所有工具的全限定名从 `mcp__orbit__*` 变为 `mcp__promptaflow__*`,
+  另有两个卡片工具改名为 `open_promptaflow_dashboard` 和 `open_promptaflow_goals`。
+  请重新连接每一个 Agent App 并重装插件;Orbit 时期缓存的工具列表解析不到。
+- PyPI 上的 `orbit-runtime` 不再更新。安装本项目前请先
+  `uv tool uninstall orbit-runtime`。
+
+工作区通过在各项目里重新跑一次 goal 来重新注册。旧目录留着或删掉都随你,这边不会去读它们。
+
 ## 安装
 
 PromptaFlow 需要 Python 3.10 或更高版本，以及
