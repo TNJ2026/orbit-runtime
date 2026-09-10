@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { IconChevronDownOutline14, IconCloseOutline16, IconRefreshOutline16, IconShareOutline16, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
 import { authoringProgress, isProgressMarker, panelError, type PanelError } from '@promptaflow/integration-core'
-import type { AgentSummary, AuthoringOutputChunk, AuthoringOutputPage, AuthoringSummary, RunDto, StepSummary, WorkflowSummary } from '@promptaflow/integration-core'
+import type { AgentSummary, AuthoringOutputChunk, AuthoringOutputPage, AuthoringSummary, RunDto, WorkflowSummary } from '@promptaflow/integration-core'
 import styles from './PromptaFlowPanel.module.css'
 import {
   DEFAULT_PANEL_LAYOUT, PANEL_STORAGE_KEY, dragPanel, placePanel, readLayout,
@@ -271,8 +271,6 @@ export function PromptaFlowPanel({
   const [workflows, setWorkflows] = useState<readonly WorkflowSummary[]>([])
   const [agents, setAgents] = useState<readonly AgentSummary[]>([])
   const [authoring, setAuthoring] = useState<readonly AuthoringSummary[]>([])
-  /** Steps of the Runs still moving, so a list line can say where each one is. */
-  const [steps, setSteps] = useState<Record<string, StepSummary[]>>({})
   // The Runtime's own four: what is running, what could, what did, and who by.
   const [tab, setTab] = useState<'goal' | 'workflows' | 'history' | 'agents'>('goal')
   // One Run at a time, filling the panel. Selection is cleared by changing page
@@ -345,7 +343,6 @@ export function PromptaFlowPanel({
           workflows: readonly WorkflowSummary[]; agents: readonly AgentSummary[]
           retiredWorkflowNames: Record<string, string>
           authoring: readonly AuthoringSummary[]
-          steps: Record<string, StepSummary[]>
         }>(
           // A folded resident badge may observe an existing Runtime, but only
           // an explicit open — `/promptaflow` or the badge — may start a new one.
@@ -365,19 +362,6 @@ export function PromptaFlowPanel({
         const next = orderRows(state.runs.map(run => toRow(run, workflowNames.get(run.workflow_id))))
         setRows(next); setUiUrl(state.uiUrl); setError(null)
         setWorkflows(state.workflows ?? []); setAgents(state.agents ?? [])
-        // Held rather than merged into the rows: a Run whose steps this answer
-        // could not read keeps the list it had, instead of the Goal page losing
-        // its steps for one poll and getting them back on the next. A Run that
-        // has finished is dropped, so this does not grow by one entry per Run
-        // for the life of the panel — the Goal page draws only what moves.
-        setSteps(current => {
-          const held: Record<string, StepSummary[]> = {}
-          for (const row of goalRuns(next)) {
-            const kept = current[row.runId]
-            if (kept) held[row.runId] = kept
-          }
-          return { ...held, ...state.steps }
-        })
         const nextAuthoring = state.authoring ?? []
         const priorAuthoring = seenAuthoring.current
         const firstForSession = priorAuthoring?.sessionId !== sessionId
@@ -569,11 +553,7 @@ export function PromptaFlowPanel({
           goal.length ? goal.map(row => (
             <PromptaFlowRunGoalCard
               key={row.runId} call={hostCall} t={t} sessionId={sessionId}
-              run={row} steps={steps[row.runId]}
-              // A person ruling on a step changes the step list this page is
-              // drawn from, and the poll is up to two seconds away. Take the
-              // answer straight from the call that produced it.
-              onSettled={settled => setSteps(current => ({ ...current, [row.runId]: settled }))}
+              run={row}
             />
           )) : <p className={styles.empty}>{t('emptyGoal')}</p>
         ) : null}

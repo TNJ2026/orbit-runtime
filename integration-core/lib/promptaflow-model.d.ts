@@ -22,6 +22,8 @@ export interface PromptaFlowRunRow {
     readonly live: boolean;
     readonly revision: number;
     readonly artifactCount: number;
+    /** When execution began, as reported by the Runtime. */
+    readonly createdAt: string;
     readonly updatedAt: string;
     /** What it was asked to work on — the request behind the goal's label. */
     readonly prompt: string;

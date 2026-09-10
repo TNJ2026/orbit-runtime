@@ -135,7 +135,7 @@ or delete an independent PromptaFlow Runtime.
 
 | Component | Supported range |
 | --- | --- |
-| PromptaFlow Runtime | `>=0.4.0 <0.5.0` |
+| PromptaFlow Runtime | Any version implementing `promptaflow-harness/2` |
 | PromptaFlow integration protocol | `promptaflow-harness/2` |
 | Harness packages | `>=0.1.1-rc.2 <0.2.0` (alpha prereleases are not supported) |
 | React | `^18.2.0` |

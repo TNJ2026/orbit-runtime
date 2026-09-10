@@ -39,7 +39,7 @@ is not named `dsh` on `PATH`. To test the exact release artifact, set
 
 | Component | Supported range |
 | --- | --- |
-| PromptaFlow Runtime | `>=0.4.0 <0.5.0` |
+| PromptaFlow Runtime | Any version implementing `promptaflow-harness/2` |
 | PromptaFlow integration protocol | `promptaflow-harness/2` |
 | Harness packages | `>=0.1.2-rc.1 <0.2.0` (alpha prereleases are not supported) |
 | Verified Harness launcher | `0.1.2-rc.1` |

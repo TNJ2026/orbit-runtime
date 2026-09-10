@@ -55,6 +55,10 @@ test('a Run uses the catalog name and falls back to its workflow id', () => {
   assert.equal(toRow(run({ workflow_id: 'review' })).workflowName, 'review')
 })
 
+test('a Run keeps the time execution began', () => {
+  assert.equal(toRow(run()).createdAt, '2026-01-01T00:00:00Z')
+})
+
 test('an unresolved outcome is amber, not red', () => {
   // The Runtime deliberately left it open; drawing it as a failure would answer
   // a question nobody has ruled on.

@@ -781,39 +781,6 @@ var PromptaFlowGateway = class {
 	}
 };
 //#endregion
-//#region ../../integration-core/src/run-progress.ts
-/** Run statuses there is no coming back from. */
-const TERMINAL$1 = /* @__PURE__ */ new Set([
-	"completed",
-	"failed",
-	"cancelled",
-	"unknown"
-]);
-/** Whether a Run could still do something. */
-function isLive(status) {
-	return !TERMINAL$1.has(status);
-}
-/**
-* The Runs the Goal page shows: everything still moving, or the one that
-* moved last when nothing is.
-*
-* A Goal reaching its end is the moment its result matters most, and dropping
-* it from the page right then answered "what happened" with an empty page —
-* the reader watched four steps go green and was left looking at "nothing is
-* running here". So a finished Goal stays, with its steps and its outcome,
-* until the next one starts and takes the page.
-*
-* Shared because the Host reads steps for exactly the Runs this page draws. A
-* Host that kept its own idea of that would go on serving a settled Run's last
-* *running* step forever, since the step read stops with the Run.
-*/
-function goalRuns(rows) {
-	const live = rows.filter((row) => row.live);
-	if (live.length) return live;
-	const latest = rows.reduce((best, row) => best === void 0 || row.updatedAt > best.updatedAt ? row : best, void 0);
-	return latest === void 0 ? [] : [latest];
-}
-//#endregion
 //#region ../../integration-core/src/session-bridge.ts
 function sessionCanBridge(header) {
 	return Boolean(header.cwd) && (header.delegationDepth ?? 0) === 0;
@@ -1254,16 +1221,6 @@ function artifactImageInput(content) {
 const AUTHORING_TURN_MS = 24e4;
 /** How long a settled job stays on the panel before it stops being news. */
 const AUTHORING_LINGER_MS = 6e4;
-/**
-* How many Runs the panel poll will read steps for.
-*
-* Steps are one extra Runtime read per Run, on a two-second poll, so this is
-* not free the way the Run list is — the list is one read whatever its length.
-* A Workspace with more than a handful of Runs moving at once has a different
-* problem than a missing progress line, and the ones past the cap are the ones
-* furthest down a list ordered by recency.
-*/
-const LIVE_STEP_LIMIT = 6;
 var PromptaFlowRemoteService = (() => {
 	let _classSuper = TypertRemoteService;
 	let _instanceExtraInitializers = [];
@@ -2252,15 +2209,13 @@ var PromptaFlowRemoteService = (() => {
 				const agents = (await this.gateway.call(scope, sessionId, "list_agents", {})).agents;
 				const workflows = this.catalog.list(scope.canonicalPath);
 				const retired = await this.retiredWorkflowNames(scope, sessionId, result.runs, workflows, force);
-				const runs = result.runs.filter((run) => !retired.missing.has(run.workflow_id));
 				return {
-					runs,
+					runs: result.runs.filter((run) => !retired.missing.has(run.workflow_id)),
 					uiUrl: await this.gateway.uiUrl(scope),
 					workflows,
 					agents,
 					retiredWorkflowNames: retired.names,
-					authoring: authoring.jobs,
-					steps: await this.liveSteps(scope, sessionId, runs)
+					authoring: authoring.jobs
 				};
 			} finally {
 				await release();
@@ -2312,44 +2267,6 @@ var PromptaFlowRemoteService = (() => {
 		}
 		retiredKey(scope, workflowId) {
 			return `${scope.canonicalPath}\n${workflowId}`;
-		}
-		/**
-		* The steps of the Runs that are still moving, so the Goal page can draw them.
-		*
-		* Only the live ones, and only what that page draws: the name and status of
-		* each step, whether it has output to offer, and whether it is waiting on a
-		* person. The rest of a StepSummary — the prompt it was authored with, its
-		* handler, its timestamps — is detail nobody reads here, and sending the
-		* whole thing on a two-second poll would put a page of JSON on the wire per
-		* Run to render a list of names.
-		*
-		* A Run whose steps cannot be read loses its progress line and keeps its
-		* row. The alternative is a panel that goes blank because one Run out of six
-		* answered badly, which trades the thing a reader came for against a detail
-		* they did not.
-		*/
-		async liveSteps(scope, sessionId, runs) {
-			const drawn = goalRuns(runs.map((run) => ({
-				live: isLive(run.status),
-				updatedAt: run.updated_at,
-				run
-			}))).slice(0, LIVE_STEP_LIMIT);
-			const read = await Promise.all(drawn.map(async ({ run }) => {
-				try {
-					const detail = await this.gateway.call(scope, sessionId, "get_run_steps", { run_id: run.run_id });
-					return [run.run_id, detail.steps.map((step) => ({
-						node_id: step.node_id,
-						label: step.label,
-						status: step.status,
-						has_output: step.has_output,
-						resolution: step.resolution,
-						reconciliation: step.reconciliation
-					}))];
-				} catch {
-					return null;
-				}
-			}));
-			return Object.fromEntries(read.filter((entry) => entry !== null));
 		}
 		/**
 		* The steps of one Run, for a panel row the reader opened.

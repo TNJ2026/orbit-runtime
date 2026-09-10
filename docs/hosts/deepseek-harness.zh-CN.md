@@ -122,7 +122,7 @@ dsh --profile web --dump-config
 
 | 组件 | 支持范围 |
 | --- | --- |
-| PromptaFlow Runtime | `>=0.4.0 <0.5.0` |
+| PromptaFlow Runtime | 实现 `promptaflow-harness/2` 协议的任意版本 |
 | PromptaFlow 集成协议 | `promptaflow-harness/2` |
 | Harness 包 | `>=0.1.1-rc.2 <0.2.0`（不支持 alpha 预发布版本） |
 | React | `^18.2.0` |

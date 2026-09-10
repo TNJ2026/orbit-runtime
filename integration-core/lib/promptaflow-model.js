@@ -79,6 +79,7 @@ export function toRow(run, workflowName) {
         live: isLive(run.status),
         revision: run.revision,
         artifactCount: run.artifact_count,
+        createdAt: run.created_at,
         updatedAt: run.updated_at,
         prompt: promptText(run.inputs),
         result: run.result,

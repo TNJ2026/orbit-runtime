@@ -227,26 +227,10 @@ export function PromptaFlowRunListRow(
   )
 }
 
-/**
- * A Run on the Goal page: what it is for, how far it is, and every step of it.
- *
- * The steps are not behind a click here. This page exists to answer what is
- * happening now, and a Run that is happening now has one thing worth reading —
- * which step it is on and what that step is saying. The list row this replaces
- * could only say that in a summary line, and the reader had to leave the page
- * to see the rest.
- *
- * The heading is a heading and not a link. There is nowhere left for it to
- * go: everything the detail page had — the steps, the output, the answer, the
- * buttons that cancel or resume — is on this card. A control that navigates to
- * a copy of what the reader is already looking at is a control that wastes the
- * one click they were willing to spend.
- */
+/** A compact account of the current (or most recently completed) Goal. */
 export function PromptaFlowRunGoalCard(
-  { call, t, sessionId, run, steps, onSettled }: {
+  { call, t, sessionId, run }: {
     call: HostCall; t: Translate; sessionId: string; run: RunRowData
-    steps?: readonly StepSummary[]
-    onSettled: (steps: StepSummary[]) => void
   },
 ) {
   return (
@@ -254,26 +238,25 @@ export function PromptaFlowRunGoalCard(
       <div className={styles.goalHead}>
         <StateDot state={dotState(run.status)} size={9} className={styles.listDot} />
         <span className={styles.listMain}>
-          <span className={styles.goalTitle}>{run.goal}</span>
-          {/* The request under the label put on it. Neither the Workflow's id
-              nor a second copy of the status: the id names a definition the
-              reader did not choose by name, and the status is already on every
-              step below. What is not anywhere else is what was asked for. */}
+          <span className={styles.goalTitle}>{run.workflowName}</span>
+          <time className={styles.goalTime} dateTime={run.createdAt}>
+            {formatRunTime(run.createdAt)}
+          </time>
           <FoldedText t={t} text={run.prompt} lines={PROMPT_LINES} />
         </span>
       </div>
       <RunControls call={call} t={t} sessionId={sessionId} run={run} />
-      {steps?.length ? (
-        <div className={styles.goalSteps}>
-          <PromptaFlowStepList
-            call={call} t={t} sessionId={sessionId} runId={run.runId}
-            steps={steps} live={run.live} onSettled={onSettled}
-          />
-        </div>
-      ) : null}
       <RunResult t={t} run={run} sessionId={sessionId} call={call} />
     </section>
   )
+}
+
+function formatRunTime(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium', timeStyle: 'short',
+  }).format(date)
 }
 
 /** Past this many lines a request stops being a heading and becomes a wall. */
@@ -476,13 +459,12 @@ function RunControls(
 }
 
 /**
- * What the Run produced, under the steps that produced it.
+ * What the Run has produced, without repeating how every step produced it.
  *
  * The reason somebody started a Goal is its answer, and until now the panel
  * was the one surface that never showed one — it could say a Run succeeded and
- * not what it succeeded at. Drawn only once there is something to draw: a
- * running Run has no answer yet, and an empty box promising one is worse than
- * no box.
+ * not what it succeeded at. While it is live, the translated status is the
+ * result so far; once settled, the answer and Artifacts join it.
  */
 /**
  * One Artifact: a quick look, and a copy of it on the filesystem.
@@ -556,9 +538,6 @@ function RunResult(
     t: Translate; run: RunRowData; sessionId: string; call: HostCall
   },
 ) {
-  // Nothing to say until it has stopped. A Run still going has no outcome, and
-  // an empty block promising one is worse than no block.
-  if (run.live) return null
   const failure = run.error ?? ''
   const { text: answer, artifacts } = failure
     ? { text: '', artifacts: [] as readonly string[] }

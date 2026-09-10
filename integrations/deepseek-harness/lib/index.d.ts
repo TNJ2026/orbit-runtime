@@ -423,7 +423,6 @@ declare class PromptaFlowRemoteService extends TypertRemoteService {
     agents: readonly AgentSummary[];
     retiredWorkflowNames: Record<string, string>;
     authoring: readonly AuthoringSummary[];
-    steps: Record<string, StepSummary[]>;
   }>;
   /**
    * Names for the Workflows a Run ran and the catalog no longer offers.
@@ -446,22 +445,6 @@ declare class PromptaFlowRemoteService extends TypertRemoteService {
    */
   private retiredWorkflowNames;
   private retiredKey;
-  /**
-   * The steps of the Runs that are still moving, so the Goal page can draw them.
-   *
-   * Only the live ones, and only what that page draws: the name and status of
-   * each step, whether it has output to offer, and whether it is waiting on a
-   * person. The rest of a StepSummary — the prompt it was authored with, its
-   * handler, its timestamps — is detail nobody reads here, and sending the
-   * whole thing on a two-second poll would put a page of JSON on the wire per
-   * Run to render a list of names.
-   *
-   * A Run whose steps cannot be read loses its progress line and keeps its
-   * row. The alternative is a panel that goes blank because one Run out of six
-   * answered badly, which trades the thing a reader came for against a detail
-   * they did not.
-   */
-  private liveSteps;
   /**
    * The steps of one Run, for a panel row the reader opened.
    *

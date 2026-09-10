@@ -1,6 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol'
-import { PromptaFlowGateway, PromptaFlowSessionBridge, WorkflowCatalog, advertisedAt, artifactFilename, commandTool, goalRuns, isLive, readableAsText, sessionCanBridge, type PromptaFlowCursorStore, type PromptaFlowRunCommand } from '@promptaflow/integration-core'
+import { PromptaFlowGateway, PromptaFlowSessionBridge, WorkflowCatalog, advertisedAt, artifactFilename, commandTool, readableAsText, sessionCanBridge, type PromptaFlowCursorStore, type PromptaFlowRunCommand } from '@promptaflow/integration-core'
 import type { AgentSummary, ArtifactContent, ArtifactSummary, AuthoringJob, AuthoringOutputPage, AuthoringSummary, EdgeSummary, ImportedArtifact, IntegrationDiagnostics, PromptaFlowCommandRequest, OutputPage, RunDto, RunGraph, RuntimeSummary, StepSummary, WorkflowNode, WorkflowSummary, WorkspaceRef } from '@promptaflow/integration-core'
 import { PromptaFlowToolBridge } from './promptaflow-tools.js'
 import type { Session, SessionStore } from '@deepseek-ai/dsh-session'
@@ -49,17 +49,6 @@ interface PromptaFlowWebServer {
 
 /** How long a settled job stays on the panel before it stops being news. */
 const AUTHORING_LINGER_MS = 60_000
-
-/**
- * How many Runs the panel poll will read steps for.
- *
- * Steps are one extra Runtime read per Run, on a two-second poll, so this is
- * not free the way the Run list is — the list is one read whatever its length.
- * A Workspace with more than a handful of Runs moving at once has a different
- * problem than a missing progress line, and the ones past the cap are the ones
- * furthest down a list ordered by recency.
- */
-const LIVE_STEP_LIMIT = 6
 
 interface TrackedAuthoring {
   /** The Session that started it; `get_authoring_job` answers only to it. */
@@ -726,7 +715,6 @@ export class PromptaFlowRemoteService extends TypertRemoteService {
     workflows: readonly WorkflowSummary[]; agents: readonly AgentSummary[]
     retiredWorkflowNames: Record<string, string>
     authoring: readonly AuthoringSummary[]
-    steps: Record<string, StepSummary[]>
   }> {
     signal.throwIfAborted()
     const { scope, live } = await this.sessionScope(sessionId, true)
@@ -779,7 +767,6 @@ export class PromptaFlowRemoteService extends TypertRemoteService {
         agents,
         retiredWorkflowNames: retired.names,
         authoring: authoring.jobs,
-        steps: await this.liveSteps(scope, sessionId, runs),
       }
     } finally { await release() }
   }
@@ -855,45 +842,6 @@ export class PromptaFlowRemoteService extends TypertRemoteService {
 
   private retiredKey(scope: WorkspaceRef, workflowId: string): string {
     return `${scope.canonicalPath}\n${workflowId}`
-  }
-
-  /**
-   * The steps of the Runs that are still moving, so the Goal page can draw them.
-   *
-   * Only the live ones, and only what that page draws: the name and status of
-   * each step, whether it has output to offer, and whether it is waiting on a
-   * person. The rest of a StepSummary — the prompt it was authored with, its
-   * handler, its timestamps — is detail nobody reads here, and sending the
-   * whole thing on a two-second poll would put a page of JSON on the wire per
-   * Run to render a list of names.
-   *
-   * A Run whose steps cannot be read loses its progress line and keeps its
-   * row. The alternative is a panel that goes blank because one Run out of six
-   * answered badly, which trades the thing a reader came for against a detail
-   * they did not.
-   */
-  private async liveSteps(
-    scope: WorkspaceRef, sessionId: string, runs: readonly RunDto[],
-  ): Promise<Record<string, StepSummary[]>> {
-    // Exactly the Runs the Goal page draws, by the same rule it draws them: a
-    // Goal that has just finished is still on that page, and its steps have to
-    // be re-read once more or it keeps the last step it was seen *running*.
-    const drawn = goalRuns(
-      runs.map(run => ({ live: isLive(run.status), updatedAt: run.updated_at, run })),
-    ).slice(0, LIVE_STEP_LIMIT)
-    const read = await Promise.all(drawn.map(async ({ run }) => {
-      try {
-        const detail = await this.gateway.call(scope, sessionId, 'get_run_steps', {
-          run_id: run.run_id,
-        }) as { steps: StepSummary[] }
-        return [run.run_id, detail.steps.map(step => ({
-          node_id: step.node_id, label: step.label, status: step.status,
-          has_output: step.has_output, resolution: step.resolution,
-          reconciliation: step.reconciliation,
-        }))] as const
-      } catch { return null }
-    }))
-    return Object.fromEntries(read.filter(entry => entry !== null))
   }
 
   /**

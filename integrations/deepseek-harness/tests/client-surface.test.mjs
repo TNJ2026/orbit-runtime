@@ -302,8 +302,8 @@ test('a Goal keeps the name of a Workflow that was deleted', async () => {
   // those Runs until the Host restarts.
   assert.match(resolver, /if \(force\)[^\n]*retiredNames\.delete/,
     'a refresh re-asks the negatives too')
-  assert.match(host, /liveSteps\(scope, sessionId, runs\)/,
-    'step polling must use the same visible Run set as the panel')
+  assert.doesNotMatch(host, /liveSteps\(scope, sessionId, runs\)/,
+    'the compact Goal page must not poll every Run step')
   // Merged under the catalog, never over it: an offered Workflow owns its name.
   const merge = code.slice(
     code.indexOf('const workflowNames = new Map'), code.indexOf('const next = orderRows'),
@@ -481,14 +481,8 @@ test('the catalog marks what a goal cannot be started from', () => {
   assert.doesNotMatch(detail, /styles\.facts/)
 })
 
-/**
- * The Goal page is the whole Run, not a summary of it.
- *
- * It exists to answer what is happening now, and the answer is which step the
- * Run is on and what that step is saying. A progress line said the first half
- * and made the reader leave the page for the second.
- */
-test('a running Goal draws its steps on the Goal page', () => {
+/** The Goal page is a summary; the History detail remains the process view. */
+test('a running Goal does not draw its steps on the Goal page', () => {
   const panel = sources[names.indexOf('PromptaFlowPanel.tsx')]
   const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
   const from = panel.indexOf("tab === 'goal' ? (")
@@ -496,77 +490,43 @@ test('a running Goal draws its steps on the Goal page', () => {
   assert.ok(from > 0 && until > from, 'the Goal and History blocks were not found')
   const goal = panel.slice(from, until)
   assert.ok(goal.includes('PromptaFlowRunGoalCard'), 'the Goal page draws the Run as a card')
-  // Drawn from the polled steps, not from nothing: the card renders its
-  // heading either way, so a card handed no steps loses the ladder in silence.
-  assert.match(goal, /steps=\{steps\[/, 'the Goal card is fed the polled steps')
+  assert.doesNotMatch(goal, /steps=\{steps\[/, 'the Goal card is not fed a step trace')
   assert.equal(goal.includes('PromptaFlowRunListRow'), false,
-    'the Goal page is past the summary row it replaced')
-  // The History page keeps the row: a finished Run's steps are read by opening
-  // it, and a page of settled ladders is not a list any more.
+    'the Goal page uses its compact card rather than a history row')
   assert.ok(panel.slice(until).includes('PromptaFlowRunListRow'))
   assert.ok(rows.includes('export function PromptaFlowStepList'))
-  // Both readers of a Run go through it, so neither can drift from the other.
-  assert.equal((rows.match(/<PromptaFlowStepList/g) ?? []).length, 2)
+  assert.equal((rows.match(/<PromptaFlowStepList/g) ?? []).length, 1,
+    'only Run detail renders the step-by-step process')
   assert.equal((rows.match(/<StepDisclosure/g) ?? []).length, 1,
     'the step row is instantiated in one place, inside PromptaFlowStepList')
 })
 
-/** The Goal page needs `has_output` and the reconciliation fields, or its steps
- *  cannot offer output or the decision a person owes them. */
-test('the Host sends the Goal page what its steps are drawn from', async () => {
+/** A compact Goal poll does not spend one extra Runtime request per Run. */
+test('the Host does not send a step trace with panel state', async () => {
   const host = await readFile(join(here, '..', 'src', 'index.ts'), 'utf8')
-  const projection = host.slice(host.indexOf('private async liveSteps'))
-  const body = projection.slice(0, projection.indexOf('\n  }'))
-  for (const field of ['node_id', 'label', 'status', 'has_output', 'resolution', 'reconciliation']) {
-    assert.ok(body.includes(field), `liveSteps must carry ${field}`)
-  }
-  // Still a projection, not the whole StepSummary: this rides a two-second poll.
-  for (const heavy of ['prompt', 'handler', 'first_at']) {
-    assert.equal(body.includes(heavy), false, `liveSteps must not carry ${heavy}`)
-  }
-  // Read for the Runs the Goal page draws, by that page's own rule. Reading
-  // only the live ones leaves a Goal that has just finished showing the last
-  // step it was seen running, because the read stops when the Run does.
-  assert.ok(body.includes('goalRuns('), 'the Host reads steps by the Goal page rule')
+  const state = host.slice(host.indexOf("@Remote('getPanelState')"), host.indexOf("@Remote('getRunDetail')"))
+  assert.doesNotMatch(state, /liveSteps|get_run_steps|steps:/)
+  assert.match(host.slice(host.indexOf("@Remote('getRunDetail')")), /get_run_steps/,
+    'Run detail still reads the complete process on demand')
 })
 
-/** One rule for which Runs the Goal page is about, or the Host serves steps for
- *  a set the page does not draw — and the page draws Runs with no steps. */
-test('the Goal page and the Host agree on which Runs it is about', async () => {
-  const host = await readFile(join(here, '..', 'src', 'index.ts'), 'utf8')
+/** The Goal page still chooses every live Run, or the latest settled one. */
+test('the Goal page keeps the shared live-or-latest rule', async () => {
   const shared = await readFile(join(coreDir, 'run-progress.ts'), 'utf8')
   assert.ok(shared.includes('export function goalRuns'))
-  // Reached through the shared package now, but still the same function: two
-  // copies of "which Runs is this Goal page about" is the disagreement this
-  // test exists to prevent.
-  assert.match(host, /goalRuns[^\n]*|[^\n]*goalRuns/)
-  assert.match(host, /from '@promptaflow\/integration-core'/)
   const panel = sources[names.indexOf('PromptaFlowPanel.tsx')]
   const from = panel.indexOf("tab === 'goal' ? (")
   const until = panel.indexOf("tab === 'history' ? (")
   assert.match(panel.slice(from, until), /goal\.map\(/, 'the Goal page draws goalRuns')
   assert.match(panel, /const goal = goalRuns\(/)
-  // The steps the panel holds are pruned by the same rule, so the Run on the
-  // page keeps its ladder and every other Run stops being remembered.
-  assert.match(panel, /for \(const row of goalRuns\(next\)\)/)
+  assert.doesNotMatch(panel, /setSteps|state\.steps/)
 })
 
 /**
- * Reading a Goal takes no clicks: the steps, what each printed, and the answer.
- *
- * A step's output used to be behind a chevron, which made "what is it doing" a
- * four-click question, and the Run's result was on no page at all — the panel
- * could say a Run succeeded and never say at what.
+ * The compact Goal card still shows the execution result without a detail click.
  */
 test('a Goal shows its output and its answer without being asked', () => {
   const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
-  // Open because the step has something to say. Seeded from `hasOutput` on
-  // every render rather than into useState, because that arrives a poll later
-  // than the step does.
-  assert.match(rows, /const open = override \?\? expandable/)
-  // Followed only while the step is the one working: an open ladder is one
-  // poll, not one per step per poll.
-  assert.match(rows, /const working = live && step\.status === 'running'/)
   assert.ok(rows.includes('function RunResult'))
   // On both pages a Run is read on, and drawn from one place.
   assert.equal((rows.match(/<RunResult/g) ?? []).length, 2)
@@ -601,21 +561,19 @@ test('the Goal heading is not a link, and the Run is still actionable', () => {
 })
 
 /**
- * The Goal heading names the work and shows what was asked for.
- *
- * It used to be the goal, the Workflow's id and the status. The id names a
- * definition the reader never chose by name, and the status is already on
- * every step below it — while the request itself, which is the one thing on
- * that card nothing else carries, was on no page at all.
+ * The Goal summary names the Workflow and shows the request and start time.
  */
-test('the Goal heading is the goal and the request, not the id and the status', () => {
+test('the Goal summary shows only the workflow, request, time and result', () => {
   const rows = sources[names.indexOf('PromptaFlowRunRow.tsx')]
   const card = rows.slice(rows.indexOf('export function PromptaFlowRunGoalCard'))
   const head = card.slice(card.indexOf('goalHead'), card.indexOf('</div>'))
-  assert.match(head, /run\.goal/)
+  assert.match(head, /run\.workflowName/)
+  assert.match(head, /dateTime=\{run\.createdAt\}/)
+  assert.match(head, /formatRunTime\(run\.createdAt\)/)
   assert.match(head, /<FoldedText t=\{t\} text=\{run\.prompt\}/)
-  assert.equal(/run\.workflow/.test(head), false, 'the Workflow id left the heading')
-  assert.equal(/styles\.status/.test(head), false, 'the status is on the steps, not twice')
+  assert.equal(/run\.goal/.test(head), false, 'the redundant Goal label is omitted')
+  assert.equal(/run\.workflow(?:\W|$)/.test(head), false, 'the Workflow id is omitted')
+  assert.equal(/styles\.status/.test(head), false, 'the raw status is omitted')
   // Folded by layout, not by counting characters: the same paste is two lines
   // wide and six lines narrow, and only the box knows which.
   assert.match(rows, /const PROMPT_LINES = 5/)
@@ -903,8 +861,9 @@ test('a result is an outcome and a door, not an artifact id', () => {
   assert.match(body, /styles\.outcome/)
   // Artifacts as a row of their own, drawn once per Artifact.
   assert.match(body, /<ArtifactRow/)
-  // And nothing at all while it is still going.
-  assert.match(body, /if \(run\.live\) return null/)
+  // While it is still going, the status is the result so far; the step trace
+  // stays out of the compact Goal card.
+  assert.doesNotMatch(body, /if \(run\.live\) return null/)
   // The panel still draws nothing of an Artifact: it hands over a link, and
   // the browser opens what the Host sends back.
   assert.equal(/getArtifactContent|listArtifacts/.test(rows), false)
