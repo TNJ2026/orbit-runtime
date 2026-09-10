@@ -45,7 +45,7 @@ panel's "Reopen the panel to start it" is not a sentence a background process
 can say.
 
 A second consumer is the thing that would prove the rest. Note that PromptaFlow
-already carries one route for other hosts — `promptaflow agent-app mcp-proxy`, a
+already carries one route for other hosts — `paf agent-app mcp-proxy`, a
 stdio adapter in Python — so a second *TypeScript* host is not automatically
 the next thing to build.
 

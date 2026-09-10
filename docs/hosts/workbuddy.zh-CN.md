@@ -40,7 +40,7 @@ Agent 应通过仓库的宿主索引找到本文，安装并启动 PromptaFlow�
 git clone https://github.com/TNJ2026/promptaflow.git /绝对路径/稳定目录/promptaflow
 uv tool install /绝对路径/稳定目录/promptaflow
 uv tool update-shell
-promptaflow --version
+paf --version
 ```
 
 如果 checkout 已存在，请先检查并保留本地修改。干净的 checkout 可用 `git pull --ff-only`
@@ -57,7 +57,7 @@ promptaflow --version
 然后检查发现结果：
 
 ```bash
-promptaflow runtimes --json
+paf runtimes --json
 ```
 
 打开 `http://127.0.0.1:8848/ui`，其中应列出目标 Workspace。请保留该 checkout，因为启动
@@ -90,7 +90,7 @@ Streamable HTTP（`accept: application/json, text/event-stream`），以协议
 `2025-11-25` 与 PromptaFlow 的 `2025-06-18` 协商并接受。它还会对该端点发起一个 GET
 以寻找服务端推流；返回的 `405` 是**答案**，不是故障。
 
-**不要在这里用 `promptaflow mcp`。** 它的 stdio 传输虽然是 WorkBuddy 自家文档描述的形状，
+**不要在这里用 `paf mcp`。** 它的 stdio 传输虽然是 WorkBuddy 自家文档描述的形状，
 但它启动的进程要的是 Hub 所管理的 Runtime 已经持有的项目数据库，会以
 `Runtime database is already owned` 退出，而不是共享。
 
@@ -156,7 +156,7 @@ WorkBuddy 从 MCP 服务器的初始化指令里收到这条规则：第一个�
 | 你看到的 | 它是什么 |
 | --- | --- |
 | 对 `/mcp` 发 GET 得到 `405` | 这是「有没有服务端推流」这个问题的**答案**，不是故障。 |
-| `Runtime database is already owned` | 用了 `promptaflow mcp`。把连接器指向 Hub 的 HTTP 端点。 |
+| `Runtime database is already owned` | 用了 `paf mcp`。把连接器指向 Hub 的 HTTP 端点。 |
 | 连接器报告没有工具 | Hub 没在跑。用 `./start-promptaflow.sh /absolute/path/to/project` 启动。 |
 
 ## 示例：生成专家的提示词

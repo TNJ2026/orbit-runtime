@@ -386,7 +386,7 @@ class GitWorkspaceProvider:
         was read. A grace period comfortably wider than that gap makes
         reclamation safe without a lock, and is the only version of this that
         works when `acquire()` and `sweep()` run in different processes (the
-        default `promptaflow serve` shape once `--execution-workers` is nonzero):
+        default `paf serve` shape once `--execution-workers` is nonzero):
         a lock only ever excludes callers in the same process.
         """
 

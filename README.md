@@ -94,7 +94,7 @@ App-specific instructions:
 git clone https://github.com/TNJ2026/promptaflow.git
 cd promptaflow
 uv sync --extra dev
-uv run promptaflow serve
+uv run paf serve
 ```
 
 The unified `serve` command reuses or starts the Hub, registers the current
@@ -238,18 +238,22 @@ completed is recovered through `reconcile_delegation`.
 
 ## CLI quick reference
 
+Installing `promptaflow` puts two names for the same command on your
+PATH: `promptaflow`, so that what you installed is what you can type, and
+`paf`, which is what everything below uses.
+
 ```bash
-promptaflow serve
-promptaflow serve --project-root /absolute/path/to/project
-promptaflow hub register /absolute/path/to/project --no-agent-project-access
-promptaflow --version
-promptaflow runtimes --json
-promptaflow mcp
-promptaflow mcp --project-root /absolute/path/to/project
-promptaflow run list
-promptaflow run inspect <run_id>
-promptaflow workflow validate <file> --catalog <catalog.json>
-promptaflow workflow publish <file> --catalog <catalog.json> --expected-version <n>
+paf serve
+paf serve --project-root /absolute/path/to/project
+paf hub register /absolute/path/to/project --no-agent-project-access
+paf --version
+paf runtimes --json
+paf mcp
+paf mcp --project-root /absolute/path/to/project
+paf run list
+paf run inspect <run_id>
+paf workflow validate <file> --catalog <catalog.json>
+paf workflow publish <file> --catalog <catalog.json> --expected-version <n>
 ```
 
 ## Development

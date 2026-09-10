@@ -1,7 +1,7 @@
 # UI prototypes
 
 This directory contains design references only. Nothing here is mounted by
-`promptaflow serve`, imported by the production package, or allowed to mutate the
+`paf serve`, imported by the production package, or allowed to mutate the
 Runtime.
 
 `runtime-ui.html` is the exact interactive mock introduced in commit

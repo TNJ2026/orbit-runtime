@@ -149,7 +149,7 @@ class TrustedCliAgentClient:
         )
         # Where a run's Agents are put to work. Without one they inherited the
         # Runtime's own working directory, which on a developer's machine is
-        # whatever repository they happened to start `promptaflow serve` in — and an
+        # whatever repository they happened to start `paf serve` in — and an
         # Agent asked to merge a pull request merged that repository.
         #
         # This is isolation, not confinement. Nothing stops a CLI from writing

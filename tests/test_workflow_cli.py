@@ -264,7 +264,7 @@ class WorkflowCliTests(unittest.TestCase):
 
         # An explicit --db is self-contained, in every command alike. A
         # sibling file only this command knew about is what made a Workflow
-        # published with `promptaflow workflow publish --db X` invisible in the UI
+        # published with `paf workflow publish --db X` invisible in the UI
         # served from the same X.
         self.assertEqual(
             self.db, create_app.call_args.kwargs["workflow_db_path"],
@@ -464,7 +464,7 @@ class WorkflowInventoryCliTests(unittest.TestCase):
 
         self.assertIn("goal readiness:", output)
         self.assertIn("workflow:legacy", output)
-        self.assertIn("promptaflow workflow inventory", output)
+        self.assertIn("paf workflow inventory", output)
 
     def test_a_readiness_survey_that_fails_does_not_stop_the_server(self) -> None:
         """A report is information; refusing to boot over it would be worse."""

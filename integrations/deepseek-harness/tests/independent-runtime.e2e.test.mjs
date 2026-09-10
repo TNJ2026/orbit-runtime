@@ -12,7 +12,7 @@ import { PromptaFlowGateway } from '../lib/gateway.js'
 const here = dirname(fileURLToPath(import.meta.url))
 const promptaflow = process.env.PROMPTAFLOW_BIN || resolve(
   here,
-  process.platform === 'win32' ? '../../../.venv/Scripts/promptaflow.exe' : '../../../.venv/bin/promptaflow',
+  process.platform === 'win32' ? '../../../.venv/Scripts/paf.exe' : '../../../.venv/bin/paf',
 )
 
 async function freePort() {
@@ -41,7 +41,7 @@ async function stop(child) {
 test('Harness reaches its workspace Runtime through the fixed Hub', { timeout: 30_000 }, async t => {
   const root = await mkdtemp(join(tmpdir(), 'promptaflow-independent-e2e-'))
   // Both roots, not just the discovery one. Acquiring a Workspace runs
-  // `promptaflow hub register`, which writes the machine-wide workspace registry —
+  // `paf hub register`, which writes the machine-wide workspace registry —
   // so without this every run of this test left its throwaway directory in the
   // developer's real one, and nothing ever took it out. Redirecting beats
   // deregistering in teardown: a run that dies half way leaves nothing behind

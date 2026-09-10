@@ -140,7 +140,7 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
                 recorded=4243,
                 ps_answers={
                     4242: "/usr/bin/postgres -D /var/lib/postgres",
-                    4243: "python -m promptaflow hub serve",
+                    4243: "python -m paf hub serve",
                 },
             )
 
@@ -159,9 +159,9 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
                 listed=[{"pid": 5001}, {"pid": 5002}],
                 recorded=5000,
                 ps_answers={
-                    5000: "python -m promptaflow hub serve --port 8848",
-                    5001: "python -m promptaflow serve --project-root /a",
-                    5002: "python -m promptaflow serve --project-root /b",
+                    5000: "python -m paf hub serve --port 8848",
+                    5001: "python -m paf serve --project-root /a",
+                    5002: "python -m paf serve --project-root /b",
                 },
             )
 
@@ -172,6 +172,35 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
 
             self.assertEqual(3, len(lines), lines)
             self.assertIn("PromptaFlow Hub", lines[0])
+
+    def test_the_console_script_form_is_recognised_too(self) -> None:
+        """A launcher and a person run `paf`; the Hub runs `-m promptaflow`.
+
+        Both are this program. Matching only the module form would leave a Hub
+        started by `start-promptaflow.sh` running, holding 8848, while the
+        restart reported there was nothing to stop.
+        """
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            environment = self.environment(
+                root,
+                listed=[{"pid": 6101}],
+                recorded=6100,
+                ps_answers={
+                    6100: "/x/.venv/bin/paf hub serve",
+                    6101: "/x/.venv/bin/paf serve --project-root /a",
+                },
+            )
+
+            lines = [
+                line for line in self.run_dry(environment, root).stdout.splitlines()
+                if line.startswith("Would stop")
+            ]
+
+            self.assertEqual(2, len(lines), lines)
+            self.assertIn("PromptaFlow Hub", lines[0])
+            self.assertIn("PromptaFlow Runtime", lines[1])
 
     def test_a_pid_reused_during_the_wait_is_not_killed(self) -> None:
         """The gap between the check and the signal is up to 45 seconds long.
@@ -191,7 +220,7 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
             root = Path(temporary)
             environment = self.environment(
                 root, listed=[], recorded=bystander.pid,
-                ps_answers={bystander.pid: "python -m promptaflow hub serve"},
+                ps_answers={bystander.pid: "python -m paf hub serve"},
             )
             # One `ps` call discovers it; every later call sees a stranger.
             self.write_ps_table(
@@ -229,8 +258,8 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
             environment = self.environment(
                 root, listed=[{"pid": 8001}], recorded=8000,
                 ps_answers={
-                    8000: "python -m promptaflow hub serve",
-                    8001: "python -m promptaflow serve --project-root /a",
+                    8000: "python -m paf hub serve",
+                    8001: "python -m paf serve --project-root /a",
                 },
             )
             # Both exit while the run is still working through them.
@@ -250,7 +279,7 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
             root = Path(temporary)
             environment = self.environment(
                 root, listed=[], recorded=7002,
-                ps_answers={7002: "python -m promptaflow hub serve"},
+                ps_answers={7002: "python -m paf hub serve"},
             )
             # Gone after discovery: `ps` answers nothing for it.
             self.write_ps_table(root / "ps-after.txt", {})
@@ -273,8 +302,8 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
             environment = self.environment(
                 root, listed=[{"pid": 6001}], recorded=6000,
                 ps_answers={
-                    6000: "python -m promptaflow hub serve",
-                    6001: "python -m promptaflow serve --project-root /a",
+                    6000: "python -m paf hub serve",
+                    6001: "python -m paf serve --project-root /a",
                 },
             )
             # One line, no spaces: what `json.dumps` gives by default.
@@ -292,7 +321,7 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
             root = Path(temporary)
             environment = self.environment(
                 root, listed=[], recorded=9000,
-                ps_answers={9000: "python -m promptaflow hub serve"},
+                ps_answers={9000: "python -m paf hub serve"},
             )
             self.write_ps_table(root / "ps-after.txt", {})
             environment["PROMPTAFLOW_TEST_PS_SWITCH"] = "1"
@@ -318,8 +347,8 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
             environment = self.environment(
                 root, listed=[], recorded=9100,
                 ps_answers={
-                    9100: "python -m promptaflow hub serve",
-                    9101: "python -m promptaflow serve --project-root /workspace",
+                    9100: "python -m paf hub serve",
+                    9101: "python -m paf serve --project-root /workspace",
                 },
             )
             lock = root / "runtime-root" / "projects" / "runtime.db.owner.lock"

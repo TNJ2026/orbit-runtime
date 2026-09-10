@@ -64,9 +64,9 @@ text/event-stream`) and negotiates protocol `2025-11-25` against PromptaFlow's
 `2025-06-18`, which it accepts. It opens a GET on the endpoint for a
 server-initiated stream; the 405 it gets back is the answer, not a fault.
 
-Do not reach for `promptaflow mcp` here. Its stdio transport is the only shape
+Do not reach for `paf mcp` here. Its stdio transport is the only shape
 WorkBuddy's own documentation describes, but the process it starts wants the
-project database that a running Hub or `promptaflow serve` already owns, and it
+project database that a running Hub or `paf serve` already owns, and it
 exits with `Runtime database is already owned` rather than sharing. HTTP is
 what leaves the rest of the machine working.
 

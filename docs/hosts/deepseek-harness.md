@@ -59,7 +59,7 @@ not discard local work; update a clean checkout with `git pull --ff-only`.
 ```bash
 uv tool install /absolute/stable/path/promptaflow
 uv tool update-shell
-promptaflow --version
+paf --version
 ```
 
 Open a new terminal if `promptaflow` is not immediately visible after

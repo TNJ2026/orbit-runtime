@@ -4278,7 +4278,7 @@ class LangGraphWorkflowServiceTests(unittest.TestCase):
         the same thing in an end-to-end test that raced — a graceful shutdown
         cancelled the running Handler, the attempt was recorded failed and the
         run went terminal, so there was nothing left to recover — and that
-        engine is not the one `promptaflow serve` runs.
+        engine is not the one `paf serve` runs.
         """
 
         started = []

@@ -214,7 +214,7 @@ class JsonOutputTests(CliMatrixTestCase):
 
 
 class RunCommandTests(CliMatrixTestCase):
-    """`promptaflow run` reads what a server wrote, without being one."""
+    """`paf run` reads what a server wrote, without being one."""
 
     def seed(self):
         from tests.test_web_composition import (
@@ -225,7 +225,7 @@ class RunCommandTests(CliMatrixTestCase):
 
         publish_linear_workflow(self.db)
         publish_human_workflow(self.db)
-        # Wired the way `promptaflow serve` wires it: state beside the database, so
+        # Wired the way `paf serve` wires it: state beside the database, so
         # the CLI and the server describe one engine rather than two.
         engine = build_service(
             self.db, [transform_registration()], state_directory=self.db.parent,
@@ -274,7 +274,7 @@ class RunCommandTests(CliMatrixTestCase):
             "run", "inspect", "langgraph_run:nope", "--db", str(self.db),
         )
         self.assertEqual(1, result.returncode)
-        self.assertIn("promptaflow run:", result.stderr)
+        self.assertIn("paf run:", result.stderr)
         self.assertNotIn("Traceback", result.stderr)
 
     def test_an_empty_runtime_says_so(self) -> None:
@@ -288,7 +288,7 @@ class RunCommandTests(CliMatrixTestCase):
         A CLI that started one would rebuild the whole Handler wiring a server
         has — discovery, workspaces, secrets — and still behave differently
         from the server that normally runs them. Starting is the UI's, or
-        `start_run` over `promptaflow mcp`.
+        `start_run` over `paf mcp`.
         """
 
         result = cli("run", "start", "workflow:linear", "--db", str(self.db))

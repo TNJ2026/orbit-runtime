@@ -34,8 +34,8 @@ function Resolve-PromptaflowCommand {
         return [pscustomobject]@{ Executable = $explicit.Source; Prefix = @() }
     }
     foreach ($candidate in @(
-        (Join-Path $promptaflowSourceRoot ".venv\Scripts\promptaflow.exe"),
-        (Join-Path $promptaflowSourceRoot ".venv\bin\promptaflow")
+        (Join-Path $promptaflowSourceRoot ".venv\Scripts\paf.exe"),
+        (Join-Path $promptaflowSourceRoot ".venv\bin\paf")
     )) {
         if (Test-Path -LiteralPath $candidate -PathType Leaf) {
             return [pscustomobject]@{ Executable = $candidate; Prefix = @() }
@@ -45,7 +45,7 @@ function Resolve-PromptaflowCommand {
     if ($null -ne $uv) {
         return [pscustomobject]@{
             Executable = $uv.Source
-            Prefix = @("run", "--project", $promptaflowSourceRoot, "promptaflow")
+            Prefix = @("run", "--project", $promptaflowSourceRoot, "paf")
         }
     }
     throw "PromptaFlow CLI not found; create .venv or install uv first."
@@ -57,7 +57,7 @@ function Invoke-PromptaflowJson {
     $output = & $script:promptaflowCommand.Executable @prefix "runtimes" "--json" 2>$null
     $result = $global:LASTEXITCODE
     if ($null -ne $result -and $result -ne 0) {
-        throw "promptaflow runtimes --json failed with exit code $result"
+        throw "paf runtimes --json failed with exit code $result"
     }
     $text = ($output | Out-String).Trim()
     if (-not $text) { return @() }

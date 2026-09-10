@@ -135,7 +135,7 @@ runnable and never fall back to another engine. Clients execute the server's
 Start the local Runtime normally:
 
 ```console
-promptaflow serve
+paf serve
 ```
 
 This creates `langgraph-runs.sqlite3` and

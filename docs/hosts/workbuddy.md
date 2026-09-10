@@ -43,7 +43,7 @@ Keep the checkout in a stable location:
 git clone https://github.com/TNJ2026/promptaflow.git /absolute/stable/path/promptaflow
 uv tool install /absolute/stable/path/promptaflow
 uv tool update-shell
-promptaflow --version
+paf --version
 ```
 
 If the checkout already exists, inspect and preserve local changes. Update a
@@ -61,7 +61,7 @@ Run the repository launcher with the project that should own the Runtime:
 Then verify discovery and open the Hub UI:
 
 ```bash
-promptaflow runtimes --json
+paf runtimes --json
 ```
 
 Open `http://127.0.0.1:8848/ui`. It should list the intended Workspace. Keep
@@ -99,7 +99,7 @@ already the operator. WorkBuddy speaks Streamable HTTP
 GET on the endpoint looking for a server-initiated stream; the `405` it gets
 back is the answer, not a fault.
 
-Do not use `promptaflow mcp` here. Its stdio transport is the shape WorkBuddy's own
+Do not use `paf mcp` here. Its stdio transport is the shape WorkBuddy's own
 documentation describes, but the process it starts wants the project database
 the Hub-managed Runtime already owns, and exits with
 `Runtime database is already owned` rather than sharing.
@@ -179,7 +179,7 @@ ask before continuing or reconciling when not. See
 | What you see | What it is |
 | --- | --- |
 | `405` on a GET to `/mcp` | The answer to "is there a server-initiated stream?", not a fault. |
-| `Runtime database is already owned` | `promptaflow mcp` was used. Point the connector at the Hub's HTTP endpoint instead. |
+| `Runtime database is already owned` | `paf mcp` was used. Point the connector at the Hub's HTTP endpoint instead. |
 | The connector reports no tools | The Hub is not running. Start it with `./start-promptaflow.sh /absolute/path/to/project`. |
 
 ## Example: a prompt that generates an expert

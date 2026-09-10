@@ -30,8 +30,8 @@ function Resolve-PromptaflowCommand {
     }
 
     foreach ($candidate in @(
-        (Join-Path $promptaflowSourceRoot ".venv\Scripts\promptaflow.exe"),
-        (Join-Path $promptaflowSourceRoot ".venv\bin\promptaflow")
+        (Join-Path $promptaflowSourceRoot ".venv\Scripts\paf.exe"),
+        (Join-Path $promptaflowSourceRoot ".venv\bin\paf")
     )) {
         if (Test-Path -LiteralPath $candidate -PathType Leaf) {
             return [pscustomobject]@{ Executable = $candidate; Prefix = @() }
@@ -42,7 +42,7 @@ function Resolve-PromptaflowCommand {
     if ($null -ne $uv) {
         return [pscustomobject]@{
             Executable = $uv.Source
-            Prefix = @("run", "--project", $promptaflowSourceRoot, "promptaflow")
+            Prefix = @("run", "--project", $promptaflowSourceRoot, "paf")
         }
     }
     throw "PromptaFlow cannot start: no project virtualenv or uv executable was found."

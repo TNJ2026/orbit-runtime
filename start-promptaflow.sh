@@ -10,12 +10,12 @@ PROMPTAFLOW_CLI="${PROMPTAFLOW_CLI:-}"
 if [ -n "$PROMPTAFLOW_CLI" ]; then
   [ -x "$PROMPTAFLOW_CLI" ] || { echo "PROMPTAFLOW_CLI is not executable: $PROMPTAFLOW_CLI" >&2; exit 127; }
   PROMPTAFLOW=("$PROMPTAFLOW_CLI")
-elif [ -x "$ROOT_DIR/.venv/bin/promptaflow" ]; then
-  PROMPTAFLOW=("$ROOT_DIR/.venv/bin/promptaflow")
-elif [ -x "$ROOT_DIR/.venv/Scripts/promptaflow.exe" ]; then
-  PROMPTAFLOW=("$ROOT_DIR/.venv/Scripts/promptaflow.exe")
+elif [ -x "$ROOT_DIR/.venv/bin/paf" ]; then
+  PROMPTAFLOW=("$ROOT_DIR/.venv/bin/paf")
+elif [ -x "$ROOT_DIR/.venv/Scripts/paf.exe" ]; then
+  PROMPTAFLOW=("$ROOT_DIR/.venv/Scripts/paf.exe")
 elif command -v uv >/dev/null 2>&1; then
-  PROMPTAFLOW=(uv run --project "$ROOT_DIR" promptaflow)
+  PROMPTAFLOW=(uv run --project "$ROOT_DIR" paf)
 else
   echo "PromptaFlow cannot start: no project virtualenv or uv executable was found." >&2
   exit 127

@@ -28,7 +28,7 @@ export class PromptaFlowGateway {
     telemetry = {
         discoveryAttempts: 0, rpcCalls: 0, transportFailures: 0,
     };
-    constructor(command = 'promptaflow', commandPrefix = [], fetchImpl = globalThis.fetch, discoveryRoot = process.env.PROMPTAFLOW_RUNTIME_ROOT || undefined, hubUrl = process.env.PROMPTAFLOW_HUB_URL || 'http://127.0.0.1:8848') {
+    constructor(command = 'paf', commandPrefix = [], fetchImpl = globalThis.fetch, discoveryRoot = process.env.PROMPTAFLOW_RUNTIME_ROOT || undefined, hubUrl = process.env.PROMPTAFLOW_HUB_URL || 'http://127.0.0.1:8848') {
         this.command = command;
         this.commandPrefix = commandPrefix;
         this.fetchImpl = fetchImpl;

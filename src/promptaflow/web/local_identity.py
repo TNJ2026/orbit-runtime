@@ -1,6 +1,6 @@
 """Identity for a locally served, single-operator Runtime.
 
-`promptaflow serve` binds to loopback and serves one person: the one at the keyboard.
+`paf serve` binds to loopback and serves one person: the one at the keyboard.
 That person is `local`, and they hold every scope. This module exists so that
 assumption is stated in one reviewable place instead of being spread through
 the adapters as "no authenticator means trusted".
@@ -31,7 +31,7 @@ SCOPED_ACTOR_HEADER = "x-promptaflow-actor"
 # Where a Session-scoped actor may arrive. `/mcp` is the MCP transport served
 # directly; `/internal/v1/agent-tools` is the same tool backend reached through
 # the Hub, which forwards the header it was handed. They are one surface with
-# two doors, and `promptaflow serve` under a Hub mounts only the second — so naming
+# two doors, and `paf serve` under a Hub mounts only the second — so naming
 # just `/mcp` here meant the header was never read at all. Nothing else is on
 # this list: the browser UI and `/api/v1` are the one loopback operator.
 SCOPED_ACTOR_PATHS = frozenset({"/mcp", "/internal/v1/agent-tools"})

@@ -10,7 +10,7 @@
 - Propagated the Host-resolved Harness Workspace id, canonical path and optional
   isolation metadata to PromptaFlow MCP calls; `/promptaflow` now rejects stale or forged
   browser Workspace identities before starting a Run.
-- Changed the Host Gateway to discover an independently started `promptaflow serve`
+- Changed the Host Gateway to discover an independently started `paf serve`
   Runtime and communicate over HTTP MCP; it no longer owns a Runtime process.
 - Removed Harness Subagent execution from Session Bridge startup. CLI Agent
   execution and credentials now stay entirely inside PromptaFlow Runtime.

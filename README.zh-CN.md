@@ -81,7 +81,7 @@ PromptaFlow 需要 Python 3.10 或更高版本，以及
 git clone https://github.com/TNJ2026/promptaflow.git
 cd promptaflow
 uv sync --extra dev
-uv run promptaflow serve
+uv run paf serve
 ```
 
 统一的 `serve` 命令会复用或启动 Hub、注册当前 Workspace，并等待受管 Runtime 就绪。
@@ -207,18 +207,21 @@ Agent 步骤指定了你未安装的 CLI 的工作流，默认会被目录过滤
 
 ## CLI 快速参考
 
+安装 `promptaflow` 会在 PATH 上放两个指向同一命令的名字:`promptaflow`——装的是什么就能敲
+什么;以及 `paf`,下面所有示例用的都是它。
+
 ```bash
-promptaflow serve
-promptaflow serve --project-root /absolute/path/to/project
-promptaflow hub register /absolute/path/to/project --no-agent-project-access
-promptaflow --version
-promptaflow runtimes --json
-promptaflow mcp
-promptaflow mcp --project-root /absolute/path/to/project
-promptaflow run list
-promptaflow run inspect <run_id>
-promptaflow workflow validate <file> --catalog <catalog.json>
-promptaflow workflow publish <file> --catalog <catalog.json> --expected-version <n>
+paf serve
+paf serve --project-root /absolute/path/to/project
+paf hub register /absolute/path/to/project --no-agent-project-access
+paf --version
+paf runtimes --json
+paf mcp
+paf mcp --project-root /absolute/path/to/project
+paf run list
+paf run inspect <run_id>
+paf workflow validate <file> --catalog <catalog.json>
+paf workflow publish <file> --catalog <catalog.json> --expected-version <n>
 ```
 
 ## 开发

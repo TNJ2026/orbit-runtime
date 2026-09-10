@@ -66,7 +66,7 @@ class CleanInstallTests(unittest.TestCase):
         if install.returncode != 0:
             raise unittest.SkipTest(f"install failed:\n{install.stderr[-2000:]}")
         cls.promptaflow = cls.venv / scripts / (
-            "promptaflow.exe" if os.name == "nt" else "promptaflow"
+            "paf.exe" if os.name == "nt" else "paf"
         )
 
     @classmethod
@@ -79,11 +79,25 @@ class CleanInstallTests(unittest.TestCase):
             cwd=str(self.dir), timeout=180, env=self.environment,
         )
 
-    def test_the_console_script_is_installed(self) -> None:
-        self.assertTrue(self.promptaflow.exists(), "no `promptaflow` entry point in the wheel")
-        result = self.promptaflow_cli("--version")
-        self.assertEqual(0, result.returncode, result.stderr)
-        self.assertIn("promptaflow", result.stdout)
+    def test_both_console_scripts_are_installed(self) -> None:
+        """Two names, one entry point, and both are a promise.
+
+        `promptaflow` is there so that what you install is what you can type;
+        `paf` is the one the documentation shows. Dropping either leaves a
+        reader following instructions that do not run.
+        """
+
+        suffix = ".exe" if os.name == "nt" else ""
+        for name in ("paf", "promptaflow"):
+            script = self.promptaflow.parent / f"{name}{suffix}"
+            with self.subTest(name):
+                self.assertTrue(script.exists(), f"no `{name}` entry point in the wheel")
+                result = subprocess.run(
+                    [str(script), "--version"], capture_output=True, text=True,
+                    cwd=str(self.dir), timeout=180, env=self.environment,
+                )
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertIn("promptaflow", result.stdout)
 
     def test_the_installed_cli_offers_only_the_target_commands(self) -> None:
         result = self.promptaflow_cli("--help")

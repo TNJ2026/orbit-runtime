@@ -38,7 +38,7 @@ export class PromptaFlowGateway {
     discoveryAttempts: 0, rpcCalls: 0, transportFailures: 0,
   }
   constructor(
-    private readonly command = 'promptaflow',
+    private readonly command = 'paf',
     private readonly commandPrefix: readonly string[] = [],
     private readonly fetchImpl: Fetch = globalThis.fetch,
     private readonly discoveryRoot = process.env.PROMPTAFLOW_RUNTIME_ROOT || undefined,

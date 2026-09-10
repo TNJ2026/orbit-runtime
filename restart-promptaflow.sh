@@ -4,7 +4,7 @@
 #
 # The start half is deliberately not implemented here. `agent-app.json` already
 # declares the command, the ready URL and how long a cold start may take, and
-# `promptaflow agent-app ensure` — what `start-promptaflow.sh` runs — owns the
+# `paf agent-app ensure` — what `start-promptaflow.sh` runs — owns the
 # `pid.json` that records which process holds the port. A restart that starts
 # the Hub itself leaves that file naming a process it killed, and the next
 # `ensure` then refuses to run at all: the port answers, the recorded PID is
@@ -30,10 +30,10 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-if [ -x "$ROOT_DIR/.venv/bin/promptaflow" ]; then
-  PROMPTAFLOW=("$ROOT_DIR/.venv/bin/promptaflow")
+if [ -x "$ROOT_DIR/.venv/bin/paf" ]; then
+  PROMPTAFLOW=("$ROOT_DIR/.venv/bin/paf")
 elif command -v uv >/dev/null 2>&1; then
-  PROMPTAFLOW=(uv run --project "$ROOT_DIR" promptaflow)
+  PROMPTAFLOW=(uv run --project "$ROOT_DIR" paf)
 else
   echo "PromptaFlow CLI not found; create .venv or install uv first." >&2
   exit 127
@@ -82,8 +82,13 @@ def identity_of(pid: int) -> str:
 
 
 # What each kind of PromptaFlow process looks like on the command line.
-HUB_COMMANDS = ("promptaflow hub serve",)
-RUNTIME_COMMANDS = ("promptaflow serve",)
+# One program, two command lines. A launcher or a person runs the console
+# script — `paf hub serve`. The Hub spawns its children through the module —
+# `python -m promptaflow ...`. Matching only one of them leaves the other
+# running and holding the port, which is the thing a restart exists to prevent.
+PROGRAM_TOKENS = ("paf", "promptaflow")
+HUB_COMMANDS = tuple(f"{token} hub serve" for token in PROGRAM_TOKENS)
+RUNTIME_COMMANDS = tuple(f"{token} serve" for token in PROGRAM_TOKENS)
 
 candidates: list[tuple[int, str, tuple[str, ...]]] = []
 # The Hub, as the Agent App host records it — not as whatever holds the port,

@@ -41,7 +41,7 @@ def retired_workflow_library_path() -> Path:
 
     There were two libraries, one per authoring product, deliberately never
     seeded from each other. With one product there is one library — but
-    `promptaflow serve` defaulted to the single-Agent one, so on a default install
+    `paf serve` defaulted to the single-Agent one, so on a default install
     this file is where everything a person published actually is. It is read
     once, merged forward, and then only ever read again to find nothing new.
     """

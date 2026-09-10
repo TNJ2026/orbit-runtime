@@ -493,7 +493,7 @@ class SingleGoalTests(unittest.TestCase):
 
     The capability report advertised this for as long as the engine has been
     the LangGraph one, and nothing kept it: the check lived in the execution
-    engine that was deleted, and `promptaflow serve` had never routed through that
+    engine that was deleted, and `paf serve` had never routed through that
     engine anyway.
     """
 

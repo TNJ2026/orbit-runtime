@@ -48,7 +48,7 @@ people never need to type a workspace hash. Without a selection the session
 uses the default workspace.
 For another registered workspace use
 `http://127.0.0.1:8848/workspaces/<workspace_id>/mcp`; obtain the stable id and
-URLs with `promptaflow hub register /absolute/project/path`.
+URLs with `paf hub register /absolute/project/path`.
 
 ## Act as a workflow-writing App
 

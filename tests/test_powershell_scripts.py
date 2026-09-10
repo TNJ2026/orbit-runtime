@@ -212,7 +212,7 @@ class PowerShellScriptTests(unittest.TestCase):
         self.assertEqual("uv", server["command"])
         self.assertEqual(
             [
-                "run", "--project", ".", "promptaflow",
+                "run", "--project", ".", "paf",
                 "agent-app", "mcp-proxy",
             ],
             server["args"],

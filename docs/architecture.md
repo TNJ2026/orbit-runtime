@@ -82,12 +82,12 @@ flowchart TB
 
 ## 4. 进程、端口与状态
 
-`promptaflow serve` 是统一入口：先复用或启动全机唯一的 Hub，再注册当前项目，并由 Hub
+`paf serve` 是统一入口：先复用或启动全机唯一的 Hub，再注册当前项目，并由 Hub
 启动内部 Runtime 进程。用户不再直接启动单 Workspace Runtime：
 
 ```mermaid
 flowchart LR
-    CLI["promptaflow serve --project-root PATH"] --> HUB
+    CLI["paf serve --project-root PATH"] --> HUB
     subgraph proc["全机 Hub"]
         HUB["127.0.0.1:8848<br/>稳定路由 + UI + MCP"]
     end
@@ -393,7 +393,7 @@ flowchart TB
     end
 
     subgraph py["Python 宿主适配"]
-        PROXY["promptaflow agent-app mcp-proxy<br/>stdio ⇄ HTTP JSON-RPC"]
+        PROXY["paf agent-app mcp-proxy<br/>stdio ⇄ HTTP JSON-RPC"]
         HOSTM["agent_apps/host.py<br/>发现 · 按需拉起 · 就绪等待"]
         EB["agent_apps/event_bridge.py<br/>工作区内的事件收件箱"]
         PROXY -. Hub 离线时回退 .-> HOSTM
@@ -418,7 +418,7 @@ flowchart TB
 `PROMPTAFLOW_ERROR_KEYS` 是「能出什么错」的集合;而「重新打开面板以启动」这句话
 不是一个后台进程说得出口的,所以措辞留给宿主。
 
-**`promptaflow agent-app mcp-proxy`** 是 Python 侧的等价物:把 HTTP JSON-RPC 的 MCP 端点
+**`paf agent-app mcp-proxy`** 是 Python 侧的等价物:把 HTTP JSON-RPC 的 MCP 端点
 用换行分隔的 JSON-RPC 抬到 stdio 上,顺带注入三个事件工具
 (`wait_app_event` / `list_app_events` / `ack_app_event`)。
 它由 `agent-app.json` 清单驱动:`service.command` 说怎么起、`ready_url` 说怎么算就绪、

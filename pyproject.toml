@@ -54,6 +54,11 @@ dev = ["playwright>=1.45", "Pillow>=10"]
 structured-authoring = ["pydantic-ai-slim>=0.4"]
 
 [project.scripts]
+# Two names for one entry point. `promptaflow` so that what you install is
+# what you can type — the gap between those two is what made `orbit-runtime`
+# shipping an `orbit` command a recurring question. `paf` because the short
+# one is what anyone using it daily actually wants, and it is what the
+# documentation shows.
 promptaflow = "promptaflow.__main__:main"
 paf = "promptaflow.__main__:main"
 

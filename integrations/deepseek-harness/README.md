@@ -2,7 +2,7 @@
 
 This directory is the installable Host Profile Bundle for `deepseek-harness`.
 PromptaFlow Runtime stays an independent process. The `PromptaFlowGateway` discovers the
-`promptaflow serve` instance published for the normalized Workspace, starts one on a
+`paf serve` instance published for the normalized Workspace, starts one on a
 free port when none exists, performs the capability handshake, and communicates
 with it only through HTTP MCP. A Runtime started this way remains available
 after the panel or Harness Profile closes.
@@ -11,7 +11,7 @@ after the panel or Harness Profile closes.
 
 - Install `promptaflow` so the executable is on the Harness Host's `PATH`.
 Opening `/promptaflow` starts PromptaFlow for the Harness Workspace when necessary. You may
-still start it independently to choose additional `promptaflow serve` options.
+still start it independently to choose additional `paf serve` options.
 
 By default the Gateway discovers ownership records below `~/.promptaflow`. If PromptaFlow
 uses a database outside that tree, set `PROMPTAFLOW_RUNTIME_ROOT` for the Harness
@@ -54,7 +54,7 @@ launcher and is exposed as the maintainer command above.
 The Gateway refuses an incompatible PromptaFlow integration protocol during startup.
 Runtime codecs also reject malformed core DTOs before they reach the Client.
 When an MCP transport fails, the cached endpoint is discarded; the next Bridge
-poll or tool call reruns discovery, allowing `promptaflow serve` to restart on a new
+poll or tool call reruns discovery, allowing `paf serve` to restart on a new
 port without restarting Harness.
 
 ## Upgrade and rollback

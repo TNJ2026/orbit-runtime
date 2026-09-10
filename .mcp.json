@@ -6,7 +6,7 @@
         "run",
         "--project",
         ".",
-        "promptaflow",
+        "paf",
         "agent-app",
         "mcp-proxy"
       ],

@@ -28,5 +28,5 @@ Tell the user where PromptaFlow opened and what the workspace card shows. Mentio
 authoring client name only if registration was separately requested and
 actually completed.
 
-Do not run `promptaflow mcp` beside `promptaflow serve`: it creates a second Runtime. The
+Do not run `paf mcp` beside `paf serve`: it creates a second Runtime. The
 registered MCP server is a stdio proxy to the same HTTP Runtime.

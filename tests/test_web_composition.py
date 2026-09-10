@@ -1,7 +1,7 @@
 """M2: the production composition root.
 
 Gate M2 in the migration plan:
-  * `promptaflow serve` creates a fresh database and starts;
+  * `paf serve` creates a fresh database and starts;
   * a database carrying legacy tables is refused;
   * a static workflow runs StartRun -> Job -> Handler -> CompleteRun;
   * jobs, leases, timers and unfinished runs survive a restart;

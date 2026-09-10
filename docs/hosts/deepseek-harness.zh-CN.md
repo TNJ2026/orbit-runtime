@@ -56,7 +56,7 @@ cd /绝对路径/稳定目录/promptaflow
 ```bash
 uv tool install /绝对路径/稳定目录/promptaflow
 uv tool update-shell
-promptaflow --version
+paf --version
 ```
 
 如果执行 `uv tool update-shell` 后仍暂时找不到 `promptaflow`，请打开一个新终端。
