@@ -400,7 +400,7 @@ def _serve(args) -> None:
     from .global_control import WorkflowTemplateStore
     from .hub import (
         ProjectAccessGrants, WorkspaceRegistry, WorkspaceRuntimeManager,
-        create_hub_app, workspace_urls,
+        create_hub_app, default_hub_root, workspace_urls,
     )
 
     project_root = resolve_project_root(args.project_root)
@@ -420,7 +420,13 @@ def _serve(args) -> None:
     identifier, _ = registry.register(project_root)
     grants = ProjectAccessGrants()
     grants.enable_by_default(identifier)
-    manager = WorkspaceRuntimeManager(registry=registry, grants=grants)
+    manager = WorkspaceRuntimeManager(
+        registry=registry, grants=grants,
+        # Only a serving Hub records what it launched, and only a serving Hub
+        # inherits it: this is the file that lets the next one reap Runtimes
+        # this one was killed before it could stop.
+        ownership_path=default_hub_root() / "launched-runtimes.json",
+    )
 
     server: uvicorn.Server | None = None
 
@@ -1334,7 +1340,7 @@ def main() -> None:
     if args.command == "hub":
         from .hub import (
             ProjectAccessGrants, WorkspaceRegistry, WorkspaceRuntimeManager,
-            create_hub_app, workspace_urls,
+            create_hub_app, default_hub_root, workspace_urls,
         )
         from .platform.projects import project_id, resolve_project_root
         from .workspace.git import is_git_repo
@@ -1431,6 +1437,9 @@ def main() -> None:
 
             config = uvicorn.Config(
                 create_hub_app(
+                    WorkspaceRuntimeManager(
+                        ownership_path=default_hub_root() / "launched-runtimes.json",
+                    ),
                     template_store=templates,
                     shutdown_request=request_shutdown,
                 ),

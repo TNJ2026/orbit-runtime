@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
+from unittest.mock import patch
 
 from promptaflow.hub import (
     HubError, MultipleRuntimesError, ProjectAccessGrants, WorkspaceRegistry,
@@ -377,6 +380,70 @@ class WorkspaceRuntimeManagerTests(unittest.TestCase):
             # The handle is what lets a finished child be reaped rather than
             # read as a zombie that never exits.
             self.assertIsNotNone(owned[123].handle)
+
+    def test_a_launched_runtime_is_recorded_where_the_next_hub_finds_it(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            record = Path(temporary) / "launched-runtimes.json"
+            manager = WorkspaceRuntimeManager(
+                registry=WorkspaceRegistry(path=Path(temporary) / "ws.json"),
+                runtime_discovery=lambda: [],
+                launcher=lambda _workspace: SimpleNamespace(pid=4242, poll=lambda: None),
+                health_check=lambda _url: True,
+                timeout_seconds=0,
+                ownership_path=record,
+            )
+            with patch("promptaflow.hub.process_identity", return_value="birth"):
+                with contextlib.suppress(HubError):
+                    manager.ensure(manager.registry.register(Path(temporary))[0])
+
+            self.assertEqual(
+                # Resolved: the registry canonicalises, and on macOS /var is a
+                # symlink to /private/var.
+                [{
+                    "pid": 4242, "identity": "birth",
+                    "workspace": str(Path(temporary).resolve()),
+                }],
+                json.loads(record.read_text(encoding="utf-8")),
+            )
+
+    def test_a_new_hub_adopts_only_what_the_record_proves_is_its_own(self) -> None:
+        """Discovery cannot say who started a Runtime; the birth token can.
+
+        A Hub that was killed leaves its Runtimes alive with nothing to reap
+        them. Adopting on a workspace match instead would take Runtimes a
+        person started themselves — the collateral this scoping removed.
+        """
+
+        with tempfile.TemporaryDirectory() as temporary:
+            record = Path(temporary) / "launched-runtimes.json"
+            record.write_text(json.dumps([
+                {"pid": 11, "identity": "still-ours", "workspace": "/work/a"},
+                {"pid": 12, "identity": "pid-was-reused", "workspace": "/work/b"},
+                {"pid": 13, "identity": "already-gone", "workspace": "/work/c"},
+            ]), encoding="utf-8")
+
+            identities = {11: "still-ours", 12: "somebody-else", 13: None}
+            with patch(
+                "promptaflow.hub.process_identity", side_effect=identities.get,
+            ):
+                manager = WorkspaceRuntimeManager(
+                    runtime_discovery=lambda: [], ownership_path=record,
+                )
+
+            owned = manager._owned_runtimes  # noqa: SLF001 - ownership contract
+            self.assertEqual([11], list(owned))
+            self.assertEqual("/work/a", owned[11].label)
+            # Not our child this time: there is nothing to reap, only to watch.
+            self.assertIsNone(owned[11].handle)
+
+    def test_ownership_is_not_read_unless_a_path_was_supplied(self) -> None:
+        """A manager built for a test or embedded elsewhere inherits nothing."""
+
+        with patch("promptaflow.hub.process_identity", return_value="any") as probe:
+            manager = WorkspaceRuntimeManager(runtime_discovery=lambda: [])
+
+        probe.assert_not_called()
+        self.assertEqual({}, manager._owned_runtimes)  # noqa: SLF001
 
     def test_existing_runtime_for_the_workspace_is_reused(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

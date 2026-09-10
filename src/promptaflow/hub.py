@@ -351,6 +351,7 @@ class WorkspaceRuntimeManager:
         sleep: Callable[[float], None] = time.sleep,
         log_root: Path | str | None = None,
         grants: ProjectAccessGrants | None = None,
+        ownership_path: Path | str | None = None,
     ) -> None:
         self.registry = registry or WorkspaceRegistry()
         self.grants = grants or ProjectAccessGrants()
@@ -366,6 +367,15 @@ class WorkspaceRuntimeManager:
         # this manager belong to this Hub. Discovery is machine-wide and may
         # include Runtimes owned by another Hub, terminal, or Agent App.
         self._owned_runtimes: dict[int, _OwnedRuntime] = {}
+        # Where the PIDs above survive this process. Opt-in, and supplied only
+        # by the two serve entrypoints: a manager built for a test or embedded
+        # in something else must not read the developer's real record and
+        # inherit — then stop — Runtimes it never launched.
+        self._ownership_path = (
+            Path(ownership_path).expanduser() if ownership_path else None
+        )
+        if self._ownership_path is not None:
+            self._adopt_recorded()
         self._guard = threading.Lock()
 
     def ensure(self, identifier: str | None = None) -> str:
@@ -396,6 +406,8 @@ class WorkspaceRuntimeManager:
                         self._owned_runtimes[pid] = _OwnedRuntime(
                             identity, str(workspace), handle,
                         )
+                    # Outside the guard: it is not reentrant.
+                    self._persist_owned()
             while self.clock() < deadline:
                 try:
                     found = self._find(workspace)
@@ -449,6 +461,66 @@ class WorkspaceRuntimeManager:
             url = base.rstrip("/") + "/ui/"
             entries[(path, url)] = {"path": path, "url": url}
         return sorted(entries.values(), key=lambda entry: (entry["path"], entry["url"]))
+
+    def _adopt_recorded(self) -> None:
+        """Re-adopt Runtimes a previous Hub launched and never got to stop.
+
+        A Hub that was killed — Ctrl-C during a hang, a crash, a service
+        restart — leaves its Runtimes alive in their own sessions with nothing
+        that will ever reap them. The next Hub sees them in discovery, but
+        discovery cannot say who started them: a Runtime somebody launched
+        themselves looks exactly the same, and adopting on a workspace match
+        would put us back to stopping other people's processes.
+
+        The record is the proof. It carries the PID's birth token, so a PID the
+        OS has since handed to somebody else simply does not match and is left
+        alone.
+        """
+
+        try:
+            recorded = json.loads(self._ownership_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return
+        if not isinstance(recorded, list):
+            return
+        for entry in recorded:
+            if not isinstance(entry, Mapping):
+                continue
+            pid, identity = entry.get("pid"), entry.get("identity")
+            label = entry.get("workspace")
+            if not isinstance(pid, int) or pid <= 0:
+                continue
+            if not isinstance(identity, str) or not isinstance(label, str):
+                continue
+            if process_identity(pid) != identity:
+                continue
+            # No handle: this process is not our child, so there is nothing to
+            # reap — only to signal and then watch for.
+            self._owned_runtimes[pid] = _OwnedRuntime(identity, label)
+
+    def _persist_owned(self) -> None:
+        """Write the owned PIDs where the next Hub can find them.
+
+        Best effort. Losing the file costs a reap after an abnormal exit, never
+        correctness: everything here is re-proved by birth token before it is
+        acted on.
+        """
+
+        if self._ownership_path is None:
+            return
+        with self._guard:
+            entries = [
+                {"pid": pid, "identity": owned.identity, "workspace": owned.label}
+                for pid, owned in self._owned_runtimes.items()
+                if owned.identity is not None
+            ]
+        try:
+            self._ownership_path.parent.mkdir(parents=True, exist_ok=True)
+            temporary = self._ownership_path.with_suffix(f".{os.getpid()}.tmp")
+            temporary.write_text(json.dumps(entries), encoding="utf-8")
+            temporary.replace(self._ownership_path)
+        except OSError:
+            pass
 
     def stop_all(self) -> dict[str, list[str]]:
         """Stop Runtimes launched by this Hub and prove their processes exited.
@@ -536,6 +608,8 @@ class WorkspaceRuntimeManager:
                     self._owned_runtimes.pop(pid, None)
                 continue
             failures.append(label)
+        # Whatever stopped is no longer ours to hand on to the next Hub.
+        self._persist_owned()
         return {
             "requested": requested,
             "terminated": terminated,
