@@ -1,6 +1,6 @@
 {
   "name": "promptaflow",
-  "version": "0.6.3-alpha",
+  "version": "0.6.5-alpha",
   "description": "Local durable workflow Runtime with a browser UI and MCP tools.",
   "author": {
     "name": "PromptaFlow"

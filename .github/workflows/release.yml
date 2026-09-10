@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Existing Git tag to release (for example v0.6.3-alpha)"
+        description: "Existing Git tag to release (for example v0.6.5-alpha)"
         required: true
         type: string
       publish_pypi:
