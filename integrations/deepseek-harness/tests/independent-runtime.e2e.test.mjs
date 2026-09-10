@@ -135,4 +135,18 @@ test('Harness reaches its workspace Runtime through the fixed Hub', { timeout: 3
   assert.equal((await fetch(ui)).ok, true)
   assert.equal((await fetch(`${base}/health/ready`)).ok, true)
   assert.equal(child.exitCode, null)
+
+  // On Windows the console launcher is a native shim in front of Python.
+  // Node's child.kill() terminates that shim rather than delivering a signal
+  // through it, so the Hub never reaches its lifespan cleanup and its detached
+  // Runtime keeps the Workspace directory locked. Use the Hub's authenticated
+  // shutdown path: this is also the production path exercised by its UI.
+  const hubUi = await (await fetch(`${base}/ui`)).text()
+  const token = /x-promptaflow-shutdown-token': '([^']+)'/.exec(hubUi)?.[1]
+  assert.ok(token, 'Hub UI must publish its loopback shutdown token')
+  const shutdown = await fetch(`${base}/api/v1/hub/shutdown`, {
+    method: 'POST', headers: { 'x-promptaflow-shutdown-token': token },
+  })
+  const shutdownBody = await shutdown.text()
+  assert.equal(shutdown.status, 200, shutdownBody)
 })

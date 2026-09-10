@@ -1,11 +1,18 @@
 import assert from 'node:assert/strict'
-import { readdir, readFile } from 'node:fs/promises'
+import { readdir, readFile as readFileRaw } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const clientDir = join(here, '..', 'src', 'client')
+// Source contracts below intentionally compare formatting as well as meaning.
+// Canonicalise checkout line endings first so those contracts mean the same
+// thing under Git's Windows CRLF conversion as they do on POSIX.
+const readFile = async (path, encoding) => {
+  const contents = await readFileRaw(path, encoding)
+  return typeof contents === 'string' ? contents.replace(/\r\n?/g, '\n') : contents
+}
 /* The host-agnostic half of this integration lives outside it. These tests
    still read it because several of the rules they hold are about the two
    halves agreeing — the panel and the Host reaching for the same `goalRuns`. */
@@ -183,7 +190,7 @@ test('selecting a Workflow writes the request, it does not start one', () => {
   // The Run has to be the Agent's or it cannot report on it afterwards — and a
   // popupSelect has nowhere to put the goal these Workflows declare an input
   // for, so the sentence is left for the person to finish.
-  const select = code.slice(code.indexOf('onSelect: (option, session)'), code.indexOf("}, 'promptaflow: workflow popup'"))
+  const select = code.slice(code.indexOf('onSelect: (option, session)'), code.indexOf("}), 'promptaflow: workflow popup'"))
   assert.match(select, /writeWorkflowDraft\(ctx, t,/)
   assert.equal(/start_run|runCommand|window\.open/.test(select), false, 'the popup grew a launcher')
 })
@@ -197,7 +204,7 @@ test('selecting a Workflow writes the request, it does not start one', () => {
  * now: it goes in with the one `setDraft` or not at all.
  */
 test('the sentence is written whole, in a single draft write', () => {
-  const select = code.slice(code.indexOf('onSelect: (option, session)'), code.indexOf("}, 'promptaflow: workflow popup'"))
+  const select = code.slice(code.indexOf('onSelect: (option, session)'), code.indexOf("}), 'promptaflow: workflow popup'"))
   const writer = code.slice(code.indexOf('function writeDraft('), code.indexOf('/** Write the workflow invocation'))
   assert.equal((writer.match(/input\.setDraft\(/g) ?? []).length, 1)
   assert.match(select, /workflow_id: option\.id, name: option\.label/)

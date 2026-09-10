@@ -315,8 +315,12 @@ class ProjectAccessGrantTests(unittest.TestCase):
                  str(workspace), *flags],
                 capture_output=True, text=True, timeout=120,
                 env={
+                    # Inherit Windows' process bootstrap variables, especially
+                    # SystemRoot: asyncio cannot initialise Winsock without it.
+                    # The executable is explicit, so the test does not need to
+                    # replace PATH with a POSIX-only value for isolation.
+                    **os.environ,
                     "PYTHONPATH": str(repository / "src"),
-                    "PATH": "/usr/bin:/bin",
                     "PROMPTAFLOW_HUB_ROOT": str(hub_root),
                 },
             )

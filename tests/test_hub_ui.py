@@ -12,6 +12,20 @@ from tests.test_web_composition import AsgiHarness
 
 
 class HubUiTests(unittest.TestCase):
+    @patch("promptaflow.hub.process_identity", return_value="birth-token")
+    def test_owned_process_handle_is_authoritative_when_it_has_exited(
+        self, process_identity,
+    ):
+        """Windows keeps birth metadata readable while Popen owns the handle."""
+
+        from promptaflow.hub import _wait_for_process_exit
+
+        handle = Mock()
+        handle.poll.return_value = 0
+
+        self.assertTrue(_wait_for_process_exit(10, "birth-token", 0, handle))
+        process_identity.assert_not_called()
+
     def runtime(self, path, url):
         return DiscoveredRuntime(Path('/unused'), {'project_root': path, 'base_url': url})
 
@@ -241,6 +255,31 @@ class HubUiTests(unittest.TestCase):
         self.assertEqual(["/work/b"], result["terminated"])
         self.assertEqual([], result["failures"])
         stop_pid_tree.assert_called_once_with(11, "starting-birth")
+
+    @patch("promptaflow.hub._wait_for_process_exit", return_value=True)
+    @patch("promptaflow.hub.stop_pid_tree_if_identity")
+    @patch("promptaflow.hub._runtime_json", return_value=(200, {}))
+    def test_stop_all_matches_a_windows_launcher_to_its_runtime_by_workspace(
+        self, runtime_json, stop_pid_tree, _wait_for_exit,
+    ):
+        """A Windows console shim and its Python child publish different PIDs."""
+
+        runtime = DiscoveredRuntime(Path('/runtime.lock'), {
+            'pid': 101, 'project_root': '/work/a',
+            'base_url': 'http://127.0.0.1:41001',
+        })
+        manager = WorkspaceRuntimeManager(runtime_discovery=lambda: [runtime])
+        manager._owned_runtimes = {  # noqa: SLF001 - manager ownership fixture
+            100: _OwnedRuntime("launcher-birth", "/work/a"),
+        }
+
+        result = manager.stop_all()
+
+        self.assertEqual(["/work/a"], result["requested"])
+        self.assertEqual([], result["terminated"])
+        self.assertEqual([], result["failures"])
+        runtime_json.assert_called_once()
+        stop_pid_tree.assert_not_called()
 
     @patch("promptaflow.hub._wait_for_process_exit")
     @patch("promptaflow.hub.stop_pid_tree_if_identity")

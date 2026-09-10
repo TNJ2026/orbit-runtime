@@ -326,9 +326,12 @@ def _wait_for_process_exit(
     while True:
         if handle is not None:
             # Reaps it if it has exited, which is what stops a zombie from
-            # answering as though it were still running.
+            # answering as though it were still running. On Windows the
+            # process kernel object can likewise keep answering GetProcessTimes
+            # while Popen still owns its handle, even after poll observed exit.
             try:
-                handle.poll()
+                if handle.poll() is not None:
+                    return True
             except Exception:  # noqa: BLE001 - a fake launcher in a test
                 handle = None
         if process_identity(pid) != identity:
@@ -549,14 +552,33 @@ class WorkspaceRuntimeManager:
         requested: list[str] = []
         terminated: list[str] = []
         failures: list[str] = []
+        discovered_runtimes = tuple(self.runtime_discovery())
         discovered = {
-            runtime.pid: runtime for runtime in tuple(self.runtime_discovery())
+            runtime.pid: runtime for runtime in discovered_runtimes
             if runtime.pid is not None
         }
         with self._guard:
             owned = tuple(self._owned_runtimes.items())
         for pid, (identity, owned_label, handle) in owned:
             runtime = discovered.get(pid)
+            if runtime is None and owned_label:
+                # Windows venv/console launchers may remain as a native shim
+                # whose PID is the one returned by Popen, while the Python
+                # child publishes its own PID in Runtime discovery. Ownership
+                # still comes exclusively from the Popen record; matching the
+                # canonical Workspace only recovers that owned Runtime's HTTP
+                # endpoint so it can drain before the shim tree is stopped.
+                try:
+                    owned_path = Path(owned_label).expanduser().resolve()
+                    workspace_matches = [
+                        candidate for candidate in discovered_runtimes
+                        if Path(str(candidate.facts.get("project_root")))
+                        .expanduser().resolve() == owned_path
+                    ]
+                except (OSError, TypeError, ValueError):
+                    workspace_matches = []
+                if len(workspace_matches) == 1:
+                    runtime = workspace_matches[0]
             label = str(
                 (runtime.facts.get("project_root") if runtime is not None else None)
                 or owned_label or f"pid {pid}"
