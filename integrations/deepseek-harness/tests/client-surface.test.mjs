@@ -107,6 +107,20 @@ test('the title area drags, and only its controls do not', () => {
   assert.equal(/event\.target !== event\.currentTarget/.test(code), false)
 })
 
+test('the title shows activity, not a run count', async () => {
+  const panel = await readFile(join(clientDir, 'PromptaFlowPanel.tsx'), 'utf8')
+  const locales = await readFile(join(clientDir, 'locales.ts'), 'utf8')
+  const css = await readFile(join(clientDir, 'PromptaFlowPanel.module.css'), 'utf8')
+  assert.match(panel, /const hasActiveWork = \(rows \?\? \[\]\)\.some\(row => row\.live\) \|\| authoring\.some\(/)
+  assert.match(panel, /job\.status === 'queued' \|\| job\.status === 'running'/)
+  assert.match(panel, /hasActiveWork \? \([\s\S]{0,180}styles\.activityDot/)
+  assert.doesNotMatch(panel, /t\('(?:liveCount|idleCount)'/)
+  assert.doesNotMatch(locales, /liveCount|idleCount/)
+  assert.match(css, /\.activityDot\s*\{[\s\S]{0,240}state-success-primary[\s\S]{0,240}animation:/)
+  assert.match(css, /@keyframes promptaflow-activity-pulse/)
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]{0,120}\.activityDot/)
+})
+
 test('every border names a colour that survives an unfamiliar theme', async () => {
   // An undefined custom property invalidates the whole declaration, not just
   // its colour: a divider written without a fallback is simply not drawn.

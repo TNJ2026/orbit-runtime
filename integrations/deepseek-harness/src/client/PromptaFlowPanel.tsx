@@ -10,7 +10,7 @@ import {
   resizePanel, type PanelBounds, type PanelLayout,
 } from './panel-geometry.ts'
 import {
-  PROMPTAFLOW_IDLE_MS, PROMPTAFLOW_POLL_MS, goalRuns, nextInterval, orderRows, stepDotState, summarise,
+  PROMPTAFLOW_IDLE_MS, PROMPTAFLOW_POLL_MS, goalRuns, nextInterval, orderRows, stepDotState,
   toRow, type PromptaFlowRunRow as RunRowData,
 } from '@promptaflow/integration-core'
 import type { PromptaFlowLocaleKey } from './locales.ts'
@@ -407,7 +407,9 @@ export function PromptaFlowPanel({
     return () => { controller.abort(); if (timer !== undefined) clearTimeout(timer) }
   }, [sessionId, layout.collapsed, layout.dismissed, asked, update])
 
-  const counts = summarise(rows ?? [])
+  const hasActiveWork = (rows ?? []).some(row => row.live) || authoring.some(
+    job => job.status === 'queued' || job.status === 'running',
+  )
   // Split once: the Runtime's own pages read as "what is happening" and "what
   // happened", and a Run belongs to exactly one of them.
   const chosen = (rows ?? []).find(row => row.runId === selected)
@@ -466,9 +468,11 @@ export function PromptaFlowPanel({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
       >
-        <span className={styles.title}>{t('title')}</span>
-        <span className={styles.count}>
-          {counts.live ? t('liveCount', counts) : t('idleCount', counts)}
+        <span className={styles.titleGroup}>
+          <span className={styles.title}>{t('title')}</span>
+          {hasActiveWork ? (
+            <span className={styles.activityDot} role="status" aria-label={t('activeWork')} />
+          ) : null}
         </span>
         <button
           type="button"
