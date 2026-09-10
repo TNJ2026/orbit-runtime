@@ -173,6 +173,31 @@ class DashboardCardTests(unittest.TestCase):
             ),
         )
 
+    def test_editable_prompt_stays_in_the_card_when_host_can_send_followups(self) -> None:
+        """A send API posts a message; its presence does not provide an editor."""
+
+        page = self.open()
+        page.evaluate("""() => {
+          window.__followups = [];
+          window.openai.sendFollowUpMessage = async value => {
+            window.__followups.push(value);
+          };
+        }""")
+
+        page.click("#createWorkflow")
+        self.assertTrue(page.is_visible("#promptEditorDialog"))
+        self.assertEqual([], page.evaluate("window.__followups"))
+        template = page.input_value("#promptEditorInput")
+        self.assertEqual("按照下面的要求创建 PromptaFlow 工作流：", template)
+
+        page.fill("#promptEditorInput", template + "总结文章并生成演示文稿")
+        page.click("#sendPromptEditor")
+        page.wait_for_function("window.__followups.length === 1")
+        self.assertEqual(
+            "按照下面的要求创建 PromptaFlow 工作流：总结文章并生成演示文稿",
+            page.evaluate("window.__followups[0].prompt"),
+        )
+
     def test_it_opens_on_the_goal_page_with_nothing_to_show(self) -> None:
         page = self.open()
         self.assertEqual("goal", self.selected(page))

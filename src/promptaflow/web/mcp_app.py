@@ -14,14 +14,14 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-PROMPTAFLOW_DASHBOARD_URI = "ui://promptaflow/current-task-v51.html"
+PROMPTAFLOW_DASHBOARD_URI = "ui://promptaflow/current-task-v52.html"
 PROMPTAFLOW_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-PROMPTAFLOW_WORKFLOWS_URI = "ui://promptaflow/workflows-v26.html"
-PROMPTAFLOW_AUTHORING_URI = "ui://promptaflow/workflow-authoring-v15.html"
-PROMPTAFLOW_RUN_URI = "ui://promptaflow/goal-run-v21.html"
-PROMPTAFLOW_GOALS_URI = "ui://promptaflow/goals-v15.html"
+PROMPTAFLOW_WORKFLOWS_URI = "ui://promptaflow/workflows-v27.html"
+PROMPTAFLOW_AUTHORING_URI = "ui://promptaflow/workflow-authoring-v16.html"
+PROMPTAFLOW_RUN_URI = "ui://promptaflow/goal-run-v22.html"
+PROMPTAFLOW_GOALS_URI = "ui://promptaflow/goals-v16.html"
 
 # The mark the full PromptaFlow UI shows in its own top-left corner — the same
 # geometry as `workflow-ui/index.html`'s `.brand-mark`, not the favicon the
@@ -80,8 +80,10 @@ function ensurePromptEditor(){let dialog=document.getElementById('promptEditorDi
 function openPromptEditor(prompt){const dialog=ensurePromptEditor(),input=dialog.querySelector('#promptEditorInput');input.value=String(prompt||'');
  dialog.querySelector('#sendPromptEditor').disabled=!input.value.trim();if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');
  requestAnimationFrame(()=>{input.focus();input.setSelectionRange(input.value.length,input.value.length)})}
-function hostProvidesPromptEditor(){return typeof window.openai?.sendFollowUpMessage==='function'}
-function dispatchPromptValue(prompt,mode='edit'){if(mode==='direct'||hostProvidesPromptEditor())send(prompt);else openPromptEditor(prompt)}
+/* `ui/message` and `sendFollowUpMessage` submit immediately; neither promises
+   a composer. Editable templates therefore stay in this card until the user
+   has completed them, regardless of which compatibility APIs the host exposes. */
+function dispatchPromptValue(prompt,mode='edit'){if(mode==='direct')send(prompt);else openPromptEditor(prompt)}
 function dispatchPrompt(button){dispatchPromptValue(button.dataset.prompt,button.dataset.promptMode||'edit')}
 """
 

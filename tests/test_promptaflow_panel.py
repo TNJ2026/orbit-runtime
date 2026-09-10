@@ -30,7 +30,7 @@ PROMPTAFLOW_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://promptaflow/current-task-v51.html", PROMPTAFLOW_DASHBOARD_URI)
+        self.assertEqual("ui://promptaflow/current-task-v52.html", PROMPTAFLOW_DASHBOARD_URI)
         self.assertEqual(PROMPTAFLOW_DASHBOARD_URI, PROMPTAFLOW_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -182,7 +182,7 @@ class CurrentTaskCardTests(unittest.TestCase):
         ):
             self.assertIn(marker, PROMPTAFLOW_DASHBOARD_HTML)
 
-    def test_add_agent_uses_the_host_aware_prompt_editor(self) -> None:
+    def test_add_agent_uses_the_card_prompt_editor(self) -> None:
         for marker in (
             "addAgent: 'Add Agent'", "addAgent: '添加 Agent'",
             "promptAddAgent: '给PromptaFlow添加Agent cli：'",
@@ -190,7 +190,7 @@ class CurrentTaskCardTests(unittest.TestCase):
             'data-prompt="${esc(t().promptAddAgent)}"',
             "button.addEventListener('click', () => dispatchPrompt(button))",
             "dispatchPromptValue(button.dataset.prompt",
-            "hostProvidesPromptEditor()",
+            "if(mode==='direct')send(prompt);else openPromptEditor(prompt)",
             "dialog.id='promptEditorDialog'",
         ):
             self.assertIn(marker, PROMPTAFLOW_DASHBOARD_HTML)

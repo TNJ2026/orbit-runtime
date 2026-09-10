@@ -77,9 +77,9 @@ class HandshakeTests(ApiTestCase):
             resources = listed["result"]["resources"]
             self.assertEqual(
                 {
-                    "ui://promptaflow/current-task-v51.html", "ui://promptaflow/workflows-v26.html",
-                    "ui://promptaflow/workflow-authoring-v15.html", "ui://promptaflow/goal-run-v21.html",
-                    "ui://promptaflow/goals-v15.html",
+                    "ui://promptaflow/current-task-v52.html", "ui://promptaflow/workflows-v27.html",
+                    "ui://promptaflow/workflow-authoring-v16.html", "ui://promptaflow/goal-run-v22.html",
+                    "ui://promptaflow/goals-v16.html",
                 },
                 {resource["uri"] for resource in resources},
             )
@@ -263,13 +263,13 @@ class DiscoveryTests(ApiTestCase):
                 item for item in tools if item["name"] == "open_promptaflow_dashboard"
             )
             self.assertEqual(
-                "ui://promptaflow/current-task-v51.html",
+                "ui://promptaflow/current-task-v52.html",
                 dashboard["_meta"]["ui"]["resourceUri"],
             )
             self.assertEqual(
                 {
-                    "open_promptaflow_dashboard": "ui://promptaflow/current-task-v51.html",
-                    "open_promptaflow_goals": "ui://promptaflow/goals-v15.html",
+                    "open_promptaflow_dashboard": "ui://promptaflow/current-task-v52.html",
+                    "open_promptaflow_goals": "ui://promptaflow/goals-v16.html",
                 },
                 {
                     item["name"]: item["_meta"]["ui"]["resourceUri"]
@@ -280,15 +280,15 @@ class DiscoveryTests(ApiTestCase):
                 item["name"]: item.get("_meta", {}).get("ui", {}).get("resourceUri")
                 for item in tools
             }
-            self.assertEqual("ui://promptaflow/workflows-v26.html", card_bindings["list_workflows"])
+            self.assertEqual("ui://promptaflow/workflows-v27.html", card_bindings["list_workflows"])
             self.assertEqual(
-                "ui://promptaflow/workflows-v26.html",
+                "ui://promptaflow/workflows-v27.html",
                 card_bindings["get_workflow_definition"],
             )
             self.assertIsNone(card_bindings["inspect_workflow_definition"])
-            self.assertEqual("ui://promptaflow/workflow-authoring-v15.html", card_bindings["generate_workflow"])
-            self.assertEqual("ui://promptaflow/goal-run-v21.html", card_bindings["start_run"])
-            self.assertEqual("ui://promptaflow/goals-v15.html", card_bindings["open_promptaflow_goals"])
+            self.assertEqual("ui://promptaflow/workflow-authoring-v16.html", card_bindings["generate_workflow"])
+            self.assertEqual("ui://promptaflow/goal-run-v22.html", card_bindings["start_run"])
+            self.assertEqual("ui://promptaflow/goals-v16.html", card_bindings["open_promptaflow_goals"])
             for item in tools:
                 resource_uri = item.get("_meta", {}).get("ui", {}).get("resourceUri")
                 if resource_uri is not None:
@@ -305,35 +305,34 @@ class DiscoveryTests(ApiTestCase):
             ).json()["result"]["resources"]
             detail = next(
                 item for item in listed
-                if item["uri"] == "ui://promptaflow/workflows-v26.html"
+                if item["uri"] == "ui://promptaflow/workflows-v27.html"
             )
             self.assertFalse(detail["_meta"]["ui"]["prefersBorder"])
             self.assertFalse(detail["_meta"]["openai/widgetPrefersBorder"])
 
             read = rpc(
                 client, "resources/read",
-                {"uri": "ui://promptaflow/workflows-v26.html"}, actor="reader",
+                {"uri": "ui://promptaflow/workflows-v27.html"}, actor="reader",
             ).json()["result"]["contents"][0]
             self.assertFalse(read["_meta"]["ui"]["prefersBorder"])
             self.assertFalse(read["_meta"]["openai/widgetPrefersBorder"])
 
-    def test_workbuddy_prompt_modes_distinguish_editable_and_direct_actions(self) -> None:
+    def test_prompt_modes_distinguish_editable_and_direct_actions(self) -> None:
         with AsgiHarness(self.app) as client:
             workflows = rpc(
                 client, "resources/read",
-                {"uri": "ui://promptaflow/workflows-v26.html"}, actor="reader",
+                {"uri": "ui://promptaflow/workflows-v27.html"}, actor="reader",
             ).json()["result"]["contents"][0]["text"]
             dashboard = rpc(
                 client, "resources/read",
-                {"uri": "ui://promptaflow/current-task-v51.html"}, actor="reader",
+                {"uri": "ui://promptaflow/current-task-v52.html"}, actor="reader",
             ).json()["result"]["contents"][0]["text"]
 
             self.assertIn("dispatchPromptValue(t().promptGoal(", workflows)
-            self.assertIn("hostProvidesPromptEditor()", workflows)
-            self.assertIn("mode==='direct'||hostProvidesPromptEditor()", workflows)
+            self.assertIn("if(mode==='direct')send(prompt);else openPromptEditor(prompt)", workflows)
             self.assertIn('data-prompt-mode="edit"', workflows)
             self.assertIn('data-prompt-mode="direct"', dashboard)
-            self.assertIn("mode==='direct'||hostProvidesPromptEditor()", dashboard)
+            self.assertIn("if(mode==='direct')send(prompt);else openPromptEditor(prompt)", dashboard)
             for editable in (
                 # Create workflow left the action row for the tab bar, so it
                 # carries its mode on the element rather than through action().
