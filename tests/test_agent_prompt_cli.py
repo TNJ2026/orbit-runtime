@@ -522,8 +522,6 @@ class InvocationSpecTests(unittest.TestCase):
             AgentInvocation(prompt_flag="-p", prompt_positional=True)
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class WorkspaceNameTests(unittest.TestCase):
@@ -644,3 +642,7 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(reference, result.provider_request_id)
         # Still here: the identity did not match, so nothing was signalled.
         self.assertTrue(os.getpid())
+
+
+if __name__ == "__main__":
+    unittest.main()

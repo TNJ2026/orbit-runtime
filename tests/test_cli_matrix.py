@@ -211,8 +211,6 @@ class JsonOutputTests(CliMatrixTestCase):
                 self.assertIsInstance(json.loads(result.stdout), dict)
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class RunCommandTests(CliMatrixTestCase):
@@ -296,3 +294,7 @@ class RunCommandTests(CliMatrixTestCase):
         result = cli("run", "start", "workflow:linear", "--db", str(self.db))
         self.assertNotEqual(0, result.returncode)
         self.assertIn("invalid choice", result.stderr)
+
+
+if __name__ == "__main__":
+    unittest.main()

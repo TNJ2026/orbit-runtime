@@ -2890,8 +2890,6 @@ class SurfaceTests(ApiTestCase):
             )
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class AuthoringSchemaApiTests(ApiTestCase):
@@ -3140,3 +3138,7 @@ class WorkspaceScopedReadsTests(ApiTestCase):
                 body={"expected_version": started["revision"]},
             )
         self.assertIn(refused.status_code, (400, 403, 404))
+
+
+if __name__ == "__main__":
+    unittest.main()

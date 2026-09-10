@@ -130,8 +130,6 @@ class CoordinatorTests(unittest.TestCase):
         self.assertFalse(c.held_by("r1"))
         self.assertEqual(["r1"], [o.run_id for o in self.registry.occupancies()])
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class ServiceSeamTests(unittest.TestCase):
@@ -782,3 +780,7 @@ class NonGitRecoveryTests(unittest.TestCase):
 
         self.assertIn("workspace_access.protect", str(caught.exception))
         self.assertEqual([], list(service.list_runs()))
+
+
+if __name__ == "__main__":
+    unittest.main()

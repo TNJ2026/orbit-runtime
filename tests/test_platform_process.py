@@ -351,8 +351,6 @@ class BoundaryTests(unittest.TestCase):
         self.assertEqual([], offenders)
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class ProcessIdentityTests(unittest.TestCase):
@@ -562,3 +560,7 @@ class EscapedDescendantTests(unittest.TestCase):
         with patch.object(process, "descendant_pids", return_value=[finished.pid]):
             # No raise: a pid that has been reaped is nothing to signal.
             process.stop_pid_tree(root.pid, grace_seconds=0.1)
+
+
+if __name__ == "__main__":
+    unittest.main()

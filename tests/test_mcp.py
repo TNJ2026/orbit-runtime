@@ -1582,8 +1582,6 @@ class McpSessionEndpointTests(ApiTestCase):
             self.assertEqual(403, response.status_code)
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class WorkspaceIsTheBoundaryTests(ApiTestCase):
@@ -1619,3 +1617,7 @@ class WorkspaceIsTheBoundaryTests(ApiTestCase):
             self.assertIn("run_visibility import reading_actor", source, module.__name__)
             self.assertNotIn("def reading_actor", source, module.__name__)
             self.assertNotIn("def reading_owner", source, module.__name__)
+
+
+if __name__ == "__main__":
+    unittest.main()

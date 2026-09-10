@@ -517,8 +517,6 @@ class WorkflowInventoryCliTests(unittest.TestCase):
         self.assertIn(str(missing), str(caught.exception))
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class WorkflowLibraryResolutionTests(unittest.TestCase):
@@ -592,3 +590,7 @@ class WorkflowLibraryResolutionTests(unittest.TestCase):
                     "/tmp/named.db",
                     self.resolved(*command, "--db", "/tmp/named.db"),
                 )
+
+
+if __name__ == "__main__":
+    unittest.main()

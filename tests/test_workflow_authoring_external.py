@@ -579,8 +579,6 @@ class SubscriptionTests(unittest.TestCase):
                 self.broker.subscribe(name, lambda _event: None)
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class ConnectedClientFirstTests(unittest.TestCase):
@@ -682,3 +680,7 @@ class _StubBroker:
         if self.raises is not None:
             raise self.raises
         return self.answer
+
+
+if __name__ == "__main__":
+    unittest.main()

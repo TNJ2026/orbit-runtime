@@ -178,8 +178,6 @@ class RestoreTests(GitRecoveryPointTests):
         self.assertNotEqual(0, result.returncode)
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class ChangeSummaryTests(GitRecoveryPointTests):
@@ -489,3 +487,7 @@ class FileBackupRecoveryTests(unittest.TestCase):
         )
         with self.assertRaises(RecoveryUnavailable):
             points.create("run-1", protect=["important.conf"])
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -346,8 +346,6 @@ class PatchTests(unittest.TestCase):
             self.assertEqual(ROOT, source_checkout_root())
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class EndpointTests(unittest.TestCase):
@@ -356,7 +354,7 @@ class EndpointTests(unittest.TestCase):
     def build(self, *, authoring=True, proposal_root=ROOT):
         from promptaflow.web.api_v1 import Authorizer, READ_SCOPE, WRITE_SCOPE
         from promptaflow.web.app import create_app
-        from test_web_composition import SCHEMAS
+        from tests.test_web_composition import SCHEMAS
 
         temp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(temp.cleanup)
@@ -375,7 +373,7 @@ class EndpointTests(unittest.TestCase):
         )
 
     def test_the_command_is_advertised_on_the_catalog_it_belongs_to(self) -> None:
-        from test_web_composition import AsgiHarness
+        from tests.test_web_composition import AsgiHarness
 
         with AsgiHarness(self.build()) as client:
             data = client.get("/api/v1/handler-catalog", actor="writer").json()["data"]
@@ -387,14 +385,14 @@ class EndpointTests(unittest.TestCase):
     def test_a_reader_is_offered_nothing(self) -> None:
         """The page asks the server what it may do, and this is the answer."""
 
-        from test_web_composition import AsgiHarness
+        from tests.test_web_composition import AsgiHarness
 
         with AsgiHarness(self.build(authoring=False)) as client:
             data = client.get("/api/v1/handler-catalog", actor="reader").json()["data"]
             self.assertEqual([], data["allowed_commands"])
 
     def test_the_command_is_hidden_without_an_editable_source_checkout(self) -> None:
-        from test_web_composition import AsgiHarness
+        from tests.test_web_composition import AsgiHarness
 
         with tempfile.TemporaryDirectory() as tmp:
             with AsgiHarness(self.build(proposal_root=tmp)) as client:
@@ -404,7 +402,7 @@ class EndpointTests(unittest.TestCase):
                 self.assertEqual([], data["allowed_commands"])
 
     def test_named_candidates_come_back_judged(self) -> None:
-        from test_web_composition import AsgiHarness
+        from tests.test_web_composition import AsgiHarness
 
         with AsgiHarness(self.build()) as client:
             response = client.post(
@@ -422,7 +420,7 @@ class EndpointTests(unittest.TestCase):
     def test_a_hostile_name_is_refused_over_http_too(self) -> None:
         """The boundary is in the probe, so the transport cannot widen it."""
 
-        from test_web_composition import AsgiHarness
+        from tests.test_web_composition import AsgiHarness
 
         with AsgiHarness(self.build()) as client:
             response = client.post(
@@ -437,7 +435,7 @@ class EndpointTests(unittest.TestCase):
             self.assertEqual("", data["patch"])
 
     def test_apply_targets_the_promptaflow_checkout_not_the_runtime_workspace(self) -> None:
-        from test_web_composition import AsgiHarness
+        from tests.test_web_composition import AsgiHarness
 
         sample = propose(
             ["aider"], specs=(), which=which_for({"aider"}),
@@ -480,10 +478,14 @@ class EndpointTests(unittest.TestCase):
             )
 
     def test_a_request_naming_neither_is_refused(self) -> None:
-        from test_web_composition import AsgiHarness
+        from tests.test_web_composition import AsgiHarness
 
         with AsgiHarness(self.build()) as client:
             response = client.post(
                 "/api/v1/agent-proposals", actor="writer", key="probe-3", body={},
             )
             self.assertNotEqual(200, response.status_code)
+
+
+if __name__ == "__main__":
+    unittest.main()

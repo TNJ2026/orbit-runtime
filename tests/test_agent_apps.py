@@ -644,8 +644,6 @@ class EventBridgeTests(unittest.TestCase):
         self.assertEqual("event:e2", self.inbox.pending()[0]["event_id"])
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class HostHelperTests(unittest.TestCase):
@@ -1063,3 +1061,7 @@ class McpProxyEndToEndTests(unittest.TestCase):
         self.assertNotIn("Errno", error["message"])
         # And the wording it replaced, for whoever has to fix it.
         self.assertIn("unavailable", error["data"]["detail"])
+
+
+if __name__ == "__main__":
+    unittest.main()

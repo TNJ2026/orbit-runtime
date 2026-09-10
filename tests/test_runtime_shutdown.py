@@ -80,8 +80,6 @@ class RuntimeShutdownTests(unittest.TestCase):
                 self.assertEqual([], stopped)
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class ExecutionDoesNotBlockTheServerTests(unittest.TestCase):
@@ -268,3 +266,7 @@ class HarnessReachesShutdownAsTheOperatorTests(unittest.TestCase):
                          "on /mcp the header refines the operator into a Session")
         self.assertEqual("local", ask("/api/v1/runtime/shutdown"),
                          "everywhere else a loopback caller is the one operator")
+
+
+if __name__ == "__main__":
+    unittest.main()

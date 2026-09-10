@@ -493,8 +493,6 @@ class CreateAppGitDetectionTests(unittest.TestCase):
         self.assertIn("workspace_path", str(caught.exception))
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class DirectProjectAccessTests(unittest.TestCase):
@@ -600,3 +598,7 @@ class ScratchDirectoryPromptTests(unittest.TestCase):
 
         self.assertNotIn("run-tmp", rendered)
         self.assertNotIn("real project directory", rendered)
+
+
+if __name__ == "__main__":
+    unittest.main()

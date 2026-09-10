@@ -416,8 +416,6 @@ def _funnel_document(workflow_id: str = "generated") -> dict:
     }
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class CliArgumentTests(unittest.TestCase):
@@ -826,3 +824,7 @@ class RevisionSeamTests(unittest.TestCase):
         # to the version it claims rather than to whatever it says.
         self.assertEqual(7, seen["base_version"])
         self.assertIn("Renamed by patch", outcome.source)
+
+
+if __name__ == "__main__":
+    unittest.main()

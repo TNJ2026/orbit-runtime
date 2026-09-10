@@ -2500,8 +2500,6 @@ class WorkflowGenerationUnavailableTests(BrowserE2ETestCase):
                 """))
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class AgentSubstitutionNoticeTests(BrowserE2ETestCase):
@@ -2910,3 +2908,7 @@ class TwoSubstitutesNoticeTests(BrowserE2ETestCase):
         self.assertEqual(
             0, page.locator(".workflow-agent-binding p").count(),
         )
+
+
+if __name__ == "__main__":
+    unittest.main()

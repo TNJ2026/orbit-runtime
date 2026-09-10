@@ -855,8 +855,6 @@ class NodeLabelTests(unittest.TestCase):
         self.assertEqual("Collect the data", restored.nodes[0].label)
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class RetryOnAHandlerlessNodeTests(unittest.TestCase):
@@ -1474,3 +1472,7 @@ class AcceptancePolicyTests(unittest.TestCase):
             self.compile({"files_exist": []})
         codes = {item.code for item in caught.exception.diagnostics}
         self.assertIn("DSL_POLICY_INVALID", codes)
+
+
+if __name__ == "__main__":
+    unittest.main()
