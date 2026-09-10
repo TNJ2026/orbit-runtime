@@ -244,11 +244,12 @@ node --test tests/ui/client_modules.test.mjs
 
 ```bash
 uv build
+RELEASE_VERSION=X.Y.Z # 替换为本次发布版本，例如 X.Y.Z-alpha。
 python scripts/build-marketplace-release.py \
-  --version 0.6.5-alpha \
-  --output dist/promptaflow-marketplace-0.6.5-alpha.zip \
-  --plugin-output dist/promptaflow-plugin-0.6.5-alpha.zip
+  --version "$RELEASE_VERSION" \
+  --output "dist/promptaflow-marketplace-${RELEASE_VERSION}.zip" \
+  --plugin-output "dist/promptaflow-plugin-${RELEASE_VERSION}.zip"
 ```
 
-推送 `v0.6.5-alpha` 这样的完整 SemVer 标签后，会执行跨平台 Release workflow，并上传
+推送 `vX.Y.Z` 或 `vX.Y.Z-alpha` 这样的完整 SemVer 标签后，会执行跨平台 Release workflow，并上传
 GitHub 分发产物。PyPI 发布只在手动运行 workflow 时按需启用；普通标签发布仍仅发布到 GitHub。
