@@ -30,7 +30,7 @@ PROMPTAFLOW_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://promptaflow/current-task-v53.html", PROMPTAFLOW_DASHBOARD_URI)
+        self.assertEqual("ui://promptaflow/current-task-v54.html", PROMPTAFLOW_DASHBOARD_URI)
         self.assertEqual(PROMPTAFLOW_DASHBOARD_URI, PROMPTAFLOW_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -103,7 +103,7 @@ class CurrentTaskCardTests(unittest.TestCase):
         The cards carried the favicon: an opaque near-black tile, drawn to
         survive being 16px in a browser tab, which beside a light card read
         as a black stamp. The UI shows something else in its own corner — a
-        plate, a ring and a satellite, each following the theme.
+        plate, a P-shaped workflow and a terminal node, each following the theme.
 
         Inline, because that is what following the theme requires: an <img>
         of a data: URI cannot read the page it sits on. The values are the
@@ -118,8 +118,8 @@ class CurrentTaskCardTests(unittest.TestCase):
                 self.assertIn('<svg class="mark"', html)
                 self.assertIn('<rect class="plate" x="0.5" y="0.5"'
                               ' width="19" height="19" rx="5"/>', html)
-                self.assertIn('<circle class="ring" cx="10" cy="10" r="5"/>', html)
-                self.assertIn('<circle class="satellite" cx="16" cy="4" r="2"/>', html)
+                self.assertIn('<path class="flow" d="M5.5 15.5v-11h4.6', html)
+                self.assertIn('<circle class="terminal" cx="16" cy="15.5" r="1.7"/>', html)
                 # `light-dark`, since the card follows the host's scheme while
                 # the UI follows an operator's explicit `data-theme`.
                 self.assertIn(
@@ -127,10 +127,10 @@ class CurrentTaskCardTests(unittest.TestCase):
                     "stroke:light-dark(#e4e8f0,#2a2d35)}", html,
                 )
                 self.assertIn(
-                    ".mark .ring{fill:none;stroke:light-dark(#2563eb,#adc6ff);"
-                    "stroke-width:2}", html,
+                    ".mark .flow{fill:none;stroke:light-dark(#2563eb,#adc6ff);"
+                    "stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}", html,
                 )
-                self.assertIn(".mark .satellite{fill:light-dark(#b45309,#ffb786)}", html)
+                self.assertIn(".mark .terminal{fill:light-dark(#b45309,#ffb786)}", html)
                 for absent in ('<img class="mark"', "data:image/svg+xml",
                                '<span class="mark">O</span>'):
                     self.assertNotIn(absent, html)
@@ -159,12 +159,18 @@ class CurrentTaskCardTests(unittest.TestCase):
                 "inspect_workflows", "inspect_workflow_definition", "list_agents",
                 # A finished run reports what it produced, which means asking
                 # what an artifact is before deciding whether to show it.
-                "read_artifact", "read_artifact_content",
+                "read_artifact", "read_artifact_content", "list_artifacts",
             },
             calls,
         )
         for absent in ("read_run_output", "read_authoring_output"):
             self.assertNotIn(absent, PROMPTAFLOW_DASHBOARD_HTML)
+
+    def test_run_cards_list_file_attachments_without_loading_large_binary_content(self) -> None:
+        for html in (PROMPTAFLOW_DASHBOARD_HTML, PROMPTAFLOW_RUN_HTML):
+            self.assertIn("callTool('list_artifacts'", html)
+            self.assertIn("startsWith('attachment:')", html)
+            self.assertIn("artifact_id: ", html)
 
     def test_workflow_selection_switches_views_inside_the_card(self) -> None:
         for marker in (

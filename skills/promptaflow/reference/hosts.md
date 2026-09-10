@@ -28,12 +28,17 @@ paths made the call. Neither shadows a discovered CLI, so neither is refused.
 
 ## How the Runtime and its MCP proxy are reached
 
-**Codex.** The bundled plugin ships the proxy, and the plugin host sets
-`PROMPTAFLOW_AGENT_APP_WORKSPACE` to the open project. The proxy registers that
+**Codex.** The bundled plugin ships the proxy and forwards
+`PROMPTAFLOW_AGENT_APP_WORKSPACE` when supplied by the host. The proxy resolves
+`--workspace` first, then this host project variable. It registers that
 workspace with the fixed loopback Hub and uses its workspace-scoped MCP URL.
 The Hub starts or discovers a dynamic-port Runtime for that workspace. In a
-projectless chat, the Host uses `PROMPTAFLOW_DEFAULT_WORKSPACE` when configured,
+chat without supplied project context, the proxy uses `PROMPTAFLOW_DEFAULT_WORKSPACE` when configured,
 otherwise `~/.promptaflow/workspaces/default`.
+
+Do not infer successful project binding from the presence of a project in the
+chat UI alone: the host must actually supply the project variable to the proxy.
+The proxy rejects relative project paths and never falls back to its process cwd.
 
 The Hub is the public MCP Gateway, not a transparent MCP proxy. It owns MCP
 protocol lifecycle and App resources; workspace Runtimes expose a private

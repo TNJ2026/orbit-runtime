@@ -77,8 +77,8 @@ class HandshakeTests(ApiTestCase):
             resources = listed["result"]["resources"]
             self.assertEqual(
                 {
-                    "ui://promptaflow/current-task-v53.html", "ui://promptaflow/workflows-v28.html",
-                    "ui://promptaflow/workflow-authoring-v16.html", "ui://promptaflow/goal-run-v22.html",
+                    "ui://promptaflow/current-task-v54.html", "ui://promptaflow/workflows-v28.html",
+                    "ui://promptaflow/workflow-authoring-v16.html", "ui://promptaflow/goal-run-v23.html",
                     "ui://promptaflow/goals-v16.html",
                 },
                 {resource["uri"] for resource in resources},
@@ -244,7 +244,7 @@ class DiscoveryTests(ApiTestCase):
                     "inspect_workflow_definition", "delete_workflow", "list_agents",
                     "list_artifacts", "read_artifact",
                     "read_artifact_content",
-                    "get_artifact_lineage", "collect_artifacts",
+                    "get_artifact_lineage", "collect_artifacts", "publish_run_files",
                     "generate_workflow", "modify_workflow", "get_authoring_job",
                     "list_authoring_jobs", "read_authoring_output",
                     "register_authoring_client",
@@ -263,12 +263,12 @@ class DiscoveryTests(ApiTestCase):
                 item for item in tools if item["name"] == "open_promptaflow_dashboard"
             )
             self.assertEqual(
-                "ui://promptaflow/current-task-v53.html",
+                "ui://promptaflow/current-task-v54.html",
                 dashboard["_meta"]["ui"]["resourceUri"],
             )
             self.assertEqual(
                 {
-                    "open_promptaflow_dashboard": "ui://promptaflow/current-task-v53.html",
+                    "open_promptaflow_dashboard": "ui://promptaflow/current-task-v54.html",
                     "open_promptaflow_goals": "ui://promptaflow/goals-v16.html",
                 },
                 {
@@ -287,7 +287,7 @@ class DiscoveryTests(ApiTestCase):
             )
             self.assertIsNone(card_bindings["inspect_workflow_definition"])
             self.assertEqual("ui://promptaflow/workflow-authoring-v16.html", card_bindings["generate_workflow"])
-            self.assertEqual("ui://promptaflow/goal-run-v22.html", card_bindings["start_run"])
+            self.assertEqual("ui://promptaflow/goal-run-v23.html", card_bindings["start_run"])
             self.assertEqual("ui://promptaflow/goals-v16.html", card_bindings["open_promptaflow_goals"])
             by_name = {item["name"]: item for item in tools}
             self.assertIn(
@@ -333,7 +333,7 @@ class DiscoveryTests(ApiTestCase):
             ).json()["result"]["contents"][0]["text"]
             dashboard = rpc(
                 client, "resources/read",
-                {"uri": "ui://promptaflow/current-task-v53.html"}, actor="reader",
+                {"uri": "ui://promptaflow/current-task-v54.html"}, actor="reader",
             ).json()["result"]["contents"][0]["text"]
 
             self.assertIn("dispatchPromptValue(t().promptGoal(", workflows)
@@ -1375,7 +1375,7 @@ class StdioTransportTests(ApiTestCase):
 
         self.assertEqual(2, len(responses))
         self.assertEqual("promptaflow", responses[0]["result"]["serverInfo"]["name"])
-        self.assertEqual(35, len(responses[1]["result"]["tools"]))
+        self.assertEqual(36, len(responses[1]["result"]["tools"]))
 
     def test_a_notification_produces_no_line_at_all(self) -> None:
         """There is no 202 on this transport; silence is the whole answer."""

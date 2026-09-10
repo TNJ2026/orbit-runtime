@@ -12574,7 +12574,7 @@ window.__ModuleLoader__.load({
 				]
 			});
 		}
-		function PromptaFlowPanel({ t, useSessions, onSelectWorkflow, onGenerateWorkflow, onAddAgent, onEditWorkflow, onDeleteWorkflow }) {
+		function PromptaFlowPanel({ t, useSessions, onSelectWorkflow, onGenerateWorkflow, onAddAgent, onEditWorkflow, onDeleteWorkflow, seenAuthoring }) {
 			const sessionId = useSessions((state) => state.current);
 			const [layout, setLayout] = (0, react.useState)(() => {
 				try {
@@ -12596,7 +12596,6 @@ window.__ModuleLoader__.load({
 			const [asked, setAsked] = (0, react.useState)(0);
 			const [asking, setAsking] = (0, react.useState)(false);
 			const forceNext = (0, react.useRef)(false);
-			const seenAuthoring = (0, react.useRef)(/* @__PURE__ */ new Map());
 			const bounds = useBounds();
 			const drag = (0, react.useRef)(null);
 			const update = (0, react.useCallback)((next) => {
@@ -13519,9 +13518,11 @@ window.__ModuleLoader__.load({
 			const t = ctx.locale.bind(PROMPTAFLOW_LOCALE_NAMESPACE);
 			registerPromptaFlowSlashSource(ctx, t);
 			registerWorkflowPopup(ctx, t);
+			const seenAuthoring = { current: /* @__PURE__ */ new Map() };
 			const Panel = ({ t, useSessions }) => {
 				const sessionId = useSessions((state) => state.current);
 				return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PromptaFlowPanel, {
+					seenAuthoring,
 					t,
 					useSessions,
 					onSelectWorkflow: (workflow, sessionId) => writeWorkflowDraft(ctx, t, workflow, sessionId),

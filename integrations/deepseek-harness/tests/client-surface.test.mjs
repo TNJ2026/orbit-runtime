@@ -64,7 +64,9 @@ test('workflow generation is a model tool, not a Harness slash command', async (
 
 test('a newly observed authoring job reveals its progress once', async () => {
   const panel = await readFile(join(clientDir, 'PromptaFlowPanel.tsx'), 'utf8')
-  assert.match(panel, /seenAuthoring = useRef\(new Map<string, Set<string>>\(\)\)/)
+  const client = await readFile(join(clientDir, 'index.tsx'), 'utf8')
+  assert.ok(client.indexOf('const seenAuthoring =') < client.indexOf('const Panel ='))
+  assert.match(client, /seenAuthoring=\{seenAuthoring\}/)
   assert.match(panel, /const firstForSession = priorAuthoring === undefined/)
   assert.match(panel, /const unseenLiveAuthoring = !firstForSession/)
   assert.match(panel, /!priorAuthoring\.has\(job\.job_id\)/)

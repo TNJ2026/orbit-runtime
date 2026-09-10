@@ -876,6 +876,21 @@ def build_mcp_dispatcher(
                     },
                 },
             },
+            {
+                "name": "publish_run_files",
+                "description": "Publish explicitly selected workspace files as attachments of a completed run, without re-execution.",
+                "scope": OPS_WRITE_SCOPE,
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "run_id": {"type": "string"},
+                        "paths": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 64},
+                        "expected_version": {"type": "integer", "minimum": 1},
+                        "idempotency_key": {"type": "string", "minLength": 1},
+                    },
+                    "required": ["run_id", "paths", "expected_version", "idempotency_key"],
+                },
+            },
         )
     if delegation_queue is not None:
         tools += (
@@ -1163,7 +1178,15 @@ def build_mcp_dispatcher(
             return langgraph_run_dto(
                 langgraph_service.get(str(arguments["run_id"]), actor=reading_actor(actor)),
                 can_write=guard.allows(actor, WRITE_SCOPE),
+                can_publish_files=guard.allows(actor, OPS_WRITE_SCOPE) and langgraph_service.project_access is not None,
             )
+        if name == "publish_run_files":
+            return langgraph_run_dto(langgraph_service.publish_run_files(
+                str(arguments["run_id"]), arguments["paths"],
+                expected_revision=int(arguments["expected_version"]),
+                idempotency_key=str(arguments["idempotency_key"]),
+                actor=reading_actor(actor),
+            ), can_write=True)
         if name == "get_run_steps":
             run_id = str(arguments["run_id"])
             langgraph_service.get(run_id, actor=reading_actor(actor))

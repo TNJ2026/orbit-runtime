@@ -74,6 +74,13 @@ class HubUiTests(unittest.TestCase):
         self.assertEqual(["color:#258353"], literals, painting)
         self.assertIn(".status{color:", dark)
 
+    def test_header_uses_the_promptaflow_workflow_mark(self):
+        body = render_hub_ui([])
+        self.assertIn('<svg class="mark" viewBox="0 0 20 20"', body)
+        self.assertIn('<path class="flow" d="M5.5 15.5v-11h4.6', body)
+        self.assertIn('<circle class="terminal" cx="16" cy="15.5" r="1.7"/>', body)
+        self.assertIn('<h1>PromptaFlow Hub</h1>', body)
+
     def test_empty_list_does_not_start_default_runtime(self):
         launcher = Mock()
         manager = WorkspaceRuntimeManager(runtime_discovery=lambda: [], launcher=launcher)

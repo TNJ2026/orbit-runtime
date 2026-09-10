@@ -254,6 +254,8 @@ export function apply(ctx: ClientContext): void {
   const t = ctx.locale.bind(PROMPTAFLOW_LOCALE_NAMESPACE)
   registerPromptaFlowSlashSource(ctx, t)
   registerWorkflowPopup(ctx, t)
+  // This cache belongs to the mounted plugin, above the Session-keyed panel.
+  const seenAuthoring = { current: new Map<string, Set<string>>() }
   const Panel = ({ t, useSessions }: PropsLocale<'promptaflow'> & {
     useSessions: <T>(selector: (state: { current?: string }) => T) => T
   }) => {
@@ -265,6 +267,7 @@ export function apply(ctx: ClientContext): void {
     const sessionId = useSessions(state => state.current)
     return <PromptaFlowPanel
       key={sessionId ?? 'no-session'}
+      seenAuthoring={seenAuthoring}
       t={t}
       useSessions={useSessions}
       onSelectWorkflow={(workflow, sessionId) => writeWorkflowDraft(ctx, t, workflow, sessionId)}

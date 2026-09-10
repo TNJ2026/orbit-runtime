@@ -14,30 +14,29 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-PROMPTAFLOW_DASHBOARD_URI = "ui://promptaflow/current-task-v53.html"
+PROMPTAFLOW_DASHBOARD_URI = "ui://promptaflow/current-task-v54.html"
 PROMPTAFLOW_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
 PROMPTAFLOW_WORKFLOWS_URI = "ui://promptaflow/workflows-v28.html"
 PROMPTAFLOW_AUTHORING_URI = "ui://promptaflow/workflow-authoring-v16.html"
-PROMPTAFLOW_RUN_URI = "ui://promptaflow/goal-run-v22.html"
+PROMPTAFLOW_RUN_URI = "ui://promptaflow/goal-run-v23.html"
 PROMPTAFLOW_GOALS_URI = "ui://promptaflow/goals-v16.html"
 
 # The mark the full PromptaFlow UI shows in its own top-left corner — the same
 # geometry as `workflow-ui/index.html`'s `.brand-mark`, not the favicon the
-# cards used to carry. The favicon is a tile: an opaque near-black plate with
-# the ring on it, drawn to survive being 16px in a browser tab. Beside a
-# light card it read as a black stamp.
+# cards used to carry. The favicon is a tile with colours fixed for its tiny
+# browser-tab context. Beside a light card it read as a black stamp.
 #
 # Inline rather than a data: URI, because the UI's mark takes its colours
-# from the page and an <img> cannot: it is a plate, a ring and a satellite,
-# and each of the three follows the theme. Embedded rather than fetched
+# from the page and an <img> cannot: it is a plate, a P-shaped workflow and a
+# terminal node, and each of the three follows the theme. Embedded rather than fetched
 # either way — MCP App documents must not depend on a separate HTTP asset.
 PROMPTAFLOW_LOGO_MARK = (
     '<svg class="mark" viewBox="0 0 20 20" aria-hidden="true" focusable="false">'
     '<rect class="plate" x="0.5" y="0.5" width="19" height="19" rx="5"/>'
-    '<circle class="ring" cx="10" cy="10" r="5"/>'
-    '<circle class="satellite" cx="16" cy="4" r="2"/></svg>'
+    '<path class="flow" d="M5.5 15.5v-11h4.6c3 0 5 1.9 5 4.5s-2 4.5-5 4.5H5.5M9.8 9c3.5 0 3.5 6.5 6.2 6.5"/>'
+    '<circle class="terminal" cx="16" cy="15.5" r="1.7"/></svg>'
 )
 
 _PROMPT_EDITOR_STYLE = r"""
@@ -124,8 +123,8 @@ _CARD_STYLE = r"""
      colour, so it is the same mark everywhere rather than the card accent
      wearing the shape. */
   .mark .plate{fill:light-dark(#f7f8fb,#212121);stroke:light-dark(#e4e8f0,#2a2d35)}
-  .mark .ring{fill:none;stroke:light-dark(#2563eb,#adc6ff);stroke-width:2}
-  .mark .satellite{fill:light-dark(#b45309,#ffb786)}
+  .mark .flow{fill:none;stroke:light-dark(#2563eb,#adc6ff);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .mark .terminal{fill:light-dark(#b45309,#ffb786)}
   h1{margin:0;flex:1;font-size:14px}
   button{font:inherit}.icon{width:32px;height:32px;border:0;border-radius:8px;
     color:var(--accent);background:transparent;cursor:pointer}
@@ -693,6 +692,12 @@ __CARD_STYLE__
     const answer = failure ? '' : resultText(stripArtifacts(run.result, ids));
     const rows = [];
     for (const id of ids) rows.push(await artifactRow(id));
+    try {
+      const data = await callTool('list_artifacts', {run_id: run.run_id, limit: 200});
+      for (const file of (data.artifacts || []).filter(a => String(a.port_id || '').startsWith('attachment:'))) {
+        rows.push(`<button class="artifact" data-prompt="${esc('打开这个运行的产物文件：'+file.filename+'；run_id: '+run.run_id+'；artifact_id: '+file.artifact_id)}">${esc(file.filename || file.port_id)} · ${esc(Math.ceil(file.size_bytes / 1024))} KB</button>`);
+      }
+    } catch (_) { /* the result remains readable if the attachment list is unavailable */ }
     return `<div class="resultBlock">
       <div class="resultLabel">${esc(failure ? t().resultFailed : t().result)}</div>
       <div class="outcome ${cssFor(run.status)}">${esc(t().outcome[run.status] || runStatusLabel(run.status))}</div>
@@ -1141,11 +1146,18 @@ const t=strings({'en-US':{preparing:'Preparing',goal:'Goal',result:'Result',
 function css(s){return s==='running'||s==='queued'?'live':s==='waiting'?'warn':s==='completed'||s==='succeeded'||s==='answered'?'good':s==='failed'||s==='cancelled'?'bad':''}
 function failureMessage(value){const error=value?.error;return typeof error==='string'?error:error?.message||error?.code||''}
 async function resultText(r){const id=r.result?.artifact_id;if(!id)return '';try{const a=await callTool('read_artifact_content',{artifact_id:id,max_bytes:262144});return a.encoding==='base64'?decodeURIComponent(escape(atob(a.content))):a.content||''}catch(_){return ''}}
+async function runFiles(r){
+ if(!r.run_id)return '';
+ try{const data=await callTool('list_artifacts',{run_id:r.run_id,limit:200});
+ const files=(data.artifacts||[]).filter(a=>String(a.port_id||'').startsWith('attachment:'));
+ return files.map(a=>`<button class="rowItem" type="button" data-prompt="${esc('打开这个运行的产物文件：'+(a.filename||a.port_id)+'；run_id: '+r.run_id+'；artifact_id: '+a.artifact_id)}"><strong>${esc(a.filename||a.port_id)}</strong><span class="meta">${esc(Math.ceil(a.size_bytes/1024))} KB · ${esc(a.content_type)}</span></button>`).join('');
+ }catch(e){return `<div class="error">${esc(e.message)}</div>`}
+}
 async function draw(r,steps){
  const rows=steps.map(s=>`<div class="step"><span class="dot ${css(s.status)}"></span><span>${esc(s.label||s.node_id)}</span><span class="meta">${esc(t().status[s.status]||s.status)}</span></div>`).join('');
- const output=terminal.has(r.status)?await resultText(r):'';card.innerHTML=`<div class="summary"><div class="statusLine"><span class="dot ${css(r.status)}"></span><span>${esc(t().status[r.status]||r.status||t().preparing)}</span></div>
+ const output=terminal.has(r.status)?await resultText(r):'';const files=terminal.has(r.status)?await runFiles(r):'';card.innerHTML=`<div class="summary"><div class="statusLine"><span class="dot ${css(r.status)}"></span><span>${esc(t().status[r.status]||r.status||t().preparing)}</span></div>
  <div class="goal">${esc(r.goal||r.workflow_id||t().goal)}</div><div class="meta">${esc(r.run_id||'')}</div></div>
- ${rows?`<div class="steps">${rows}</div>`:''}${output?`<div class="result"><h2 class="resultTitle">${esc(t().result)}</h2><div>${esc(output)}</div></div>`:''}`}
+ ${rows?`<div class="steps">${rows}</div>`:''}${output?`<div class="result"><h2 class="resultTitle">${esc(t().result)}</h2><div>${esc(output)}</div></div>`:''}${files?`<div class="result">${files}</div>`:''}`;bind()}
 async function refresh(){try{const failure=failureMessage(run);if(failure){clearTimeout(timer);card.innerHTML=`<div class="error">${esc(failure)}</div>`;return}if(firstPaint&&run?.run_id&&run.status==='failed'){firstPaint=false;await draw({...run,status:'running'},[]);clearTimeout(timer);timer=setTimeout(refresh,2000);return}firstPaint=false;if(!run?.run_id){const data=await callTool('list_runs',{limit:1});run=data.runs?.[0]||{}}
  else run=await callTool('inspect_run',{run_id:run.run_id});const data=run.run_id?await callTool('get_run_steps',{run_id:run.run_id}):{steps:[]};await draw(run,data.steps||[]);
  clearTimeout(timer);if(run.run_id&&!terminal.has(run.status))timer=setTimeout(refresh,2000)}catch(e){card.innerHTML=`<div class="error">${esc(e.message)}</div>`}}

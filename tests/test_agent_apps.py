@@ -1005,6 +1005,51 @@ class PromptaflowMcpProxyStartupTests(unittest.TestCase):
             serve.call_args.kwargs["state_dir"],
         )
 
+    def test_proxy_workspace_precedence_and_scoped_endpoint(self) -> None:
+        default = self.root / "default"
+        explicit = self.root / "explicit"
+        explicit.mkdir()
+        for cli, host_path, expected, create in (
+            (None, str(self.workspace), self.workspace, False),
+            (str(explicit), str(self.workspace), explicit, False),
+            (None, "", default, True),
+            (None, "  ", default, True),
+        ):
+            with self.subTest(cli=cli, host_path=host_path):
+                args = type("Args", (), {
+                    "state_dir": None, "workspace": cli,
+                    "manifest": str(self.manifest), "agent_app_action": "mcp-proxy",
+                })()
+                registration = {
+                    "workspace_id": "chosen",
+                    "workspace_path": str(expected.resolve()),
+                    "mcp_url": "http://127.0.0.1:8848/workspaces/chosen/mcp",
+                    "ui_url": "http://127.0.0.1:8848/workspaces/chosen/ui/",
+                    "events_url": "ws://127.0.0.1:8848/workspaces/chosen/events",
+                }
+                with (
+                    mock.patch.dict(os.environ, {
+                        "PROMPTAFLOW_AGENT_APP_WORKSPACE": host_path,
+                        "PROMPTAFLOW_DEFAULT_WORKSPACE": str(default),
+                    }),
+                    mock.patch("promptaflow.agent_apps.mcp_proxy.register_workspace_with_hub",
+                               return_value=registration) as register,
+                    mock.patch("promptaflow.agent_apps.mcp_proxy.serve_proxy") as serve,
+                ):
+                    _agent_app(args)
+                self.assertEqual(expected.resolve(), register.call_args.args[1])
+                self.assertEqual(create, register.call_args.kwargs["create"])
+                self.assertEqual(registration["mcp_url"], serve.call_args.args[0].mcp.url)
+
+    def test_proxy_rejects_relative_host_workspace(self) -> None:
+        args = type("Args", (), {
+            "state_dir": None, "workspace": None,
+            "manifest": str(self.manifest), "agent_app_action": "mcp-proxy",
+        })()
+        with mock.patch.dict(os.environ, {"PROMPTAFLOW_AGENT_APP_WORKSPACE": "relative/project"}):
+            with self.assertRaisesRegex(SystemExit, "absolute path"):
+                _agent_app(args)
+
 
 class McpProxyEndToEndTests(unittest.TestCase):
     """The whole pipe: a line of stdin becomes a request on a socket."""

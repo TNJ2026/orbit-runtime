@@ -1546,12 +1546,87 @@ class LangGraphWorkflowService:
         """
 
         with self._connect() as connection:
+            count = (
+                "(SELECT COUNT(*) FROM langgraph_artifacts a"
+                " WHERE a.run_id=r.run_id AND a.status='committed')"
+                if self._artifacts_are_here() else "0"
+            )
             row = connection.execute(
-                "SELECT * FROM langgraph_runs WHERE run_id=?", (run_id,)
+                f"SELECT r.*, {count} AS artifact_count FROM langgraph_runs r WHERE run_id=?", (run_id,)
             ).fetchone()
         if row is None or (actor is not None and row["owner_actor"] != actor):
             raise LookupError(f"LangGraph run not found: {run_id}")
         return self._record(row)
+
+    def publish_run_files(self, run_id, paths, *, expected_revision, idempotency_key, actor=None):
+        """Repair missing attachments without changing results or executing nodes.
+
+        The root comes from the Runtime grant, never the request. Staged blobs
+        become visible atomically with the idempotency receipt and run event.
+        """
+        import hashlib
+        from .project_access import project_access_need
+
+        current = self.get(run_id, actor=actor)
+        if not idempotency_key.strip():
+            raise ValueError("idempotency_key is required")
+        if not self._artifacts_are_here():
+            raise ValueError("attachment repair requires the local artifact store")
+        root = getattr(self.project_access, "project_root", None)
+        if root is None or not project_access_need(self._run_ir(current)):
+            raise ValueError("run did not have project file access")
+        request_hash = definition_hash({
+            "command": "publish_run_files", "run_id": run_id, "paths": paths,
+            "expected_revision": expected_revision,
+        }).value
+
+        def receipt(connection):
+            prior = connection.execute(
+                "SELECT request_hash,run_id FROM langgraph_run_receipts WHERE idempotency_key=?",
+                (idempotency_key,),
+            ).fetchone()
+            if prior and (prior["request_hash"] != request_hash or prior["run_id"] != run_id):
+                raise LangGraphRunConflict("idempotency key was already used for another request")
+            return prior
+
+        with self._connect() as connection:
+            if receipt(connection):
+                return current
+        if current.status != "completed" or current.revision != expected_revision:
+            raise LangGraphRunConflict("completed run revision changed")
+        attempt = "artifact_repair:" + hashlib.sha256(
+            (run_id + "|" + idempotency_key).encode()
+        ).hexdigest()
+        access = self.artifacts.access(
+            run_id=run_id, node_id="artifact_repair", attempt_id=attempt,
+            output_ports=(), inputs={}, actor=current.owner_actor,
+        )
+        ids = access.publish_files(root, paths)
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            if receipt(connection):
+                return self.get(run_id, actor=actor)
+            changed = connection.execute(
+                "UPDATE langgraph_runs SET revision=revision+1,updated_at=?"
+                " WHERE run_id=? AND status='completed' AND revision=?",
+                (self._stamp(), run_id, expected_revision),
+            ).rowcount
+            if changed != 1:
+                raise LangGraphRunConflict("completed run revision changed")
+            for artifact_id in ids:
+                changed = connection.execute(
+                    "UPDATE langgraph_artifacts SET status='committed'"
+                    " WHERE artifact_id=? AND status='staged' AND owner_actor=?",
+                    (artifact_id, current.owner_actor),
+                ).rowcount
+                if changed != 1:
+                    raise LangGraphRunConflict("attachment is not staged")
+            connection.execute(
+                "INSERT INTO langgraph_run_receipts VALUES (?,?,?)",
+                (idempotency_key, request_hash, run_id),
+            )
+            append_event(connection, run_id, "artifacts_published")
+        return self.get(run_id, actor=actor)
 
     def _in_background(self, run_id: str, ir, *, inputs=..., resume=...) -> None:
         """Execute a run on a thread, and remember it is out there.

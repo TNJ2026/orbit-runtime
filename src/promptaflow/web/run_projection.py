@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 
-def langgraph_run_dto(run, *, can_write: bool) -> dict[str, Any]:
+def langgraph_run_dto(run, *, can_write: bool, can_publish_files: bool = False) -> dict[str, Any]:
     """Project a Run without leaking its internal owner identity.
 
     Commands are authorization-dependent affordances, not status-derived
@@ -14,6 +14,16 @@ def langgraph_run_dto(run, *, can_write: bool) -> dict[str, Any]:
     """
 
     commands = []
+    if can_publish_files and run.status == "completed":
+        commands.append({
+            "command": "langgraph_run.publish_files",
+            "label": "Publish missing run files",
+            "method": "POST",
+            "href": f"/api/v1/langgraph-runs/{run.run_id}/publish-files",
+            "target_aggregate_id": run.run_id,
+            "expected_version": run.revision,
+            "payload_schema": "langgraph-run-publish-files/1.0",
+        })
     if can_write and run.status == "interrupted":
         commands.append({
             "command": "langgraph_run.resume",

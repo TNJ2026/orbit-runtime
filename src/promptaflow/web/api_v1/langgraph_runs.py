@@ -75,7 +75,8 @@ def build_routes(ctx, service) -> list[Route]:
         except LookupError as exc:
             return error("not_found", str(exc), 404)
         return JSONResponse(envelope(
-            langgraph_run_dto(run, can_write=ctx.guard.allows(actor, WRITE_SCOPE)),
+            langgraph_run_dto(run, can_write=ctx.guard.allows(actor, WRITE_SCOPE),
+                can_publish_files=ctx.guard.allows(actor, OPS_WRITE_SCOPE) and service.project_access is not None),
             projection_version=run.revision,
         ))
 
@@ -332,6 +333,16 @@ def build_routes(ctx, service) -> list[Route]:
             return error("invalid_request", str(exc))
         return JSONResponse(envelope({"artifacts": list(items)}))
 
+    async def publish_run_files(request: Request) -> JSONResponse:
+        def command(body, actor, key):
+            run = service.publish_run_files(
+                request.path_params["run_id"], body["paths"],
+                expected_revision=int(body["expected_version"]),
+                idempotency_key=key, actor=reading_actor(actor),
+            )
+            return {"run": langgraph_run_dto(run, can_write=True)}
+        return await ctx.mutate(request, OPS_WRITE_SCOPE, "langgraph_run.publish_files", command)
+
     async def get_artifact(request: Request) -> JSONResponse:
         actor = ctx.authenticate(request, READ_SCOPE)
         if isinstance(actor, JSONResponse):
@@ -577,6 +588,7 @@ def build_routes(ctx, service) -> list[Route]:
         )
 
     routes = [
+        Route("/api/v1/langgraph-runs/{run_id}/publish-files", publish_run_files, methods=["POST"]),
         Route("/api/v1/project-access", project_access, methods=["GET"]),
         Route(
             "/api/v1/project-access/resolve", resolve_project_access,

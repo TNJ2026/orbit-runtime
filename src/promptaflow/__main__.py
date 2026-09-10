@@ -440,27 +440,27 @@ def _serve(args) -> None:
             return
         os.kill(os.getpid(), signal.SIGINT)
 
-    app = create_hub_app(
-        manager=manager, template_store=WorkflowTemplateStore(),
-        shutdown_request=request_shutdown,
-    )
-
-    # Bind/listen before launching the Runtime. This establishes the Hub as the
-    # stable owner of the public address first; queued connections are accepted
-    # when uvicorn enters its loop after the Workspace becomes ready.
-    config = uvicorn.Config(app, host=args.host, port=args.port, log_level="info")
-    listener = config.bind_socket()
-    listener.listen()
-    base_url = _hub_health_url(args.host, listener.getsockname()[1])
-    urls = workspace_urls(identifier, base_url)
-    print(f"promptaflow Hub listening on {base_url}", flush=True)
+    listener = None
     try:
+        app = create_hub_app(
+            manager=manager, template_store=WorkflowTemplateStore(),
+            shutdown_request=request_shutdown,
+        )
+        # Own the public address before launching the workspace Runtime.
+        config = uvicorn.Config(app, host=args.host, port=args.port, log_level="info")
+        listener = config.bind_socket()
+        listener.listen()
+        base_url = _hub_health_url(args.host, listener.getsockname()[1])
+        urls = workspace_urls(identifier, base_url)
+        print(f"promptaflow Hub listening on {base_url}", flush=True)
         manager.ensure(identifier)
         print(f"promptaflow workspace ready at {urls['ui_url']}", flush=True)
         server = uvicorn.Server(config)
         server.run(sockets=[listener])
     finally:
-        listener.close()
+        if listener is not None:
+            listener.close()
+        manager.close()
 
 
 def _serve_runtime(args) -> None:
@@ -832,13 +832,22 @@ def _agent_app(args) -> None:
 
     manifest_path = _default_agent_app_manifest(args.manifest)
     host = AgentAppHost(state_root=args.state_dir)
-    workspace = (
-        Path(args.workspace).expanduser().resolve()
-        if args.workspace is not None else default_workspace()
-    )
+    # The plugin runs from its installation directory; cwd is not the chat's
+    # project. Explicit CLI scope wins, followed by the host's project context.
+    requested_workspace = args.workspace
+    if requested_workspace is None:
+        requested_workspace = (env("AGENT_APP_WORKSPACE") or "").strip() or None
+    if requested_workspace is not None:
+        workspace = Path(requested_workspace).expanduser()
+        if not workspace.is_absolute():
+            raise SystemExit("paf agent-app: workspace must be an absolute path")
+        workspace = workspace.resolve()
+    else:
+        workspace = default_workspace()
+    create_workspace = requested_workspace is None
     if args.agent_app_action == "ensure":
         identifier, _ = WorkspaceRegistry().register(
-            workspace, create=args.workspace is None,
+            workspace, create=create_workspace,
         )
         try:
             host.ensure(manifest_path)
@@ -855,7 +864,7 @@ def _agent_app(args) -> None:
         raise SystemExit(f"paf agent-app: {manifest.app_id} does not declare an MCP endpoint")
     try:
         registration = register_workspace_with_hub(
-            manifest.mcp.url, workspace, create=args.workspace is None,
+            manifest.mcp.url, workspace, create=create_workspace,
         )
     except HubUnavailableError:
         # Non-Codex hosts may use the stdio proxy without separately managing
@@ -867,7 +876,7 @@ def _agent_app(args) -> None:
             raise SystemExit(f"paf agent-app: {exc}") from None
         try:
             registration = register_workspace_with_hub(
-                manifest.mcp.url, workspace, create=args.workspace is None,
+                manifest.mcp.url, workspace, create=create_workspace,
             )
         except (HubUnavailableError, HubWorkspaceRegistrationError) as exc:
             raise SystemExit(f"paf agent-app mcp-proxy: {exc}") from None
@@ -1173,7 +1182,8 @@ def build_parser() -> argparse.ArgumentParser:
             "--workspace", default=None,
             help=(
                 "Workspace identity and working directory for workspace-scoped Apps "
-                "(default: PROMPTAFLOW_DEFAULT_WORKSPACE or ~/.promptaflow/workspaces/default)"
+                "(default: PROMPTAFLOW_AGENT_APP_WORKSPACE, then "
+                "PROMPTAFLOW_DEFAULT_WORKSPACE or ~/.promptaflow/workspaces/default)"
             ),
         )
         command.add_argument(
@@ -1420,6 +1430,7 @@ def main() -> None:
                 command, stdin=subprocess.DEVNULL,
                 start_new_session=os.name != "nt",
             )
+        manager = None
         try:
             server: uvicorn.Server | None = None
 
@@ -1435,11 +1446,12 @@ def main() -> None:
                     return
                 os.kill(os.getpid(), signal.SIGINT)
 
+            manager = WorkspaceRuntimeManager(
+                ownership_path=default_hub_root() / "launched-runtimes.json",
+            )
             config = uvicorn.Config(
                 create_hub_app(
-                    WorkspaceRuntimeManager(
-                        ownership_path=default_hub_root() / "launched-runtimes.json",
-                    ),
+                    manager,
                     template_store=templates,
                     shutdown_request=request_shutdown,
                 ),
@@ -1448,6 +1460,8 @@ def main() -> None:
             server = uvicorn.Server(config)
             server.run()
         finally:
+            if manager is not None:
+                manager.close()
             if background is not None and background.poll() is None:
                 background.terminate()
                 try:

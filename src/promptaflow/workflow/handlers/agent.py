@@ -50,6 +50,7 @@ Work within the available time and stop starting new operations when time is sho
 Prefer tests targeted at the changes; do not run the full test suite by default.
 When asked to wrap up, a test fails, or progress is blocked, return immediately with the current result.
 Always report completed changes, tests run, errors, and remaining work, even when the task is only partially complete.
+For files you produced and want to deliver, include a Markdown link to each file using its path relative to your working directory in your final response. PromptaFlow publishes these linked files as run attachments (up to 64 files, 64 MiB each, 128 MiB total). Link files individually, not directories. Do not link private or unrelated files.
 After the complete final response, print {marker} on a line by itself. PromptaFlow treats that line as completion; do not print anything after it."""
 
 
@@ -290,9 +291,12 @@ class TrustedCliAgentClient:
                 registered = True
 
         try:
+            workspace = self._workspace(context)
+            # Retain the actual granted cwd; never acquire a disposable copy twice.
+            context.deliverable_workspace = workspace
             handle = ProcessHandle(
                 (*self.command, *extra_args),
-                cwd=self._workspace(context),
+                cwd=workspace,
                 env=self.environment,
                 stdin_text=payload.decode("utf-8"),
                 max_output_bytes=max_output_bytes or self.max_output_bytes,
@@ -740,11 +744,27 @@ def _agent_result(text: str, context) -> "AgentResponse":
     carries only the reference; an inline port keeps the object envelope.
     """
 
+    attachments = ()
+    workspace = getattr(context, "deliverable_workspace", None)
+    publisher = getattr(getattr(context, "artifacts", None), "publish_files", None)
+    if workspace is not None and publisher is not None:
+        from .deliverables import linked_files, DeliverableReadError
+
+        # A missing/unsafe link must not make a completed external action run
+        # again. Report publication failure in the result, without claiming
+        # that the file was delivered. Storage failures still propagate.
+        try:
+            paths = linked_files(text, Path(workspace))
+            if paths:
+                attachments = publisher(workspace, paths)
+        except DeliverableReadError as exc:
+            text += f"\n\n[PromptaFlow] File publication failed: {exc}"
     ports = getattr(getattr(context, "request", None), "output_ports", ())
     port = _artifact_port(ports, AGENT_RESULT_PORT)
     if port is None:
         return AgentResponse(
             {AGENT_RESULT_PORT: {AGENT_RESULT_TEXT_KEY: text}}, None, None, "completed",
+            artifact_refs=attachments,
         )
     content_types = port.get("data_policy", {}).get("content_types") or ("text/plain",)
     artifact_id = context.artifacts.write(
@@ -753,7 +773,7 @@ def _agent_result(text: str, context) -> "AgentResponse":
     )
     return AgentResponse(
         {AGENT_RESULT_PORT: {"artifact_id": str(artifact_id)}},
-        None, None, "completed", artifact_refs=(artifact_id,),
+        None, None, "completed", artifact_refs=(*attachments, artifact_id),
     )
 
 

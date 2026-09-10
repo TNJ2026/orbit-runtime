@@ -245,6 +245,7 @@ function AuthoringRow({ t, job, sessionId }: { t: Translate; job: AuthoringSumma
 }
 
 export interface PromptaFlowPanelProps {
+  seenAuthoring: { current: Map<string, Set<string>> }
   t: Translate
   /** `shell.overlay` is root-scoped: it hands over the session *store*, never
    *  a session id. Reading `current` from it is the only way this panel knows
@@ -263,7 +264,7 @@ export interface PromptaFlowPanelProps {
 
 export function PromptaFlowPanel({
   t, useSessions, onSelectWorkflow, onGenerateWorkflow, onAddAgent,
-  onEditWorkflow, onDeleteWorkflow,
+  onEditWorkflow, onDeleteWorkflow, seenAuthoring,
 }: PromptaFlowPanelProps) {
   const sessionId = useSessions(state => state.current)
   const [layout, setLayout] = useState<PanelLayout>(() => {
@@ -296,7 +297,6 @@ export function PromptaFlowPanel({
      The first answer for a Session is a baseline, not an announcement: after a
      reload it may contain work that has been running for minutes. Later jobs
      open the Workflows page once without fighting a manual collapse. */
-  const seenAuthoring = useRef(new Map<string, Set<string>>())
   const bounds = useBounds()
   const drag = useRef<{ x: number; y: number } | null>(null)
 

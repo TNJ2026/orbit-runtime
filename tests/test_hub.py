@@ -4,7 +4,10 @@ import contextlib
 import json
 import os
 import shutil
+import subprocess
+import sys
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -350,6 +353,74 @@ class ProjectAccessGrantTests(unittest.TestCase):
 
 
 class WorkspaceRuntimeManagerTests(unittest.TestCase):
+    def test_crashed_hub_releases_kernel_lock_for_successor(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            record = Path(temporary) / "launched-runtimes.json"
+            result = subprocess.run([
+                sys.executable, "-c",
+                "import os, sys; from promptaflow.hub import WorkspaceRuntimeManager; "
+                "manager = WorkspaceRuntimeManager(ownership_path=sys.argv[1]); os._exit(0)",
+                str(record),
+            ], capture_output=True, timeout=10)
+            self.assertEqual(0, result.returncode, result.stderr)
+            successor = WorkspaceRuntimeManager(ownership_path=record)
+            successor.close()
+
+    def test_live_hub_excludes_successor_until_ownership_is_released(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            record = Path(temporary) / "launched-runtimes.json"
+            first = WorkspaceRuntimeManager(ownership_path=record)
+            try:
+                with self.assertRaises(HubError):
+                    WorkspaceRuntimeManager(ownership_path=record)
+            finally:
+                first.close()
+            successor = WorkspaceRuntimeManager(ownership_path=record)
+            successor.close()
+
+    def test_concurrent_snapshots_preserve_all_owned_runtimes(self):
+        from promptaflow.hub import _OwnedRuntime
+
+        with tempfile.TemporaryDirectory() as temporary:
+            record = Path(temporary) / "launched-runtimes.json"
+            manager = WorkspaceRuntimeManager(ownership_path=record)
+            entered, proceed = threading.Event(), threading.Event()
+            original = Path.write_text
+            errors = []
+
+            def paused_write(path, *args, **kwargs):
+                if threading.current_thread().name == "first-write":
+                    entered.set()
+                    if not proceed.wait(3):
+                        raise AssertionError("writer was not released")
+                return original(path, *args, **kwargs)
+
+            def persist_second():
+                try:
+                    with manager._guard:
+                        manager._owned_runtimes[22] = _OwnedRuntime("b", "/b")
+                    manager._persist_owned()
+                except Exception as exc:
+                    errors.append(exc)
+
+            manager._owned_runtimes[11] = _OwnedRuntime("a", "/a")
+            try:
+                with patch.object(Path, "write_text", paused_write):
+                    first = threading.Thread(target=manager._persist_owned, name="first-write")
+                    first.start()
+                    self.assertTrue(entered.wait(3))
+                    second = threading.Thread(target=persist_second)
+                    second.start()
+                    proceed.set()
+                    first.join(3)
+                    second.join(3)
+                    self.assertFalse(first.is_alive() or second.is_alive())
+                self.assertEqual([], errors)
+                self.assertEqual({11, 22}, {row['pid'] for row in json.loads(record.read_text())})
+            finally:
+                proceed.set()
+                manager.close()
+
     @mock.patch("promptaflow.hub.process_identity", return_value="birth-token")
     def test_a_launched_runtime_is_recorded_as_owned_by_this_hub(
         self, _process_identity,
@@ -392,6 +463,7 @@ class WorkspaceRuntimeManagerTests(unittest.TestCase):
                 timeout_seconds=0,
                 ownership_path=record,
             )
+            self.addCleanup(manager.close)
             with patch("promptaflow.hub.process_identity", return_value="birth"):
                 with contextlib.suppress(HubError):
                     manager.ensure(manager.registry.register(Path(temporary))[0])
@@ -405,6 +477,7 @@ class WorkspaceRuntimeManagerTests(unittest.TestCase):
                 }],
                 json.loads(record.read_text(encoding="utf-8")),
             )
+            manager.close()
 
     def test_a_new_hub_adopts_only_what_the_record_proves_is_its_own(self) -> None:
         """Discovery cannot say who started a Runtime; the birth token can.
@@ -429,12 +502,14 @@ class WorkspaceRuntimeManagerTests(unittest.TestCase):
                 manager = WorkspaceRuntimeManager(
                     runtime_discovery=lambda: [], ownership_path=record,
                 )
+                self.addCleanup(manager.close)
 
             owned = manager._owned_runtimes  # noqa: SLF001 - ownership contract
             self.assertEqual([11], list(owned))
             self.assertEqual("/work/a", owned[11].label)
             # Not our child this time: there is nothing to reap, only to watch.
             self.assertIsNone(owned[11].handle)
+            manager.close()
 
     def test_ownership_is_not_read_unless_a_path_was_supplied(self) -> None:
         """A manager built for a test or embedded elsewhere inherits nothing."""

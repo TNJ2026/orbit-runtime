@@ -34,6 +34,7 @@ from .global_control import (
 )
 from .platform.projects import project_id, resolve_project_root
 from .platform.process import process_identity, stop_pid_tree_if_identity
+from .platform.project_occupancy import _FileLock
 from .platform.runtime_ownership import DiscoveredRuntime, discover_runtimes
 from .web.mcp import (
     INVALID_PARAMS, INVALID_REQUEST, METHOD_NOT_FOUND, PARSE_ERROR,
@@ -374,9 +375,22 @@ class WorkspaceRuntimeManager:
         self._ownership_path = (
             Path(ownership_path).expanduser() if ownership_path else None
         )
-        if self._ownership_path is not None:
-            self._adopt_recorded()
         self._guard = threading.Lock()
+        self._ownership_lock = None
+        if self._ownership_path is not None:
+            self._ownership_lock = _FileLock(self._ownership_path.with_suffix('.lock'))
+            if not self._ownership_lock.acquire():
+                raise HubError(f"Another Hub owns {self._ownership_path.parent}")
+            try:
+                self._adopt_recorded()
+            except BaseException:
+                self.close()
+                raise
+
+    def close(self) -> None:
+        """Release ownership after the serving Hub has finished shutdown."""
+        if self._ownership_lock is not None:
+            self._ownership_lock.release()
 
     def ensure(self, identifier: str | None = None) -> str:
         workspace = self.registry.resolve(identifier)
@@ -514,13 +528,13 @@ class WorkspaceRuntimeManager:
                 for pid, owned in self._owned_runtimes.items()
                 if owned.identity is not None
             ]
-        try:
-            self._ownership_path.parent.mkdir(parents=True, exist_ok=True)
-            temporary = self._ownership_path.with_suffix(f".{os.getpid()}.tmp")
-            temporary.write_text(json.dumps(entries), encoding="utf-8")
-            temporary.replace(self._ownership_path)
-        except OSError:
-            pass
+            try:
+                self._ownership_path.parent.mkdir(parents=True, exist_ok=True)
+                temporary = self._ownership_path.with_suffix(f".{os.getpid()}.tmp")
+                temporary.write_text(json.dumps(entries), encoding="utf-8")
+                temporary.replace(self._ownership_path)
+            except OSError:
+                pass
 
     def stop_all(self) -> dict[str, list[str]]:
         """Stop Runtimes launched by this Hub and prove their processes exited.

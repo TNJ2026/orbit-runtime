@@ -27,6 +27,7 @@
         "COMSPEC",
         "USERNAME",
         "PROMPTAFLOW_AGENT_APP_WORKSPACE",
+        "PROMPTAFLOW_DEFAULT_WORKSPACE",
         "PROMPTAFLOW_CLI",
         "SYSTEMROOT",
         "WINDIR",

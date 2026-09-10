@@ -1066,7 +1066,9 @@ export function createViews(context) {
   async function appendRunArtifacts(root, runId) {
     let artifacts = [];
     try {
-      artifacts = (await api.artifacts({ runId, limit: 25 })).data.artifacts || [];
+      artifacts = (await api.artifacts({ runId, limit: 100 })).data.artifacts || [];
+      artifacts.sort((a, b) => Number(String(b.port_id).startsWith("attachment:"))
+        - Number(String(a.port_id).startsWith("attachment:")));
     } catch (error) {
       root.append(el("section", { class: "panel" }, [
         el("div", { class: "panel-head" }, [

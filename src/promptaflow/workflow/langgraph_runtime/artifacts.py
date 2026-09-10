@@ -381,12 +381,38 @@ class _ArtifactAccess:
         if normalized not in policy.content_types:
             raise LangGraphArtifactAccessDenied("Artifact content type is not allowed")
         filename = _typed_filename(name, normalized, filename)
+        return self._write(name, content, normalized, filename, port.schema_id, policy.max_size_bytes)
+
+    def publish_files(self, workspace, paths):
+        """Trusted CLI deliverables, separate from the workflow's typed data ports.
+
+        A file is a run attachment, not a replacement for `result`. Restrict the
+        reader and MIME/size policy here rather than widening declared ports.
+        All bytes (including secret checks) validate before any are staged.
+        """
+        from ..handlers.deliverables import read_deliverables, MAX_FILE_BYTES, DeliverableReadError
+
+        try:
+            files = read_deliverables(Path(workspace), paths)
+        except (OSError, ValueError) as exc:
+            raise DeliverableReadError(str(exc)) from exc
+        for _, _, content in files:
+            assert_no_secret_values(content, self.secret_values)
+        return tuple(
+            self._write(
+                "attachment:" + filename, content, content_type, Path(filename).name,
+                "schema://file/1.0", MAX_FILE_BYTES,
+            )
+            for filename, content_type, content in files
+        )
+
+    def _write(self, name, content, normalized, filename, schema_id, max_size_bytes):
         artifact_id = "langgraph_artifact:" + hashlib.sha256(
             f"{self.attempt_id}|{name}".encode("utf-8")
         ).hexdigest()
         assert_no_secret_values(content, self.secret_values)
         receipt = self.store.backend.write(
-            content, max_size_bytes=policy.max_size_bytes
+            content, max_size_bytes=max_size_bytes
         )
         with self.store._connect() as connection:
             prior = connection.execute(
@@ -399,7 +425,7 @@ class _ArtifactAccess:
                     "'staged',?,?)",
                     (
                         artifact_id, self.run_id, self.attempt_id, self.node_id,
-                        name, port.schema_id, normalized, receipt.size_bytes,
+                        name, schema_id, normalized, receipt.size_bytes,
                         receipt.blob_key, filename, self.actor,
                     ),
                 )
