@@ -37,6 +37,17 @@ def cli(*args: str, cwd: Path | None = None) -> subprocess.CompletedProcess:
 # The DSL and catalog are the ones the DSL tests already keep valid, so this
 # file exercises the CLI rather than re-deriving a workflow schema that would
 # drift the moment the DSL changes.
+#
+# Reaching a sibling needs a root on `sys.path`, and which root that is depends
+# on how the file was started: `python -m unittest tests.test_cli_matrix` puts
+# the repository there, `python tests/test_cli_matrix.py` puts `tests/` there
+# instead. Naming one of them picks a winner and makes the other an import
+# error — so the repository root is put there when it is missing, and the
+# import names it explicitly.
+_ROOT = str(Path(__file__).resolve().parents[1])
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
+
 from tests.test_workflow_dsl import VALID_DSL  # noqa: E402
 
 WORKFLOW_ID = f"workflow:{VALID_DSL['metadata']['id']}"
