@@ -315,6 +315,10 @@ class _OwnedRuntime(NamedTuple):
     #: still answers `process_identity` on Linux — so a Runtime that stopped
     #: perfectly would read as stuck and be signalled for nothing.
     handle: Any | None = None
+    #: Correlates a launcher PID with the Runtime child it created when a
+    #: Windows console shim makes those PIDs differ. Unlike the Workspace path,
+    #: this value is unique to one launch and cannot select another Hub's child.
+    owner_token: str | None = None
 
 
 def _wait_for_process_exit(
@@ -419,9 +423,14 @@ class WorkspaceRuntimeManager:
                     identity = process_identity(pid)
                     # Held so the child can be reaped later; see `_OwnedRuntime`.
                     handle = launched if hasattr(launched, "poll") else None
+                    owner_token = getattr(
+                        launched, "_promptaflow_owner_token", None,
+                    )
+                    if not isinstance(owner_token, str):
+                        owner_token = None
                     with self._guard:
                         self._owned_runtimes[pid] = _OwnedRuntime(
-                            identity, str(workspace), handle,
+                            identity, str(workspace), handle, owner_token,
                         )
                     # Outside the guard: it is not reentrant.
                     self._persist_owned()
@@ -505,6 +514,7 @@ class WorkspaceRuntimeManager:
                 continue
             pid, identity = entry.get("pid"), entry.get("identity")
             label = entry.get("workspace")
+            owner_token = entry.get("owner_token")
             if not isinstance(pid, int) or pid <= 0:
                 continue
             if not isinstance(identity, str) or not isinstance(label, str):
@@ -513,7 +523,10 @@ class WorkspaceRuntimeManager:
                 continue
             # No handle: this process is not our child, so there is nothing to
             # reap — only to signal and then watch for.
-            self._owned_runtimes[pid] = _OwnedRuntime(identity, label)
+            self._owned_runtimes[pid] = _OwnedRuntime(
+                identity, label, None,
+                owner_token if isinstance(owner_token, str) else None,
+            )
 
     def _persist_owned(self) -> None:
         """Write the owned PIDs where the next Hub can find them.
@@ -527,7 +540,12 @@ class WorkspaceRuntimeManager:
             return
         with self._guard:
             entries = [
-                {"pid": pid, "identity": owned.identity, "workspace": owned.label}
+                {
+                    "pid": pid, "identity": owned.identity,
+                    "workspace": owned.label,
+                    **({"owner_token": owned.owner_token}
+                       if owned.owner_token is not None else {}),
+                }
                 for pid, owned in self._owned_runtimes.items()
                 if owned.identity is not None
             ]
@@ -559,20 +577,21 @@ class WorkspaceRuntimeManager:
         }
         with self._guard:
             owned = tuple(self._owned_runtimes.items())
-        for pid, (identity, owned_label, handle) in owned:
+        for pid, (identity, owned_label, handle, owner_token) in owned:
             runtime = discovered.get(pid)
-            if runtime is None and owned_label:
+            if runtime is None and owned_label and owner_token:
                 # Windows venv/console launchers may remain as a native shim
                 # whose PID is the one returned by Popen, while the Python
                 # child publishes its own PID in Runtime discovery. Ownership
-                # still comes exclusively from the Popen record; matching the
-                # canonical Workspace only recovers that owned Runtime's HTTP
-                # endpoint so it can drain before the shim tree is stopped.
+                # is proved by the per-launch token; the canonical Workspace
+                # then recovers that owned Runtime's HTTP endpoint so it can
+                # drain before the shim tree is stopped.
                 try:
                     owned_path = Path(owned_label).expanduser().resolve()
                     workspace_matches = [
                         candidate for candidate in discovered_runtimes
-                        if Path(str(candidate.facts.get("project_root")))
+                        if candidate.facts.get("hub_owner_token") == owner_token
+                        and Path(str(candidate.facts.get("project_root")))
                         .expanduser().resolve() == owned_path
                     ]
                 except (OSError, TypeError, ValueError):
@@ -691,9 +710,13 @@ class WorkspaceRuntimeManager:
         directory.mkdir(parents=True, exist_ok=True)
         stdout = (directory / "stdout.log").open("ab")
         stderr = (directory / "stderr.log").open("ab")
+        owner_token = uuid.uuid4().hex
         try:
-            return subprocess.Popen(
-                self._serve_arguments(workspace),
+            process = subprocess.Popen(
+                [
+                    *self._serve_arguments(workspace),
+                    "--hub-owner-token", owner_token,
+                ],
                 cwd=workspace,
                 env=os.environ.copy(),
                 stdin=subprocess.DEVNULL,
@@ -702,6 +725,8 @@ class WorkspaceRuntimeManager:
                 close_fds=True,
                 start_new_session=os.name != "nt",
             )
+            process._promptaflow_owner_token = owner_token  # type: ignore[attr-defined]
+            return process
         finally:
             stdout.close()
             stderr.close()

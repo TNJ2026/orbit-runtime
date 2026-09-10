@@ -357,6 +357,25 @@ class ProjectAccessGrantTests(unittest.TestCase):
 
 
 class WorkspaceRuntimeManagerTests(unittest.TestCase):
+    @mock.patch("promptaflow.hub.subprocess.Popen")
+    def test_default_launcher_gives_the_runtime_a_unique_owner_token(
+        self, popen,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace = root / "project"
+            workspace.mkdir()
+            process = popen.return_value
+            manager = WorkspaceRuntimeManager(log_root=root / "logs")
+
+            launched = manager._launch(workspace)  # noqa: SLF001
+
+            arguments = popen.call_args.args[0]
+            token_index = arguments.index("--hub-owner-token") + 1
+            token = arguments[token_index]
+            self.assertRegex(token, r"^[0-9a-f]{32}$")
+            self.assertEqual(token, launched._promptaflow_owner_token)
+
     def test_crashed_hub_releases_kernel_lock_for_successor(self):
         with tempfile.TemporaryDirectory() as temporary:
             record = Path(temporary) / "launched-runtimes.json"
@@ -494,7 +513,10 @@ class WorkspaceRuntimeManagerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             record = Path(temporary) / "launched-runtimes.json"
             record.write_text(json.dumps([
-                {"pid": 11, "identity": "still-ours", "workspace": "/work/a"},
+                {
+                    "pid": 11, "identity": "still-ours",
+                    "workspace": "/work/a", "owner_token": "launch-a",
+                },
                 {"pid": 12, "identity": "pid-was-reused", "workspace": "/work/b"},
                 {"pid": 13, "identity": "already-gone", "workspace": "/work/c"},
             ]), encoding="utf-8")
@@ -511,6 +533,7 @@ class WorkspaceRuntimeManagerTests(unittest.TestCase):
             owned = manager._owned_runtimes  # noqa: SLF001 - ownership contract
             self.assertEqual([11], list(owned))
             self.assertEqual("/work/a", owned[11].label)
+            self.assertEqual("launch-a", owned[11].owner_token)
             # Not our child this time: there is nothing to reap, only to watch.
             self.assertIsNone(owned[11].handle)
             manager.close()

@@ -267,10 +267,13 @@ class HubUiTests(unittest.TestCase):
         runtime = DiscoveredRuntime(Path('/runtime.lock'), {
             'pid': 101, 'project_root': '/work/a',
             'base_url': 'http://127.0.0.1:41001',
+            'hub_owner_token': 'owned-launch',
         })
         manager = WorkspaceRuntimeManager(runtime_discovery=lambda: [runtime])
         manager._owned_runtimes = {  # noqa: SLF001 - manager ownership fixture
-            100: _OwnedRuntime("launcher-birth", "/work/a"),
+            100: _OwnedRuntime(
+                "launcher-birth", "/work/a", None, "owned-launch",
+            ),
         }
 
         result = manager.stop_all()
@@ -280,6 +283,34 @@ class HubUiTests(unittest.TestCase):
         self.assertEqual([], result["failures"])
         runtime_json.assert_called_once()
         stop_pid_tree.assert_not_called()
+
+    @patch("promptaflow.hub._wait_for_process_exit", return_value=True)
+    @patch("promptaflow.hub.stop_pid_tree_if_identity", return_value=True)
+    @patch("promptaflow.hub._runtime_json")
+    def test_stop_all_does_not_match_another_hub_by_workspace(
+        self, runtime_json, stop_pid_tree, _wait_for_exit,
+    ):
+        """A losing launcher must not claim the winner of a startup race."""
+
+        foreign = DiscoveredRuntime(Path('/foreign.lock'), {
+            'pid': 101, 'project_root': '/work/a',
+            'base_url': 'http://127.0.0.1:41001',
+            'hub_owner_token': 'other-hub-launch',
+        })
+        manager = WorkspaceRuntimeManager(runtime_discovery=lambda: [foreign])
+        manager._owned_runtimes = {  # noqa: SLF001 - ownership fixture
+            100: _OwnedRuntime(
+                "launcher-birth", "/work/a", None, "this-hub-launch",
+            ),
+        }
+
+        result = manager.stop_all()
+
+        self.assertEqual([], result["requested"])
+        self.assertEqual(["/work/a"], result["terminated"])
+        self.assertEqual([], result["failures"])
+        runtime_json.assert_not_called()
+        stop_pid_tree.assert_called_once_with(100, "launcher-birth")
 
     @patch("promptaflow.hub._wait_for_process_exit")
     @patch("promptaflow.hub.stop_pid_tree_if_identity")

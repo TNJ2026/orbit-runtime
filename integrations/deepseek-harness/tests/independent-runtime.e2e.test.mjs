@@ -40,7 +40,7 @@ async function stop(child) {
   await new Promise(resolveExit => child.once('exit', resolveExit))
 }
 
-async function runtimePid(workspacePath) {
+async function runtimeForWorkspace(workspacePath) {
   const canonicalWorkspace = await realpath(workspacePath)
   for (let attempt = 0; attempt < 100; attempt++) {
     const { stdout } = await execFileAsync(promptaflow, ['runtimes', '--json'], {
@@ -53,7 +53,7 @@ async function runtimePid(workspacePath) {
     )
     if (runtime !== undefined) {
       assert.equal(Number.isInteger(runtime.pid), true, 'Runtime discovery must publish its PID')
-      return runtime.pid
+      return runtime
     }
     await new Promise(resolveWait => setTimeout(resolveWait, 50))
   }
@@ -123,7 +123,13 @@ test('Harness reaches its workspace Runtime through the fixed Hub', { timeout: 3
   const workspace = { id: 'workspace:e2e', canonicalPath: workspacePath }
   const release = await gateway.acquire(workspace, true)
   const first = await gateway.call(workspace, 'first', 'list_runs', {})
-  ownedRuntimePid = await runtimePid(workspacePath)
+  const ownedRuntime = await runtimeForWorkspace(workspacePath)
+  ownedRuntimePid = ownedRuntime.pid
+  assert.match(
+    ownedRuntime.hub_owner_token,
+    /^[0-9a-f]{32}$/,
+    'a Hub-launched Runtime must publish its per-launch ownership token',
+  )
   const second = await gateway.call(workspace, 'second', 'list_runs', {})
   assert.deepEqual(first.runs, [])
   assert.deepEqual(second.runs, [])

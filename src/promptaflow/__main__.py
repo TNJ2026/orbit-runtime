@@ -658,6 +658,8 @@ def _serve_runtime(args) -> None:
         project_root=str(project_root),
         base_url=base_url,
         mcp_url=f"{base_url}/mcp",
+        **({"hub_owner_token": args.hub_owner_token}
+           if args.hub_owner_token else {}),
     )
     try:
         server = uvicorn.Server(config)
@@ -956,6 +958,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--project-root", default=None,
         help="Project directory used for Runtime state (default: current directory)",
     )
+    serve_cmd.add_argument("--hub-owner-token", default=None, help=argparse.SUPPRESS)
     serve_cmd.add_argument(
         "--db",
         default=None,
