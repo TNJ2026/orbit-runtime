@@ -8,7 +8,13 @@ import unittest
 from pathlib import Path
 
 
-EXCLUDED_MODULES = frozenset({"test_visual_regression", "test_browser_e2e"})
+EXCLUDED_MODULES = frozenset({
+    "test_visual_regression",
+    "test_browser_e2e",
+    # Uses BrowserE2ETestCase from test_browser_e2e and therefore needs the
+    # same separately provisioned Chromium runtime.
+    "test_generation_dialog",
+})
 ROOT = Path(__file__).resolve().parents[1]
 
 
