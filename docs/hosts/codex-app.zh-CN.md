@@ -32,6 +32,15 @@ Directory。
 
 如果要安装指定 Release，在提示词末尾加上明确版本即可，例如：`安装 PromptaFlow 0.4.0`。
 
+如果仓库已经 clone 到本地，请把该 checkout 作为当前 Codex 项目打开，然后粘贴：
+
+```text
+请从当前本地仓库安装 PromptaFlow Codex 插件。使用此源码构建本地 Marketplace，不要重新 clone 或下载 GitHub Release；保留本地修改，安装并验证插件，然后在需要完全重启 Codex 时停止并告诉我。
+```
+
+如果当前打开的是其他项目，请把“当前本地仓库”替换为 checkout 的绝对路径。源码安装得到的是
+当时的快照；之后修改 checkout，需要重新构建并安装插件才能生效。
+
 ### 1. 检查前置条件
 
 继续之前请安装：

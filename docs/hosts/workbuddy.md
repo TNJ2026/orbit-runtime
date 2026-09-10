@@ -27,6 +27,17 @@ The Agent should find this document through the repository's host index,
 install and start PromptaFlow, verify the endpoint, then guide you through any
 connector-setting action it cannot perform itself.
 
+If the checkout already exists locally, open it in WorkBuddy or provide its
+absolute path and paste:
+
+```text
+Set up PromptaFlow for WorkBuddy from the current local repository. Do not clone it again. Install the local Runtime, start the Hub for my target project, verify the endpoint, and guide me through any custom MCP connector settings you cannot change yourself. Preserve all local changes.
+```
+
+This configures a connector rather than installing a WorkBuddy plugin. Use the
+connector name `promptaflow`, Streamable HTTP URL
+`http://127.0.0.1:8848/mcp`, and no authentication.
+
 ### 1. Check the prerequisites
 
 - Git and `uv`.

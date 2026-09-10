@@ -25,6 +25,14 @@
 Agent 应从仓库的宿主索引找到本文，并执行下面的步骤。它必须在重启当前 Harness Profile
 之前停下，提醒你完成重启。
 
+如果 checkout 已经在本地，请把它作为 Harness Workspace 打开，或提供它的绝对路径，然后粘贴：
+
+```text
+请从当前本地仓库安装 PromptaFlow DeepSeek Harness 集成。不要重新 clone；保留所有本地修改，安装本地 Runtime 和 Harness Bundle、验证 Profile 配置，然后在必须重启 Harness Web Profile 之前停止并提醒我。
+```
+
+重启 Profile 后，打开一个由真实目录支持的 Workspace，并执行 `/promptaflow` 验证常驻面板。
+
 ### 1. 检查前置条件
 
 - Git 和 `uv`。

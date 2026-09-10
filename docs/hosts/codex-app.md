@@ -36,6 +36,17 @@ Install the PromptaFlow Codex plugin from https://github.com/TNJ2026/promptaflow
 For a specific release, add its exact version to the prompt, for example:
 `Install PromptaFlow 0.4.0`.
 
+If the repository is already cloned, open the checkout as the current Codex
+project and paste:
+
+```text
+Install the PromptaFlow Codex plugin from the current local repository. Build a local Marketplace from this source; do not clone the repository again or download a GitHub Release. Preserve local changes, install and verify the plugin, then stop and tell me when Codex must be fully restarted.
+```
+
+From another project, replace “the current local repository” with the
+checkout's absolute path. Source installation is a snapshot: after changing
+the checkout, rebuild and reinstall the plugin to pick up those changes.
+
 ### 1. Check the prerequisites
 
 Install these before continuing:

@@ -82,6 +82,16 @@ App:
 Install PromptaFlow for this app from https://github.com/TNJ2026/promptaflow.
 ```
 
+If the repository is already cloned, open that checkout in the Agent App and
+use this prompt instead:
+
+```text
+Install or configure PromptaFlow for this app from the current local repository. Do not clone it again or download a Release; follow the host-specific documentation in this checkout, preserve local changes, and stop before any App or Profile restart that I must perform.
+```
+
+When the checkout is not the current workspace, replace “current local
+repository” with its absolute path.
+
 App-specific instructions:
 
 - [Codex app](./docs/hosts/codex-app.md)

@@ -25,6 +25,15 @@ WorkBuddy 没有专用插件，也没有 Proxy。PromptaFlow 在本地运行，W
 Agent 应通过仓库的宿主索引找到本文，安装并启动 PromptaFlow、检查端点，然后引导你完成它无法
 代替操作的连接器设置。
 
+如果 checkout 已经在本地，请在 WorkBuddy 中打开它，或提供它的绝对路径，然后粘贴：
+
+```text
+请从当前本地仓库为 WorkBuddy 配置 PromptaFlow。不要重新 clone；保留所有本地修改，安装本地 Runtime，为我的目标项目启动 Hub、验证端点，并引导我完成你无法代替操作的自定义 MCP 连接器设置。
+```
+
+这里配置的是连接器，不是安装 WorkBuddy 插件。连接器名称使用 `promptaflow`，Streamable HTTP
+URL 使用 `http://127.0.0.1:8848/mcp`，认证选择“无”。
+
 ### 1. 检查前置条件
 
 - Git 和 `uv`。

@@ -28,6 +28,16 @@ The Agent should find this document from the repository's host index and
 follow the steps below. It must stop before restarting the active Harness
 Profile and tell you when that restart is required.
 
+If the checkout already exists locally, open it as the Harness Workspace or
+provide its absolute path and paste:
+
+```text
+Install the PromptaFlow DeepSeek Harness integration from the current local repository. Do not clone it again. Preserve local changes, install the local Runtime and Harness Bundle, verify the Profile configuration, then stop and tell me before the Harness Web Profile must be restarted.
+```
+
+After the Profile restart, open a real directory-backed Workspace and run
+`/promptaflow` to verify the resident panel.
+
 ### 1. Check the prerequisites
 
 - Git and `uv`.

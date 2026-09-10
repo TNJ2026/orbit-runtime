@@ -69,6 +69,14 @@ PromptaFlow 需要 Python 3.10 或更高版本，以及
 请为当前 App 安装这个仓库中的 PromptaFlow：https://github.com/TNJ2026/promptaflow
 ```
 
+如果仓库已经 clone 到本地，请先在 Agent App 中打开该 checkout，再使用：
+
+```text
+请从当前本地仓库为这个 App 安装或配置 PromptaFlow。不要重新 clone 或下载 Release；请阅读当前 checkout 中对应宿主的文档，保留本地修改，并在需要我亲自重启 App 或 Profile 之前停止并提醒我。
+```
+
+如果该 checkout 不是当前工作区，请把“当前本地仓库”替换为它的绝对路径。
+
 各 App 的详细文档：
 
 - [Codex app](./docs/hosts/codex-app.zh-CN.md)
