@@ -173,6 +173,39 @@ class RestartPromptaflowScriptTests(unittest.TestCase):
             self.assertEqual(3, len(lines), lines)
             self.assertIn("PromptaFlow Hub", lines[0])
 
+    def test_a_runtime_the_hub_spawned_is_recognised(self) -> None:
+        """The Hub does not start its children with `serve`.
+
+        `hub.py` spawns each workspace Runtime as
+        `python -m promptaflow _runtime --project-root ...`. Discovery finds
+        those PIDs, so a restart lists them — and then has to recognise them on
+        the command line before it will signal one. Matching only `serve` skips
+        every Runtime the Hub itself started, which is all of them on a normal
+        install: the restart reports success while the old Runtimes keep their
+        ports and their locks.
+        """
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            environment = self.environment(
+                root,
+                listed=[{"pid": 7101}, {"pid": 7102}],
+                recorded=7100,
+                ps_answers={
+                    7100: "python -m promptaflow hub serve",
+                    7101: "python -m promptaflow _runtime --host 127.0.0.1 --port 0 --project-root /a",
+                    7102: "python -m promptaflow _runtime --host 127.0.0.1 --port 0 --project-root /b",
+                },
+            )
+
+            lines = [
+                line for line in self.run_dry(environment, root).stdout.splitlines()
+                if line.startswith("Would stop")
+            ]
+
+            self.assertEqual(3, len(lines), lines)
+            self.assertIn("PromptaFlow Hub", lines[0])
+
     def test_the_console_script_form_is_recognised_too(self) -> None:
         """A launcher and a person run `paf`; the Hub runs `-m promptaflow`.
 

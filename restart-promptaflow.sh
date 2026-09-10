@@ -82,13 +82,21 @@ def identity_of(pid: int) -> str:
 
 
 # What each kind of PromptaFlow process looks like on the command line.
-# One program, two command lines. A launcher or a person runs the console
-# script — `paf hub serve`. The Hub spawns its children through the module —
-# `python -m promptaflow ...`. Matching only one of them leaves the other
-# running and holding the port, which is the thing a restart exists to prevent.
+#
+# Two axes, and both have to be covered. A launcher or a person runs the
+# console script — `paf hub serve`; the Hub spawns its children through the
+# module — `python -m promptaflow ...`. And a Runtime is only spelled `serve`
+# when somebody started it by hand: the Hub starts each workspace Runtime as
+# `_runtime`, which on a normal install is every Runtime there is.
+#
+# A candidate this fails to recognise is not stopped and not reported as a
+# problem — it is skipped as somebody else's process, and the restart goes on
+# to report success while the old one keeps its port and its lock.
 PROGRAM_TOKENS = ("paf", "promptaflow")
-HUB_COMMANDS = tuple(f"{token} hub serve" for token in PROGRAM_TOKENS)
-RUNTIME_COMMANDS = tuple(f"{token} serve" for token in PROGRAM_TOKENS)
+HUB_VERBS = ("hub serve",)
+RUNTIME_VERBS = ("_runtime", "serve")
+HUB_COMMANDS = tuple(f"{t} {v}" for t in PROGRAM_TOKENS for v in HUB_VERBS)
+RUNTIME_COMMANDS = tuple(f"{t} {v}" for t in PROGRAM_TOKENS for v in RUNTIME_VERBS)
 
 candidates: list[tuple[int, str, tuple[str, ...]]] = []
 # The Hub, as the Agent App host records it — not as whatever holds the port,

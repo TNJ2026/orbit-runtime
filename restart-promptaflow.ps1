@@ -94,7 +94,10 @@ function Test-PromptaFlowCommand {
         [Parameter(Mandatory = $true)][ValidateSet("Hub", "Runtime")][string] $Kind
     )
 
-    $promptaflowPrefix = '(?i)(?:\b-m\s+promptaflow\s+|promptaflow(?:\.exe)?["'']?\s+)'
+    # Console script or module, and the console script has two names. `-m` only
+    # ever names the module, which is `promptaflow` whatever the command is
+    # called.
+    $promptaflowPrefix = '(?i)(?:\b-m\s+promptaflow\s+|(?:promptaflow|paf)(?:\.exe)?["'']?\s+)'
     if ($Kind -eq "Hub") {
         if ($CommandLine -match ($promptaflowPrefix + '(?:hub\s+serve|serve)(?:\s|$)')) {
             return $true
