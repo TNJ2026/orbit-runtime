@@ -46,7 +46,6 @@ const TERMINAL_LANGGRAPH_STATUSES = new Set([
 // How much of one recorded value is rendered. Inline values are capped at
 // 256 KB server-side; a page that pastes all of that stops responding.
 const DATA_TEXT_LIMIT = 20_000;
-const runtimeState = { stopped: false };
 let views;
 
 // Which Agents this Runtime can write DSL with. The server decides; an empty
@@ -367,64 +366,10 @@ function installMoreMenu() {
   });
 }
 
-function runtimeShutdownCommand() {
-  return shellFacts?.runtime?.allowed_commands?.find(
-    (allowed) => allowed.command === "runtime.shutdown",
-  ) || null;
-}
-
-function openRuntimeShutdownDialog() {
-  const allowed = runtimeShutdownCommand();
-  if (!allowed) return;
-  const titleId = `runtime-shutdown-${Date.now()}`;
-  const dialog = el("dialog", {
-    class: "workflow-delete-dialog", "aria-labelledby": titleId,
-  });
-  const cancel = el("button", {
-    class: "button", type: "button", text: i18n.t("action.cancel"),
-  });
-  const stop = el("button", {
-    class: "button danger", type: "submit",
-    text: i18n.t("runtime.shutdown.action"),
-  });
-  cancel.addEventListener("click", () => dialog.close());
-  const form = el("form", { method: "dialog" }, [
-    el("h2", { id: titleId, text: i18n.t("runtime.shutdown.title") }),
-    el("p", { text: i18n.t("runtime.shutdown.confirm") }),
-    el("div", { class: "actions" }, [cancel, stop]),
-  ]);
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    cancel.disabled = true;
-    stop.disabled = true;
-    try {
-      await api.execute(allowed, {}, "runtime.shutdown");
-      runtimeState.stopped = true;
-      views.stopPolling();
-      dialog.close();
-      document.getElementById("runtimeDot").classList.add("degraded");
-      document.getElementById("runtimeCard").setAttribute(
-        "aria-label", i18n.t("shell.runtime.stopped"),
-      );
-      document.getElementById("refresh").disabled = true;
-      document.getElementById("shutdownRuntime").disabled = true;
-      announce(i18n.t("runtime.shutdown.complete"));
-    } catch (error) {
-      cancel.disabled = false;
-      stop.disabled = false;
-      reportError(error);
-    }
-  });
-  dialog.append(form);
-  dialog.addEventListener("close", () => dialog.remove(), { once: true });
-  document.body.append(dialog);
-  dialog.showModal();
-}
-
 async function boot() {
   i18n = await I18n.load(preferredLocale());
   views = createViews({
-    api, i18n, shellFacts, mayStartRun, runtimeState,
+    api, i18n, shellFacts, mayStartRun,
     render: (...args) => render(...args), navigate: (...args) => navigate(...args),
     // A getter, not the flag: `rendering` changes for the life of the shell
     // and a copy taken here would answer for the moment views were built.
@@ -470,11 +415,6 @@ async function boot() {
     shellFacts = (await api.capabilities()).data;
     mayStartRun = Boolean(shellFacts.permissions && shellFacts.permissions.start_run);
     views.update({ i18n, shellFacts, mayStartRun, route });
-    const shutdown = runtimeShutdownCommand();
-    document.getElementById("shutdownRuntime").hidden = !shutdown;
-    document.getElementById("shutdownRuntime").addEventListener(
-      "click", openRuntimeShutdownDialog,
-    );
   } catch (error) {
     reportError(error);
   }

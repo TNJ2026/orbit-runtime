@@ -10,7 +10,7 @@ import { askConfirm, askText, showNotice } from "../components/dialog.js";
 export function createViews(context) {
   const { api, render, navigate, announce, reportError, commandButtons,
     promptAndExecute, pill, statusDot, defaultGenerationAgent,
-    generationAgentField, workflowViews, runtimeState, isRendering,
+    generationAgentField, workflowViews, isRendering,
     TERMINAL_RUN_STATUSES, TERMINAL_LANGGRAPH_STATUSES,
     DATA_TEXT_LIMIT } = context;
   let i18n = context.i18n;
@@ -1668,7 +1668,6 @@ export function createViews(context) {
     const delaySeconds = () =>
       Math.min(300, LIVE_REFRESH_SECONDS * 2 ** failures);
     const tick = async () => {
-      if (runtimeState.stopped) return;
       try {
         // Inside the try, and the reschedule inside a finally: this guard once
         // read an identifier that was never in scope, and because it threw
