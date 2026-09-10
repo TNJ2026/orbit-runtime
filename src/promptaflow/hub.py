@@ -13,7 +13,7 @@ import sys
 import threading
 import time
 import uuid
-from typing import Any, Callable, Container, Iterable, Mapping
+from typing import Any, Callable, Container, Iterable, Mapping, NamedTuple
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlsplit
 from urllib.request import Request as UrlRequest, urlopen
@@ -27,6 +27,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 from websockets.asyncio.client import connect as websocket_connect
 
 from .agent_apps.host import default_workspace
+from .web.app import DEFAULT_SHUTDOWN_SECONDS
 from .web.hub_ui import render_hub_ui
 from .global_control import (
     WorkflowTemplateError, WorkflowTemplateStorageError, WorkflowTemplateStore,
@@ -292,16 +293,49 @@ def workspace_urls(identifier: str, hub_url: str = "http://127.0.0.1:8848") -> d
     }
 
 
-def _wait_for_process_exit(pid: int, identity: str, timeout: float) -> bool:
+# How long a Runtime may take to stop itself before the Hub reaches for a
+# signal. Derived, not chosen: the Runtime spends `DEFAULT_SHUTDOWN_SECONDS`
+# joining its loops, draining background work and writing the LangGraph
+# checkpoint. A Hub that allows less than that turns a clean stop into lost
+# work — the drain exists precisely to write what a kill would discard.
+RUNTIME_GRACE_SECONDS = DEFAULT_SHUTDOWN_SECONDS + 2.0
+
+#: After a signal, the process only has to die; nothing is being written.
+RUNTIME_SIGNAL_GRACE_SECONDS = 2.0
+
+
+class _OwnedRuntime(NamedTuple):
+    """A Runtime this Hub launched, and what is needed to prove it exited."""
+
+    identity: str | None
+    label: str
+    #: The `Popen` for our own child, when we have one. Without it an exited
+    #: child stays a zombie until CPython happens to reap it, and a zombie
+    #: still answers `process_identity` on Linux — so a Runtime that stopped
+    #: perfectly would read as stuck and be signalled for nothing.
+    handle: Any | None = None
+
+
+def _wait_for_process_exit(
+    pid: int, identity: str, timeout: float, handle: Any | None = None,
+) -> bool:
     """Wait until ``pid`` no longer names the process whose birth token we saw."""
 
     deadline = time.monotonic() + max(0.0, timeout)
-    while process_identity(pid) == identity:
+    while True:
+        if handle is not None:
+            # Reaps it if it has exited, which is what stops a zombie from
+            # answering as though it were still running.
+            try:
+                handle.poll()
+            except Exception:  # noqa: BLE001 - a fake launcher in a test
+                handle = None
+        if process_identity(pid) != identity:
+            return True
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             return False
         time.sleep(min(0.05, remaining))
-    return True
 
 
 class WorkspaceRuntimeManager:
@@ -331,7 +365,7 @@ class WorkspaceRuntimeManager:
         # PID -> (birth identity, Workspace label). Only processes launched by
         # this manager belong to this Hub. Discovery is machine-wide and may
         # include Runtimes owned by another Hub, terminal, or Agent App.
-        self._owned_runtimes: dict[int, tuple[str | None, str]] = {}
+        self._owned_runtimes: dict[int, _OwnedRuntime] = {}
         self._guard = threading.Lock()
 
     def ensure(self, identifier: str | None = None) -> str:
@@ -356,8 +390,12 @@ class WorkspaceRuntimeManager:
                 pid = getattr(launched, "pid", None)
                 if isinstance(pid, int) and pid > 0:
                     identity = process_identity(pid)
+                    # Held so the child can be reaped later; see `_OwnedRuntime`.
+                    handle = launched if hasattr(launched, "poll") else None
                     with self._guard:
-                        self._owned_runtimes[pid] = (identity, str(workspace))
+                        self._owned_runtimes[pid] = _OwnedRuntime(
+                            identity, str(workspace), handle,
+                        )
             while self.clock() < deadline:
                 try:
                     found = self._find(workspace)
@@ -431,7 +469,7 @@ class WorkspaceRuntimeManager:
         }
         with self._guard:
             owned = tuple(self._owned_runtimes.items())
-        for pid, (identity, owned_label) in owned:
+        for pid, (identity, owned_label, handle) in owned:
             runtime = discovered.get(pid)
             label = str(
                 (runtime.facts.get("project_root") if runtime is not None else None)
@@ -468,12 +506,16 @@ class WorkspaceRuntimeManager:
             if identity is None:
                 failures.append(label)
                 continue
-            if graceful_requested and _wait_for_process_exit(pid, identity, 2.0):
+            if graceful_requested and _wait_for_process_exit(
+                pid, identity, RUNTIME_GRACE_SECONDS, handle,
+            ):
                 with self._guard:
                     self._owned_runtimes.pop(pid, None)
                 continue
             stopped = stop_pid_tree_if_identity(pid, identity)
-            if _wait_for_process_exit(pid, identity, 0.25):
+            if _wait_for_process_exit(
+                pid, identity, RUNTIME_SIGNAL_GRACE_SECONDS, handle,
+            ):
                 if stopped:
                     terminated.append(label)
                 with self._guard:
@@ -656,6 +698,13 @@ def create_hub_app(
                 getattr(runtimes, "stop_all", None)
                 if shutdown_request is not None else None
             )
+            # The HTTP shutdown route sweeps before it asks the server to
+            # exit, and its outcome is what the operator was answered with.
+            # Sweeping again here would re-signal Runtimes that are already
+            # mid-teardown, and print a contradiction to stderr after the route
+            # returned 200.
+            if getattr(app.state, "runtime_shutdown", None) is not None:
+                stop_all = None
             if stop_all is not None:
                 try:
                     outcome = await anyio.to_thread.run_sync(stop_all)

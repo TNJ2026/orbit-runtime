@@ -98,10 +98,15 @@ test('Harness reaches its workspace Runtime through the fixed Hub', { timeout: 3
   t.after(async () => {
     try {
       await stop(child)
-      if (ownedRuntimePid !== undefined) {
-        try { await waitPidGone(ownedRuntimePid) }
-        catch (error) { throw new Error(`${String(error)}\n${stderr}`) }
-      }
+      // Never conditional. Skipping the assertion when the PID was not
+      // captured turns any earlier failure into a green run that proved
+      // nothing about the behaviour this test exists for.
+      assert.notEqual(
+        ownedRuntimePid, undefined,
+        `the Runtime PID was never captured, so its exit was never checked\n${stderr}`,
+      )
+      try { await waitPidGone(ownedRuntimePid) }
+      catch (error) { throw new Error(`${String(error)}\n${stderr}`) }
     } finally {
       for (const [name, value] of Object.entries(previous)) {
         if (value === undefined) delete process.env[name]

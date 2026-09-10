@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from promptaflow.hub import WorkspaceRuntimeManager, create_hub_app
+from promptaflow.hub import _OwnedRuntime  # noqa: PLC2701 - ownership record under test
 from promptaflow.platform.runtime_ownership import DiscoveredRuntime
 from promptaflow.web.hub_ui import render_hub_ui
 from tests.test_web_composition import AsgiHarness
@@ -187,8 +188,8 @@ class HubUiTests(unittest.TestCase):
             runtime_discovery=lambda: [graceful, starting],
         )
         manager._owned_runtimes = {  # noqa: SLF001 - manager ownership fixture
-            10: ("graceful-birth", "/work/a"),
-            11: ("starting-birth", "/work/b"),
+            10: _OwnedRuntime("graceful-birth", "/work/a"),
+            11: _OwnedRuntime("starting-birth", "/work/b"),
         }
         result = manager.stop_all()
 
@@ -214,7 +215,7 @@ class HubUiTests(unittest.TestCase):
             runtime_discovery=lambda: [runtime],
         )
         manager._owned_runtimes = {  # noqa: SLF001 - manager ownership fixture
-            10: ("stuck-birth", "/work/a"),
+            10: _OwnedRuntime("stuck-birth", "/work/a"),
         }
         result = manager.stop_all()
 
@@ -225,7 +226,7 @@ class HubUiTests(unittest.TestCase):
 
     def test_stop_all_reports_an_owned_pid_without_a_birth_identity_as_failure(self):
         manager = WorkspaceRuntimeManager(runtime_discovery=lambda: [])
-        manager._owned_runtimes = {10: (None, "/work/a")}  # noqa: SLF001
+        manager._owned_runtimes = {10: _OwnedRuntime(None, "/work/a")}  # noqa: SLF001
 
         result = manager.stop_all()
 

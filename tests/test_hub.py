@@ -370,10 +370,13 @@ class WorkspaceRuntimeManagerTests(unittest.TestCase):
             )
 
             self.assertEqual("http://127.0.0.1:41001", manager.ensure(identifier))
-            self.assertEqual(
-                {123: ("birth-token", str(workspace))},
-                manager._owned_runtimes,  # noqa: SLF001 - ownership contract
-            )
+            owned = manager._owned_runtimes  # noqa: SLF001 - ownership contract
+            self.assertEqual([123], list(owned))
+            self.assertEqual("birth-token", owned[123].identity)
+            self.assertEqual(str(workspace), owned[123].label)
+            # The handle is what lets a finished child be reaped rather than
+            # read as a zombie that never exits.
+            self.assertIsNotNone(owned[123].handle)
 
     def test_existing_runtime_for_the_workspace_is_reused(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
