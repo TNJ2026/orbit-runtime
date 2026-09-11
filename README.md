@@ -45,28 +45,6 @@ Agent App / Browser / API
            └── LangGraph state, runs and Artifacts
 ```
 
-## Upgrading from Orbit
-
-This project was called Orbit, and the rename is a clean break: nothing from an
-Orbit install is read, converted or migrated.
-
-- State lives under `~/.promptaflow`. An existing `~/.orbit` is never opened —
-  its projects, Hub registry, workspaces and workflow library are not carried
-  over, and a first run looks like a fresh install.
-- Per-project state lives in `<project>/.promptaflow`. An existing
-  `<project>/.orbit` is left untouched, worktrees and all.
-- The distribution is `promptaflow`, the command is `promptaflow` (`paf` for
-  short), and the MCP server answers to `promptaflow` — so every tool's
-  qualified name moved from `mcp__orbit__*` to `mcp__promptaflow__*`, and the
-  two card-opening tools are now `open_promptaflow_dashboard` and
-  `open_promptaflow_goals`. Reconnect every Agent App and reinstall the plugin;
-  a tool list cached from an Orbit install will not resolve.
-- `orbit-runtime` on PyPI is not updated. `uv tool uninstall orbit-runtime`
-  before installing this.
-
-Workspaces are re-registered by running a goal in each project again. The old
-directories are yours to keep or delete; nothing here will read them.
-
 ## Install
 
 PromptaFlow requires Python 3.10 or newer and
