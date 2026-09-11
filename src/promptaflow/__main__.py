@@ -693,14 +693,17 @@ def _mcp(args) -> None:
     actor_prefix = getattr(args, "actor_prefix", None)
     if actor_prefix is not None and not actor_prefix.strip():
         raise SystemExit("paf mcp: --actor-prefix cannot be empty")
-    project_root = resolve_project_root(getattr(args, "project_root", None))
-    if args.agent_project_access and args.project_root is None:
+    raw_project_root = getattr(args, "project_root", None)
+    if args.agent_project_access and (
+        raw_project_root is None or not str(raw_project_root).strip()
+    ):
         raise SystemExit(
             "paf mcp: --agent-project-access requires --project-root. A stdio "
             "Runtime's working directory is chosen by the client application "
             "rather than by you — commonly `/` or your home directory — and "
             "the granted project must be one you named."
         )
+    project_root = resolve_project_root(raw_project_root)
     # What the grant covers: the directory the operator named, exactly as
     # named. `resolve_project_root` walks up to the nearest `.git` or
     # `pyproject.toml`, which is right for placing the database and wrong for
@@ -709,8 +712,8 @@ def _mcp(args) -> None:
     # whole home directory. Where nothing was named there is nothing to grant,
     # and `create_app`'s own guard says so.
     grant_root = (
-        Path(args.project_root).expanduser().resolve()
-        if args.project_root is not None else None
+        Path(raw_project_root).expanduser().resolve()
+        if raw_project_root is not None else None
     )
     db_path = _runtime_db_path(args.db, project_root=project_root)
     try:

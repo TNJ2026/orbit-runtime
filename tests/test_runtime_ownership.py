@@ -192,6 +192,22 @@ class McpOwnershipCleanupTests(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "requires --project-root"):
                 _mcp(args)
 
+    def test_project_access_with_a_blank_project_is_refused(self) -> None:
+        """An empty shell expansion must not turn the client cwd into a grant."""
+
+        from promptaflow.__main__ import _mcp
+
+        with tempfile.TemporaryDirectory() as root:
+            for project_root in ("", "   "):
+                with self.subTest(project_root=project_root):
+                    args = self.args(root)
+                    args.project_root = project_root
+                    args.agent_project_access = True
+                    with self.assertRaisesRegex(
+                        SystemExit, "requires --project-root",
+                    ):
+                        _mcp(args)
+
     def test_an_unusable_project_ends_at_the_prompt_not_in_a_traceback(self) -> None:
         from promptaflow.__main__ import _mcp
 
