@@ -12,6 +12,7 @@ may fall back further, to the Runtime's own real working tree.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -450,6 +451,29 @@ class CreateAppGitDetectionTests(unittest.TestCase):
         root = Path(self.temp.name) / "project"
         root.mkdir()
         app = self.build_app(root)
+        self.assertIsNone(self.project_workspace_of(app))
+        self.assertEqual(root.resolve(), self.project_root_of(app))
+
+    def test_default_project_gets_direct_full_access_even_when_it_is_git(self) -> None:
+        root = self.git_repo()
+        from promptaflow.web.app import create_app
+        from promptaflow.web.builtin_handlers import BUILTIN_SCHEMAS
+
+        with (
+            patch.dict(
+                os.environ, {"PROMPTAFLOW_DEFAULT_WORKSPACE": str(root)},
+                clear=False,
+            ),
+            patch(
+                "promptaflow.workflow.catalogs.agent_discovery.discover_agent_clis_cached",
+                return_value=(self.agent,),
+            ),
+        ):
+            app = create_app(
+                self.db, schemas=BUILTIN_SCHEMAS, discover_agents=True,
+                workspace_path=root,
+            )
+
         self.assertIsNone(self.project_workspace_of(app))
         self.assertEqual(root.resolve(), self.project_root_of(app))
 

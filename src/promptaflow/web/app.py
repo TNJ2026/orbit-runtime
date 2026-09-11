@@ -534,7 +534,17 @@ def create_app(
     # The real project directory for non-git direct access.
     project_root_for_agents: Path | None = None
     grant_capabilities: frozenset[str] = frozenset()
-    if agent_project_access:
+    default_project_access = False
+    if workspace_path is not None:
+        from ..agent_apps.host import default_workspace
+        from ..platform.projects import resolve_project_root
+
+        default_project_access = (
+            Path(workspace_path).expanduser().resolve()
+            == resolve_project_root(default_workspace())
+        )
+    effective_project_access = agent_project_access or default_project_access
+    if effective_project_access:
         from ..platform.projects import project_state_dir
         from ..workspace import (
             GitWorkspaceProvider, GitWorktreeGrant,
@@ -550,7 +560,17 @@ def create_app(
         if not project_root.is_dir():
             raise ValueError(f"project directory does not exist: {project_root}")
         state_dir = project_state_dir(project_root)
-        if (project_root / ".git").exists():
+        if default_project_access:
+            # The configured default Workspace is PromptaFlow's own trusted
+            # working area. It always receives the complete directory with
+            # maximum read/write access, regardless of whether somebody has
+            # initialised Git inside it. Run occupancy supplies the exclusive
+            # isolation required by write-capable App delegations.
+            project_root_for_agents = project_root
+            grant_capabilities = frozenset({
+                "workspace.project.read", "workspace.project.write",
+            })
+        elif (project_root / ".git").exists():
             if not git_available() or not is_git_repo(project_root):
                 raise ValueError(
                     f"--agent-project-access requires a usable git repository "
@@ -677,7 +697,7 @@ def create_app(
 
     # Delegated App/Harness Agents receive the same Run workspace contract as
     # local CLIs. The Host must execute inside the returned absolute path.
-    if agent_project_access:
+    if effective_project_access:
         configured = []
         for registration in registrations:
             implementation = registration.implementation

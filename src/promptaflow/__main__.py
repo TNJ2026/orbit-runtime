@@ -1356,6 +1356,7 @@ def main() -> None:
             create_hub_app, default_hub_root, workspace_urls,
         )
         from .platform.projects import project_id, resolve_project_root
+        from .agent_apps.host import default_workspace
         from .workspace.git import is_git_repo
 
         registry = WorkspaceRegistry()
@@ -1370,18 +1371,26 @@ def main() -> None:
             # Reported on every registration, not only when it changes: this
             # is the one place the operator sees whether the Workspace they
             # just opened will let a workflow read the project it runs in.
+            grant_mode = grants.mode(identifier)
+            is_default_workspace = (
+                registered_workspace == resolve_project_root(default_workspace())
+            )
             print(json.dumps(
                 {
                     **workspace_urls(identifier),
                     "workspace_path": str(registered_workspace),
                     "agent_project_access": grants.granted(identifier),
-                    "agent_project_access_mode": grants.mode(identifier),
+                    "agent_project_access_mode": grant_mode,
                     "effective_project_access": (
-                        "git_worktree"
-                        if grants.mode(identifier) and is_git_repo(registered_workspace)
-                        else "non_git_direct_read_write_no_rollback"
-                        if grants.mode(identifier) == "read_write"
-                        else "disabled"
+                        "default_direct_read_write_no_rollback"
+                        if grant_mode == "read_write" and is_default_workspace
+                        else (
+                            "git_worktree"
+                            if grant_mode and is_git_repo(registered_workspace)
+                            else "non_git_direct_read_write_no_rollback"
+                            if grant_mode == "read_write"
+                            else "disabled"
+                        )
                     ),
                 },
                 sort_keys=True,

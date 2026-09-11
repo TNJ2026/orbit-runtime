@@ -30,7 +30,7 @@ PROMPTAFLOW_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://promptaflow/current-task-v54.html", PROMPTAFLOW_DASHBOARD_URI)
+        self.assertEqual("ui://promptaflow/current-task-v55.html", PROMPTAFLOW_DASHBOARD_URI)
         self.assertEqual(PROMPTAFLOW_DASHBOARD_URI, PROMPTAFLOW_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:
@@ -843,9 +843,29 @@ class DedicatedCardTests(unittest.TestCase):
         self.assertNotIn("list_runs", PROMPTAFLOW_AUTHORING_HTML)
 
     def test_run_card_is_scoped_to_one_run_and_its_result(self) -> None:
-        for marker in ("inspect_run", "get_run_steps", "read_artifact_content"):
+        for marker in ("inspect_run", "get_run_steps", "read_artifact", "read_artifact_content"):
             self.assertIn(marker, PROMPTAFLOW_RUN_HTML)
         self.assertNotIn("list_authoring_jobs", PROMPTAFLOW_RUN_HTML)
+
+    def test_html_artifacts_show_a_path_and_export_action_without_loading_content(self) -> None:
+        for html in (PROMPTAFLOW_DASHBOARD_HTML, PROMPTAFLOW_RUN_HTML):
+            with self.subTest(uri="dashboard" if html is PROMPTAFLOW_DASHBOARD_HTML else "run"):
+                self.assertRegex(html, r"type\s*===\s*'text/html'")
+                self.assertIn(r"/\.html?$/i", html)
+                self.assertIn('class="artifactPath"', html)
+                self.assertIn('data-prompt-mode="direct"', html)
+                self.assertIn("return the exported file path", html)
+                self.assertIn("返回导出后的文件路径", html)
+
+        dashboard = PROMPTAFLOW_DASHBOARD_HTML.split("async function artifactRow", 1)[1]
+        dashboard = dashboard.split("function goalRuns", 1)[0]
+        self.assertLess(dashboard.index("isHtmlArtifact(summary)"), dashboard.index("read_artifact_content"))
+
+        run = PROMPTAFLOW_RUN_HTML.split("async function resultArtifact", 1)[1]
+        run = run.split("async function runFiles", 1)[0]
+        self.assertLess(run.index("read_artifact'"), run.index("read_artifact_content"))
+        self.assertLess(run.index("htmlArtifact(a)"), run.index("read_artifact_content"))
+        self.assertIn("!Number.isFinite(size)", run)
 
     def test_run_card_labels_its_result(self) -> None:
         self.assertIn('<h2 class="resultTitle">${esc(t().result)}</h2>', PROMPTAFLOW_RUN_HTML)

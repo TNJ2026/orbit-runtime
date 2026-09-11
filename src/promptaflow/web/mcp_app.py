@@ -14,13 +14,13 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-PROMPTAFLOW_DASHBOARD_URI = "ui://promptaflow/current-task-v54.html"
+PROMPTAFLOW_DASHBOARD_URI = "ui://promptaflow/current-task-v55.html"
 PROMPTAFLOW_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
 PROMPTAFLOW_WORKFLOWS_URI = "ui://promptaflow/workflows-v28.html"
 PROMPTAFLOW_AUTHORING_URI = "ui://promptaflow/workflow-authoring-v16.html"
-PROMPTAFLOW_RUN_URI = "ui://promptaflow/goal-run-v23.html"
+PROMPTAFLOW_RUN_URI = "ui://promptaflow/goal-run-v24.html"
 PROMPTAFLOW_GOALS_URI = "ui://promptaflow/goals-v16.html"
 
 # The mark the full PromptaFlow UI shows in its own top-left corner — the same
@@ -187,6 +187,10 @@ _CARD_STYLE = r"""
   .step{display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--line);font-size:12px}
   .step:last-child{border-bottom:0}.result{padding:12px 14px;border-top:1px solid var(--line);white-space:pre-wrap;overflow-wrap:anywhere}
   .resultTitle{margin:0 0 6px;font-size:12px;font-weight:650}
+  .artifactFile{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;
+    align-items:center;padding:10px 14px;border-top:1px solid var(--line)}
+  .artifactPath{min-width:0;color:var(--muted);font:12px/1.45 ui-monospace,
+    SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
   .detailPanel{height:420px;overflow:hidden}.detailPanel.definition{overflow-y:auto}
   .workflowGraphMount{width:100%;height:100%;min-width:0;min-height:0;background:var(--bg)}
   .tabs{display:flex;gap:20px;padding:0 14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -209,6 +213,7 @@ _CARD_STYLE = r"""
   .actions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 4px;border-top:1px solid var(--line)}
   .action{padding:7px 10px;border:0;border-radius:8px;color:var(--accent);
     background:transparent;cursor:pointer;font-weight:620}
+  .artifactFile .action{padding:5px 8px;white-space:nowrap}
   /* `currentColor`, so the destructive one tints red without a rule of its
      own, and both stay right if either colour is ever changed. */
   .action:hover,.icon:hover,.back:hover{
@@ -383,7 +388,7 @@ __CARD_STYLE__
       workflows: 'Workflows', workflow: 'Workflow', back: 'Back', noWorkflows: 'No published workflows', noSteps: 'No steps', noAgents: 'No registered Agents', newGoal: 'New goal', modify: 'Modify', addAgent: 'Add Agent',
       goal: 'Goal', emptyGoal: 'Nothing is running here.',
       history: 'History', agents: 'Agents', goalDetail: 'Goal', noRuns: 'No goals have been run in this project yet.',
-      result: 'Result', resultFailed: 'Why it failed',
+      result: 'Result', resultFailed: 'Why it failed', exportArtifact: 'Export',
       outcome: { completed: 'Finished', failed: 'Failed', cancelled: 'Cancelled',
         unknown: 'Outcome unknown — nobody has ruled on it' },
       today: 'Today', yesterday: 'Yesterday', dateUnknown: 'Unknown date',
@@ -403,6 +408,8 @@ __CARD_STYLE__
       promptAddAgent: 'Add an Agent CLI to PromptaFlow: ',
       promptGoal: (name,id) => `Run the workflow "${name}" (${id}) with this goal: `,
       promptModify: (name,id) => `Modify the workflow "${name}" (${id}) as follows: `,
+      promptExportArtifact: (run,id,path) => `Export the PromptaFlow artifact ${id} from run ${run} as a local file. `
+        + `Keep the filename ${path}, and return the exported file path.`,
     },
     'zh-CN': {
       running: '运行中', waiting: '需要你的处理', interrupted: '需要你的处理',
@@ -414,7 +421,7 @@ __CARD_STYLE__
       workflows: '工作流', workflow: '工作流详情', back: '返回', noWorkflows: '暂无已发布工作流', noSteps: '暂无步骤', noAgents: '暂无已注册 Agent', newGoal: '新目标', modify: '修改', addAgent: '添加 Agent',
       goal: '目标', emptyGoal: '这里没有正在执行的目标。',
       history: '历史记录', agents: 'Agents', goalDetail: '目标详情', noRuns: '当前项目还没有目标执行记录。',
-      result: '结果', resultFailed: '失败原因',
+      result: '结果', resultFailed: '失败原因', exportArtifact: '导出',
       outcome: { completed: '已完成', failed: '失败', cancelled: '已取消',
         unknown: '结果未知 —— 还没有人裁定' },
       today: '今天', yesterday: '昨天', dateUnknown: '未知日期',
@@ -434,6 +441,8 @@ __CARD_STYLE__
       promptAddAgent: '给PromptaFlow添加Agent cli：',
       promptGoal: (name,id) => `使用工作流「${name}」（${id}）执行：`,
       promptModify: (name,id) => `按照下面的要求修改工作流「${name}」（${id}）：`,
+      promptExportArtifact: (run,id,path) => `将 PromptaFlow 运行 ${run} 的产物 ${id} 导出为本地文件。`
+        + `保留文件名 ${path}，并返回导出后的文件路径。`,
     },
   };
   const t = () => S[locale] || S['en-US'];
@@ -643,6 +652,22 @@ __CARD_STYLE__
     return bare.length > 12 ? `${bare.slice(0, 12)}…` : bare;
   }
 
+  function artifactPath(summary,id) {
+    return String(summary?.filename || artifactLabel(id));
+  }
+
+  function isHtmlArtifact(summary) {
+    const type = String(summary?.content_type || '').split(';')[0].trim().toLowerCase();
+    return type === 'text/html' || /\.html?$/i.test(String(summary?.filename || ''));
+  }
+
+  function artifactFile(summary,id,runId) {
+    const path = artifactPath(summary,id);
+    const prompt = t().promptExportArtifact(runId,id,path);
+    return `<div class="artifactFile"><code class="artifactPath" title="${esc(path)}">${esc(path)}</code>`
+      + `<button class="action" type="button" data-prompt-mode="direct" data-prompt="${esc(prompt)}">${esc(t().exportArtifact)}</button></div>`;
+  }
+
   function failureMessage(run) {
     const error = run?.error;
     return typeof error === 'string' ? error : error?.message || error?.code || '';
@@ -653,20 +678,21 @@ __CARD_STYLE__
      the thing that was asked for. Decided from what PromptaFlow recorded, before
      any bytes move. A preview that cannot be read is not worth a sentence:
      the artifact is still there, and still named below. */
-  async function artifactRow(id) {
+  async function artifactRow(id,runId) {
     try {
       const meta = await callTool('read_artifact', {artifact_id: id});
       const summary = meta.artifact || meta;
       const type = String(summary.content_type || '').split(';')[0].trim().toLowerCase();
       const size = Number(summary.size_bytes);
-      if (READABLE_TYPES.includes(type) && size >= 0 && size < READABLE_MAX_BYTES) {
+      if (!isHtmlArtifact(summary) && READABLE_TYPES.includes(type) && size >= 0 && size < READABLE_MAX_BYTES) {
         const held = await callTool('read_artifact_content', {artifact_id: id});
         const text = held.encoding === 'base64'
           ? decodeURIComponent(escape(atob(held.content))) : held.content || '';
         if (text) return `<pre class="result">${esc(text)}</pre>`;
       }
+      return artifactFile(summary,id,runId);
     } catch (_) { /* still an artifact, still named */ }
-    return `<div class="artifact" title="${esc(id)}">${esc(artifactLabel(id))}</div>`;
+    return artifactFile({},id,runId);
   }
 
   /* What the Goal page draws: everything still moving, or the one that moved
@@ -691,7 +717,7 @@ __CARD_STYLE__
     const ids = [];
     const answer = failure ? '' : resultText(stripArtifacts(run.result, ids));
     const rows = [];
-    for (const id of ids) rows.push(await artifactRow(id));
+    for (const id of ids) rows.push(await artifactRow(id,run.run_id));
     try {
       const data = await callTool('list_artifacts', {run_id: run.run_id, limit: 200});
       for (const file of (data.artifacts || []).filter(a => String(a.port_id || '').startsWith('attachment:'))) {
@@ -1135,29 +1161,34 @@ _RUN_STYLE = r"""
 
 PROMPTAFLOW_RUN_HTML = _card("PromptaFlow · Goal execution", r"""
 const card=document.getElementById('card');card.className='card goalRun';let run=initial(),timer=null,firstPaint=true;const terminal=new Set(['completed','failed','cancelled','unknown']);
-const t=strings({'en-US':{preparing:'Preparing',goal:'Goal',result:'Result',
+const t=strings({'en-US':{preparing:'Preparing',goal:'Goal',result:'Result',exportArtifact:'Export',
  status:{queued:'Queued',running:'Running',waiting:'Needs your input',interrupted:'Needs your input',
   completed:'Completed',failed:'Failed',cancelled:'Cancelled',unknown:'Needs review',
-  succeeded:'Done',answered:'Answered',not_reached:'Pending'}},
-'zh-CN':{preparing:'准备中',goal:'目标',result:'执行结果',
+  succeeded:'Done',answered:'Answered',not_reached:'Pending'},
+ promptExport:(run,id,path)=>`Export this PromptaFlow artifact as a local file; run_id: ${run}; artifact_id: ${id}. Keep the filename ${path}, and return the exported file path.`},
+'zh-CN':{preparing:'准备中',goal:'目标',result:'执行结果',exportArtifact:'导出',
  status:{queued:'排队中',running:'运行中',waiting:'需要你的处理',interrupted:'需要你的处理',
   completed:'已完成',failed:'失败',cancelled:'已取消',unknown:'需要检查',
-  succeeded:'完成',answered:'已回答',not_reached:'未开始'}}});
+  succeeded:'完成',answered:'已回答',not_reached:'未开始'},
+ promptExport:(run,id,path)=>`将这个 PromptaFlow 产物导出为本地文件；run_id: ${run}；artifact_id: ${id}。保留文件名 ${path}，并返回导出后的文件路径。`}});
 function css(s){return s==='running'||s==='queued'?'live':s==='waiting'?'warn':s==='completed'||s==='succeeded'||s==='answered'?'good':s==='failed'||s==='cancelled'?'bad':''}
 function failureMessage(value){const error=value?.error;return typeof error==='string'?error:error?.message||error?.code||''}
-async function resultText(r){const id=r.result?.artifact_id;if(!id)return '';try{const a=await callTool('read_artifact_content',{artifact_id:id,max_bytes:262144});return a.encoding==='base64'?decodeURIComponent(escape(atob(a.content))):a.content||''}catch(_){return ''}}
+function artifactName(a,id){return String(a?.filename||String(id).replace(/^langgraph_artifact:/,'').slice(0,12)||'artifact')}
+function htmlArtifact(a){const type=String(a?.content_type||'').split(';')[0].trim().toLowerCase();return type==='text/html'||/\.html?$/i.test(String(a?.filename||''))}
+function artifactFile(r,a,id){const path=artifactName(a,id);return `<div class="artifactFile"><div><div class="resultTitle">${esc(t().result)}</div><code class="artifactPath" title="${esc(path)}">${esc(path)}</code></div><button class="action" type="button" data-prompt-mode="direct" data-prompt="${esc(t().promptExport(r.run_id,id,path))}">${esc(t().exportArtifact)}</button></div>`}
+async function resultArtifact(r){const id=r.result?.artifact_id;if(!id)return '';try{const meta=await callTool('read_artifact',{artifact_id:id});const a=meta.artifact||meta;const type=String(a.content_type||'').split(';')[0].trim().toLowerCase();const size=Number(a.size_bytes);if(htmlArtifact(a)||!['text/markdown','text/plain'].includes(type)||!Number.isFinite(size)||size<0||size>=2048)return artifactFile(r,a,id);const held=await callTool('read_artifact_content',{artifact_id:id,max_bytes:2048});const text=held.encoding==='base64'?decodeURIComponent(escape(atob(held.content))):held.content||'';return text?`<div class="result"><h2 class="resultTitle">${esc(t().result)}</h2><div>${esc(text)}</div></div>`:artifactFile(r,a,id)}catch(_){return artifactFile(r,{},id)}}
 async function runFiles(r){
  if(!r.run_id)return '';
  try{const data=await callTool('list_artifacts',{run_id:r.run_id,limit:200});
  const files=(data.artifacts||[]).filter(a=>String(a.port_id||'').startsWith('attachment:'));
- return files.map(a=>`<button class="rowItem" type="button" data-prompt="${esc('打开这个运行的产物文件：'+(a.filename||a.port_id)+'；run_id: '+r.run_id+'；artifact_id: '+a.artifact_id)}"><strong>${esc(a.filename||a.port_id)}</strong><span class="meta">${esc(Math.ceil(a.size_bytes/1024))} KB · ${esc(a.content_type)}</span></button>`).join('');
+ return files.map(a=>{const path=artifactName(a,a.artifact_id);return `<button class="rowItem" type="button" data-prompt-mode="direct" data-prompt="${esc(t().promptExport(r.run_id,a.artifact_id,path))}"><strong>${esc(path)}</strong><span class="meta">${esc(Math.ceil(a.size_bytes/1024))} KB · ${esc(a.content_type)}</span></button>`}).join('');
  }catch(e){return `<div class="error">${esc(e.message)}</div>`}
 }
 async function draw(r,steps){
  const rows=steps.map(s=>`<div class="step"><span class="dot ${css(s.status)}"></span><span>${esc(s.label||s.node_id)}</span><span class="meta">${esc(t().status[s.status]||s.status)}</span></div>`).join('');
- const output=terminal.has(r.status)?await resultText(r):'';const files=terminal.has(r.status)?await runFiles(r):'';card.innerHTML=`<div class="summary"><div class="statusLine"><span class="dot ${css(r.status)}"></span><span>${esc(t().status[r.status]||r.status||t().preparing)}</span></div>
+ const output=terminal.has(r.status)?await resultArtifact(r):'';const files=terminal.has(r.status)?await runFiles(r):'';card.innerHTML=`<div class="summary"><div class="statusLine"><span class="dot ${css(r.status)}"></span><span>${esc(t().status[r.status]||r.status||t().preparing)}</span></div>
  <div class="goal">${esc(r.goal||r.workflow_id||t().goal)}</div><div class="meta">${esc(r.run_id||'')}</div></div>
- ${rows?`<div class="steps">${rows}</div>`:''}${output?`<div class="result"><h2 class="resultTitle">${esc(t().result)}</h2><div>${esc(output)}</div></div>`:''}${files?`<div class="result">${files}</div>`:''}`;bind()}
+ ${rows?`<div class="steps">${rows}</div>`:''}${output}${files?`<div class="result">${files}</div>`:''}`;bind()}
 async function refresh(){try{const failure=failureMessage(run);if(failure){clearTimeout(timer);card.innerHTML=`<div class="error">${esc(failure)}</div>`;return}if(firstPaint&&run?.run_id&&run.status==='failed'){firstPaint=false;await draw({...run,status:'running'},[]);clearTimeout(timer);timer=setTimeout(refresh,2000);return}firstPaint=false;if(!run?.run_id){const data=await callTool('list_runs',{limit:1});run=data.runs?.[0]||{}}
  else run=await callTool('inspect_run',{run_id:run.run_id});const data=run.run_id?await callTool('get_run_steps',{run_id:run.run_id}):{steps:[]};await draw(run,data.steps||[]);
  clearTimeout(timer);if(run.run_id&&!terminal.has(run.status))timer=setTimeout(refresh,2000)}catch(e){card.innerHTML=`<div class="error">${esc(e.message)}</div>`}}

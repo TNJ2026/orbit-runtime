@@ -250,6 +250,24 @@ class ProjectAccessGrantTests(unittest.TestCase):
                 "--agent-project-access", manager._serve_arguments(workspace)
             )
 
+    def test_configured_default_workspace_always_has_full_project_access(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            grants = ProjectAccessGrants(root / "project-access.json")
+            identifier, workspace, manager = self.manager(root, grants)
+            grants.set(identifier, allowed=False)
+
+            with mock.patch.dict(
+                os.environ,
+                {"PROMPTAFLOW_DEFAULT_WORKSPACE": str(workspace)},
+                clear=False,
+            ):
+                self.assertEqual("read_write", grants.mode(identifier))
+                self.assertTrue(grants.granted(identifier))
+                self.assertIn(
+                    "--agent-project-access", manager._serve_arguments(workspace)
+                )
+
     def test_the_grant_survives_a_re_registration(self) -> None:
         """Registering happens on every start; permission must not ride on it.
 

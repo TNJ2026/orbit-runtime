@@ -246,6 +246,31 @@ class CurrentAppExecutionTests(unittest.TestCase):
         binding = bind_current_app(single_step_workflow(step), registry)
         self.assertEqual("app.delegate", binding.ir.nodes[0].handler.name)
 
+    def test_writable_project_access_sets_truthful_app_isolation(self):
+        step = replace(agent_step(), policies=("project",))
+        ir = replace(
+            single_step_workflow(step), nodes=(step,),
+            policies=(IRPolicy("project", "workspace_access", {}),),
+        )
+        for capabilities, isolation in (
+            ({"workspace.read"}, "worktree"),
+            ({"workspace.project.read", "workspace.project.write"}, "exclusive"),
+        ):
+            with self.subTest(isolation=isolation):
+                registration = HandlerRegistration(
+                    APP_DELEGATE_MANIFEST,
+                    AppDelegationHandler(self.queue, poll_seconds=0.005),
+                    "app.delegate@1.1.0",
+                    granted_capabilities=frozenset(capabilities),
+                )
+                registry = trusted_handlers(
+                    [registration], attempt_db_path=self.path,
+                )
+                binding = bind_current_app(ir, registry)
+                config = binding.ir.nodes[0].config
+                self.assertEqual("write", config["effects"])
+                self.assertEqual(isolation, config["isolation_mode"])
+
     def test_human_resume_keeps_app_binding_and_returns_before_delegation(self):
         human = IRNode("review", "human", (port("prompt"),), (port("result"),), None, {}, (), None)
         action = agent_step("after_review")

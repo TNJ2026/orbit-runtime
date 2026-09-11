@@ -232,6 +232,11 @@ class ProjectAccessGrants:
         self._lock = threading.Lock()
 
     def mode(self, identifier: str) -> str | None:
+        # The configured default Workspace is PromptaFlow's trusted working
+        # project. It is always fully writable; this is independent of Git
+        # and cannot be accidentally revoked by an old persisted preference.
+        if identifier == project_id(resolve_project_root(default_workspace())):
+            return "read_write"
         return self._read().get(identifier)
 
     def granted(self, identifier: str) -> bool:

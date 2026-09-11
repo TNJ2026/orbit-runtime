@@ -7,6 +7,7 @@ from ..domain.definitions import IRHandlerRef
 from ..domain.serialization import to_primitive
 from .compiler import HandlerBindingError
 from .harness_subagent import APP_DELEGATE_MANIFEST
+from .project_access import project_access_need
 
 
 def validate_execution_mode(mode):
@@ -25,6 +26,10 @@ def bind_current_app(ir, registry):
     """
     manifest = APP_DELEGATE_MANIFEST
     reference = IRHandlerRef(manifest.name, manifest.fingerprint)
+    project_need = project_access_need(ir)
+    writing_nodes = (
+        frozenset(project_need.agent_nodes) if project_need.write else frozenset()
+    )
     nodes, rebound = [], {}
     for node in ir.nodes:
         is_agent = node.handler is not None and (
@@ -57,6 +62,7 @@ def bind_current_app(ir, registry):
                 ):
                     raise ValueError(f"current_app needs a text or JSON artifact output on node {node.id!r}")
         config = to_primitive(node.config)
+        declared_isolation = config.get("isolation_mode")
         if node.handler.name == "app.delegate":
             config.update(target="run_initiator")
             config.pop("pool", None)
@@ -74,7 +80,28 @@ def bind_current_app(ir, registry):
                 },
             }
         converted = replace(node, handler=reference, config=config)
-        registry.resolve(converted)  # Refuse before creating a Run if unavailable.
+        bound = registry.resolve(converted)  # Refuse before creating a Run if unavailable.
+        if node.id in writing_nodes:
+            # A workspace_access grant is run-wide: every Agent in the run is
+            # handed the same writable directory, even when only one node
+            # names the policy. Tell the App the truth about that capability
+            # instead of leaving the Agent defaults at read/shared and making
+            # the Host reject the delegation when it notices the task writes.
+            config["effects"] = "write"
+            if declared_isolation is None:
+                if "workspace.project.write" in bound.capabilities:
+                    # The real checkout is protected by the Runtime's
+                    # run-wide occupancy claim, not by a disposable copy.
+                    config["isolation_mode"] = "exclusive"
+                elif "workspace.read" in bound.capabilities:
+                    config["isolation_mode"] = "worktree"
+                else:
+                    raise ValueError(
+                        "current_app write delegation has no exclusive or "
+                        "worktree project grant"
+                    )
+            converted = replace(node, handler=reference, config=config)
+            registry.resolve(converted)
         nodes.append(converted)
         rebound[node.id] = reference
     return AgentRebinding(replace(ir, nodes=tuple(nodes)), rebound)
