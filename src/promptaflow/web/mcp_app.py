@@ -14,13 +14,13 @@ from pathlib import Path
 # The host caches MCP App resources by URI. This URI intentionally changed
 # after the dashboard was split from the workflow catalog so an older card
 # cannot be reused for the current-task surface.
-PROMPTAFLOW_DASHBOARD_URI = "ui://promptaflow/current-task-v55.html"
+PROMPTAFLOW_DASHBOARD_URI = "ui://promptaflow/current-task-v56.html"
 PROMPTAFLOW_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
 PROMPTAFLOW_WORKFLOWS_URI = "ui://promptaflow/workflows-v29.html"
 PROMPTAFLOW_AUTHORING_URI = "ui://promptaflow/workflow-authoring-v17.html"
-PROMPTAFLOW_RUN_URI = "ui://promptaflow/goal-run-v24.html"
+PROMPTAFLOW_RUN_URI = "ui://promptaflow/goal-run-v25.html"
 PROMPTAFLOW_GOALS_URI = "ui://promptaflow/goals-v17.html"
 
 # The mark the full PromptaFlow UI shows in its own top-left corner — the same

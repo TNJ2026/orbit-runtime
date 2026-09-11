@@ -237,7 +237,7 @@ paf hub register /absolute/path/to/project --no-agent-project-access
 paf --version
 paf runtimes --json
 paf mcp
-paf mcp --project-root /absolute/path/to/project
+paf mcp --project-root /absolute/path/to/project --agent-project-access
 paf run list
 paf run inspect <run_id>
 paf workflow validate <file> --catalog <catalog.json>

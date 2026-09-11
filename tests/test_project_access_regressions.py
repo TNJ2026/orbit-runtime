@@ -345,6 +345,34 @@ class FileBackupRegressions(unittest.TestCase):
 
 
 class RunWideGrantRegressions(unittest.TestCase):
+    def test_read_only_worktree_does_not_claim_the_real_project(self):
+        from dataclasses import replace
+        from tests.test_workflow_langgraph_runtime import node, workflow
+        from promptaflow.workflow.domain.definitions import IRPolicy
+        from promptaflow.workflow.langgraph_runtime.service import (
+            LangGraphWorkflowService,
+        )
+
+        step = replace(
+            node("agent.only", inputs=("value",), outputs=("value",)),
+            policies=("access",),
+        )
+
+        def definition(mode):
+            return workflow(
+                (step,), (), entry=(step.id,), terminals=(step.id,),
+                result=(step.id, "value"),
+                policies=(IRPolicy(
+                    "access", "workspace_access", {"mode": mode},
+                ),),
+            )
+
+        service = object.__new__(LangGraphWorkflowService)
+        service.project_access = object()
+
+        self.assertIsNone(service._project_need(definition("read_only")))
+        self.assertTrue(service._project_need(definition("read_write")).write)
+
     def test_implicit_agent_receives_grant_and_requires_capability(self):
         from dataclasses import replace
         from tests.test_workflow_langgraph_runtime import node, edge, workflow, binding

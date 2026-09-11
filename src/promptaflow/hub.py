@@ -258,7 +258,7 @@ class ProjectAccessGrants:
         # `enable_by_default` never overwrites, and an unreadable or
         # unrecognised file grants nothing rather than refusing. So this is a
         # deliberate refusal, not the stale preference the rule exists to
-        # ignore, and overriding it would make `--no-project-access` print
+        # ignore, and overriding it would make `--no-agent-project-access` print
         # consent the operator declined to give.
         stored = self._read().get(identifier)
         if stored is None and identifier == project_id(default_workspace()):

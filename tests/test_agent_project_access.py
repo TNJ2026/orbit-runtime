@@ -472,10 +472,10 @@ class CreateAppGitDetectionTests(unittest.TestCase):
         creates one.
 
         `--agent-project-access` is the only record that an operator agreed to
-        hand over real files; the Hub sets it from the persisted grant. `paf
-        mcp` passes a `workspace_path` and has no such option at all, so a
-        Runtime started that way must come up with nothing granted rather than
-        with read/write over whatever it was pointed at.
+        hand over real files; the Hub sets it from the persisted grant and
+        `paf mcp` accepts it explicitly. Passing a `workspace_path` without the
+        switch must still come up with nothing granted rather than with
+        read/write over whatever it was pointed at.
         """
 
         root = self.git_repo()

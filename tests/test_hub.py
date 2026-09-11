@@ -271,7 +271,8 @@ class ProjectAccessGrantTests(unittest.TestCase):
         """Being trusted by default is not the same as being unrevokable.
 
         The rule exists so a stale persisted preference cannot quietly take
-        the working area away. An operator who typed `--no-project-access` is
+        the working area away. An operator who typed
+        `--no-agent-project-access` is
         not a stale preference, and reporting `agent_project_access: true`
         back at them would make the switch a lie.
         """

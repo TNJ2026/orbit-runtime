@@ -30,7 +30,7 @@ PROMPTAFLOW_DASHBOARD_HTML_SOURCE = (
 
 class CurrentTaskCardTests(unittest.TestCase):
     def test_it_keeps_current_task_as_the_default_resource(self) -> None:
-        self.assertEqual("ui://promptaflow/current-task-v55.html", PROMPTAFLOW_DASHBOARD_URI)
+        self.assertEqual("ui://promptaflow/current-task-v56.html", PROMPTAFLOW_DASHBOARD_URI)
         self.assertEqual(PROMPTAFLOW_DASHBOARD_URI, PROMPTAFLOW_MCP_APP_RESOURCES[0]["uri"])
 
     def test_it_publishes_dedicated_cards(self) -> None:

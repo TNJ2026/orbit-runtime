@@ -271,14 +271,12 @@ class CurrentAppExecutionTests(unittest.TestCase):
                 self.assertEqual("write", config["effects"])
                 self.assertEqual(isolation, config["isolation_mode"])
 
-    def test_a_declared_isolation_that_cannot_hold_a_write_is_refused_at_bind(self):
+    def test_declared_isolation_must_match_the_workspace_actually_granted(self):
         """Before a Run exists, not part-way through one.
 
-        The grant makes every Agent in the run a writer, and `shared` and
-        `snapshot` cannot hold a write delegation — the delegation Handler
-        rejects that pair itself. Forcing the effect while honouring the
-        declaration built a node certain to fail the moment it was invoked:
-        the run started, ran, and died on the delegation.
+        The grant makes every Agent in the run a writer. A generally
+        write-capable mode is not enough: saying `worktree` while handing the
+        App the direct checkout is a false isolation contract.
         """
 
         registration = HandlerRegistration(
@@ -291,7 +289,7 @@ class CurrentAppExecutionTests(unittest.TestCase):
         )
         registry = trusted_handlers([registration], attempt_db_path=self.path)
 
-        for declared in ("shared", "snapshot"):
+        for declared in ("shared", "snapshot", "worktree"):
             with self.subTest(declared=declared):
                 step = replace(
                     agent_step(config={"prompt": "go", "isolation_mode": declared}),
@@ -301,12 +299,12 @@ class CurrentAppExecutionTests(unittest.TestCase):
                     single_step_workflow(step), nodes=(step,),
                     policies=(IRPolicy("project", "workspace_access", {}),),
                 )
-                with self.assertRaisesRegex(ValueError, "cannot hold a write"):
+                with self.assertRaisesRegex(ValueError, "requires 'exclusive'"):
                     bind_current_app(ir, registry)
 
-        # An explicitly declared write-capable mode is still honoured.
+        # The mode matching the direct project grant is still honoured.
         step = replace(
-            agent_step(config={"prompt": "go", "isolation_mode": "worktree"}),
+            agent_step(config={"prompt": "go", "isolation_mode": "exclusive"}),
             policies=("project",),
         )
         ir = replace(
@@ -315,7 +313,20 @@ class CurrentAppExecutionTests(unittest.TestCase):
         )
         config = bind_current_app(ir, registry).ir.nodes[0].config
         self.assertEqual("write", config["effects"])
-        self.assertEqual("worktree", config["isolation_mode"])
+        self.assertEqual("exclusive", config["isolation_mode"])
+
+        # The inverse mismatch is rejected for a worktree-only grant too.
+        worktree_registration = HandlerRegistration(
+            APP_DELEGATE_MANIFEST,
+            AppDelegationHandler(self.queue, poll_seconds=0.005),
+            "app.delegate@1.1.0",
+            granted_capabilities=frozenset({"workspace.read"}),
+        )
+        worktree_registry = trusted_handlers(
+            [worktree_registration], attempt_db_path=self.path,
+        )
+        with self.assertRaisesRegex(ValueError, "requires 'worktree'"):
+            bind_current_app(ir, worktree_registry)
 
     def test_human_resume_keeps_app_binding_and_returns_before_delegation(self):
         human = IRNode("review", "human", (port("prompt"),), (port("result"),), None, {}, (), None)

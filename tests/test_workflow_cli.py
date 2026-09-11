@@ -592,6 +592,12 @@ class WorkflowLibraryResolutionTests(unittest.TestCase):
 
         self.assertEqual("/tmp/promptaflow-workspace", args.project_root)
 
+    def test_mcp_project_access_is_explicitly_opt_in(self) -> None:
+        self.assertFalse(self.parse("mcp").agent_project_access)
+        self.assertTrue(
+            self.parse("mcp", "--agent-project-access").agent_project_access
+        )
+
     def test_workflow_commands_accept_a_workspace_but_use_the_shared_catalog(self) -> None:
         """The Workspace selects runtime state, never a private definition DB."""
 

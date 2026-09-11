@@ -763,6 +763,7 @@ def _mcp(args) -> None:
             mcp_tool_profile=args.mcp_tool_profile,
             delegation_queue=delegation_queue,
             workspace_path=project_root,
+            agent_project_access=args.agent_project_access,
         )
     except Exception:
         ownership.release()
@@ -1059,6 +1060,16 @@ def build_parser() -> argparse.ArgumentParser:
     mcp_cmd.add_argument(
         "--no-agent-discovery", action="store_true",
         help="Skip probing for installed Agent CLIs at startup",
+    )
+    mcp_cmd.add_argument(
+        "--agent-project-access",
+        action="store_true",
+        help=(
+            "Let workflow nodes that declare a workspace_access policy access "
+            "the project selected by --project-root. Git projects use a "
+            "disposable Run worktree; non-git projects expose the real "
+            "directory with no automatic rollback."
+        ),
     )
     mcp_cmd.add_argument(
         "--mcp-tool-profile", choices=("full", "harness"), default="full",

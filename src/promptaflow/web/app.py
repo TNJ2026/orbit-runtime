@@ -538,9 +538,9 @@ def create_app(
     # It selects the shape of the grant below; it never creates one. Project
     # access stays gated on `--agent-project-access` on every entry point,
     # because that switch is the only record of an operator having agreed to
-    # it: the Hub sets it from `ProjectAccessGrants`, and `paf mcp` — which
-    # passes a `workspace_path` but has no such option — must not acquire real
-    # read/write over a directory simply by being pointed at it.
+    # it: the Hub sets it from `ProjectAccessGrants`, while `paf mcp` requires
+    # the operator to pass the switch explicitly. Merely pointing either entry
+    # point at a directory must not grant real read/write access.
     default_project_access = False
     if workspace_path is not None:
         from ..agent_apps.host import default_workspace

@@ -2679,7 +2679,11 @@ class LangGraphWorkflowService:
         from .project_access import project_access_need
 
         need = project_access_need(ir)
-        return need if need.required else None
+        # A read-only workflow can compile in a Runtime with direct access only
+        # when the Runtime also has a Git worktree grant; the compiler routes
+        # that run to the worktree. It must not take the real checkout's lock,
+        # create a recovery point there, or wait behind a direct writer.
+        return need if need.required and need.write else None
 
     def _require_project_available(self, need) -> None:
         """Refuse a start the project can never accept, before a Run exists.

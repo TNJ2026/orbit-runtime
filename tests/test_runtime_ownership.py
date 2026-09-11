@@ -93,7 +93,7 @@ class McpOwnershipCleanupTests(unittest.TestCase):
         return types.SimpleNamespace(
             db=str(Path(root) / "runtime.db"), artifact_root=None,
             no_agent_discovery=True, actor="local", mcp_tool_profile="full",
-            project_root=root,
+            project_root=root, agent_project_access=False,
         )
 
     def test_a_failed_artifact_store_does_not_bury_its_own_fault(self) -> None:
@@ -127,6 +127,23 @@ class McpOwnershipCleanupTests(unittest.TestCase):
 
             resolve_db.assert_called_once_with(
                 args.db, project_root=Path(root).resolve(),
+            )
+
+    def test_project_access_switch_reaches_the_stdio_runtime(self) -> None:
+        from promptaflow.__main__ import _mcp
+        from promptaflow.web.app import create_app
+
+        with tempfile.TemporaryDirectory() as root:
+            args = self.args(root)
+            args.agent_project_access = True
+            with patch(
+                "promptaflow.web.app.create_app", wraps=create_app,
+            ) as build, patch("promptaflow.web.mcp.serve_stdio"):
+                _mcp(args)
+
+            self.assertTrue(build.call_args.kwargs["agent_project_access"])
+            self.assertEqual(
+                Path(root).resolve(), build.call_args.kwargs["workspace_path"],
             )
 
     def test_a_failed_shutdown_still_releases(self) -> None:
