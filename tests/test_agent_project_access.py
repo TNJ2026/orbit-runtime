@@ -456,6 +456,29 @@ class CreateAppGitDetectionTests(unittest.TestCase):
 
     def test_default_project_gets_direct_full_access_even_when_it_is_git(self) -> None:
         root = self.git_repo()
+        with patch.dict(
+            os.environ, {"PROMPTAFLOW_DEFAULT_WORKSPACE": str(root)}, clear=False,
+        ):
+            app = self.build_app(root)
+
+        self.assertEqual(root.resolve(), self.project_root_of(app))
+        # And the worktree grant is kept beside it rather than replaced: a
+        # `read_only` policy has to have somewhere enforceable to run, and the
+        # compiler is what chooses between the two per run.
+        self.assertIsInstance(self.project_workspace_of(app), GitWorktreeGrant)
+
+    def test_a_default_workspace_is_not_a_substitute_for_the_switch(self) -> None:
+        """Being the default Workspace selects the shape of a grant, never
+        creates one.
+
+        `--agent-project-access` is the only record that an operator agreed to
+        hand over real files; the Hub sets it from the persisted grant. `paf
+        mcp` passes a `workspace_path` and has no such option at all, so a
+        Runtime started that way must come up with nothing granted rather than
+        with read/write over whatever it was pointed at.
+        """
+
+        root = self.git_repo()
         from promptaflow.web.app import create_app
         from promptaflow.web.builtin_handlers import BUILTIN_SCHEMAS
 
@@ -475,7 +498,40 @@ class CreateAppGitDetectionTests(unittest.TestCase):
             )
 
         self.assertIsNone(self.project_workspace_of(app))
-        self.assertEqual(root.resolve(), self.project_root_of(app))
+        self.assertIsNone(self.project_root_of(app))
+
+    def test_direct_access_to_a_git_project_keeps_a_way_back(self) -> None:
+        """Direct access is about which directory, not about giving up git.
+
+        The default Workspace reaches the real checkout even when it is a
+        repository. Taking the unprotected path there would throw away both
+        the rollback and the change summary git would have given, and leave
+        every run's summary reading as an error.
+        """
+
+        from promptaflow.web.app import create_app
+        from promptaflow.web.builtin_handlers import BUILTIN_SCHEMAS
+        from promptaflow.workspace.recovery import GitRecoveryPoints
+
+        root = self.git_repo()
+        with (
+            patch.dict(
+                os.environ, {"PROMPTAFLOW_DEFAULT_WORKSPACE": str(root)},
+                clear=False,
+            ),
+            patch(
+                "promptaflow.workflow.catalogs.agent_discovery.discover_agent_clis_cached",
+                return_value=(self.agent,),
+            ),
+        ):
+            app = create_app(
+                self.db, schemas=BUILTIN_SCHEMAS, discover_agents=True,
+                agent_project_access=True, workspace_path=root,
+                langgraph_state_directory=Path(self.temp.name) / "langgraph",
+            )
+
+        coordinator = app.state.runtime.project_access
+        self.assertIsInstance(coordinator.recovery_points, GitRecoveryPoints)
 
 
     def test_git_missing_refuses_startup_rather_than_silently_downgrading(self) -> None:

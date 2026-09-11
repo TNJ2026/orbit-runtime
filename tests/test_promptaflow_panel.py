@@ -867,6 +867,34 @@ class DedicatedCardTests(unittest.TestCase):
         self.assertLess(run.index("htmlArtifact(a)"), run.index("read_artifact_content"))
         self.assertIn("!Number.isFinite(size)", run)
 
+    def test_an_ordinary_text_result_is_still_shown_on_the_run_card(self) -> None:
+        """The Export button is for what is too big to read, not for the answer.
+
+        This is the result the goal was run for. Sending an ordinary few-KB
+        markdown reply to a filename and a button would hide every ordinary
+        answer behind an extra round trip.
+        """
+
+        self.assertIn("const RESULT_MAX_BYTES=262144;", PROMPTAFLOW_RUN_HTML)
+        run = PROMPTAFLOW_RUN_HTML.split("async function resultArtifact", 1)[1]
+        run = run.split("async function runFiles", 1)[0]
+        self.assertIn("size>=RESULT_MAX_BYTES", run)
+        self.assertIn("max_bytes:RESULT_MAX_BYTES", run)
+        self.assertNotIn("2048", run)
+
+    def test_dashboard_attachments_use_the_localized_export_prompt(self) -> None:
+        """Every artifact action on both cards speaks the reader's language.
+
+        The run card's file rows were converted; the dashboard's were left
+        with a hardcoded Chinese string and no `direct` prompt mode.
+        """
+
+        self.assertNotIn("打开这个运行的产物文件", PROMPTAFLOW_DASHBOARD_HTML)
+        outcome = PROMPTAFLOW_DASHBOARD_HTML.split("async function runOutcome", 1)[1]
+        outcome = outcome.split("function historyRow", 1)[0]
+        self.assertIn("t().promptExportArtifact(run.run_id", outcome)
+        self.assertIn('data-prompt-mode="direct"', outcome)
+
     def test_run_card_labels_its_result(self) -> None:
         self.assertIn('<h2 class="resultTitle">${esc(t().result)}</h2>', PROMPTAFLOW_RUN_HTML)
         self.assertIn("result:'Result'", PROMPTAFLOW_RUN_HTML)

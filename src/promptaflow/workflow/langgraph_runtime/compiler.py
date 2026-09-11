@@ -1142,14 +1142,23 @@ def compile_workflow(
     )
     run_workspace_access = None
     if project_need:
-        if direct_project and not project_need.write:
+        # The real directory is handed over writable — that is all a direct
+        # grant has to give — so `read_only` cannot be *enforced* there. Where
+        # the Runtime also holds a Git worktree grant, this run takes that
+        # instead: a disposable copy is exactly what makes read_only mean
+        # something, and refusing a workflow that used to run merely because
+        # the same Runtime gained a second, wider grant is a regression.
+        # Nothing to fall back to is still a refusal, and still a real one.
+        direct_run = direct_project and (project_need.write or not git_project)
+        if direct_project and not project_need.write and not git_project:
             raise LangGraphCompileError(
-                "workspace_access mode 'read_only' cannot be enforced for a "
-                "non-git real project directory; use explicit read_write "
-                "access"
+                "workspace_access mode 'read_only' cannot be enforced: this "
+                "run takes the real project directory, and this Runtime "
+                "holds no Git worktree grant to run it in instead; use "
+                "explicit read_write access"
             )
         run_workspace_access = {
-            "isolation": "none" if direct_project else "worktree",
+            "isolation": "none" if direct_run else "worktree",
             "mode": "read_write" if project_need.write else "read_only",
         }
         # Which capability is missing is the whole of what the author has to
@@ -1160,7 +1169,7 @@ def compile_workflow(
         # `isolation: none` the grant is the run's, so they work there too.
         for node_id in project_need.agent_nodes:
             granted = bound[node_id].capabilities
-            if direct_project:
+            if direct_run:
                 if "workspace.project.read" not in granted:
                     raise LangGraphCompileError(
                         f"node {node_id!r} works in the project directory this "

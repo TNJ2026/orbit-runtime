@@ -534,17 +534,23 @@ def create_app(
     # The real project directory for non-git direct access.
     project_root_for_agents: Path | None = None
     grant_capabilities: frozenset[str] = frozenset()
+    # Whether this Runtime's workspace *is* the configured default Workspace.
+    # It selects the shape of the grant below; it never creates one. Project
+    # access stays gated on `--agent-project-access` on every entry point,
+    # because that switch is the only record of an operator having agreed to
+    # it: the Hub sets it from `ProjectAccessGrants`, and `paf mcp` — which
+    # passes a `workspace_path` but has no such option — must not acquire real
+    # read/write over a directory simply by being pointed at it.
     default_project_access = False
     if workspace_path is not None:
         from ..agent_apps.host import default_workspace
-        from ..platform.projects import resolve_project_root
 
+        # The exact directory, matching `ProjectAccessGrants.mode`; see there
+        # for why the resolved project root is the wrong thing to compare.
         default_project_access = (
-            Path(workspace_path).expanduser().resolve()
-            == resolve_project_root(default_workspace())
+            Path(workspace_path).expanduser().resolve() == default_workspace()
         )
-    effective_project_access = agent_project_access or default_project_access
-    if effective_project_access:
+    if agent_project_access:
         from ..platform.projects import project_state_dir
         from ..workspace import (
             GitWorkspaceProvider, GitWorktreeGrant,
@@ -570,6 +576,23 @@ def create_app(
             grant_capabilities = frozenset({
                 "workspace.project.read", "workspace.project.write",
             })
+            if (
+                (project_root / ".git").exists()
+                and git_available() and is_git_repo(project_root)
+                and has_commits(project_root)
+            ):
+                # Held *alongside* the direct grant rather than instead of it.
+                # A write run still takes the real directory — that is the
+                # point of this branch — but a `workspace_access` policy asking
+                # for `read_only` cannot be enforced against a writable
+                # directory, and without this the compiler had nothing to fall
+                # back to and refused the run outright. The compiler picks
+                # between the two per run; the Handler dispatches on the
+                # `isolation` it records.
+                project_workspace = GitWorktreeGrant(
+                    GitWorkspaceProvider(project_root, state_dir)
+                )
+                grant_capabilities |= {"workspace.read"}
         elif (project_root / ".git").exists():
             if not git_available() or not is_git_repo(project_root):
                 raise ValueError(
@@ -697,7 +720,7 @@ def create_app(
 
     # Delegated App/Harness Agents receive the same Run workspace contract as
     # local CLIs. The Host must execute inside the returned absolute path.
-    if effective_project_access:
+    if agent_project_access:
         configured = []
         for registration in registrations:
             implementation = registration.implementation
@@ -793,8 +816,18 @@ def create_app(
                 None if project_root_for_agents is None
                 else ProjectAccessCoordinator(
                     project_root_for_agents, write_granted=True,
-                    recovery_points=UnprotectedDirectRecoveryPoints(
-                        project_root_for_agents,
+                    # `UnprotectedDirectRecoveryPoints` is the honest answer
+                    # for a directory git cannot describe, and the wrong one
+                    # for a directory it can: the default Workspace reaches
+                    # direct access even when it is a repository, and taking
+                    # the unprotected path there would throw away both the
+                    # rollback and the change summary git would have given.
+                    # `None` lets the coordinator make that choice itself.
+                    recovery_points=(
+                        None if is_git_repo(project_root_for_agents)
+                        else UnprotectedDirectRecoveryPoints(
+                            project_root_for_agents,
+                        )
                     ),
                 )
             ),

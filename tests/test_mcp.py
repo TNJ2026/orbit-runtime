@@ -77,9 +77,9 @@ class HandshakeTests(ApiTestCase):
             resources = listed["result"]["resources"]
             self.assertEqual(
                 {
-                    "ui://promptaflow/current-task-v55.html", "ui://promptaflow/workflows-v28.html",
-                    "ui://promptaflow/workflow-authoring-v16.html", "ui://promptaflow/goal-run-v24.html",
-                    "ui://promptaflow/goals-v16.html",
+                    "ui://promptaflow/current-task-v55.html", "ui://promptaflow/workflows-v29.html",
+                    "ui://promptaflow/workflow-authoring-v17.html", "ui://promptaflow/goal-run-v24.html",
+                    "ui://promptaflow/goals-v17.html",
                 },
                 {resource["uri"] for resource in resources},
             )
@@ -269,7 +269,7 @@ class DiscoveryTests(ApiTestCase):
             self.assertEqual(
                 {
                     "open_promptaflow_dashboard": "ui://promptaflow/current-task-v55.html",
-                    "open_promptaflow_goals": "ui://promptaflow/goals-v16.html",
+                    "open_promptaflow_goals": "ui://promptaflow/goals-v17.html",
                 },
                 {
                     item["name"]: item["_meta"]["ui"]["resourceUri"]
@@ -280,15 +280,15 @@ class DiscoveryTests(ApiTestCase):
                 item["name"]: item.get("_meta", {}).get("ui", {}).get("resourceUri")
                 for item in tools
             }
-            self.assertEqual("ui://promptaflow/workflows-v28.html", card_bindings["list_workflows"])
+            self.assertEqual("ui://promptaflow/workflows-v29.html", card_bindings["list_workflows"])
             self.assertEqual(
-                "ui://promptaflow/workflows-v28.html",
+                "ui://promptaflow/workflows-v29.html",
                 card_bindings["get_workflow_definition"],
             )
             self.assertIsNone(card_bindings["inspect_workflow_definition"])
-            self.assertEqual("ui://promptaflow/workflow-authoring-v16.html", card_bindings["generate_workflow"])
+            self.assertEqual("ui://promptaflow/workflow-authoring-v17.html", card_bindings["generate_workflow"])
             self.assertEqual("ui://promptaflow/goal-run-v24.html", card_bindings["start_run"])
-            self.assertEqual("ui://promptaflow/goals-v16.html", card_bindings["open_promptaflow_goals"])
+            self.assertEqual("ui://promptaflow/goals-v17.html", card_bindings["open_promptaflow_goals"])
             by_name = {item["name"]: item for item in tools}
             self.assertIn(
                 "inspect_workflow_definition",
@@ -313,14 +313,14 @@ class DiscoveryTests(ApiTestCase):
             ).json()["result"]["resources"]
             detail = next(
                 item for item in listed
-                if item["uri"] == "ui://promptaflow/workflows-v28.html"
+                if item["uri"] == "ui://promptaflow/workflows-v29.html"
             )
             self.assertFalse(detail["_meta"]["ui"]["prefersBorder"])
             self.assertFalse(detail["_meta"]["openai/widgetPrefersBorder"])
 
             read = rpc(
                 client, "resources/read",
-                {"uri": "ui://promptaflow/workflows-v28.html"}, actor="reader",
+                {"uri": "ui://promptaflow/workflows-v29.html"}, actor="reader",
             ).json()["result"]["contents"][0]
             self.assertFalse(read["_meta"]["ui"]["prefersBorder"])
             self.assertFalse(read["_meta"]["openai/widgetPrefersBorder"])
@@ -329,7 +329,7 @@ class DiscoveryTests(ApiTestCase):
         with AsgiHarness(self.app) as client:
             workflows = rpc(
                 client, "resources/read",
-                {"uri": "ui://promptaflow/workflows-v28.html"}, actor="reader",
+                {"uri": "ui://promptaflow/workflows-v29.html"}, actor="reader",
             ).json()["result"]["contents"][0]["text"]
             dashboard = rpc(
                 client, "resources/read",

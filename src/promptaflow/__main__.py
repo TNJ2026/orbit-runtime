@@ -1372,9 +1372,9 @@ def main() -> None:
             # is the one place the operator sees whether the Workspace they
             # just opened will let a workflow read the project it runs in.
             grant_mode = grants.mode(identifier)
-            is_default_workspace = (
-                registered_workspace == resolve_project_root(default_workspace())
-            )
+            # The exact directory, matching `ProjectAccessGrants.mode`; see
+            # there for why the resolved project root is the wrong comparison.
+            is_default_workspace = registered_workspace == default_workspace()
             print(json.dumps(
                 {
                     **workspace_urls(identifier),
@@ -1382,7 +1382,18 @@ def main() -> None:
                     "agent_project_access": grants.granted(identifier),
                     "agent_project_access_mode": grant_mode,
                     "effective_project_access": (
-                        "default_direct_read_write_no_rollback"
+                        # The default Workspace takes the real directory
+                        # rather than a worktree, so it is named apart from
+                        # `git_worktree`. Whether there is a way back is a
+                        # separate question, and git answers it for a
+                        # repository even under direct access — saying
+                        # otherwise would tell an operator to expect no
+                        # rollback where the Runtime does establish one.
+                        (
+                            "default_direct_read_write"
+                            if is_git_repo(registered_workspace)
+                            else "default_direct_read_write_no_rollback"
+                        )
                         if grant_mode == "read_write" and is_default_workspace
                         else (
                             "git_worktree"

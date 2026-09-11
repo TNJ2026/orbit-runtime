@@ -250,12 +250,11 @@ class ProjectAccessGrantTests(unittest.TestCase):
                 "--agent-project-access", manager._serve_arguments(workspace)
             )
 
-    def test_configured_default_workspace_always_has_full_project_access(self) -> None:
+    def test_configured_default_workspace_has_full_project_access_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             grants = ProjectAccessGrants(root / "project-access.json")
             identifier, workspace, manager = self.manager(root, grants)
-            grants.set(identifier, allowed=False)
 
             with mock.patch.dict(
                 os.environ,
@@ -267,6 +266,62 @@ class ProjectAccessGrantTests(unittest.TestCase):
                 self.assertIn(
                     "--agent-project-access", manager._serve_arguments(workspace)
                 )
+
+    def test_the_default_workspace_grant_still_yields_to_an_explicit_refusal(self) -> None:
+        """Being trusted by default is not the same as being unrevokable.
+
+        The rule exists so a stale persisted preference cannot quietly take
+        the working area away. An operator who typed `--no-project-access` is
+        not a stale preference, and reporting `agent_project_access: true`
+        back at them would make the switch a lie.
+        """
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            grants = ProjectAccessGrants(root / "project-access.json")
+            identifier, workspace, manager = self.manager(root, grants)
+            grants.set(identifier, allowed=False)
+
+            with mock.patch.dict(
+                os.environ,
+                {"PROMPTAFLOW_DEFAULT_WORKSPACE": str(workspace)},
+                clear=False,
+            ):
+                self.assertEqual("disabled", grants.mode(identifier))
+                self.assertFalse(grants.granted(identifier))
+                self.assertNotIn(
+                    "--agent-project-access", manager._serve_arguments(workspace)
+                )
+
+    def test_the_default_workspace_never_promotes_an_ancestor_repository(self) -> None:
+        """A `.git` above the default workspace must not widen the grant.
+
+        `resolve_project_root` walks up to the nearest project marker, and the
+        stock default workspace lives under `~`. A dotfiles checkout at
+        `~/.git` is an ordinary thing to have, and reading the rule through
+        that search handed the whole home directory to every Agent — registered
+        as the Workspace, served as `--project-root`, and writable.
+        """
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / ".git").mkdir()
+            default = root / "workspaces" / "default"
+            default.mkdir(parents=True)
+            grants = ProjectAccessGrants(root / "project-access.json")
+            registry = WorkspaceRegistry(root / "workspaces.json")
+
+            with mock.patch.dict(
+                os.environ,
+                {"PROMPTAFLOW_DEFAULT_WORKSPACE": str(default)},
+                clear=False,
+            ):
+                identifier, registered = registry.register(default)
+
+                self.assertEqual(default.resolve(), registered)
+                self.assertIsNone(grants.mode(project_id(root)))
+                self.assertFalse(grants.granted(project_id(root)))
+                self.assertEqual("read_write", grants.mode(identifier))
 
     def test_the_grant_survives_a_re_registration(self) -> None:
         """Registering happens on every start; permission must not ride on it.

@@ -406,3 +406,49 @@ class RunWideGrantRegressions(unittest.TestCase):
             compiled("read_only", frozenset({
                 "workspace.project.read", "workspace.project.write",
             }))
+
+    def test_read_only_takes_the_worktree_when_the_runtime_also_holds_one(self):
+        """A wider grant must not cost a workflow the narrower one.
+
+        The default Workspace reaches direct read/write even when it is a git
+        repository, and keeps its worktree grant beside it. `read_only` cannot
+        be enforced against the real directory, so a run that asks for it
+        takes the worktree — refusing outright would break workflows that ran
+        before the Runtime gained the second grant.
+        """
+
+        from dataclasses import replace
+        from tests.test_workflow_langgraph_runtime import node, edge, workflow, binding
+        from promptaflow.workflow.domain.definitions import IRPolicy
+        from promptaflow.workflow.langgraph_runtime import (
+            compile_workflow, LangGraphHandlerRegistry,
+        )
+
+        step = replace(node("agent.only", inputs=("value",), outputs=("value",)),
+                       policies=("access",))
+        observed = []
+
+        def invoke(values, config, context):
+            observed.append(context.workspace_access)
+            return values
+
+        both = frozenset({
+            "workspace.read", "workspace.project.read", "workspace.project.write",
+        })
+
+        def compiled(mode, capabilities=both):
+            ir = workflow((step,), (), entry=(step.id,), terminals=(step.id,),
+                result=(step.id, "value"),
+                policies=(IRPolicy("access", "workspace_access", {"mode": mode}),))
+            return compile_workflow(ir, LangGraphHandlerRegistry([
+                binding(step.id, invoke, capabilities=capabilities),
+            ]))
+
+        compiled("read_only").invoke({"value": 1})
+        compiled("read_write").invoke({"value": 1})
+
+        self.assertEqual(
+            [{"isolation": "worktree", "mode": "read_only"},
+             {"isolation": "none", "mode": "read_write"}],
+            observed,
+        )

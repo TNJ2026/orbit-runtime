@@ -271,6 +271,52 @@ class CurrentAppExecutionTests(unittest.TestCase):
                 self.assertEqual("write", config["effects"])
                 self.assertEqual(isolation, config["isolation_mode"])
 
+    def test_a_declared_isolation_that_cannot_hold_a_write_is_refused_at_bind(self):
+        """Before a Run exists, not part-way through one.
+
+        The grant makes every Agent in the run a writer, and `shared` and
+        `snapshot` cannot hold a write delegation — the delegation Handler
+        rejects that pair itself. Forcing the effect while honouring the
+        declaration built a node certain to fail the moment it was invoked:
+        the run started, ran, and died on the delegation.
+        """
+
+        registration = HandlerRegistration(
+            APP_DELEGATE_MANIFEST,
+            AppDelegationHandler(self.queue, poll_seconds=0.005),
+            "app.delegate@1.1.0",
+            granted_capabilities=frozenset({
+                "workspace.project.read", "workspace.project.write",
+            }),
+        )
+        registry = trusted_handlers([registration], attempt_db_path=self.path)
+
+        for declared in ("shared", "snapshot"):
+            with self.subTest(declared=declared):
+                step = replace(
+                    agent_step(config={"prompt": "go", "isolation_mode": declared}),
+                    policies=("project",),
+                )
+                ir = replace(
+                    single_step_workflow(step), nodes=(step,),
+                    policies=(IRPolicy("project", "workspace_access", {}),),
+                )
+                with self.assertRaisesRegex(ValueError, "cannot hold a write"):
+                    bind_current_app(ir, registry)
+
+        # An explicitly declared write-capable mode is still honoured.
+        step = replace(
+            agent_step(config={"prompt": "go", "isolation_mode": "worktree"}),
+            policies=("project",),
+        )
+        ir = replace(
+            single_step_workflow(step), nodes=(step,),
+            policies=(IRPolicy("project", "workspace_access", {}),),
+        )
+        config = bind_current_app(ir, registry).ir.nodes[0].config
+        self.assertEqual("write", config["effects"])
+        self.assertEqual("worktree", config["isolation_mode"])
+
     def test_human_resume_keeps_app_binding_and_returns_before_delegation(self):
         human = IRNode("review", "human", (port("prompt"),), (port("result"),), None, {}, (), None)
         action = agent_step("after_review")

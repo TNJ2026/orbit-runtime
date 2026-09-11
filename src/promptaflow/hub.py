@@ -84,7 +84,18 @@ class WorkspaceRegistry:
             requested.mkdir(parents=True, exist_ok=True)
         elif not requested.is_dir():
             raise HubError(f"PromptaFlow workspace is not an existing directory: {requested}")
-        root = resolve_project_root(requested)
+        # A real project registers as its root, so running from a subdirectory
+        # opens the same Workspace. The default Workspace registers as itself:
+        # it is PromptaFlow's own working area rather than a checkout somebody
+        # is working in, and the marker search would promote it to whatever
+        # ancestor happens to carry a `.git` — `~` for the stock location.
+        # Serving a Runtime rooted at the home directory is not what anyone
+        # configured, and `ProjectAccessGrants.mode` would then hand that
+        # directory out fully writable.
+        root = (
+            requested if requested == default_workspace()
+            else resolve_project_root(requested)
+        )
         identifier = project_id(root)
         with self._lock:
             entries = self._read()
@@ -233,11 +244,26 @@ class ProjectAccessGrants:
 
     def mode(self, identifier: str) -> str | None:
         # The configured default Workspace is PromptaFlow's trusted working
-        # project. It is always fully writable; this is independent of Git
-        # and cannot be accidentally revoked by an old persisted preference.
-        if identifier == project_id(resolve_project_root(default_workspace())):
+        # project: fully writable unless somebody has said otherwise, and
+        # independent of whether Git has been initialised inside it.
+        #
+        # The *exact* directory, never `resolve_project_root` of it: that walks
+        # up to the nearest project marker, and the stock default workspace
+        # lives under `~`. One `~/.git` — a dotfiles checkout is the ordinary
+        # way to have one — and the marker search lands on the home directory,
+        # which would then be handed out fully writable.
+        #
+        # An operator who has actually said no still wins. Only a stored
+        # "disabled" can reach this, and only `set(allowed=False)` writes one:
+        # `enable_by_default` never overwrites, and an unreadable or
+        # unrecognised file grants nothing rather than refusing. So this is a
+        # deliberate refusal, not the stale preference the rule exists to
+        # ignore, and overriding it would make `--no-project-access` print
+        # consent the operator declined to give.
+        stored = self._read().get(identifier)
+        if stored is None and identifier == project_id(default_workspace()):
             return "read_write"
-        return self._read().get(identifier)
+        return stored
 
     def granted(self, identifier: str) -> bool:
         return self.mode(identifier) == "read_write"

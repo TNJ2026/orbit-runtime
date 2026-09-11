@@ -18,10 +18,10 @@ PROMPTAFLOW_DASHBOARD_URI = "ui://promptaflow/current-task-v55.html"
 PROMPTAFLOW_DASHBOARD_MIME_TYPE = "text/html;profile=mcp-app"
 # Bump the URI whenever the list card markup changes: Codex caches MCP App
 # resources by URI and otherwise keeps rendering the previous document.
-PROMPTAFLOW_WORKFLOWS_URI = "ui://promptaflow/workflows-v28.html"
-PROMPTAFLOW_AUTHORING_URI = "ui://promptaflow/workflow-authoring-v16.html"
+PROMPTAFLOW_WORKFLOWS_URI = "ui://promptaflow/workflows-v29.html"
+PROMPTAFLOW_AUTHORING_URI = "ui://promptaflow/workflow-authoring-v17.html"
 PROMPTAFLOW_RUN_URI = "ui://promptaflow/goal-run-v24.html"
-PROMPTAFLOW_GOALS_URI = "ui://promptaflow/goals-v16.html"
+PROMPTAFLOW_GOALS_URI = "ui://promptaflow/goals-v17.html"
 
 # The mark the full PromptaFlow UI shows in its own top-left corner — the same
 # geometry as `workflow-ui/index.html`'s `.brand-mark`, not the favicon the
@@ -721,7 +721,9 @@ __CARD_STYLE__
     try {
       const data = await callTool('list_artifacts', {run_id: run.run_id, limit: 200});
       for (const file of (data.artifacts || []).filter(a => String(a.port_id || '').startsWith('attachment:'))) {
-        rows.push(`<button class="artifact" data-prompt="${esc('打开这个运行的产物文件：'+file.filename+'；run_id: '+run.run_id+'；artifact_id: '+file.artifact_id)}">${esc(file.filename || file.port_id)} · ${esc(Math.ceil(file.size_bytes / 1024))} KB</button>`);
+        const path = artifactPath(file, file.artifact_id);
+        const prompt = t().promptExportArtifact(run.run_id, file.artifact_id, path);
+        rows.push(`<button class="artifact" type="button" data-prompt-mode="direct" data-prompt="${esc(prompt)}">${esc(file.filename || file.port_id)} · ${esc(Math.ceil(file.size_bytes / 1024))} KB</button>`);
       }
     } catch (_) { /* the result remains readable if the attachment list is unavailable */ }
     return `<div class="resultBlock">
@@ -1176,7 +1178,13 @@ function failureMessage(value){const error=value?.error;return typeof error==='s
 function artifactName(a,id){return String(a?.filename||String(id).replace(/^langgraph_artifact:/,'').slice(0,12)||'artifact')}
 function htmlArtifact(a){const type=String(a?.content_type||'').split(';')[0].trim().toLowerCase();return type==='text/html'||/\.html?$/i.test(String(a?.filename||''))}
 function artifactFile(r,a,id){const path=artifactName(a,id);return `<div class="artifactFile"><div><div class="resultTitle">${esc(t().result)}</div><code class="artifactPath" title="${esc(path)}">${esc(path)}</code></div><button class="action" type="button" data-prompt-mode="direct" data-prompt="${esc(t().promptExport(r.run_id,id,path))}">${esc(t().exportArtifact)}</button></div>`}
-async function resultArtifact(r){const id=r.result?.artifact_id;if(!id)return '';try{const meta=await callTool('read_artifact',{artifact_id:id});const a=meta.artifact||meta;const type=String(a.content_type||'').split(';')[0].trim().toLowerCase();const size=Number(a.size_bytes);if(htmlArtifact(a)||!['text/markdown','text/plain'].includes(type)||!Number.isFinite(size)||size<0||size>=2048)return artifactFile(r,a,id);const held=await callTool('read_artifact_content',{artifact_id:id,max_bytes:2048});const text=held.encoding==='base64'?decodeURIComponent(escape(atob(held.content))):held.content||'';return text?`<div class="result"><h2 class="resultTitle">${esc(t().result)}</h2><div>${esc(text)}</div></div>`:artifactFile(r,a,id)}catch(_){return artifactFile(r,{},id)}}
+/* How much of a text result the card will show inline. This is the answer the
+   goal was run for, not one attachment among several, so the bar is the one
+   the result block has always used: an ordinary markdown reply of a few KB
+   belongs on the card, and only something genuinely large becomes a filename
+   and an Export button. HTML is sent to the file row at any size. */
+const RESULT_MAX_BYTES=262144;
+async function resultArtifact(r){const id=r.result?.artifact_id;if(!id)return '';try{const meta=await callTool('read_artifact',{artifact_id:id});const a=meta.artifact||meta;const type=String(a.content_type||'').split(';')[0].trim().toLowerCase();const size=Number(a.size_bytes);if(htmlArtifact(a)||!['text/markdown','text/plain'].includes(type)||!Number.isFinite(size)||size<0||size>=RESULT_MAX_BYTES)return artifactFile(r,a,id);const held=await callTool('read_artifact_content',{artifact_id:id,max_bytes:RESULT_MAX_BYTES});const text=held.encoding==='base64'?decodeURIComponent(escape(atob(held.content))):held.content||'';return text?`<div class="result"><h2 class="resultTitle">${esc(t().result)}</h2><div>${esc(text)}</div></div>`:artifactFile(r,a,id)}catch(_){return artifactFile(r,{},id)}}
 async function runFiles(r){
  if(!r.run_id)return '';
  try{const data=await callTool('list_artifacts',{run_id:r.run_id,limit:200});
