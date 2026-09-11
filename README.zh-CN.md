@@ -43,6 +43,33 @@ Agent App / 浏览器 / API
 PromptaFlow 需要 Python 3.10 或更高版本，以及
 [uv](https://docs.astral.sh/uv/)。
 
+### 通过 PyPI 安装
+
+推荐把最新稳定版 CLI 安装到独立环境：
+
+```bash
+uv tool install promptaflow
+paf --version
+paf serve --project-root /你的项目绝对路径
+```
+
+安装预发布版本时，需要显式允许预发布版本：
+
+```bash
+uv tool install --prerelease allow promptaflow
+```
+
+也可以使用 pip 安装到当前 Python 环境：
+
+```bash
+python -m pip install promptaflow
+# 安装预发布版本：
+python -m pip install --pre promptaflow
+```
+
+PyPI 包提供 Runtime 以及 `paf`/`promptaflow` 命令，但不会安装 Agent App
+集成或 MCP App 卡片；需要这些功能时，请继续按照下方对应宿主的文档安装。
+
 ### 使用提示词安装
 
 把下面这句话发给受支持的 Agent App。Agent 会读取仓库里持续维护的文档，并为当前 App

@@ -50,6 +50,34 @@ Agent App / Browser / API
 PromptaFlow requires Python 3.10 or newer and
 [uv](https://docs.astral.sh/uv/).
 
+### Install from PyPI
+
+Install the latest stable CLI in an isolated environment:
+
+```bash
+uv tool install promptaflow
+paf --version
+paf serve --project-root /absolute/path/to/project
+```
+
+To install a prerelease, allow prerelease versions explicitly:
+
+```bash
+uv tool install --prerelease allow promptaflow
+```
+
+Alternatively, install into the active Python environment with pip:
+
+```bash
+python -m pip install promptaflow
+# For a prerelease:
+python -m pip install --pre promptaflow
+```
+
+The PyPI package provides the Runtime and the `paf`/`promptaflow` commands. It
+does not install an Agent App integration or MCP App cards; follow the
+host-specific instructions below when those are needed.
+
 ### Install with a prompt
 
 Paste this into a supported Agent App. The Agent follows the maintained
