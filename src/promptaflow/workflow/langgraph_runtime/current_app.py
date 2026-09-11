@@ -9,6 +9,13 @@ from .compiler import HandlerBindingError
 from .harness_subagent import APP_DELEGATE_MANIFEST
 from .project_access import project_access_need
 
+# The isolation modes a delegation with `effects: write` is allowed to run
+# under. `AppDelegationHandler.validate` and its Harness twin enforce the same
+# pair at invoke time; naming it here is what lets the conflict be reported
+# while the workflow is still being bound.
+WRITE_ISOLATION_MODES = frozenset({"exclusive", "worktree"})
+
+
 def validate_execution_mode(mode):
     if mode not in ("default", "current_app"):
         raise ValueError("execution_mode must be default or current_app")
@@ -98,18 +105,30 @@ def bind_current_app(ir, registry):
                     "current_app write delegation has no exclusive or "
                     "worktree project grant"
                 )
-            if declared_isolation is None:
+            if declared_isolation is None or declared_isolation in WRITE_ISOLATION_MODES:
+                # Corrected rather than refused. The mode describes the
+                # workspace the Host receives, so calling a direct checkout
+                # "worktree" would tell the App a different contract from the
+                # path in its request — but which of the two a run gets is the
+                # Runtime's grant to decide, not the definition's. Refusing the
+                # other one would pin every published workflow that names this
+                # field to one Runtime shape and fail it on the other, and the
+                # library is durable: definitions outlive the Runtime they were
+                # written on.
                 config["isolation_mode"] = required_isolation
-            elif declared_isolation != required_isolation:
-                # The mode describes the workspace the Host receives, not only
-                # whether a write is broadly allowed. Calling a direct checkout
-                # "worktree" (or a worktree "exclusive") would tell the App a
-                # different isolation contract from the path in the request.
+            else:
+                # `shared` and `snapshot` cannot hold a write delegation at
+                # all — the delegation Handler rejects that pair itself. Said
+                # here, before a Run exists, because writing is not optional
+                # for this node: the run's grant made it a write, so honouring
+                # the declaration would build a node certain to fail its own
+                # validation the moment it is invoked.
                 raise ValueError(
                     f"node {node.id!r} declares isolation_mode "
-                    f"{declared_isolation!r}, but this run's project grant "
-                    f"requires {required_isolation!r}; declare that mode or "
-                    f"leave isolation_mode out"
+                    f"{declared_isolation!r}, which cannot hold a write "
+                    f"delegation; this run's workspace_access policy makes it "
+                    f"one. Declare {required_isolation!r} or leave "
+                    f"isolation_mode out."
                 )
             converted = replace(node, handler=reference, config=config)
         nodes.append(converted)

@@ -694,6 +694,24 @@ def _mcp(args) -> None:
     if actor_prefix is not None and not actor_prefix.strip():
         raise SystemExit("paf mcp: --actor-prefix cannot be empty")
     project_root = resolve_project_root(getattr(args, "project_root", None))
+    if args.agent_project_access and args.project_root is None:
+        raise SystemExit(
+            "paf mcp: --agent-project-access requires --project-root. A stdio "
+            "Runtime's working directory is chosen by the client application "
+            "rather than by you — commonly `/` or your home directory — and "
+            "the granted project must be one you named."
+        )
+    # What the grant covers: the directory the operator named, exactly as
+    # named. `resolve_project_root` walks up to the nearest `.git` or
+    # `pyproject.toml`, which is right for placing the database and wrong for
+    # deciding which files an Agent may edit — the stock default Workspace
+    # carries no marker, so one dotfiles `~/.git` would widen the grant to the
+    # whole home directory. Where nothing was named there is nothing to grant,
+    # and `create_app`'s own guard says so.
+    grant_root = (
+        Path(args.project_root).expanduser().resolve()
+        if args.project_root is not None else None
+    )
     db_path = _runtime_db_path(args.db, project_root=project_root)
     try:
         assert_runtime_schema(db_path)
@@ -762,9 +780,18 @@ def _mcp(args) -> None:
             langgraph_state_directory=Path(db_path).parent,
             mcp_tool_profile=args.mcp_tool_profile,
             delegation_queue=delegation_queue,
-            workspace_path=project_root,
+            workspace_path=(
+                grant_root if grant_root is not None else project_root
+            ),
             agent_project_access=args.agent_project_access,
         )
+    except ValueError as exc:
+        # A directory that is not there, a `.git` git cannot use, a repository
+        # with nothing committed. All are things the operator pointed this at,
+        # so they end the same way every other startup failure here does —
+        # a line at the prompt, not a traceback.
+        ownership.release()
+        raise SystemExit(f"paf mcp: {exc}") from None
     except Exception:
         ownership.release()
         raise

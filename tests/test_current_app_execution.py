@@ -271,12 +271,15 @@ class CurrentAppExecutionTests(unittest.TestCase):
                 self.assertEqual("write", config["effects"])
                 self.assertEqual(isolation, config["isolation_mode"])
 
-    def test_declared_isolation_must_match_the_workspace_actually_granted(self):
+    def test_declared_isolation_is_corrected_to_the_workspace_actually_granted(self):
         """Before a Run exists, not part-way through one.
 
-        The grant makes every Agent in the run a writer. A generally
-        write-capable mode is not enough: saying `worktree` while handing the
-        App the direct checkout is a false isolation contract.
+        The grant makes every Agent in the run a writer. Saying `worktree`
+        while handing the App the direct checkout is a false isolation
+        contract, so the declaration is corrected to what the Runtime actually
+        grants — not refused, because which of the two a run gets is the
+        Runtime's to decide and a published definition outlives it. A mode
+        that cannot hold a write at all is still refused.
         """
 
         registration = HandlerRegistration(
@@ -289,33 +292,25 @@ class CurrentAppExecutionTests(unittest.TestCase):
         )
         registry = trusted_handlers([registration], attempt_db_path=self.path)
 
-        for declared in ("shared", "snapshot", "worktree"):
+        def bound(declared, against=registry):
+            step = replace(
+                agent_step(config={"prompt": "go", "isolation_mode": declared}),
+                policies=("project",),
+            )
+            ir = replace(
+                single_step_workflow(step), nodes=(step,),
+                policies=(IRPolicy("project", "workspace_access", {}),),
+            )
+            return bind_current_app(ir, against).ir.nodes[0].config
+
+        for declared in ("shared", "snapshot"):
             with self.subTest(declared=declared):
-                step = replace(
-                    agent_step(config={"prompt": "go", "isolation_mode": declared}),
-                    policies=("project",),
-                )
-                ir = replace(
-                    single_step_workflow(step), nodes=(step,),
-                    policies=(IRPolicy("project", "workspace_access", {}),),
-                )
-                with self.assertRaisesRegex(ValueError, "requires 'exclusive'"):
-                    bind_current_app(ir, registry)
+                with self.assertRaisesRegex(ValueError, "cannot hold a write"):
+                    bound(declared)
 
-        # The mode matching the direct project grant is still honoured.
-        step = replace(
-            agent_step(config={"prompt": "go", "isolation_mode": "exclusive"}),
-            policies=("project",),
-        )
-        ir = replace(
-            single_step_workflow(step), nodes=(step,),
-            policies=(IRPolicy("project", "workspace_access", {}),),
-        )
-        config = bind_current_app(ir, registry).ir.nodes[0].config
-        self.assertEqual("write", config["effects"])
-        self.assertEqual("exclusive", config["isolation_mode"])
-
-        # The inverse mismatch is rejected for a worktree-only grant too.
+        # Either write-capable declaration binds, and both come out as the
+        # mode this Runtime's grant actually provides. A definition naming one
+        # of them is not pinned to the Runtime it was published on.
         worktree_registration = HandlerRegistration(
             APP_DELEGATE_MANIFEST,
             AppDelegationHandler(self.queue, poll_seconds=0.005),
@@ -325,8 +320,14 @@ class CurrentAppExecutionTests(unittest.TestCase):
         worktree_registry = trusted_handlers(
             [worktree_registration], attempt_db_path=self.path,
         )
-        with self.assertRaisesRegex(ValueError, "requires 'worktree'"):
-            bind_current_app(ir, worktree_registry)
+        for declared in ("exclusive", "worktree"):
+            with self.subTest(declared=declared):
+                direct = bound(declared)
+                self.assertEqual("write", direct["effects"])
+                self.assertEqual("exclusive", direct["isolation_mode"])
+                self.assertEqual(
+                    "worktree", bound(declared, worktree_registry)["isolation_mode"],
+                )
 
     def test_human_resume_keeps_app_binding_and_returns_before_delegation(self):
         human = IRNode("review", "human", (port("prompt"),), (port("result"),), None, {}, (), None)

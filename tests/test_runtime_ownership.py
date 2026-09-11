@@ -146,6 +146,65 @@ class McpOwnershipCleanupTests(unittest.TestCase):
                 Path(root).resolve(), build.call_args.kwargs["workspace_path"],
             )
 
+    def test_the_grant_covers_the_named_directory_not_its_ancestor(self) -> None:
+        """`resolve_project_root` places the database; it must not widen a grant.
+
+        It walks up to the nearest `.git` or `pyproject.toml`. The stock
+        default Workspace carries neither, so reading the grant through that
+        search handed out whatever repository happened to be above it — one
+        dotfiles `~/.git` is enough to make that the whole home directory.
+        """
+
+        from promptaflow.__main__ import _mcp
+        from promptaflow.web.app import create_app
+
+        with tempfile.TemporaryDirectory() as root:
+            (Path(root) / ".git").mkdir()
+            named = Path(root) / "workspaces" / "default"
+            named.mkdir(parents=True)
+            args = self.args(root)
+            args.project_root = str(named)
+            args.agent_project_access = True
+            with patch(
+                "promptaflow.web.app.create_app", wraps=create_app,
+            ) as build, patch("promptaflow.web.mcp.serve_stdio"):
+                _mcp(args)
+
+            self.assertEqual(
+                named.resolve(), build.call_args.kwargs["workspace_path"],
+            )
+
+    def test_project_access_without_a_named_project_is_refused(self) -> None:
+        """The cwd of a stdio Runtime belongs to the client application.
+
+        A GUI host commonly launches one from `/` or the home directory, so
+        defaulting the grant to it would hand an Agent whatever that turned
+        out to be. `create_app`'s own guard says the same thing and can never
+        fire here, because a path is always passed.
+        """
+
+        from promptaflow.__main__ import _mcp
+
+        with tempfile.TemporaryDirectory() as root:
+            args = self.args(root)
+            args.project_root = None
+            args.agent_project_access = True
+            with self.assertRaisesRegex(SystemExit, "requires --project-root"):
+                _mcp(args)
+
+    def test_an_unusable_project_ends_at_the_prompt_not_in_a_traceback(self) -> None:
+        from promptaflow.__main__ import _mcp
+
+        with tempfile.TemporaryDirectory() as root:
+            named = Path(root) / "not-there"
+            args = self.args(root)
+            args.project_root = str(named)
+            args.agent_project_access = True
+            with self.assertRaisesRegex(SystemExit, "does not exist"):
+                _mcp(args)
+            # And the database is free for the next process.
+            RuntimeOwnership(Path(args.db)).acquire().release()
+
     def test_a_failed_shutdown_still_releases(self) -> None:
         """Asserted on the call, not on a second acquire succeeding.
 
