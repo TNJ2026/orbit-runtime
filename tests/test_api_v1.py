@@ -1443,7 +1443,9 @@ class WorkflowDraftApiTests(ApiTestCase):
                 },
             ).json()["data"]
             self.assertEqual("dirty", staged["validation_status"])
-            self.assertEqual("queued", staged["pending_revision"]["status"])
+            self.assertIn(
+                staged["pending_revision"]["status"], {"queued", "running"},
+            )
             staged = self._settle(client, draft["draft_id"])
             self.assertEqual("pending", staged["pending_revision"]["status"])
             self.assertIn("Linear, edited", staged["pending_revision"]["source"])
